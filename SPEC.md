@@ -1272,6 +1272,39 @@ approach) while leaving the actual agreement as a human interaction.
 
 **Recommendation going forward:** Store credentials in a password manager (e.g. Bitwarden, accessible to relevant collectives) and use the description field only for non-secret contextual notes. The description field is still visible to all logged-in volunteers — it is not a secrets store.
 
+### 8.14 Volunteer table is slow to sort and slow to add new volunteers
+
+**Symptom:** The volunteer summary table (`/members/volunteers/`) becomes
+noticeably slow as the volunteer list grows. Two specific pain points:
+
+1. **Re-sorting the table triggers a full server round-trip.** Clicking
+   a sort header sends a GET request with `?order=name` or `?order=date`,
+   which re-queries the database and re-renders the entire page. On a large
+   volunteer list this is a perceptible delay for an operation that should
+   be instantaneous.
+
+2. **"Add new volunteer" is slow.** The flow involves a server POST, a
+   redirect, and a full page reload of the volunteer list — meaning the
+   volunteer list DB query runs again in full each time a volunteer is added.
+   This compounds if admins are bulk-entering volunteers during an induction.
+
+**Root cause:** No client-side interactivity. Sorting is handled server-side
+in `view_volunteer_summary` ([toolkit/members/volunteer_views.py](toolkit/members/volunteer_views.py):113)
+via a GET parameter; there is no in-browser sort. The add-volunteer form
+follows the standard Django POST-redirect-GET pattern with a full page reload.
+
+**Fix (sorting):** Replace the server-side sort with a client-side table sort.
+A small vanilla JS implementation (or a lightweight library such as
+[Tablesort](https://github.com/tristen/tablesort), ~1 KB) would make column
+headers sort the already-loaded table instantly with no server request.
+Estimated effort: 🟢 XS (2–4h).
+
+**Fix (add volunteer):** Either (a) submit the add-volunteer form via `fetch()`
+and append the new row to the existing table in-place, or (b) accept the
+current POST-redirect-GET pattern but ensure the redirect lands on a paginated
+or otherwise bounded query rather than loading every active volunteer.
+Estimated effort: 🔵 S (4–8h) for the fetch approach.
+
 ---
 
 ## 9. Proposed new features
@@ -1831,8 +1864,7 @@ A simple in-browser calculator — no server round-trip needed — that takes:
 | Other costs | £20 |
 | Room capacity | 80 |
 | Door split arrangement (%) | 70% to artist, 30% to venue |
-| Ticket price(s) | £8 standard / £5 concs |
-| Expected ratio of concessions | 30% |
+| Ticket price / expected average | £5 (see PAYF note below) |
 
 Outputs:
 
@@ -1843,6 +1875,28 @@ Outputs:
   100% capacity
 - A plain-English summary: *"You need to sell 35 tickets (44% of capacity) to
   break even. At a full room you'd make £48 for the venue."*
+
+**Pay As You Feel (PAYF) pricing:**
+
+S&S events commonly use PAYF pricing with suggested bands of £0, £3, £5, and
+£7. Rather than requiring programmers to estimate attendance at each price band
+separately (high mental overhead, usually speculative), the calculator should
+accept a single **expected average ticket price** field. The programmer sets
+the average they realistically expect people to pay and the calculator uses
+that figure throughout.
+
+A default of **£5** is a reasonable starting point — observed payment
+distribution at S&S events suggests most people pay £5 or more when given the
+choice, though this default should be updated once the data has been confirmed.
+The field should be clearly editable so programmers can adjust it for events
+where the audience skews differently (e.g. lower for community events, higher
+for popular one-off shows).
+
+This approach is deliberately simpler than per-tier modelling. Three inputs
+of (£0 / 30%, £5 / 50%, £7 / 20%) are more accurate in theory but add
+friction at the planning stage when approximate answers are all that's needed.
+The single average-price field gives the same quality of decision signal with
+far less cognitive overhead.
 
 **Implementation notes:**
 
