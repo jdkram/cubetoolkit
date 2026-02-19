@@ -333,6 +333,48 @@ In development (`docker-compose.yml`), only the web app runs. In production (`do
 
 ---
 
+## Troubleshooting
+
+### "Duplicate column name" / migration crash on startup
+
+**Symptom:** The `toolkit` container starts, runs `manage.py migrate`, and immediately crashes with an error like:
+
+```text
+django.db.utils.OperationalError: (1060, "Duplicate column name 'user_id'")
+  Applying members.0009_volunteer_user...
+```
+
+The container then restarts and crashes again in a loop.
+
+**Cause:** The MariaDB volume contains a stale `django_migrations` table from a previous development session — possibly one where a migration was renamed or replaced. Django sees the migration as unapplied (no record in `django_migrations`) and tries to run it, but the column or table already exists in the database from the old run.
+
+**Fix:** Wipe the database volume and start fresh. In a dev environment this is safe — just re-run the seed command afterwards:
+
+```bash
+# Stop containers and delete volumes (wipes the database)
+docker compose down --volumes
+
+# Rebuild and start — migrations run clean from scratch
+docker compose up --build
+
+# Once running, recreate users and seed data
+docker compose exec toolkit /venv/bin/python3 manage.py createsuperuser
+docker compose exec toolkit /venv/bin/python3 manage.py seed_dev_data
+```
+
+> **Note:** `createsuperuser` requires an interactive terminal; run it in a real shell,
+> not piped. Alternatively, use the Django shell:
+>
+> ```bash
+> docker compose exec toolkit /venv/bin/python3 manage.py shell -c "
+> from django.contrib.auth.models import User
+> u, _ = User.objects.get_or_create(username='admin')
+> u.set_password('admin'); u.is_staff = True; u.is_superuser = True; u.save()
+> "
+> ```
+
+---
+
 ## Next Steps
 
 - Browse the diary models: [toolkit/diary/models.py](toolkit/diary/models.py)
