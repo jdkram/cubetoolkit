@@ -22,6 +22,10 @@ DATABASES = {
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "insecure-dev-secret-key-change-in-production")
 
+# Print emails to the container logs instead of attempting SMTP delivery.
+# Change to smtp.EmailBackend and set EMAIL_HOST/PORT/etc. in production.
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
 # Log to console only inside the container
 del LOGGING["handlers"]["file"]
 LOGGING["loggers"]["toolkit"]["handlers"] = ["console"]

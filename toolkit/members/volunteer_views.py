@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 
+from django.contrib.auth.models import User
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
@@ -8,6 +9,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.contrib.auth.decorators import permission_required
 from django.contrib import messages
+from django.utils.text import slugify
 from django.views.decorators.http import require_POST, require_safe
 from django.db.models import Exists, F, OuterRef, Prefetch
 from django.utils import timezone
@@ -233,24 +235,26 @@ def activate_volunteer(request, set_active=True):
         messages.SUCCESS,
         f"{'Unretired' if set_active else 'Retired'} volunteer {vol.member.name}",
     )
-    # email admin with the news
-    admin_body = (
-        f"I'm delighted to inform you that {request.user.last_name} has updated the "
-        f"status of volunteer\n\n"
-        f"{vol.member.name} <{vol.member.email}>\n\n"
-        f"to {'unretired' if set_active else 'retired'}.\n\n"
-        f"Please amend the volunteers mailing list "
-        f"at your earliest convenience."
-    )
-    send_mail(
-        (
-            f"[{settings.VENUE['longname']}] Change in volunteer status {vol.member.name}"
-        ),
-        admin_body,
-        settings.VENUE["mailout_from_address"],
-        settings.VENUE["vols_admin_address"],
-        fail_silently=False,
-    )
+    # email admin with the news (only if vols_admin_address is configured)
+    vols_admin = settings.VENUE.get("vols_admin_address") or []
+    if vols_admin:
+        admin_body = (
+            f"I'm delighted to inform you that {request.user.last_name} has updated the "
+            f"status of volunteer\n\n"
+            f"{vol.member.name} <{vol.member.email}>\n\n"
+            f"to {'unretired' if set_active else 'retired'}.\n\n"
+            f"Please amend the volunteers mailing list "
+            f"at your earliest convenience."
+        )
+        send_mail(
+            (
+                f"[{settings.VENUE['longname']}] Change in volunteer status {vol.member.name}"
+            ),
+            admin_body,
+            settings.VENUE["mailout_from_address"],
+            vols_admin,
+            fail_silently=False,
+        )
 
     return HttpResponseRedirect(reverse("view-volunteer-list"))
 
@@ -289,6 +293,26 @@ def edit_volunteer(request, volunteer_id, create_new=False):
             member.gdpr_opt_in = timezone.now()
             member.save()
             volunteer.member = member
+
+            if create_new:
+                # Auto-create an inactive Django user account for the new
+                # volunteer. Derive a unique username from the member's name.
+                base = slugify(member.name)[:40] or "volunteer"
+                username = base
+                n = 1
+                while User.objects.filter(username=username).exists():
+                    username = f"{base}-{n}"
+                    n += 1
+                user = User(
+                    username=username,
+                    email=member.email or "",
+                    first_name=member.name.split()[0] if member.name else "",
+                    last_name=" ".join(member.name.split()[1:]) if member.name else "",
+                )
+                user.set_unusable_password()
+                user.save()
+                volunteer.user = user
+
             vol_form.save()
 
             logger.info(
@@ -302,24 +326,26 @@ def edit_volunteer(request, volunteer_id, create_new=False):
             )
 
             if create_new:
-                # Email admin
-                admin_body = (
-                    f"I'm delighted to inform you that {request.user.last_name} has just added "
-                    f"new volunteer\n\n"
-                    f"{volunteer.member.name} <{volunteer.member.email}>\n\n"
-                    f"to the toolkit.\n\n"
-                    f"Please add them to the volunteers mailing list "
-                    f"at your earliest convenience."
-                )
-                send_mail(
-                    (
-                        f"[{settings.VENUE['longname']}] New volunteer {volunteer.member.name}"
-                    ),
-                    admin_body,
-                    settings.VENUE["mailout_from_address"],
-                    settings.VENUE["vols_admin_address"],
-                    fail_silently=False,
-                )
+                # Email admin (only if vols_admin_address is configured)
+                vols_admin = settings.VENUE.get("vols_admin_address") or []
+                if vols_admin:
+                    admin_body = (
+                        f"I'm delighted to inform you that {request.user.last_name} has just added "
+                        f"new volunteer\n\n"
+                        f"{volunteer.member.name} <{volunteer.member.email}>\n\n"
+                        f"to the toolkit.\n\n"
+                        f"Please add them to the volunteers mailing list "
+                        f"at your earliest convenience."
+                    )
+                    send_mail(
+                        (
+                            f"[{settings.VENUE['longname']}] New volunteer {volunteer.member.name}"
+                        ),
+                        admin_body,
+                        settings.VENUE["mailout_from_address"],
+                        vols_admin,
+                        fail_silently=False,
+                    )
             # Go to the volunteer list view:
             return HttpResponseRedirect(reverse("view-volunteer-summary"))
     else:

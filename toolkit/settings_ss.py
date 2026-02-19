@@ -37,6 +37,9 @@ VENUE = {
     "mailout_from_address": "info@starandshadow.org.uk",
     # email address shown when volunteer removes themselves from rota
     "vols_email": "volunteers@lists.starandshadow.org.uk",
+    # email address(es) notified when volunteers are added or deactivated
+    # (leave empty to disable these notifications)
+    "vols_admin_address": [],
     "show_user_management": True,
 }
 
