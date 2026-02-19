@@ -1,60 +1,48 @@
 Cube Toolkit
 ============
 
-Introduction
-------------
+Django application powering [Cube Microplex](https://www.cubecinema.com/) (Bristol)
+and [Star and Shadow Cinema](https://www.starandshadow.org.uk/) (Newcastle).
+Handles event scheduling, volunteer rotas, member database, and a CMS.
 
-This is the code that powers parts of the Cube Microplex, a volunteer run
-thing in Bristol, UK: http://www.cubecinema.com/
+Quick start
+-----------
 
-It's a Django (i.e. Python) application that (currently) provides an event
-diary, membership database, and CMS (using Wagtail).
+```bash
+docker compose up --build
+```
 
-It was initially written to closely emulate a set of Perl CGI scripts, which
-is why the UI is the way it is.
+See [docs/ONBOARDING.md](docs/ONBOARDING.md) for full setup instructions.
 
-Deployment for production
--------------------------
+Documentation
+-------------
 
-At present the application is deployed directly onto a real live server that
-you could drop on your foot if you were so minded. On that server it runs
-from a container managed by docker-compose. The full process for deployment
-is mildly complicated, and there are detailed instructions on the Cube wiki
-about how to do it.
-
-
-Running for development
------------------------
-
-There are two ways to run locally; under docker, and directly with your local
-python.
-
-A docker-compose.yml file is provided that should work to run the toolkit and
-required services. Note the configuration it provides is not very secure.
-
-For advice on running under local python see the cube wiki or ask me.
+| File | What it covers |
+| --- | --- |
+| [docs/ONBOARDING.md](docs/ONBOARDING.md) | Developer setup: Docker, project structure, running tests |
+| [docs/SPEC.md](docs/SPEC.md) | Full system specification: what it does, data model, workflows, design decisions |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Development roadmap: bugs, feature priorities, sizing |
+| [docs/TASKS.md](docs/TASKS.md) | Detailed task descriptions for open bugs and features |
+| [docs/ARCHIVE.md](docs/ARCHIVE.md) | Completed tasks |
+| [docs/BRANCH_NOTES.md](docs/BRANCH_NOTES.md) | Differences between the `master` and `s+s` branches |
+| [docs/SEED_DATA.md](docs/SEED_DATA.md) | Reference data for `manage.py seed_dev_data` |
 
 License
 -------
-The code is copyright Ben Motz and other contributors. It's currently,
-slightly arbitrarily, distributed under the GNU Affero license (see LICENSE).
-If you want to use this code under some other FLOSS license then do ask, as
-it's unlikely to be a problem.
 
-This specifically excludes the following files:
+Copyright Ben Motz and other contributors. Distributed under the GNU Affero license (see LICENSE).
 
-*  /toolkit/members/static/members/cube_microplex_logo.gif
-*  /toolkit/members/static/members/default_mugshot.gif
-*  /toolkit/diary/static/diary/diary_edit_list_header.gif
-*  toolkit/content/static/content/logo.gif
+Excludes:
 
-These images are copyright Cube Cinema Ltd, which has not given me permission
-to distribute them, and certainly hasn't given you permission.
+- `/toolkit/members/static/members/cube_microplex_logo.gif`
+- `/toolkit/members/static/members/default_mugshot.gif`
+- `/toolkit/diary/static/diary/diary_edit_list_header.gif`
+- `toolkit/content/static/content/logo.gif`
 
-This repository also includes code from other authors that may be under
-other licenses, as indicated. Specifically the contents of the following
-directories:
+(These images are copyright Cube Cinema Ltd.)
 
-* toolkit/static_common/js/lib/
-* toolkit/static_common/css/lib/
-* toolkit/diary/static/diary/js/lib/
+Third-party code under their own licenses:
+
+- `toolkit/static_common/js/lib/`
+- `toolkit/static_common/css/lib/`
+- `toolkit/diary/static/diary/js/lib/`
