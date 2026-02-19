@@ -20,7 +20,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from PIL import Image, ImageDraw
 
-from toolkit.diary.models import Event, EventTag, MediaItem, Role, RotaEntry, Room, Showing
+from toolkit.diary.models import Event, EventTag, EventTemplate, MediaItem, Role, RotaEntry, Room, Showing
 from toolkit.members.models import Member, Volunteer
 
 try:
@@ -318,6 +318,127 @@ EVENTS = [
     },
 ]
 
+# Event templates — pre-defined event types selectable when creating a new event.
+# (The "add event" UI form requires an EventTemplate to be chosen.)
+# Roles and tags reference names defined in ROLES and TAGS above.
+EVENT_TEMPLATES = [
+    {
+        "name": "Film (DCP)",
+        "pricing": "£7/£5",
+        "roles": [
+            "Keyholder",
+            "Programmer",
+            "Projectionist - DCP",
+            "Box Office - Admission Tickets",
+            "Bar Staff - Shift 1",
+            "Usher - Fire Trained",
+        ],
+        "tags": ["film"],
+    },
+    {
+        "name": "Film (MP4/DVD)",
+        "pricing": "£7/£5",
+        "roles": [
+            "Keyholder",
+            "Programmer",
+            "Projectionist - MP4",
+            "Box Office - Admission Tickets",
+            "Bar Staff - Shift 1",
+            "Usher - Fire Trained",
+        ],
+        "tags": ["film"],
+    },
+    {
+        "name": "Family Film Club",
+        "pricing": "Free",
+        "roles": [
+            "Keyholder",
+            "Projectionist - MP4",
+            "Box Office - Admission Tickets",
+            "Bar Staff - Shift 1",
+        ],
+        "tags": ["film", "free"],
+    },
+    {
+        "name": "Gig",
+        "pricing": "",
+        "roles": [
+            "Keyholder",
+            "Sound Technician level 1",
+            "Sound Technician level 2",
+            "Bar Staff - Shift 1",
+            "Bar Staff - Shift 2",
+            "Box Office - Admission Tickets",
+            "Usher - Fire Trained",
+        ],
+        "tags": ["music", "performance"],
+    },
+    {
+        "name": "Volunteer Induction",
+        "pricing": "Free",
+        "roles": [
+            "Inductor - 1 (trained)",
+            "Inductor - 2 (shadowing)",
+            "Trainee (inducted)",
+        ],
+        "tags": ["induction", "volunteer"],
+    },
+    {
+        "name": "Meeting",
+        "pricing": "Free",
+        "roles": ["Facilitator", "Minute taker"],
+        "tags": ["meeting"],
+    },
+    {
+        "name": "Workshop",
+        "pricing": "",
+        "roles": ["Keyholder", "Facilitator", "Facilitator Shadow"],
+        "tags": ["workshop"],
+    },
+    {
+        "name": "Cleaning Session",
+        "pricing": "Free",
+        "roles": ["Keyholder", "Cleaner", "Extra Hands (no training needed)"],
+        "tags": ["volunteer"],
+    },
+    {
+        "name": "Keyholder Training",
+        "pricing": "Free",
+        "roles": ["Keyholder", "Extra Hands (no training needed)"],
+        "tags": ["training-for-volunteers"],
+    },
+    {
+        "name": "Community Kitchen",
+        "pricing": "Free",
+        "roles": ["Keyholder", "Cafe (Level 1)", "Extra Hands (no training needed)"],
+        "tags": ["cafe", "workshop"],
+    },
+    {
+        "name": "Party",
+        "pricing": "",
+        "roles": ["Keyholder", "Bar Staff - Shift 1", "Bar Shadow"],
+        "tags": ["volunteer", "party"],
+    },
+    {
+        "name": "Exhibition",
+        "pricing": "",
+        "roles": ["Keyholder", "Extra Hands (no training needed)"],
+        "tags": ["exhibition"],
+    },
+    {
+        "name": "Outside Hire",
+        "pricing": "",
+        "roles": ["Keyholder"],
+        "tags": ["outside-hire"],
+    },
+    {
+        "name": "Training",
+        "pricing": "Free",
+        "roles": ["Keyholder", "Trainee (inducted)"],
+        "tags": ["training-for-volunteers"],
+    },
+]
+
 # Safer Spaces page content (based on the live S&S website).
 # Used for CMS seed data.
 SAFER_SPACES_BODY = """
@@ -384,6 +505,7 @@ class Command(BaseCommand):
             RotaEntry.objects.all().delete()
             Showing.objects.all().delete()
             Event.objects.all().delete()
+            EventTemplate.objects.all().delete()
             EventTag.objects.filter(read_only=False).delete()
             # Delete seed-generated media items (and their files)
             for mi in MediaItem.objects.filter(credit="seed_dev_data"):
@@ -401,6 +523,7 @@ class Command(BaseCommand):
         counts = {
             "roles": 0,
             "tags": 0,
+            "event_templates": 0,
             "volunteers": 0,
             "events": 0,
             "showings": 0,
@@ -425,6 +548,25 @@ class Command(BaseCommand):
                 tag.clean()  # generates slug
                 tag.save()
                 counts["tags"] += 1
+
+        # Event templates
+        for tmpl_data in EVENT_TEMPLATES:
+            tmpl, created = EventTemplate.objects.get_or_create(
+                name=tmpl_data["name"],
+                defaults={"pricing": tmpl_data.get("pricing", "")},
+            )
+            if created:
+                counts["event_templates"] += 1
+                for role_name in tmpl_data.get("roles", []):
+                    try:
+                        tmpl.roles.add(Role.objects.get(name=role_name))
+                    except Role.DoesNotExist:
+                        pass
+                for tag_name in tmpl_data.get("tags", []):
+                    try:
+                        tmpl.tags.add(EventTag.objects.get(name=tag_name))
+                    except EventTag.DoesNotExist:
+                        pass
 
         # Members and Volunteers
         volunteer_objects = {}
@@ -563,14 +705,15 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(
                 f"\nSeed data created:\n"
-                f"  Roles:        {counts['roles']} new\n"
-                f"  Tags:         {counts['tags']} new\n"
-                f"  Volunteers:   {counts['volunteers']} new\n"
-                f"  Events:       {counts['events']} new\n"
-                f"  Showings:     {counts['showings']} new\n"
-                f"  Rota entries: {counts['rota_entries']} new\n"
-                f"  Images:       {counts['images']} new\n"
-                f"  CMS pages:    {counts['cms_pages']} new"
+                f"  Roles:           {counts['roles']} new\n"
+                f"  Tags:            {counts['tags']} new\n"
+                f"  Event templates: {counts['event_templates']} new\n"
+                f"  Volunteers:      {counts['volunteers']} new\n"
+                f"  Events:          {counts['events']} new\n"
+                f"  Showings:        {counts['showings']} new\n"
+                f"  Rota entries:    {counts['rota_entries']} new\n"
+                f"  Images:          {counts['images']} new\n"
+                f"  CMS pages:       {counts['cms_pages']} new"
             )
         )
 
