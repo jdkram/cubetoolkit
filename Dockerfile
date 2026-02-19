@@ -17,6 +17,7 @@ FROM base AS build
 RUN DEBIAN_FRONTEND=noninteractive apt-get update \
   && apt-get install --yes --no-install-recommends \
   python3-pip \
+  pkg-config \
   build-essential \
   libmariadb-dev \
   libpython3-dev
