@@ -121,3 +121,19 @@ a {
     border-spacing: 0px;
     padding-top: 30px; }
 
+
+/* Volunteer-only badge on internal events (shown to logged-in users only) */
+.volunteer-badge {
+    display: inline-block;
+    font-size: 0.75em;
+    padding: 0.1em 0.4em;
+    background: #ffe0b2;
+    border: 1px solid #f09020;
+    border-radius: 3px;
+    margin-bottom: 0.3em;
+}
+
+.showing-internal {
+    border-left: 3px solid #f09020;
+    padding-left: 0.4em;
+}

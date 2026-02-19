@@ -2,3 +2,9 @@
     color: red;
     list-style: none url("../../img/message_error.png") inside;
 }
+
+/* Raise jQuery UI datepicker/timepicker above Bootstrap navbar (z-index: 1030) */
+.ui-datepicker,
+.ui-timepicker-div {
+    z-index: 1040 !important;
+}

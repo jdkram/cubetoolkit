@@ -32,23 +32,34 @@ def _view_diary(request, startdate, enddate, tag=None, extra_title=None):
         else []
     )
 
-    # Build query. The select_related() and prefetch_related on the end
-    # encourages it to get the associated showing/event data, to reduce the
-    # number of SQL queries
-    showings = (
-        Showing.objects.public()
-        .start_in_range(startdate, enddate)
-        .order_by("start")
-        .select_related()
-        .prefetch_related("event__media")
-        .prefetch_related("event__tags")
-    )
+    # Logged-in volunteers see all confirmed showings, including private/hidden
+    # ones. Public visitors see only the public subset.
+    is_volunteer = request.user.is_authenticated
+    if is_volunteer:
+        showings_qs = (
+            Showing.objects.filter(confirmed=True)
+            .start_in_range(startdate, enddate)
+            .order_by("start")
+            .select_related()
+            .prefetch_related("event__media")
+            .prefetch_related("event__tags")
+        )
+    else:
+        showings_qs = (
+            Showing.objects.public()
+            .start_in_range(startdate, enddate)
+            .order_by("start")
+            .select_related()
+            .prefetch_related("event__media")
+            .prefetch_related("event__tags")
+        )
+
     if tag:
-        showings = showings.filter(event__tags__slug=tag)
+        showings_qs = showings_qs.filter(event__tags__slug=tag)
 
     # Build a list of events for that list of showings:
     events = OrderedDict()
-    for showing in showings:
+    for showing in showings_qs:
         events.setdefault(showing.event, list()).append(showing)
 
     context = {
@@ -60,7 +71,7 @@ def _view_diary(request, startdate, enddate, tag=None, extra_title=None):
         # Set page title:
         "extra_title": extra_title,
         # Set of Showing objects for date range
-        "showings": showings,
+        "showings": showings_qs,
         # Ordered dict mapping event -> list of showings:
         "events": events,
         # This is prepended to filepaths from the MediaPaths table to use
@@ -69,6 +80,8 @@ def _view_diary(request, startdate, enddate, tag=None, extra_title=None):
         "printed_programmes": PrintedProgramme.objects.month_in_range(
             startdate, enddate
         ),
+        # True when user is logged in — template uses this to show volunteer badges
+        "is_volunteer": is_volunteer,
     }
 
     return render(request, "view_showing_index.html", context)
