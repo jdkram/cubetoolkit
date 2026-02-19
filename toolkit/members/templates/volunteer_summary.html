@@ -26,6 +26,9 @@
         font-size: 0.75em;
         opacity: 0.5;
     }
+    #volunteer-table td.check-col {
+        text-align: center;
+    }
 </style>
 {% endblock %}
 
@@ -49,12 +52,28 @@ Active {{ VENUE.name }} volunteers: {{ active_count }}</p>
         <th data-sortable>
             Name <span class="sort-ind" aria-hidden="true"></span>
         </th>
+        {% if VENUE.show_user_management %}
+            <th data-sortable>
+                User name <span class="sort-ind" aria-hidden="true"></span>
+            </th>
+            <th>
+                <abbr title="Administrator — has complete rights to see and do everything">Panopticon</abbr>
+            </th>
+            <th>
+                <abbr title="Can edit the diary but not access details of volunteers and members">Programmer</abbr>
+            </th>
+        {% endif %}
         <th>
             Email
         </th>
         <th data-sortable>
             Inducted <span class="sort-ind" aria-hidden="true"></span>
         </th>
+        {% if VENUE.show_user_management %}
+            <th data-sortable>
+                Last logged in <span class="sort-ind" aria-hidden="true"></span>
+            </th>
+        {% endif %}
       </tr>
     </thead>
 
@@ -65,6 +84,17 @@ Active {{ VENUE.name }} volunteers: {{ active_count }}</p>
                 <th scope="row" data-value="{{ member.name }}">
                     <a href="{% url "edit-volunteer" volunteer.pk %}">{{ member.name }}</a>
                 </th>
+                {% if VENUE.show_user_management %}
+                    <td data-value="{{ volunteer.user.username }}">
+                        {{ volunteer.user.username }}
+                    </td>
+                    <td class="check-col" data-value="{% if volunteer.user.is_superuser %}1{% else %}0{% endif %}">
+                        {% if volunteer.user.is_superuser %}&#10003;{% endif %}
+                    </td>
+                    <td class="check-col" data-value="{% if volunteer.is_programmer %}1{% else %}0{% endif %}">
+                        {% if volunteer.is_programmer %}&#10003;{% endif %}
+                    </td>
+                {% endif %}
                 <td>
                     {{ member.email|urlize|default:"<em>Request email address</em>" }}
                 </td>
@@ -75,6 +105,11 @@ Active {{ VENUE.name }} volunteers: {{ active_count }}</p>
                         {{ volunteer.created_at|date:"d/m/Y" }}
                     {% endif %}
                 </td>
+                {% if VENUE.show_user_management %}
+                    <td data-value="{{ volunteer.user.last_login|date:"YmdHis"|default:"0" }}">
+                        {{ volunteer.user.last_login|date:"d/m/Y H:i"|default:"Never" }}
+                    </td>
+                {% endif %}
             </tr>
         {% endwith %}
     {% endfor %}
