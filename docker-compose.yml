@@ -1,5 +1,4 @@
 # This compose file is for development and test, not for production deployment!
-version: "3.7"
 networks:
   toolkit_dev:
     driver: bridge
@@ -20,7 +19,6 @@ services:
       DB_PASSWORD: "${DB_PASSWORD:-devserver_db_password}"
       DB_HOST: "mariadb"
       DB_PORT: "3306"
-      REDIS_URL: "redis://redis:6379/0"
       SECRET_KEY: "${DJANGO_SECRET_KEY:-really_bad_django_secret_key}"
       DJANGO_SETTINGS_MODULE: "toolkit.docker_settings_ss"
     ports:
