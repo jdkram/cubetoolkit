@@ -6,6 +6,12 @@ class IndexLink(models.Model):
 
     text = models.CharField(max_length=1024, blank=True, null=False)
     link = models.URLField(max_length=1024, blank=False, null=False)
+    description = models.TextField(
+        blank=True,
+        default="",
+        help_text="Optional plain-text note shown below the link (e.g. login credentials, instructions). "
+        "Visible only to logged-in volunteers.",
+    )
     category = models.ForeignKey(
         "IndexCategory",
         verbose_name="Link category",

@@ -98,7 +98,7 @@
 <li><a href="{{ link.link }}">{% firstof link.text link.link %}</a> <span class="index-edit">
 [<a href="{% url "update-index-link" pk=link.pk %}">e</a>]
 [<a href="{% url "delete-index-link" pk=link.pk %}">x</a>]
-</span></li>
+</span>{% if link.description %}<br><small style="white-space:pre-wrap; color:#555;">{{ link.description }}</small>{% endif %}</li>
 {% endfor %}
 </ul>
 <hr>

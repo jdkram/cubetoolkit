@@ -15,7 +15,7 @@ urlpatterns = [
         write_decorator(
             generic_edit.CreateView.as_view(
                 model=IndexLink,
-                fields=("text", "link", "category"),
+                fields=("text", "link", "description", "category"),
                 template_name="index_generic_form.html",
                 # Need to use 'lazy', as 'reverse' won't work until urlpatterns
                 # (this data structure) has been defined.
@@ -30,7 +30,7 @@ urlpatterns = [
             generic_edit.UpdateView.as_view(
                 model=IndexLink,
                 template_name="index_generic_form.html",
-                fields=("text", "link", "category"),
+                fields=("text", "link", "description", "category"),
                 success_url=functional.lazy(reverse, str)("toolkit-index"),
             )
         ),
