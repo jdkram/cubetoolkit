@@ -1,12 +1,52 @@
-*.pyc
+# --- Python bytecode ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Logs and runtime files ---
 *.log
-venv
-venv26
-media
+logs/
+coverage.xml
+.coverage
+
+# --- Virtual environments ---
+venv/
+venv26/
+.venv/
+.env
+.envrc
+
+# --- Django / web app ---
+media/
+static/
+staticfiles/
 site_transfer.tgz
 toolkit/settings.py
-./static
-.tox
+
+# --- Build, packaging, distributions ---
 tk-snapshot-*.tgz
-.vscode
+dist/
+build/
+*.egg-info/
+
+# --- Test / CI ---
+.tox/
+
+# --- Editors / IDEs ---
+.vscode/
+.idea/
+
+# --- macOS ---
 .DS_Store
+
+# --- Sample data / local dumps ---
+sample_html_from_current_site/
+*.sqlite3
+
+# --- Misc ---
+*.log.*
+
+# --- Local planning / PDF export tools ---
+SPEC.pdf
+make_pdf.py
+Film*.txt

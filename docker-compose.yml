@@ -22,6 +22,7 @@ services:
       DB_PORT: "3306"
       REDIS_URL: "redis://redis:6379/0"
       SECRET_KEY: "${DJANGO_SECRET_KEY:-really_bad_django_secret_key}"
+      DJANGO_SETTINGS_MODULE: "toolkit.docker_settings_ss"
     ports:
       - target: "8000"
         published: "8000"
