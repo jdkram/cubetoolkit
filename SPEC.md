@@ -1272,38 +1272,27 @@ approach) while leaving the actual agreement as a human interaction.
 
 **Recommendation going forward:** Store credentials in a password manager (e.g. Bitwarden, accessible to relevant collectives) and use the description field only for non-secret contextual notes. The description field is still visible to all logged-in volunteers — it is not a secrets store.
 
-### 8.14 Volunteer table is slow to sort and slow to add new volunteers
+### 8.14 Volunteer table is slow to sort and slow to add new volunteers ✅ sorting resolved
 
 **Symptom:** The volunteer summary table (`/members/volunteers/`) becomes
 noticeably slow as the volunteer list grows. Two specific pain points:
 
-1. **Re-sorting the table triggers a full server round-trip.** Clicking
-   a sort header sends a GET request with `?order=name` or `?order=date`,
-   which re-queries the database and re-renders the entire page. On a large
-   volunteer list this is a perceptible delay for an operation that should
-   be instantaneous.
+1. **Re-sorting the table triggers a full server round-trip.** ✅ Fixed: the
+   `volunteer_summary.html` template now uses vanilla JS click handlers on the
+   Name and Inducted column headers to sort the already-loaded table in-place.
+   No server request is made. Clicking the same header toggles asc/desc;
+   a ▲/▼ indicator shows current sort direction.
 
 2. **"Add new volunteer" is slow.** The flow involves a server POST, a
    redirect, and a full page reload of the volunteer list — meaning the
    volunteer list DB query runs again in full each time a volunteer is added.
    This compounds if admins are bulk-entering volunteers during an induction.
 
-**Root cause:** No client-side interactivity. Sorting is handled server-side
-in `view_volunteer_summary` ([toolkit/members/volunteer_views.py](toolkit/members/volunteer_views.py):113)
-via a GET parameter; there is no in-browser sort. The add-volunteer form
-follows the standard Django POST-redirect-GET pattern with a full page reload.
-
-**Fix (sorting):** Replace the server-side sort with a client-side table sort.
-A small vanilla JS implementation (or a lightweight library such as
-[Tablesort](https://github.com/tristen/tablesort), ~1 KB) would make column
-headers sort the already-loaded table instantly with no server request.
-Estimated effort: 🟢 XS (2–4h).
-
-**Fix (add volunteer):** Either (a) submit the add-volunteer form via `fetch()`
-and append the new row to the existing table in-place, or (b) accept the
-current POST-redirect-GET pattern but ensure the redirect lands on a paginated
-or otherwise bounded query rather than loading every active volunteer.
-Estimated effort: 🔵 S (4–8h) for the fetch approach.
+**Remaining fix (add volunteer):** Either (a) submit the add-volunteer form
+via `fetch()` and append the new row to the existing table in-place, or (b)
+accept the current POST-redirect-GET pattern but ensure the redirect lands on
+a paginated or otherwise bounded query rather than loading every active
+volunteer. Estimated effort: 🔵 S (4–8h) for the fetch approach.
 
 ### 8.15 Frontend library debt — legacy and EOL dependencies
 
@@ -1315,7 +1304,7 @@ critically so. Audited February 2026.
 | Library | Version in use | Issue |
 | --- | --- | --- |
 | CKEditor | 4.7.3 | **EOL December 2023.** Multiple XSS CVEs will not be patched. Used via `toolkit/diary/templates/widgets/htmltextarea.html`. Migrate to a maintained editor (Draftail if on Wagtail pages; TipTap or Quill otherwise). Effort: 🟡 M. |
-| jQuery (public site) | 2.1.3 via Google CDN | **EOL 2016.** Has XSS vulnerabilities fixed in jQuery 3.x. Loaded in `templates/base_public.html`. Replace with the 3.5.1 file already vendored for the admin, or update to 3.7+. Effort: 🟢 XS. |
+| jQuery (public site) | 2.1.3 via Google CDN | ✅ resolved. Replaced CDN reference with locally vendored `jquery.min.js` (3.5.1) in both `templates/base_public.html` and `star_and_shadow_templates/base_public.html`. No external dependency, no EOL version. |
 | Google Fonts (all templates) | HTTP URL | ✅ resolved. Fixed `http://` → `https://` in `base_admin.html` (live request) and removed dead IE8 conditional comment blocks containing `http://` from all three base templates. |
 
 #### 🟠 High — Abandoned or no longer receiving security patches
@@ -1332,9 +1321,9 @@ critically so. Audited February 2026.
 | --- | --- | --- |
 | FullCalendar | 3.5.1 (2017) | Superseded by v6 (no jQuery, TypeScript, ESM). Improving the calendar edit view would warrant this upgrade; it is a large migration. Effort: 🔴 XL. |
 | Moment.js | bundled in FC | Frozen (maintenance-only). Automatically resolved if FullCalendar is upgraded to v6. |
-| html2text | 3.200.3 (2015) | 9-year-old pin. Current release is 2024.x. Unpin, test mailout output, update. Effort: 🟢 XS. |
+| html2text | 3.200.3 (2015) | ✅ resolved. Unpinned in `requirements/base.txt`; pip will now resolve the current release. |
 | django-crispy-forms | <1.13 | EOL; v2.x separates template packs. Migrate to `crispy-forms>=2.0` + `crispy-bootstrap5`. Entangled with Bootstrap 5 upgrade above. |
-| mysqlclient | 2.1.0 | Current is 2.2.x, includes MariaDB compatibility fixes relevant to Bug B. Effort: 🟢 XS. |
+| mysqlclient | 2.1.0 | ✅ resolved. Updated constraint to `>=2.2.0,<3` in `requirements/docker.txt`. |
 
 #### 🟢 Low — Dead code to delete
 
@@ -2669,7 +2658,7 @@ erDiagram
 
 ---
 
-### 9.16 Live word counter for copy summary 🟢 XS (2–4h)
+### 9.16 Live word counter for copy summary ✅ implemented
 
 **Background:** The Film Programming Suggestions form requires a 25-word summary or pitch for each screening proposal. This wording is used unchanged for the print programme and submitted to *The Crack* and *NARC* magazines (see section 3.5). The `copy_summary` field on the event creation form should help programmers hit this target.
 
