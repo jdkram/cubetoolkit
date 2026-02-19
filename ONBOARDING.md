@@ -41,15 +41,31 @@ Visit [http://localhost:8000](http://localhost:8000)
 
 You'll see the diary (event list), which is public. The internal toolkit is at [http://localhost:8000/toolkit/](http://localhost:8000/toolkit/) and requires a login.
 
-### 3. Create an admin user
+### 3. Create an admin user and seed sample data
 
-In a separate terminal:
+Run these two commands in a separate terminal:
 
 ```bash
-docker compose exec toolkit /venv/bin/python manage.py createsuperuser
+# Create the default dev admin account (username: admin, password: admin)
+docker compose exec toolkit /venv/bin/python3 manage.py shell -c "
+from django.contrib.auth.models import User
+User.objects.create_superuser(username='admin', password='admin', email='admin@example.test')
+"
+
+# Populate the database with sample events, volunteers, and roles
+docker compose exec toolkit /venv/bin/python3 manage.py seed_dev_data
 ```
 
-Follow the prompts. You can then log in at [http://localhost:8000/auth/login](http://localhost:8000/auth/login).
+> **Default dev credentials:** `admin` / `admin`
+> These are intentionally weak — they are only for local development. Change them before exposing the app to a network.
+
+Log in at [http://localhost:8000/auth/login](http://localhost:8000/auth/login).
+
+To choose your own password instead, use `createsuperuser` — but note it requires an interactive terminal (`-it` flags):
+
+```bash
+docker compose exec -it toolkit /venv/bin/python3 manage.py createsuperuser
+```
 
 ### 4. Stop the services
 
@@ -357,21 +373,13 @@ docker compose down --volumes
 # Rebuild and start — migrations run clean from scratch
 docker compose up --build
 
-# Once running, recreate users and seed data
-docker compose exec toolkit /venv/bin/python3 manage.py createsuperuser
+# Once running, recreate users and seed data (see step 3 above for details)
+docker compose exec toolkit /venv/bin/python3 manage.py shell -c "
+from django.contrib.auth.models import User
+User.objects.create_superuser(username='admin', password='admin', email='admin@example.test')
+"
 docker compose exec toolkit /venv/bin/python3 manage.py seed_dev_data
 ```
-
-> **Note:** `createsuperuser` requires an interactive terminal; run it in a real shell,
-> not piped. Alternatively, use the Django shell:
->
-> ```bash
-> docker compose exec toolkit /venv/bin/python3 manage.py shell -c "
-> from django.contrib.auth.models import User
-> u, _ = User.objects.get_or_create(username='admin')
-> u.set_password('admin'); u.is_staff = True; u.is_superuser = True; u.save()
-> "
-> ```
 
 ---
 
