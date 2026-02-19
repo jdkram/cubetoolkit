@@ -1305,6 +1305,58 @@ current POST-redirect-GET pattern but ensure the redirect lands on a paginated
 or otherwise bounded query rather than loading every active volunteer.
 Estimated effort: 🔵 S (4–8h) for the fetch approach.
 
+### 8.15 Frontend library debt — legacy and EOL dependencies
+
+Several vendored and CDN-referenced frontend libraries are outdated, some
+critically so. Audited February 2026.
+
+#### 🔴 Critical — CVEs / confirmed EOL
+
+| Library | Version in use | Issue |
+| --- | --- | --- |
+| CKEditor | 4.7.3 | **EOL December 2023.** Multiple XSS CVEs will not be patched. Used via `toolkit/diary/templates/widgets/htmltextarea.html`. Migrate to a maintained editor (Draftail if on Wagtail pages; TipTap or Quill otherwise). Effort: 🟡 M. |
+| jQuery (public site) | 2.1.3 via Google CDN | **EOL 2016.** Has XSS vulnerabilities fixed in jQuery 3.x. Loaded in `templates/base_public.html`. Replace with the 3.5.1 file already vendored for the admin, or update to 3.7+. Effort: 🟢 XS. |
+| Google Fonts (all templates) | HTTP URL | ✅ resolved. Fixed `http://` → `https://` in `base_admin.html` (live request) and removed dead IE8 conditional comment blocks containing `http://` from all three base templates. |
+
+#### 🟠 High — Abandoned or no longer receiving security patches
+
+| Library | Version in use | Issue |
+| --- | --- | --- |
+| jQuery UI | 1.11.0 (2014) | Security patches stopped. XSS CVEs in `datepicker` and `checkboxradio` widgets. Update to 1.13.3 (current LTS, drop-in). Long-term: replace datepicker with native `<input type="date">`. Effort to update: 🔵 S. |
+| Bootstrap | 4.6.2 | No longer maintained. BS5 breaks `data-toggle` → `data-bs-toggle`, `mr-auto` → `ms-auto`, `sr-only` → `visually-hidden`. Migration is entangled with django-crispy-forms (see below). Effort: 🟠 L. |
+| Chosen | 1.1.0 | GitHub-archived (no releases since 2019). Known accessibility defects. Replace with Select2 or native multi-select. Effort: 🔵 S. |
+
+#### 🟡 Medium — Outdated pins or frozen libraries
+
+| Library | Version in use | Issue |
+| --- | --- | --- |
+| FullCalendar | 3.5.1 (2017) | Superseded by v6 (no jQuery, TypeScript, ESM). Improving the calendar edit view would warrant this upgrade; it is a large migration. Effort: 🔴 XL. |
+| Moment.js | bundled in FC | Frozen (maintenance-only). Automatically resolved if FullCalendar is upgraded to v6. |
+| html2text | 3.200.3 (2015) | 9-year-old pin. Current release is 2024.x. Unpin, test mailout output, update. Effort: 🟢 XS. |
+| django-crispy-forms | <1.13 | EOL; v2.x separates template packs. Migrate to `crispy-forms>=2.0` + `crispy-bootstrap5`. Entangled with Bootstrap 5 upgrade above. |
+| mysqlclient | 2.1.0 | Current is 2.2.x, includes MariaDB compatibility fixes relevant to Bug B. Effort: 🟢 XS. |
+
+#### 🟢 Low — Dead code to delete
+
+- `respond.min.js` — IE8 media-query polyfill. IE8 is <0.01% of users. Delete the
+  file and its `<script>` tag in `base_public.html`.
+- IE8 conditional comments — `<!--[if lte IE 8]>` blocks in `base_public.html`
+  and `base_admin.html` load six redundant Google Fonts requests that no browser
+  will ever make. Delete them.
+- `wysihtml5.css` — WYSIHTML5 has been unmaintained since ~2014; verify it is not
+  referenced anywhere and delete it.
+
+#### Recommended order of attack
+
+1. HTTP → HTTPS on admin Google Fonts (5 minutes, zero risk)
+2. jQuery 2.1.3 → 3.7+ on public site (update CDN reference to local vendored file)
+3. Unpin `html2text` and `mysqlclient`; test; commit
+4. CKEditor 4 → maintained editor (security-critical)
+5. jQuery UI 1.11 → 1.13 (drop-in)
+6. Delete Respond.js and IE8 conditional comment blocks
+7. Bootstrap 4 → 5 + `crispy-forms` 2.x + Chosen → Select2 (batch together)
+8. FullCalendar 3 → 6 (large; do when calendar editing needs attention)
+
 ---
 
 ## 9. Proposed new features
