@@ -12,6 +12,24 @@ The current branch is **`master`** (Django 5.2 LTS, Wagtail 6.3, Python 3, no Ce
 
 ---
 
+## Standing rule: keep SPEC.md in sync with the code
+
+**After every code change, update SPEC.md to reflect what was done.**
+
+This applies to:
+
+- Bug fixes → update or add an entry in section 8 (current limitations / known gaps), marking it ✅ resolved
+- New features implemented → mark the relevant section 9.x entry as ✅ implemented and update the feature description to match what was actually built
+- New features proposed but not yet built → add a new section 9.x entry with the standard sizing label (🟢 XS / 🔵 S / 🟡 M / 🟠 L / 🔴 XL / ⛔ XXL)
+- Data model changes → update section 2 (data model) and the ER diagram text
+- New external system dependencies → add a row to section 4 (external integrations)
+- Workflow changes → update section 3 (key workflows)
+- Permission changes → update section 5 (permission model)
+
+Do not commit code changes without also committing the corresponding SPEC.md update in the same commit (or immediately following it). The goal is that SPEC.md always reflects the current state of the system, not a historical wish-list.
+
+---
+
 ## Current task: get the Star and Shadow site running on `master`
 
 The `s+s` branch was the Star and Shadow production branch but ran Django 2.2 (EOL). The decision was made to start fresh from `master` (which is far more modern) and port the S+S-specific functionality across, rather than attempt a Django upgrade on the old branch.
