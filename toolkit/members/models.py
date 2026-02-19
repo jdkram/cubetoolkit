@@ -7,6 +7,7 @@ from monthdelta import monthdelta
 
 import django.db  # Used for raw query for stats
 from django.conf import settings
+from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import Q
 from django.utils.timezone import now as timezone_now
@@ -193,6 +194,11 @@ class Member(models.Model):
 
 
 class Volunteer(models.Model):
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+    )
 
     member = models.OneToOneField(
         "Member", related_name="volunteer", on_delete=models.CASCADE
