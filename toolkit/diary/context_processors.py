@@ -4,7 +4,12 @@ from toolkit.diary.models import EventTag
 
 
 def diary_settings(request):
-    return {"MULTIROOM_ENABLED": settings.MULTIROOM_ENABLED}
+    return {
+        "MULTIROOM_ENABLED": settings.MULTIROOM_ENABLED,
+        "IMAGE_COPYRIGHT_GUIDANCE_URL": getattr(
+            settings, "IMAGE_COPYRIGHT_GUIDANCE_URL", None
+        ),
+    }
 
 
 def promoted_tags(request):

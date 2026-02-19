@@ -29,4 +29,9 @@
     <li><a href="{% pageurl top_level_child %}">{{ top_level_child.seo_title|default:top_level_child.title }}</a>
       {% endif %}
     {% endfor %}
+    {% if user.is_authenticated %}
+    <li><a href="{% url "toolkit-index" %}">Volunteer Toolkit</a></li>
+    {% else %}
+    <li><a href="{% url "login" %}">Volunteer Login</a></li>
+    {% endif %}
 </ul>
