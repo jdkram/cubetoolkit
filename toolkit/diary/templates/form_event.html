@@ -8,6 +8,17 @@ Event Details for {{ event.name }}
 <style>
     .asteriskField { display: none; }
     #remaining_chars { font-weight: bold; }
+    #word-counter {
+        font-size: 0.85em;
+        margin-top: 0.25rem;
+        padding: 0.15rem 0.4rem;
+        border-radius: 3px;
+        display: inline-block;
+    }
+    #word-counter.wc-composing { color: #6c757d; }
+    #word-counter.wc-close     { color: #856404; background: #fff3cd; }
+    #word-counter.wc-perfect   { color: #155724; background: #d4edda; font-weight: bold; }
+    #word-counter.wc-over      { color: #721c24; background: #f8d7da; }
 </style>
 {% endblock %}
 
@@ -25,6 +36,14 @@ $(document).ready(function() {
     copy_summary_label.html("Copy summary:<br>(<span id='remaining_chars'></span>)");
     count_span = $('#remaining_chars');
 
+    // Word counter element inserted below the textarea
+    copy_summary.after('<div id="word-counter" aria-live="polite"></div>');
+    var word_counter = $('#word-counter');
+
+    function count_words(text) {
+        return text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+    }
+
     function update_character_count() {
         var used = copy_summary.val().length;
         var remaining = COPY_LIMIT - used;
@@ -35,8 +54,31 @@ $(document).ready(function() {
         }
     }
 
-    copy_summary.bind('input propertychange', update_character_count);
+    function update_word_count() {
+        var words = count_words(copy_summary.val());
+        var cls, msg;
+        if (words < 20) {
+            cls = 'wc-composing';
+            msg = words + ' words';
+        } else if (words < 25) {
+            cls = 'wc-close';
+            msg = words + ' words — getting close to 25';
+        } else if (words === 25) {
+            cls = 'wc-perfect';
+            msg = '25 words — perfect for print programme and magazines';
+        } else {
+            cls = 'wc-over';
+            msg = words + ' words — over 25, print version will need shortening';
+        }
+        word_counter.attr('class', cls).text(msg);
+    }
+
+    copy_summary.bind('input propertychange', function() {
+        update_character_count();
+        update_word_count();
+    });
     update_character_count();
+    update_word_count();
 });
 </script>
 {% endblock %}
