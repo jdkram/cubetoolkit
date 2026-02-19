@@ -113,9 +113,16 @@ class MembersTestsMixin:
         )
         self.mem_8.save()
 
+        # Users for volunteers (minimal accounts, no permissions needed):
+        u_vol1 = auth_models.User.objects.create_user("vol1", "volon@cube.test", "testpass")
+        u_vol2 = auth_models.User.objects.create_user("vol2", "", "testpass")
+        u_vol3 = auth_models.User.objects.create_user("vol3", "volthree@foo.test", "testpass")
+        u_vol4 = auth_models.User.objects.create_user("vol4", "four4@foo.test", "testpass")
+
         # Volunteers:
         self.vol_1 = Volunteer(
             member=self.mem_4,
+            user=u_vol1,
             notes="Likes the $, the \u00a3 and the \u20ac",
             portrait=f"{settings.MEDIA_ROOT}/path/to/portrait",
         )
@@ -123,16 +130,16 @@ class MembersTestsMixin:
         self.vol_1.roles.set([r1, r3])
         self.vol_1.save()
 
-        self.vol_2 = Volunteer(member=self.mem_5)
+        self.vol_2 = Volunteer(member=self.mem_5, user=u_vol2)
         self.vol_2.save()
 
-        self.vol_3 = Volunteer(member=self.mem_6)
+        self.vol_3 = Volunteer(member=self.mem_6, user=u_vol3)
         self.vol_3.save()
         self.vol_3.roles.set([r3])
         self.vol_3.save()
 
         self.vol_4 = Volunteer(
-            member=self.mem_7, active=False, notes="Subliminal, superluminous"
+            member=self.mem_7, user=u_vol4, active=False, notes="Subliminal, superluminous"
         )
         self.vol_4.save()
         self.vol_4.roles.set([r3])
