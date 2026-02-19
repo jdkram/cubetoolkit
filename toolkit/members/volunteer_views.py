@@ -9,7 +9,7 @@ from django.core.mail import send_mail
 from django.contrib.auth.decorators import permission_required
 from django.contrib import messages
 from django.views.decorators.http import require_POST, require_safe
-from django.db.models import F, Prefetch
+from django.db.models import Exists, F, OuterRef, Prefetch
 from django.utils import timezone
 import csv
 
@@ -114,19 +114,27 @@ def view_volunteer_summary(request):
 
     order = request.GET.get("order", "name")
 
+    base_qs = (
+        Volunteer.objects.filter(active=True)
+        .select_related("member", "user")
+        .annotate(
+            is_programmer=Exists(
+                Volunteer.objects.filter(
+                    pk=OuterRef("pk"),
+                    user__groups__name="Programmers",
+                )
+            )
+        )
+    )
+
     if "name" in order:
-        volunteers = (
-            Volunteer.objects.filter(active=True)
-            .order_by("member__name")
-            .prefetch_related("member")
-        )
+        volunteers = base_qs.order_by("member__name")
         sort_type = "name"
+    elif "logged" in order:
+        volunteers = base_qs.order_by("-user__last_login")
+        sort_type = "last logged in date"
     else:
-        volunteers = (
-            Volunteer.objects.filter(active=True)
-            .order_by("-member__created_at")
-            .prefetch_related("member")
-        )
+        volunteers = base_qs.order_by("-member__created_at")
         sort_type = "induction date"
 
     active_count = volunteers.count()
