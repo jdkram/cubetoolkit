@@ -16,6 +16,8 @@ VENUE = {
     "twitter": "https://twitter.com/StarAndShadow",
     "facebook": "https://www.facebook.com/StarAndShadow",
     "instagram": "https://www.instagram.com/starandshadowcinema/",
+    "bluesky": "",   # TODO: add Bluesky handle when confirmed
+    "mastodon": "",  # TODO: add Mastodon URL if account exists
     "flickr": "",
     "vimeo": "",
     "youtube": "https://www.youtube.com/channel/UCJxp1CvJlDsWBEJrguvhoLw/",
@@ -49,12 +51,20 @@ DEFAULT_MUGSHOT = "/static/content/ss_logo_e3cae3_pink3.jpg"
 # programmes can be uploaded
 DAWN_OF_TIME = 1998
 
+# URL to an image copyright guidance document (e.g. on NextCloud).
+# When set, a link appears next to the image upload field in the event editor.
+# Leave as None if no guidance document exists yet.
+IMAGE_COPYRIGHT_GUIDANCE_URL = None
+
 ###############################################################################
 #
 # Below here are Django settings
 #
 
 ADMINS = ("Marcus Valentine", "REDACTED")
+
+# Enable Django admin for S+S (urls_flat.py mounts it at /toolkit/admin/)
+INSTALLED_APPS = INSTALLED_APPS + ("django.contrib.admin",)
 
 TEMPLATES[0]["DIRS"] = (
     os.path.join(BASE_DIR, "star_and_shadow_templates"),

@@ -58,6 +58,11 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
 <form action="{% url "edit-event-details" event_id=event.id %}" method="post" enctype="multipart/form-data">
     {% crispy event_form %}
     {% crispy media_form %}
+    <p class="help-block">
+        <small>&#x26A0;&#xFE0F; Please make sure you have the right to use any image you upload.
+        {% if IMAGE_COPYRIGHT_GUIDANCE_URL %}See our <a href="{{ IMAGE_COPYRIGHT_GUIDANCE_URL }}" target="_blank" rel="noopener">image copyright guidance</a> for help finding freely-licensed images.{% endif %}
+        </small>
+    </p>
     <p>
         <button type="submit" class="btn btn-primary">Update</button> <a href="{% url "edit-event-details-view" event_id=event.pk %}">Cancel</a>
     </p>

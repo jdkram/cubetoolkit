@@ -15,6 +15,7 @@ import toolkit.members.urls
 import toolkit.toolkit_auth.urls
 import toolkit.index.urls
 import toolkit.diary.urls
+import toolkit.mailer.urls
 
 from toolkit.index.models import IndexLink
 
@@ -26,6 +27,7 @@ urlpatterns = [
     re_path(r"^volunteers/", include(toolkit.members.urls.volunteer_urls)),
     re_path(r"^auth/", include(toolkit.toolkit_auth.urls.urlpatterns)),
     re_path(r"^toolkit/index/", include(toolkit.index.urls.urlpatterns)),
+    re_path(r"^mailout/", include(toolkit.mailer.urls)),
     re_path(r"^$", toolkit.diary.urls.view_diary, name="default-view"),
     re_path(
         r"^id/(?P<event_id>\d+)/$",
@@ -85,8 +87,11 @@ urlpatterns = [
 ]
 
 if settings.DEBUG:
-    import debug_toolbar
+    try:
+        import debug_toolbar
 
-    urlpatterns = [
-        re_path(r"^__debug__/", include(debug_toolbar.urls)),
-    ] + urlpatterns
+        urlpatterns = [
+            re_path(r"^__debug__/", include(debug_toolbar.urls)),
+        ] + urlpatterns
+    except ImportError:
+        pass

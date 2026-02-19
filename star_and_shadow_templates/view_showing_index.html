@@ -60,11 +60,22 @@ setup_page(true);
     <div class="showing-sizer"></div>
     <div class="gutter-sizer"></div>
 {% for event, showings in events.items %}
-    <div class="showing" id="event_{{ event.id }}">
+    <div class="showing{% if is_volunteer and event.private or is_volunteer and showings.0.hide_in_programme %} showing-internal{% endif %}" id="event_{{ event.id }}">
+
+        {% if is_volunteer and event.private %}
+        <span class="volunteer-badge" title="Private event — not listed publicly">&#128274; volunteer only</span>
+        {% elif is_volunteer and showings.0.hide_in_programme %}
+        <span class="volunteer-badge" title="Hidden from public programme">&#128274; internal</span>
+        {% endif %}
 
         <div class="event_image">
             {% with media_item=event.media.all.0 event_slug=event.name|slugify %}
-            {% if media_item %}<a href="{% url "single-event-view-with-slug" event_id=event.id event_slug=event_slug %}">
+            {% if is_volunteer and event.private or is_volunteer and showings.0.hide_in_programme %}
+              {% url "rota-edit" as event_detail_url %}
+            {% else %}
+              {% url "single-event-view-with-slug" event_id=event.id event_slug=event_slug as event_detail_url %}
+            {% endif %}
+            {% if media_item %}<a href="{{ event_detail_url }}">
                 <img src="{{ media_item.media_file|thumbnail_url:'indexview' }}" alt="Picture for event {{ event.name }}"></a>
             {% endif %}
             {% if event.tags.all %}
@@ -75,7 +86,7 @@ setup_page(true);
                 </span>
             {% endif %}
         </div><!-- div event_image -->
-        <a href="{% url "single-event-view-with-slug" event_id=event.id event_slug=event_slug %}">
+        <a href="{{ event_detail_url }}">
             <p><span class="pre_title">
                 {{ event.pre_title }}
             </span></p>
@@ -95,7 +106,7 @@ setup_page(true);
                     {% if showing.discounted %}<abbr class="discounted" title="* cheap night">*</abbr>{% endif %}<br>
                     {% endfor %}
             </p>
-            <p class="copy">{{ event.copy_summary|truncatewords:16 }} [<a class="more" href="{% url "single-event-view-with-slug" event_id=event.id event_slug=event_slug %}">more</a>]</p>
+            <p class="copy">{{ event.copy_summary|truncatewords:16 }} [<a class="more" href="{{ event_detail_url }}">more</a>]</p>
         </div>{% endwith %}
     </div>{% endfor %}<!-- end .showing -->
 </div><!-- end #programme -->
