@@ -1279,7 +1279,7 @@ approach) while leaving the actual agreement as a human interaction.
 The following features have been identified as priorities for a future version.
 They are organised by area.
 
-### 9.1 Volunteer programme view — see internal events when logged in
+### 9.1 Volunteer programme view — see internal events when logged in ✅ implemented
 
 **Goal:** Let volunteers see the full picture of what's happening at the venue,
 including events that aren't listed publicly.
@@ -1291,19 +1291,22 @@ given their own separate communication. Logged-in volunteers should see these
 on the same programme page they'd share with the public, without a separate
 internal calendar tool.
 
-Features:
+Features (all implemented):
 
 - When browsing the programme while logged in, volunteer-only or internal events
-  appear in-line with the rest of the listing, visually distinguished (e.g. a
-  different colour or a small "🔒 volunteer" badge)
+  appear in-line with the rest of the listing, visually distinguished with a
+  🔒 badge ("volunteer only" or "internal") and an amber left border
 - The public version of the same URL remains unchanged — non-logged-in visitors
   see only the public programme
 - No separate internal calendar URL needed; the main `/programme/` URL adapts
   to the session state
 - Applies to any showing where `event.private=True` or `hide_in_programme=True`
-
-This is relatively low complexity to implement (one auth check in the public
-view, one template conditional) and high value for volunteer engagement.
+- Volunteer-only event cards link to the rota (not the public event detail page,
+  which would return a 404 for private events)
+- The public site nav shows the user's display name and a **Sign out** link
+  inside the Volunteer Toolkit sub-menu when a volunteer is logged in,
+  confirming their session and allowing them to sign out without navigating
+  away from the programme
 
 ### 9.2 Event programming pipeline
 
@@ -1791,7 +1794,7 @@ date range. Allows programmers to see at a glance whether a room is free
 before proposing an event, without having to check every individual showing
 in the diary.
 
-### 9.8 Image copyright reminder
+### 9.8 Image copyright reminder ✅ implemented
 
 **Goal:** Prompt programmers to verify image rights at the point of upload,
 and give them easy access to guidance.
