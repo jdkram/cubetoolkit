@@ -30,7 +30,12 @@
       {% endif %}
     {% endfor %}
     {% if user.is_authenticated %}
-    <li><a href="{% url "toolkit-index" %}">Volunteer Toolkit</a></li>
+    <li><a href="{% url "toolkit-index" %}">Volunteer Toolkit</a>
+        <ul class="sub-menu">
+            <li class="volunteer-signed-in">&#128100;&nbsp;{{ user.get_full_name|default:user.username }}</li>
+            <li><a href="{% url "logout" %}">Sign out</a></li>
+        </ul>
+    </li>
     {% else %}
     <li><a href="{% url "login" %}">Volunteer Login</a></li>
     {% endif %}
