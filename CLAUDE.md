@@ -5,28 +5,26 @@
 This is the **Cube Toolkit** codebase — a Django app that manages events, members, and mailouts for the Cube Microplex cinema in Bristol. It also supports the Star and Shadow cinema via a separate settings layer.
 
 Before doing anything else, read:
-- [ONBOARDING.md](ONBOARDING.md) — project structure, apps, Django primer, how to run with Docker
-- [BRANCH_NOTES.md](BRANCH_NOTES.md) — detailed audit of differences between the `master` and `s+s` branches
+- [docs/ONBOARDING.md](docs/ONBOARDING.md) — project structure, apps, Django primer, how to run with Docker
+- [docs/BRANCH_NOTES.md](docs/BRANCH_NOTES.md) — detailed audit of differences between the `master` and `s+s` branches
 
 The current branch is **`master`** (Django 5.2 LTS, Wagtail 6.3, Python 3, no Celery).
 
 ---
 
-## Standing rule: keep SPEC.md in sync with the code
+## Standing rule: keep docs/ in sync with the code
 
-**After every code change, update SPEC.md to reflect what was done.**
+**After every code change, update the relevant docs.**
 
-This applies to:
+- Bug fixes → mark resolved in [docs/TASKS.md](docs/TASKS.md) (move completed item to [docs/ARCHIVE.md](docs/ARCHIVE.md)); update [docs/ROADMAP.md](docs/ROADMAP.md) status table
+- New features implemented → mark ✅ in [docs/TASKS.md](docs/TASKS.md), move to [docs/ARCHIVE.md](docs/ARCHIVE.md)
+- New features proposed → add to [docs/TASKS.md](docs/TASKS.md) section 9.x with sizing label (🟢 XS / 🔵 S / 🟡 M / 🟠 L / 🔴 XL / ⛔ XXL)
+- Data model changes → update [docs/SPEC.md](docs/SPEC.md) section 8 (data model) and ER diagram
+- New external system dependencies → update [docs/SPEC.md](docs/SPEC.md) section 6 (external integrations)
+- Workflow changes → update [docs/SPEC.md](docs/SPEC.md) section 4 (key workflows)
+- Permission changes → update [docs/SPEC.md](docs/SPEC.md) section 2 (permission model)
 
-- Bug fixes → update or add an entry in section 8 (current limitations / known gaps), marking it ✅ resolved
-- New features implemented → mark the relevant section 9.x entry as ✅ implemented and update the feature description to match what was actually built
-- New features proposed but not yet built → add a new section 9.x entry with the standard sizing label (🟢 XS / 🔵 S / 🟡 M / 🟠 L / 🔴 XL / ⛔ XXL)
-- Data model changes → update section 2 (data model) and the ER diagram text
-- New external system dependencies → add a row to section 4 (external integrations)
-- Workflow changes → update section 3 (key workflows)
-- Permission changes → update section 5 (permission model)
-
-Do not commit code changes without also committing the corresponding SPEC.md update in the same commit (or immediately following it). The goal is that SPEC.md always reflects the current state of the system, not a historical wish-list.
+Do not commit code changes without also committing the corresponding docs update in the same commit (or immediately following it).
 
 ---
 
@@ -268,9 +266,12 @@ docker compose exec toolkit /venv/bin/python3 manage.py seed_dev_data
 |---|---|
 | Cube docker settings | [toolkit/docker_settings.py](toolkit/docker_settings.py) |
 | S+S settings (venue config, feature flags) | [toolkit/settings_ss.py](toolkit/settings_ss.py) |
-| S+S docker settings | `toolkit/docker_settings_ss.py` ← **needs creating** |
+| S+S docker settings | [toolkit/docker_settings_ss.py](toolkit/docker_settings_ss.py) |
 | Shared base settings | [toolkit/settings_common.py](toolkit/settings_common.py) |
 | Container entrypoint | [containerconfig/tk_run.sh](containerconfig/tk_run.sh) |
 | Dev docker compose | [docker-compose.yml](docker-compose.yml) |
 | S+S-specific templates | [star_and_shadow_templates/](star_and_shadow_templates/) |
-| Branch comparison | [BRANCH_NOTES.md](BRANCH_NOTES.md) |
+| Branch comparison | [docs/BRANCH_NOTES.md](docs/BRANCH_NOTES.md) |
+| System specification | [docs/SPEC.md](docs/SPEC.md) |
+| Development roadmap | [docs/ROADMAP.md](docs/ROADMAP.md) |
+| Open tasks / bugs | [docs/TASKS.md](docs/TASKS.md) |
