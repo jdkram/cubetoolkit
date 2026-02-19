@@ -370,6 +370,13 @@ class Command(BaseCommand):
             action="store_true",
             help="Delete all existing diary/member data before seeding.",
         )
+        parser.add_argument(
+            "--bulk-volunteers",
+            type=int,
+            default=0,
+            metavar="N",
+            help="Also create N numbered test volunteers (voltest_NNNN) for performance testing.",
+        )
 
     def handle(self, *args, **options):
         if options["wipe"]:
@@ -386,6 +393,7 @@ class Command(BaseCommand):
             Volunteer.objects.all().delete()
             Member.objects.all().delete()
             User.objects.filter(username__contains=".").delete()
+            User.objects.filter(username__startswith="voltest_").delete()
             if WAGTAIL_AVAILABLE:
                 BasicArticlePage.objects.filter(slug="safer-spaces").delete()
             self.stdout.write("  Done.")
@@ -548,6 +556,10 @@ class Command(BaseCommand):
         if WAGTAIL_AVAILABLE:
             counts["cms_pages"] += self._seed_cms_pages()
 
+        # Bulk test volunteers (performance testing only)
+        if options["bulk_volunteers"]:
+            counts["volunteers"] += self._seed_bulk_volunteers(options["bulk_volunteers"])
+
         self.stdout.write(
             self.style.SUCCESS(
                 f"\nSeed data created:\n"
@@ -561,6 +573,74 @@ class Command(BaseCommand):
                 f"  CMS pages:    {counts['cms_pages']} new"
             )
         )
+
+    def _seed_bulk_volunteers(self, count):
+        """Bulk-create N numbered test volunteers for performance testing.
+
+        Uses username pattern voltest_NNNN to avoid clashing with real seed
+        volunteers. Idempotent: skips indices that already exist.
+        Returns count of volunteers created.
+        """
+        existing = set(
+            int(u[8:])
+            for u in User.objects.filter(username__startswith="voltest_")
+            .values_list("username", flat=True)
+            if u[8:].isdigit()
+        )
+        to_create = [i for i in range(1, count + 1) if i not in existing]
+        if not to_create:
+            return 0
+
+        self.stdout.write(f"  Creating {len(to_create)} bulk test volunteers...")
+
+        # Members
+        Member.objects.bulk_create(
+            [
+                Member(
+                    name=f"Volunteer {i:04d}",
+                    email=f"voltest_{i:04d}@example.test",
+                )
+                for i in to_create
+            ]
+        )
+        members_by_email = {
+            m.email: m
+            for m in Member.objects.filter(
+                email__in=[f"voltest_{i:04d}@example.test" for i in to_create]
+            )
+        }
+
+        # Users (no password needed — these accounts are never logged into)
+        new_users = []
+        for i in to_create:
+            u = User(
+                username=f"voltest_{i:04d}",
+                email=f"voltest_{i:04d}@example.test",
+            )
+            u.set_unusable_password()
+            new_users.append(u)
+        User.objects.bulk_create(new_users)
+        users_by_username = {
+            u.username: u
+            for u in User.objects.filter(
+                username__in=[f"voltest_{i:04d}" for i in to_create]
+            )
+        }
+
+        # Volunteers
+        Volunteer.objects.bulk_create(
+            [
+                Volunteer(
+                    member=members_by_email[f"voltest_{i:04d}@example.test"],
+                    user=users_by_username[f"voltest_{i:04d}"],
+                )
+                for i in to_create
+                if f"voltest_{i:04d}@example.test" in members_by_email
+                and f"voltest_{i:04d}" in users_by_username
+            ]
+        )
+
+        return len(to_create)
 
     def _make_event_image(self, event, bg_colour):
         """Generate an 800×450 JPEG test image and attach it to the event."""
