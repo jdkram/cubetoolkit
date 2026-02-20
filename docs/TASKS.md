@@ -1534,6 +1534,54 @@ erDiagram
 | Screening report CSV export | 🔵 S | 4–6h |
 | **Total** | **🟡 M** | **~23–40h** |
 
+### 9.16 Alt text fields for images 🔵 S (8–16h)
+
+**Goal:** Add structured alt text (alternative text) fields to all images across the toolkit, ensuring that screen reader users and people with images disabled can understand visual content.
+
+#### Why this matters
+
+Alt text is critical for web accessibility. When an image fails to load, or when a user relies on a screen reader, alt text provides the essential context that sighted users get from looking at the image. The toolkit uses images throughout:
+
+- Event images in the public programme
+- Volunteer portraits
+- Venue/room images
+- Logo and decorative graphics
+
+Currently, images in the toolkit have no structured alt text field. Some may have caption text, but captions are not a substitute for alt text — they are supplementary.
+
+#### Implementation scope
+
+**Data model:**
+- Add `alt_text = models.CharField(max_length=255, blank=True, default="")` to `MediaItem`
+- Add a migration to create this field on existing `MediaItem` records
+
+**Admin and form integration:**
+- Expose `alt_text` in the Django admin `MediaItem` edit form
+- If MediaItem is used inline in Event forms, expose the field there too
+
+**Template updates:**
+- Everywhere an image is displayed (event cards, volunteer profiles, etc.), ensure the `<img>` tag includes `alt="{{ media_item.alt_text }}"` from the database
+- For decorative images (e.g. spacers or pure decoration), set `alt=""` explicitly to signal to screen readers that they can be skipped
+
+**Seeding and backfill (optional enhancement):**
+- Consider generating placeholder alt text for seed data images (e.g. "Poster for Community Kitchen Special event")
+- For existing production images, alt text can be filled in incrementally as admins encounter them, or in a bulk backfill pass
+
+#### Size breakdown
+
+| Component | Size | Hours |
+|---|---|---|
+| `MediaItem.alt_text` field + migration | 🟢 XS | 2–3h |
+| Admin form / inline form integration | 🟢 XS–🔵 S | 2–4h |
+| Template updates (find all uses of images and update tags) | 🟢 XS–🔵 S | 2–4h |
+| Seed data alt text | 🟢 XS | 1–2h |
+| Documentation (how to set alt text, guidelines) | 🟢 XS | 1–2h |
+| **Total** | **🔵 S** | **~8–16h** |
+
+#### Related features
+
+This feature intersects with section 9.17 (Inclusivity and accessibility). Once alt text fields are in place, all public-facing images will be accessible to screen reader users, a key accessibility requirement.
+
 ---
 
 ### 9.17 Inclusivity and accessibility 🟡 M (ongoing; audit 8–16h + incremental fixes)
