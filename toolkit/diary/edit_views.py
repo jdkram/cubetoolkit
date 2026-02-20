@@ -1075,7 +1075,7 @@ class EditRotaView(PermissionRequiredMixin, View):
             .start_in_range(start_date, end_date)
             .order_by("start")
             #              force sane number of queries:
-            .prefetch_related("rotaentry_set__role")
+            .prefetch_related("rotaentry_set__role", "event__tags")
             .select_related()
         )
 
