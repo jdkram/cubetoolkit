@@ -56,11 +56,11 @@ Active {{ VENUE.name }} volunteers: {{ active_count }}</p>
             <th data-sortable>
                 User name <span class="sort-ind" aria-hidden="true"></span>
             </th>
-            <th>
-                <abbr title="Administrator — has complete rights to see and do everything">Panopticon</abbr>
+            <th data-sortable>
+                <abbr title="Administrator — has complete rights to see and do everything">Panopticon</abbr> <span class="sort-ind" aria-hidden="true"></span>
             </th>
-            <th>
-                <abbr title="Can edit the diary but not access details of volunteers and members">Programmer</abbr>
+            <th data-sortable>
+                <abbr title="Can edit the diary but not access details of volunteers and members">Programmer</abbr> <span class="sort-ind" aria-hidden="true"></span>
             </th>
         {% endif %}
         <th>
@@ -123,7 +123,7 @@ Active {{ VENUE.name }} volunteers: {{ active_count }}</p>
 {% block script %}
 {{ block.super }}
 <script>
-(function () {
+document.addEventListener('DOMContentLoaded', function () {
   var tbody = document.querySelector('#volunteer-table tbody');
   if (!tbody) return;
   var state = { col: -1, asc: true };
@@ -149,6 +149,6 @@ Active {{ VENUE.name }} volunteers: {{ active_count }}</p>
       rows.forEach(function (r) { tbody.appendChild(r); });
     });
   });
-}());
+});
 </script>
 {% endblock %}
