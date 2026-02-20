@@ -10,15 +10,7 @@
 
 ## Immediate blockers (fix first)
 
-These block critical workflows and should be prioritized:
-
-| ID | Issue | Size | Blocks | Ref |
-|----|-------|------|--------|-----|
-| **B** | Wagtail `translation_key` column overflow | 🔵 S | CMS page creation in admin | TASKS.md § "Current bugs" |
-
-**Details:** MariaDB `wagtailcore_page.translation_key` is `varchar(32)`, but Wagtail 6 generates 36-char UUIDs with dashes. Causes `DataError` when creating pages via admin. Workaround: `seed_dev_data` creates pages programmatically.
-
-**Suggested fix:** Widen column to `varchar(36)` via migration, or check Wagtail upstream for configuration.
+✅ **All resolved** — CMS page creation is now functional. See ARCHIVE.md for Bug B fix.
 
 ---
 
