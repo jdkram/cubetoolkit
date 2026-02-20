@@ -56,6 +56,9 @@ setup_page(true);
 
 {% block body %}
 {{ block.super }}
+{% if is_volunteer %}
+<div class="volunteer-notice">You&#8217;re logged in as a volunteer &#8212; private events are shown. <form method="post" action="{% url 'logout' %}" style="display:inline;margin:0">{% csrf_token %}<button type="submit" class="volunteer-signout-btn">Sign out</button></form></div>
+{% endif %}
 <div class="programme">
     <div class="showing-sizer"></div>
     <div class="gutter-sizer"></div>
@@ -120,12 +123,11 @@ setup_page(true);
         <p class="sameday">
     {% endifchanged %}
     <span class="time">{{showing.start|date:"H:i"}}</span> ....
-    {% if showing.hide_in_programme or showing.event.private %}Closed for private event.
-    {% else %}
-        <a href="{% url "single-event-view" event_id=showing.event_id %}">{{ showing.event.pre_title|title }} {{ showing.event.name|capfirst }} {{ showing.event.post_title|title }}
-    {% if showing.cancelled %} (CANCELLED){% endif %}
-    {% if showing.sold_out %} (SOLD OUT){% endif %}
-    {% if showing.discounted %} *{% endif %}{% endif %}</a></p>
+    {% if is_volunteer and showing.hide_in_programme or is_volunteer and showing.event.private %}
+        <a href="{% url "rota-edit" %}">{{ showing.event.name|capfirst }} <span class="volunteer-badge">&#128274; volunteer only</span></a></p>
+    {% elif not showing.hide_in_programme and not showing.event.private %}
+        <a href="{% url "single-event-view" event_id=showing.event_id %}">{{ showing.event.pre_title|title }} {{ showing.event.name|capfirst }} {{ showing.event.post_title|title }}{% if showing.cancelled %} (CANCELLED){% endif %}{% if showing.sold_out %} (SOLD OUT){% endif %}{% if showing.discounted %} *{% endif %}</a></p>
+    {% endif %}
 {% endfor %}
 <p>&nbsp;</p>
 <p>* cheap night</p>
