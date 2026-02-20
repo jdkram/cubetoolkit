@@ -1,6 +1,8 @@
 # Completed Tasks — Archive
 
-Tasks here are done. Active tasks are in [TASKS.md](TASKS.md).
+**For current work and priorities, see:** [CURRENT_WORK.md](../CURRENT_WORK.md) · [ROADMAP.md](ROADMAP.md) · [TASKS.md](TASKS.md)
+
+Tasks here are done. Active tasks are in [CURRENT_WORK.md](../CURRENT_WORK.md).
 
 ---
 

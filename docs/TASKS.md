@@ -1,7 +1,11 @@
 # Star and Shadow Toolkit — Tasks
 
-This file tracks known bugs, system limitations, and proposed features.
-Completed items are in [ARCHIVE.md](ARCHIVE.md).
+**Purpose:** Design rationale, system limitations, and feature specifications.
+
+**For current work and priorities, see:** [CURRENT_WORK.md](../CURRENT_WORK.md) · [ROADMAP.md](ROADMAP.md) (overview)
+**Completed work:** [ARCHIVE.md](ARCHIVE.md)
+
+This file details the *what* and *why* behind proposed work. Status indicators have moved to CURRENT_WORK.md to maintain a single source of truth.
 
 **Size key:** 🟢 XS (1–4h) · 🔵 S (4–16h) · 🟡 M (16–40h) · 🟠 L (40–80h) · 🔴 XL (80–160h) · ⛔ XXL (160h+)
 
@@ -1622,7 +1626,21 @@ These flags are **informational only** — the goal is transparency, not exclusi
 
 **Implementation:** Add `accessibility_notes = models.TextField(blank=True, default="")` to `Role`. Update the role edit view. Show the note (if set) in the rota slot UI. 🟢 XS (2–4h)
 
----
+### 9.18 Event Creation UX Overhaul 🟡 M (20–40h)
+
+**Goal:** Streamline the event creation process to remove the need for "cloning from the future" and reduce the friction of confirming events. See `docs/PROPOSALS/001_STREAMLINED_EVENT_WORKFLOW.md`.
+
+#### 9.18.1 Supercharge EventTemplate 🔵 S (4–8h)
+Update `EventTemplate` model to include `copy`, `copy_summary`, `rota_notes`, `terms`, `film_information`, and `private`. Add a "Save as Template" button to the Event Edit view to allow easy creation of templates from existing events.
+
+#### 9.18.2 Unified "Create Booking" Form 🔵 S (8–16h)
+Refactor the "Add Event" view to accept Showing details (Date, Time, Room) in the same form.
+- Save creates both `Event` and `Showing` records transactionally.
+- "Publish" button sets `confirmed=True` immediately if validation passes.
+- "Save Draft" sets `confirmed=False`.
+
+#### 9.18.3 Event Dashboard Redirect 🟢 XS (2–4h)
+Change the post-save redirect on event creation. Instead of going to the calendar/list view, go to the specific Event Edit/Dashboard view. This provides immediate confirmation of what was created and allows further edits (e.g. adding a second showing) without searching.
 
 ---
 
