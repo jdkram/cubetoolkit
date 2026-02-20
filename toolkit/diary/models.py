@@ -38,6 +38,13 @@ class Role(models.Model):
     # Allow role to be edited/deleted
     read_only = models.BooleanField(default=False)
 
+    description = models.TextField(
+        blank=True,
+        default="",
+        help_text="Guidance for volunteers about this role: what's involved, "
+        "accessibility notes, links to guides, training requirements, etc.",
+    )
+
     class Meta:
         db_table = "Roles"
         ordering = ["name"]
