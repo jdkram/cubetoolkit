@@ -1,5 +1,6 @@
 <div class="social-media">
     <p>Social:</p>
+    {% if VENUE.twitter %}<a href="{{ VENUE.twitter }}" title="Twitter"><i class="fa-brands fa-twitter"></i></a>{% endif %}
     {% if VENUE.instagram %}<a href="{{ VENUE.instagram }}" title="Instagram"><i class="fa-brands fa-instagram"></i></a>{% endif %}
     {% if VENUE.mastodon %}<a href="{{ VENUE.mastodon }}#" title="Mastodon"><i class="fa-brands fa-mastodon"></i></a>{% endif %}
     {% if VENUE.bluesky %}<a href="{{ VENUE.bluesky }}#" title="Bluesky"><i class="fa-brands fa-bluesky"></i></a>{% endif %}
