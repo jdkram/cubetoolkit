@@ -5,6 +5,12 @@ from toolkit.settings_ss import *
 DEBUG = True
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
+# settings_common.py sets TEMPLATES[0]["OPTIONS"]["debug"] = DEBUG at import
+# time, before our DEBUG = True override takes effect. Fix it here so that
+# the filesystem template loader does not cache templates in memory, allowing
+# docker cp to update templates without a full image rebuild.
+TEMPLATES[0]["OPTIONS"]["debug"] = True
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
