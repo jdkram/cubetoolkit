@@ -1,8 +1,8 @@
 # Star and Shadow Toolkit — Development Roadmap
 
-**TL;DR:** Working Django app for events, volunteers, members. Needs bugs fixed,
-S&S features ported from old branch, then feature development. Full detail in
-[docs/SPEC.md](SPEC.md) and [docs/TASKS.md](TASKS.md).
+**TL;DR:** Working Django app for events, volunteers, members. Needs bugs fixed, S&S features ported, then feature development.
+
+**For current work and priorities, see:** [CURRENT_WORK.md](../CURRENT_WORK.md) · [TASKS.md](TASKS.md) (design details) · [ARCHIVE.md](ARCHIVE.md) (completed)
 
 ---
 
@@ -44,17 +44,7 @@ familiar with the codebase; expect 2–3× longer when learning the stack.
 | F | Time picker is a slider (poor UX — should be `<input type="time">`) | 🔵 S | Open |
 | G | Date/time picker clips behind navbar | 🟢 XS | ✅ Fixed |
 
-**Bug B detail:** MariaDB strict mode + Wagtail 6 UUID handling mismatch. Check column
-definition with `SHOW COLUMNS FROM wagtailcore_page LIKE 'translation_key';`. Possible
-fixes: disable strict mode for UUIDs, or set `WAGTAIL_I18N_ENABLED = False`. May need
-a schema migration.
-
-**Bug C detail:** Apostrophes/quotes stored as raw HTML entities. Likely cause: Django's
-`escape()` applied server-side in rota edit view, but jeditable inserts response as plain
-text. Fix: return unescaped text from endpoint, or configure jeditable to treat as HTML.
-
-**Bug D detail:** Make prompt toggleable via `ROTA_CLEAR_EMAIL_PROMPT_ENABLED` (default
-`False` for S&S).
+**See [CURRENT_WORK.md](../CURRENT_WORK.md) for current priorities and details.
 
 ### S&S features to port from the `s+s` branch
 
@@ -62,6 +52,7 @@ text. Fix: return unescaped text from endpoint, or configure jeditable to treat 
 |---|---|---|
 | `Volunteer.user` OneToOneField (auto-create user on volunteer add) | 🟠 L | Open |
 | Django admin + ModelAdmin classes | 🟡 M | Open |
+| Panopticon user management in `/volunteers/ID/edit` view | 🟢 XS | Open |
 | Programmer permission group (`create_programmer_permission` command) | 🟢 XS | Open |
 | Name coercion in rota edit (fill in logged-in user's name) | 🟢 XS | Open |
 | `SHOW_ARCHIVE_IMAGES` / `IMAGES_START_DATE` settings | 🟢 XS | Open |
