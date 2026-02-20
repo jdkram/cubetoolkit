@@ -25,6 +25,7 @@ class RoleForm(forms.ModelForm):
         fields = (
             "name",
             "standard",
+            "description",
         )
 
 

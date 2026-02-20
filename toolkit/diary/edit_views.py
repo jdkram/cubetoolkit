@@ -928,6 +928,7 @@ def edit_roles(request):
         fields=(
             "name",
             "standard",
+            "description",
         ),
         can_delete=True,
     )
