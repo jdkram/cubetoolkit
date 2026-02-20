@@ -73,3 +73,9 @@ TEMPLATES[0]["DIRS"] = (
     os.path.join(BASE_DIR, "star_and_shadow_templates"),
     os.path.join(BASE_DIR, "templates"),
 )
+
+# S+S-specific limits and configuration
+# Increase rota role count limit from default 8 to 30 to accommodate larger volunteer rotas
+# See docs/LIVESITE_FIXES.md § "Rota role count limitation" for context
+MAX_COUNT_PER_ROLE = 30
+

@@ -25,6 +25,7 @@
 | ✅ `Volunteer.user` OneToOneField | Done | Each volunteer linked to Django `User` |
 | ✅ Django admin integration | Done | Enabled in `INSTALLED_APPS` + `settings_ss.py` |
 | ⚠️ Programmer permission group | Partial | `Programmers` group created by `seed_dev_data`, but dedicated `create_programmer_permission` command missing |
+| ✅ Rota role count limit increase (8 → 30) | Done | MAX_COUNT_PER_ROLE overridden in settings_ss.py; all three enforcement points auto-parameterized |
 | ❌ `SHOW_ARCHIVE_IMAGES` / `IMAGES_START_DATE` | Not started | Hide event images before configurable date |
 | ❌ `Showing.rota_notes` field size | Not started | Extend from 1024 → 4096 characters |
 | ❌ `Member.email` mandatory | Not started | Change from `blank=True` to `blank=False` |
