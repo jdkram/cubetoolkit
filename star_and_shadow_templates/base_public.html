@@ -4,8 +4,21 @@
 {% block css %}
 <link href='https://fonts.googleapis.com/css?family=Roboto+Mono:400,100,100italic,300,300italic,500' rel='stylesheet' type='text/css'>
 <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:200,300,400,500,600,700,900" rel="stylesheet">
-<link rel="stylesheet" href="{{ STATIC_URL }}css/font-awesome/css/font-awesome.min.css">
+<link rel="stylesheet" href="{{ STATIC_URL }}css/fontawesome/css/fontawesome.min.css">
+<link rel="stylesheet" href="{{ STATIC_URL }}css/fontawesome/css/solid.min.css">
+<link rel="stylesheet" href="{{ STATIC_URL }}css/fontawesome/css/brands.min.css">
+<link rel="stylesheet" href="{{ STATIC_URL }}css/fontawesome/css/v4-shims.min.css">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+.site-logo { width: auto; max-width: 100%; height: auto; display: block; }
+.dev-watermark {
+    position: fixed; top: 8px; right: 8px; z-index: 9999;
+    background: rgba(220,0,0,0.82); color: #fff;
+    font-family: monospace; font-size: 11px; font-weight: bold;
+    padding: 3px 8px; border-radius: 3px; pointer-events: none;
+    letter-spacing: 0.05em;
+}
+</style>
 {% endblock css %}
 
 {% block script %}
@@ -28,7 +41,7 @@
 <div id="container" class="body">
     <div id="sidebar" class="panel">
       <div class="nav-wrap">
-          <a href="{% url "default-view" %}"><img src="{{ STATIC_URL }}{{ VENUE.nav_menu_img }}" alt="{{ VENUE.name }} logo" width="175" height="168"></a>
+          <a href="{% url "default-view" %}"><img src="{{ STATIC_URL }}{{ VENUE.nav_menu_img }}" alt="{{ VENUE.name }} logo" class="site-logo"></a>
           <div id="site-title" class="clearfix">
               {% capture navmenu-title %}
               {% block navmenu-title %}
@@ -63,6 +76,7 @@
               {% retrieve site-description %}
             </div><!-- end .site-description -->
         </div><!-- end .nav-wrap -->
+<div class="dev-watermark">DEV SITE</div>
 {% endblock header%}
 
 {% block footer %}
