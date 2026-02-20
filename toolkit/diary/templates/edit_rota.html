@@ -236,6 +236,25 @@
             width: 35%;
         }
     }
+    .rota-info {
+        display: inline-block;
+        width: 1.2em;
+        height: 1.2em;
+        line-height: 1.2em;
+        text-align: center;
+        background-color: #e7f3ff;
+        border: 1px solid #b3d9ff;
+        border-radius: 50%;
+        font-size: 90%;
+        color: #0066cc;
+        cursor: help;
+        margin-right: 0.25em;
+        font-weight: normal;
+    }
+    .rota-info:hover {
+        background-color: #cce5ff;
+        border-color: #0066cc;
+    }
 </style>
 {% endblock %}
 
@@ -537,6 +556,7 @@ edit_rota(
             <ul class="rota">
             {% for rota_entry in showing.rotaentry_set.all %}
                 <li data-role-name="{{ rota_entry.role.name }}">
+                {% if rota_entry.role.description %}<span class="rota-info" title="{{ rota_entry.role.description }}">ℹ</span>{% endif %}
                 <span class="rota_role">{{ rota_entry.role.name }}-{{ rota_entry.rank }}</span>
                 &nbsp;
                 {% if showing.in_past %}
