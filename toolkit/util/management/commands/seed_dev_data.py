@@ -16,7 +16,7 @@ import random
 import urllib.request
 
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, User
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from PIL import Image, ImageDraw
@@ -590,9 +590,9 @@ class Command(BaseCommand):
         parser.add_argument(
             "--bulk-volunteers",
             type=int,
-            default=0,
+            default=2000,
             metavar="N",
-            help="Also create N numbered test volunteers (voltest_NNNN) for performance testing.",
+            help="Create N numbered test volunteers (voltest_NNNN) for performance testing. Default: 2000.",
         )
 
     def handle(self, *args, **options):
@@ -673,9 +673,30 @@ class Command(BaseCommand):
                     except EventTag.DoesNotExist:
                         pass
 
+        # Pre-compute induction batch dates for the seed volunteers.
+        # Walk forward from 2 years ago in random 10–60 day steps so each
+        # "batch" of inductees shares the same date, as in real life.
+        _today = timezone.now().date()
+        _batch_date_pool = []
+        _d = _today - datetime.timedelta(days=365 * 2)
+        while _d < _today - datetime.timedelta(days=30):
+            _batch_date_pool.append(_d)
+            _d += datetime.timedelta(days=random.randint(10, 60))
+
+        _vol_induction_dates = []
+        _vi = 0
+        _pool_idx = 0
+        while _vi < len(VOLUNTEERS):
+            _bs = random.randint(2, 5)
+            _bd = _batch_date_pool[_pool_idx % len(_batch_date_pool)]
+            _entries = min(_bs, len(VOLUNTEERS) - _vi)
+            _vol_induction_dates.extend([_bd] * _entries)
+            _vi += _entries
+            _pool_idx += 1
+
         # Members and Volunteers
         volunteer_objects = {}
-        for vol_data in VOLUNTEERS:
+        for idx, vol_data in enumerate(VOLUNTEERS):
             member, created = Member.objects.get_or_create(
                 email=vol_data["email"],
                 defaults={"name": vol_data["name"]},
@@ -699,7 +720,34 @@ class Command(BaseCommand):
             )
             volunteer_objects[vol_data["name"]] = volunteer
 
+            # Back-date the induction date to the pre-computed batch date.
+            # We use queryset .update() to bypass auto_now_add.
+            induction_date = _vol_induction_dates[idx]
+            induction_dt = timezone.make_aware(
+                datetime.datetime.combine(induction_date, datetime.time(18, 0))
+            )
+            Volunteer.objects.filter(pk=volunteer.pk).update(created_at=induction_dt)
+
+            # Give most volunteers a plausible last-login date.
+            if random.random() < 0.75:
+                user.last_login = timezone.now() - datetime.timedelta(
+                    days=random.randint(0, 500)
+                )
+                user.save(update_fields=["last_login"])
+
         vol_list = list(volunteer_objects.values())
+
+        # Assign roles to seed volunteers so the summary table shows a mix.
+        # First volunteer → superuser; second and third → programmer.
+        programmers_group, _ = Group.objects.get_or_create(name="Programmers")
+        seed_users = [v.user for v in vol_list if v.user]
+        if seed_users:
+            u = seed_users[0]
+            u.is_superuser = True
+            u.is_staff = True
+            u.save(update_fields=["is_superuser", "is_staff"])
+        for u in seed_users[1:3]:
+            programmers_group.user_set.add(u)
 
         # Default room
         room, _ = Room.objects.get_or_create(
@@ -887,6 +935,58 @@ class Command(BaseCommand):
                 and f"voltest_{i:04d}" in users_by_username
             ]
         )
+
+        # Back-date induction dates in batches (same logic as seed volunteers).
+        # Walk from 5 years ago so 2000 volunteers span a realistic range.
+        today = timezone.now().date()
+        batch_date_pool = []
+        d = today - datetime.timedelta(days=365 * 5)
+        while d < today - datetime.timedelta(days=30):
+            batch_date_pool.append(d)
+            d += datetime.timedelta(days=random.randint(10, 60))
+
+        vol_pks = list(
+            Volunteer.objects.filter(
+                member__email__in=[
+                    f"voltest_{i:04d}@example.test" for i in to_create
+                ]
+            ).values_list("pk", flat=True).order_by("pk")
+        )
+        vi = 0
+        bi = 0
+        while vi < len(vol_pks):
+            bs = random.randint(3, 8)
+            bd = batch_date_pool[bi % len(batch_date_pool)]
+            bdt = timezone.make_aware(
+                datetime.datetime.combine(bd, datetime.time(18, 0))
+            )
+            Volunteer.objects.filter(pk__in=vol_pks[vi:vi + bs]).update(created_at=bdt)
+            vi += bs
+            bi += 1
+
+        # Random last_login for 60% of bulk volunteers.
+        now = timezone.now()
+        users_to_update = []
+        for u in users_by_username.values():
+            if random.random() < 0.6:
+                u.last_login = now - datetime.timedelta(days=random.randint(0, 700))
+                users_to_update.append(u)
+        if users_to_update:
+            User.objects.bulk_update(users_to_update, ["last_login"], batch_size=500)
+
+        # 2% panopticon (superuser), 4% programmer.
+        all_new_users = list(users_by_username.values())
+        n = len(all_new_users)
+        if n:
+            programmers_group, _ = Group.objects.get_or_create(name="Programmers")
+            n_super = max(1, int(0.02 * n))
+            superusers = random.sample(all_new_users, min(n_super, n))
+            superuser_pks = {u.pk for u in superusers}
+            User.objects.filter(pk__in=superuser_pks).update(is_superuser=True, is_staff=True)
+            n_prog = max(1, int(0.04 * n))
+            eligible = [u for u in all_new_users if u.pk not in superuser_pks]
+            programmers = random.sample(eligible, min(n_prog, len(eligible)))
+            programmers_group.user_set.add(*programmers)
 
         return len(to_create)
 

@@ -38,22 +38,19 @@ class EditRotaViewGet(DiaryTestsMixin, TestCase):
         self.assertContains(
             response,
             r'<input type="text" name="from_date" value="1-06-2013" '
-            r'id="id_from_date" />',
+            r'id="id_from_date" class="form-control form-control-sm" placeholder="d-m-yyyy" />',
             html=True,
         )
         self.assertContains(
             response,
             r'<input type="text" name="to_date" value="1-07-2013" '
-            r'id="id_to_date" />',
+            r'id="id_to_date" class="form-control form-control-sm" placeholder="d-m-yyyy" />',
             html=True,
         )
 
-        # Check event listed:
-        self.assertContains(
-            response,
-            '<a href="/programme/showing/id/7/">EVENT FOUR TITL\u0112</a>',
-            html=True,
-        )
+        # Check event listed (name visible; public link present as ↗ arrow):
+        self.assertContains(response, "Event four titl\u0113")
+        self.assertContains(response, "/programme/showing/id/7/")
 
         # Notes present:
         self.assertContains(response, "Some notes about the Rota!")
@@ -77,13 +74,13 @@ class EditRotaViewGet(DiaryTestsMixin, TestCase):
         self.assertContains(
             response,
             r'<input type="text" name="from_date" value="11-06-2013" '
-            r'id="id_from_date" />',
+            r'id="id_from_date" class="form-control form-control-sm" placeholder="d-m-yyyy" />',
             html=True,
         )
         self.assertContains(
             response,
             r'<input type="text" name="to_date" value="21-06-2013" '
-            r'id="id_to_date" />',
+            r'id="id_to_date" class="form-control form-control-sm" placeholder="d-m-yyyy" />',
             html=True,
         )
 
