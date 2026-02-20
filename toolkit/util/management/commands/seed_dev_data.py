@@ -13,6 +13,7 @@ import datetime
 import io
 import os
 import random
+import urllib.request
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -137,6 +138,7 @@ EVENTS = [
         "roles": ["Keyholder", "Cafe (Level 1)", "Extra Hands (no training needed)"],
         "day_offset": 3,
         "hour": 14,
+        "image_url": "https://images.pexels.com/photos/1267320/pexels-photo-1267320.jpeg?auto=compress&cs=tinysrgb&w=800",
     },
     {
         "name": "Volunteer Hangout",
@@ -150,6 +152,7 @@ EVENTS = [
         "roles": ["Keyholder", "Bar Staff - Shift 1"],
         "day_offset": 5,
         "hour": 19,
+        "image_url": "https://images.pexels.com/photos/3171837/pexels-photo-3171837.jpeg?auto=compress&cs=tinysrgb&w=800",
     },
     {
         "name": "Volunteer Induction",
@@ -168,6 +171,7 @@ EVENTS = [
         ],
         "day_offset": 7,
         "hour": 18,
+        "image_url": "https://images.pexels.com/photos/3184418/pexels-photo-3184418.jpeg?auto=compress&cs=tinysrgb&w=800",
     },
     {
         "name": "Keyholder Training",
@@ -184,6 +188,7 @@ EVENTS = [
         "roles": ["Keyholder", "Extra Hands (no training needed)"],
         "day_offset": 10,
         "hour": 11,
+        "image_url": "https://images.pexels.com/photos/279810/pexels-photo-279810.jpeg?auto=compress&cs=tinysrgb&w=800",
     },
     {
         "name": "Seeking a Friend for the End of the World",
@@ -205,6 +210,7 @@ EVENTS = [
         ],
         "day_offset": 12,
         "hour": 19,
+        "image_url": "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=800",
     },
     {
         "name": "Friday Cleaning Club and Brunch Social",
@@ -218,6 +224,7 @@ EVENTS = [
         "roles": ["Keyholder", "Cleaner", "Cafe (Level 1)", "Cafe Shadowing"],
         "day_offset": 14,
         "hour": 10,
+        "image_url": "https://images.pexels.com/photos/4239091/pexels-photo-4239091.jpeg?auto=compress&cs=tinysrgb&w=800",
     },
     {
         "name": "Art Club",
@@ -230,6 +237,7 @@ EVENTS = [
         "roles": ["Keyholder", "Extra Hands (no training needed)"],
         "day_offset": 16,
         "hour": 15,
+        "image_url": "https://images.pexels.com/photos/102127/pexels-photo-102127.jpeg?auto=compress&cs=tinysrgb&w=800",
     },
     {
         "name": "Family Film Club",
@@ -248,6 +256,7 @@ EVENTS = [
         ],
         "day_offset": 19,
         "hour": 13,
+        "image_url": "https://images.pexels.com/photos/33129/popcorn-movie-party-entertainment.jpg?auto=compress&cs=tinysrgb&w=800",
     },
     {
         "name": "Starcade",
@@ -268,6 +277,7 @@ EVENTS = [
         ],
         "day_offset": 21,
         "hour": 19,
+        "image_url": "https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg?auto=compress&cs=tinysrgb&w=800",
     },
     {
         "name": "Creative Writing",
@@ -280,19 +290,34 @@ EVENTS = [
         "roles": ["Facilitator", "Facilitator Shadow"],
         "day_offset": 23,
         "hour": 18,
+        "image_url": "https://images.pexels.com/photos/733856/pexels-photo-733856.jpeg?auto=compress&cs=tinysrgb&w=800",
     },
     {
         "name": "Programme Development Meeting",
-        "copy_summary": "Internal meeting to discuss upcoming programme proposals.",
-        "copy": "Monthly meeting open to all volunteers interested in programming. "
+        "copy_summary": "Meeting to discuss upcoming programme proposals. Open to all.",
+        "copy": "Monthly meeting open to all volunteers and members of the public interested in programming. "
         "Bring proposals, costings, and ideas.",
         "tags": ["meeting"],
-        "private": True,
-        "hide_in_programme": True,
+        "private": False,
         "rota_notes": "Agenda to be circulated by Friday. Please review proposals in advance.",
         "roles": ["Facilitator", "Minute taker"],
         "day_offset": 25,
         "hour": 18,
+        "image_url": "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Cafe Induction",
+        "copy_summary": "Training on how to use the coffee machine and run the cafe.",
+        "copy": "Essential training for anyone wanting to volunteer in the cafe. Covers "
+        "food hygiene, coffee machine operation, and till use.",
+        "tags": ["induction", "cafe", "training-for-volunteers"],
+        "private": True,
+        "hide_in_programme": True,
+        "rota_notes": "Please read the cafe handbook before attending.",
+        "roles": ["Inductor - 1 (trained)", "Trainee (inducted)"],
+        "day_offset": 26,
+        "hour": 11,
+        "image_url": "https://images.pexels.com/photos/1307698/pexels-photo-1307698.jpeg?auto=compress&cs=tinysrgb&w=800",
     },
     {
         "name": "It's Such a Beautiful Day + ME",
@@ -315,6 +340,7 @@ EVENTS = [
         ],
         "day_offset": 28,
         "hour": 19,
+        "image_url": "https://images.pexels.com/photos/269140/pexels-photo-269140.jpeg?auto=compress&cs=tinysrgb&w=800",
     },
 ]
 
@@ -770,7 +796,7 @@ class Command(BaseCommand):
             if not event.media.exists():
                 primary_tag = (event_data.get("tags") or ["default"])[0]
                 colour = TAG_COLOURS.get(primary_tag, TAG_COLOURS["default"])
-                if self._make_event_image(event, colour):
+                if self._make_event_image(event, colour, event_data.get("image_url")):
                     counts["images"] += 1
 
         # CMS pages
@@ -864,41 +890,92 @@ class Command(BaseCommand):
 
         return len(to_create)
 
-    def _make_event_image(self, event, bg_colour):
-        """Generate an 800×450 JPEG test image and attach it to the event."""
+    def _make_event_image(self, event, bg_colour, image_url=None):
+        """Generate or download an 800×450 JPEG test image and attach it to the event."""
         try:
-            # Create image
-            img = Image.new("RGB", (800, 450), color=bg_colour)
-            draw = ImageDraw.Draw(img)
+            img = None
+            if image_url:
+                try:
+                    # Download image
+                    req = urllib.request.Request(
+                        image_url, headers={"User-Agent": "Mozilla/5.0"}
+                    )
+                    with urllib.request.urlopen(req, timeout=10) as response:
+                        img_data = response.read()
 
-            # Draw a subtle lighter panel in the lower third
-            panel_y = 300
-            draw.rectangle([0, panel_y, 800, 450], fill=tuple(max(0, c + 20) for c in bg_colour))
+                    img = Image.open(io.BytesIO(img_data))
+                    if img.mode != "RGB":
+                        img = img.convert("RGB")
 
-            # Title text — wrap at ~40 chars
-            title = event.name
-            if len(title) > 40:
-                # Simple word-wrap
-                words = title.split()
-                lines, current = [], []
-                for word in words:
-                    if sum(len(w) for w in current) + len(current) + len(word) > 38:
-                        lines.append(" ".join(current))
-                        current = [word]
+                    # Resize and center-crop to 800x450
+                    target_w, target_h = 800, 450
+                    img_ratio = img.width / img.height
+                    target_ratio = target_w / target_h
+
+                    if img_ratio > target_ratio:
+                        # Image is wider than target
+                        new_h = target_h
+                        new_w = int(new_h * img_ratio)
                     else:
-                        current.append(word)
-                if current:
-                    lines.append(" ".join(current))
-            else:
-                lines = [title]
+                        # Image is taller than target
+                        new_w = target_w
+                        new_h = int(new_w / img_ratio)
 
-            y = panel_y + 20
-            for line in lines:
-                draw.text((30, y), line, fill=(240, 240, 240))
-                y += 28
+                    # Use LANCZOS if available (Pillow 9+), else fallback to default
+                    resample = getattr(Image.Resampling, "LANCZOS", Image.BICUBIC)
+                    img = img.resize((new_w, new_h), resample=resample)
 
-            # "SEED IMAGE" watermark in top-right corner
-            draw.text((670, 12), "SEED IMAGE", fill=(180, 180, 180))
+                    left = (new_w - target_w) / 2
+                    top = (new_h - target_h) / 2
+                    right = (new_w + target_w) / 2
+                    bottom = (new_h + target_h) / 2
+                    img = img.crop((left, top, right, bottom))
+
+                except Exception as exc:
+                    self.stdout.write(
+                        f"  Warning: could not download image for '{event.name}': {exc}"
+                    )
+                    img = None
+
+            if img is None:
+                # Fallback to generated placeholder
+                img = Image.new("RGB", (800, 450), color=bg_colour)
+                draw = ImageDraw.Draw(img)
+
+                # Draw a subtle lighter panel in the lower third
+                panel_y = 300
+                draw.rectangle(
+                    [0, panel_y, 800, 450],
+                    fill=tuple(max(0, c + 20) for c in bg_colour),
+                )
+
+                # Title text — wrap at ~40 chars
+                title = event.name
+                if len(title) > 40:
+                    # Simple word-wrap
+                    words = title.split()
+                    lines, current = [], []
+                    for word in words:
+                        if (
+                            sum(len(w) for w in current) + len(current) + len(word)
+                            > 38
+                        ):
+                            lines.append(" ".join(current))
+                            current = [word]
+                        else:
+                            current.append(word)
+                    if current:
+                        lines.append(" ".join(current))
+                else:
+                    lines = [title]
+
+                y = panel_y + 20
+                for line in lines:
+                    draw.text((30, y), line, fill=(240, 240, 240))
+                    y += 28
+
+                # "SEED IMAGE" watermark in top-right corner
+                draw.text((670, 12), "SEED IMAGE", fill=(180, 180, 180))
 
             buf = io.BytesIO()
             img.save(buf, format="JPEG", quality=80)
