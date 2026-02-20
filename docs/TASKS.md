@@ -1625,6 +1625,32 @@ Refactor the "Add Event" view to accept Showing details (Date, Time, Room) in th
 #### 9.18.3 Event Dashboard Redirect 🟢 XS (2–4h)
 Change the post-save redirect on event creation. Instead of going to the calendar/list view, go to the specific Event Edit/Dashboard view. This provides immediate confirmation of what was created and allows further edits (e.g. adding a second showing) without searching.
 
+### 9.19 Audit and fix page titles for accessibility and correctness 🟢 XS (1–2h)
+
+**Goal:** Ensure all page `<title>` tags in templates are accurate, semantic, and accessible for screen readers and browser tabs.
+
+**Current issue:** Some pages may have hardcoded venue names or incorrect titles. For example, the rota edit page title is `{{ VENUE.longname }} role rota`, which should correctly show "Star and Shadow role rota" on the S+S deployment, but may have shown "CUBE role rota" historically or on other deployments. More broadly, many page titles lack clear structure and don't distinguish between internal toolkit pages and public-facing content.
+
+**Scope:** Audit all Django templates and update page titles to follow a consistent pattern:
+- **Public pages:** `{{ event_name }} - {{ VENUE.longname }}`
+- **Admin/internal pages:** `{{ page_name }} - {{ VENUE.longname }} Toolkit`
+- **Rota pages:** `{{ VENUE.longname }} Rota - {{ date_range_if_applicable }}`
+
+**Why this matters:**
+- Browser tabs show only the first ~60 characters of a title — make them count
+- Screen reader users rely on page titles to understand page context
+- Clear titles reduce navigation confusion, especially when many tabs are open
+- Consistency improves maintainability
+
+**Files to review:**
+- `toolkit/diary/templates/*.html` (edit_rota.html, view_rota.html, form_*.html)
+- `toolkit/members/templates/*.html` (volunteer views)
+- `toolkit/index/templates/*.html` (toolkit homepage)
+- `toolkit/content/templates/*.html` (CMS pages)
+- `star_and_shadow_templates/*.html` (S+S-specific templates)
+
+**Implementation:** Update all `{% block title %}` tags to follow the pattern above, ensuring they use `{{ VENUE.longname }}` or similar venue variable rather than hardcoded strings.
+
 ---
 
 *Completed tasks: [ARCHIVE.md](ARCHIVE.md)*
