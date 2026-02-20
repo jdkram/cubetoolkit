@@ -60,6 +60,20 @@ Date/time picker widget rendered behind the Bootstrap navbar in the diary event 
 
 Fix applied: raised z-index in `edit_form.css` for the datepicker widget.
 
+### Bug B — Wagtail `translation_key` column overflow ✅ Fixed
+
+**Issue:** Creating pages via Wagtail admin (`/toolkit/cms/pages/add/…`) threw `MySQLdb.DataError: (1406, "Data too long for column 'translation_key' at row 1")`
+
+**Root cause:** MariaDB column `wagtailcore_page.translation_key` was `varchar(32)`, but Wagtail 6 generates 36-character UUIDs with dashes (e.g., `550e8400-e29b-41d4-a716-446655440000`).
+
+**Fix applied:** Created migration `toolkit/content/migrations/0013_widen_page_translation_key.py` using a `RunSQL` operation to alter the column from `varchar(32)` to `varchar(36)`. The migration includes a reverse SQL statement for rollback.
+
+**Verification:**
+- Migration applied successfully in Docker environment
+- Column verified as `varchar(36)` using `SHOW COLUMNS FROM wagtailcore_page LIKE 'translation_key'`
+- 36-character UUIDs can now be stored without overflow
+- CMS page creation via admin is now functional
+
 ---
 
 ## System improvements ✅
