@@ -24,8 +24,8 @@ from toolkit.diary.models import Event, EventTag, EventTemplate, MediaItem, Role
 from toolkit.members.models import Member, Volunteer
 
 try:
-    from wagtail.models import Site
-    from toolkit.content.models import BasicArticlePage
+    from wagtail.models import Page, Site
+    from toolkit.content.models import BasicArticlePage, SectionRootWithLinks
     WAGTAIL_AVAILABLE = True
 except ImportError:
     WAGTAIL_AVAILABLE = False
@@ -476,6 +476,76 @@ Safeguarding Officer is Josephine Walker.</p>
 </ul>
 """
 
+WHO_ARE_WE_BODY = """
+<h2>About the Star and Shadow</h2>
+<p>The Star and Shadow Cinema is a volunteer-run community cinema based in
+Newcastle upon Tyne. We're not just a cinema — we're a workspace, a meeting
+space, an arts space, and a community hub.</p>
+<p>Everything we do is run by volunteers. There are no permanent paid staff.
+The building is collectively managed, programmed, and cared for by a community
+of around 200 active volunteers.</p>
+<p>We show independent and world cinema, host live music and performance, run
+workshops, and welcome groups who want to use the space. If you've never been,
+come along — the bar's open, the welcome's warm, and the programming is always
+interesting.</p>
+<h2>How We Work</h2>
+<p>Decisions are made collectively. There's no boss. The cinema is governed by
+a combination of regular volunteer meetings, working groups, and a co-operative
+structure that gives every active volunteer a say in how the place is run.</p>
+<p>We believe that cinema — and culture more broadly — should be accessible to
+everyone, regardless of income, background, or how much they already know about
+film. Our pricing reflects that: we keep tickets cheap and our bar is not a
+markup machine.</p>
+"""
+
+HOW_TO_VOLUNTEER_BODY = """
+<h2>How to Get Involved</h2>
+<p>The Star and Shadow is run entirely by volunteers. Whether you want to work
+behind the bar, operate the projector, help with events, or get involved in
+programming — there's a role for you.</p>
+<h2>First Steps</h2>
+<p>Attend a <strong>Volunteer Induction</strong> — these run regularly and are
+the starting point for all new volunteers. You'll meet people, learn how the
+building works, and find out what opportunities are available.</p>
+<p>Induction dates are listed on the <a href="/">programme page</a>.</p>
+<h2>What Happens Next</h2>
+<p>After induction you'll be added to the volunteer mailing list and can start
+signing up for roles on the rota. Training for most roles (bar, box office,
+projection) is hands-on and arranged through the rota.</p>
+<h2>Roles Available</h2>
+<ul>
+<li><strong>Keyholder</strong> — opens and closes the venue</li>
+<li><strong>Bar</strong> — bar staff, shadowing, and bar management</li>
+<li><strong>Box Office</strong> — tickets, memberships, and greeting</li>
+<li><strong>Projectionist</strong> — DCP, MP4/DVD, and shadowing</li>
+<li><strong>Facilitator</strong> — facilitating meetings and events</li>
+<li><strong>Programmer</strong> — proposing and booking events</li>
+<li><strong>Cleaner</strong> — keeping the building clean and welcoming</li>
+</ul>
+"""
+
+PRIVACY_POLICY_BODY = """
+<h2>Privacy Policy</h2>
+<p>The Star and Shadow Cinema takes your privacy seriously. We collect only the
+data we need to run the cinema and keep our volunteer community informed.</p>
+<h2>What We Collect</h2>
+<ul>
+<li>Your name and email address if you join our mailing list or volunteer</li>
+<li>Booking information if you purchase tickets through our box office</li>
+</ul>
+<h2>How We Use It</h2>
+<p>We use your data to send programme information (with your consent), manage
+volunteering, and administer the cinema. We never sell your data or share it
+with third parties for marketing purposes.</p>
+<h2>Your Rights</h2>
+<p>You have the right to access, correct, or request deletion of your personal
+data at any time. To unsubscribe from our mailing list, follow the link at the
+bottom of any email we send you.</p>
+<h2>Contact</h2>
+<p>If you have any questions about how we handle your data, contact us at
+<a href="mailto:info@starandshadow.org.uk">info@starandshadow.org.uk</a>.</p>
+"""
+
 
 # ---------------------------------------------------------------------------
 # Command
@@ -517,7 +587,16 @@ class Command(BaseCommand):
             User.objects.filter(username__contains=".").delete()
             User.objects.filter(username__startswith="voltest_").delete()
             if WAGTAIL_AVAILABLE:
-                BasicArticlePage.objects.filter(slug="safer-spaces").delete()
+                # Delete seeded section roots and their children.
+                # Use page.delete() (not queryset delete) so treebeard
+                # properly repairs numchild counts on ancestor pages.
+                for slug in ("about", "get-involved", "important-info"):
+                    for page in Page.objects.filter(slug=slug):
+                        page.delete()
+                # Also remove any old-style standalone article pages that
+                # might have been seeded before the section structure existed.
+                for page in Page.objects.filter(slug="safer-spaces"):
+                    page.delete()
             self.stdout.write("  Done.")
 
         counts = {
@@ -849,7 +928,12 @@ class Command(BaseCommand):
             return False
 
     def _seed_cms_pages(self):
-        """Create sample Wagtail CMS pages. Returns count of pages created."""
+        """Create sample Wagtail CMS pages matching the live S&S nav structure.
+
+        Creates three section roots (About, Get Involved, Important Info) with
+        article pages underneath, so the nav menu has the same shape as the
+        live starandshadow.org.uk site.  Returns count of pages created.
+        """
         try:
             site = Site.objects.filter(is_default_site=True).first()
             if not site:
@@ -862,20 +946,67 @@ class Command(BaseCommand):
 
         created = 0
 
-        # Safer Spaces page
-        if not root_page.get_descendants().filter(slug="safer-spaces").exists():
+        def get_or_create_section(slug, title):
+            nonlocal created
+            existing = root_page.get_descendants().filter(slug=slug).first()
+            if existing:
+                return existing.specific
+            try:
+                section = SectionRootWithLinks(
+                    title=title,
+                    slug=slug,
+                    show_in_menus=True,
+                    live=True,
+                )
+                root_page.add_child(instance=section)
+                created += 1
+                return section
+            except Exception as exc:
+                self.stdout.write(f"  Warning: could not create section '{title}': {exc}")
+                return None
+
+        def get_or_create_article(parent, slug, title, body, show_on_programme_page=False):
+            nonlocal created
+            if parent is None:
+                return
+            existing = parent.get_descendants().filter(slug=slug).first()
+            if existing:
+                return existing.specific
             try:
                 page = BasicArticlePage(
-                    title="Safer Spaces / Safety / Safeguarding",
-                    slug="safer-spaces",
-                    body=SAFER_SPACES_BODY.strip(),
-                    show_on_programme_page=True,
+                    title=title,
+                    slug=slug,
+                    body=body,
+                    show_on_programme_page=show_on_programme_page,
                     live=True,
-                    show_in_menus=False,
+                    show_in_menus=True,
                 )
-                root_page.add_child(instance=page)
+                parent.add_child(instance=page)
                 created += 1
             except Exception as exc:
-                self.stdout.write(f"  Warning: could not create Safer Spaces page: {exc}")
+                self.stdout.write(f"  Warning: could not create page '{title}': {exc}")
+
+        # --- About ---
+        about = get_or_create_section("about", "About")
+        get_or_create_article(about, "who-are-we", "Who Are We", WHO_ARE_WE_BODY.strip())
+
+        # --- Get Involved ---
+        get_involved = get_or_create_section("get-involved", "Get Involved")
+        get_or_create_article(
+            get_involved, "how-to-volunteer", "How to Volunteer", HOW_TO_VOLUNTEER_BODY.strip()
+        )
+
+        # --- Important Info ---
+        important_info = get_or_create_section("important-info", "Important Info")
+        get_or_create_article(
+            important_info,
+            "safer-spaces",
+            "Safer Spaces",
+            SAFER_SPACES_BODY.strip(),
+            show_on_programme_page=True,
+        )
+        get_or_create_article(
+            important_info, "privacy-policy", "Privacy Policy", PRIVACY_POLICY_BODY.strip()
+        )
 
         return created
