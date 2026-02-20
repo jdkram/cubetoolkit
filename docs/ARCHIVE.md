@@ -18,6 +18,40 @@ import toolkit.mailer.urls
 re_path(r"^mailout/", include(toolkit.mailer.urls)),
 ```
 
+### S+S port bugs fixed during initial bring-up (Feb 2026) ✅
+
+A batch of bugs found during the first run of the S+S site on the `master`
+branch (Django 5.2 + Wagtail 6.3):
+
+- **POST-only logout (Django 5.x):** Django 5 dropped GET-based logout.
+  Logout `<a href>` links caused a redirect loop. Changed all logout links
+  to `<form method="post">` buttons throughout the public nav and programme
+  templates.
+
+- **Font Awesome 404:** `base_public.html` referenced the FA4 path
+  (`css/font-awesome/css/font-awesome.min.css`) but the static directory
+  serves FA5 (`css/fontawesome/…`). Updated to FA5 paths with v4 shims;
+  also enables FA5 brands icons (Instagram, Mastodon, Bluesky etc.).
+
+- **Logo clipping and squishing:** `nav-wrap` overrides from
+  `programme_custom.css` and `event_custom.css` set the nav to 170px wide,
+  but the logo `<img>` had hardcoded `width="175"`. The sidebar's
+  `overflow-y: auto` forced horizontal overflow to clip. On the event page,
+  `event.css` blanket `img { width: 100% }` squished the logo while the
+  `height="168"` attr remained, distorting the aspect ratio. Fixed by
+  removing hardcoded attrs, adding `.site-logo { width: auto; max-width:
+  100%; height: auto }`.
+
+- **Bootstrap sourceMappingURL 404:** The committed `bootstrap.min.css` had
+  a trailing `/*# sourceMappingURL=…*/` comment pointing to a `.map` file
+  not in the repo. Removed.
+
+- **Template caching in dev container:** `settings_common.py` evaluates
+  `TEMPLATES[0]["OPTIONS"]["debug"] = DEBUG` at import time, before
+  `docker_settings_ss.py` overrides `DEBUG = True`. This meant the
+  filesystem template loader cached templates in memory. Fixed by explicitly
+  setting `TEMPLATES[0]["OPTIONS"]["debug"] = True` in `docker_settings_ss.py`.
+
 ### Bug G — Date/time picker clips behind navbar ✅ Fixed
 
 Date/time picker widget rendered behind the Bootstrap navbar in the diary event edit view (z-index issue).
@@ -142,4 +176,7 @@ The limit is a soft guideline, not a hard database constraint. The field should 
 |---|---|
 | Docker dev environment (S&S settings) | ✅ Done |
 | `seed_dev_data` management command | ✅ Done — 29 roles, 16 tags, 15 volunteers, 12 events |
+| `seed_dev_data`: CMS nav structure | ✅ Done — About, Get Involved, Important Info section roots with article pages |
 | Word counter for `copy_summary` field | ✅ Done |
+| DEV SITE watermark on public pages | ✅ Done — fixed-position badge in `base_public.html`; remove before production |
+| Volunteer Toolkit sub-menu in public nav | ✅ Done — links to toolkit/diary/rota + sign-out button when logged in |

@@ -7,6 +7,33 @@ Completed items are in [ARCHIVE.md](ARCHIVE.md).
 
 ---
 
+## Current bugs
+
+### Bug B — Wagtail `translation_key` column overflows on MariaDB strict mode
+
+Triggered by: creating any new CMS page via `/toolkit/cms/pages/add/…`
+
+Error: `MySQLdb.DataError: (1406, "Data too long for column 'translation_key' at row 1")`
+
+Root cause: Wagtail's `translation_key` field on `wagtailcore_page` is stored
+as `varchar(32)` in MariaDB, but Wagtail 6 generates a 36-char UUID string
+(with dashes) that overflows the column when `STRICT_TRANS_TABLES` is active.
+
+**Investigation steps:**
+
+1. Check column definition: `docker compose exec mariadb mariadb -u toolkit -p toolkit -e "SHOW COLUMNS FROM wagtailcore_page LIKE 'translation_key';"`
+2. Search Wagtail issue tracker for "translation_key MariaDB DataError"
+3. Possible fixes: widen column to `varchar(36)` via a squashed migration, or check whether Wagtail 6.x has an upstream fix
+
+**Impact:** CMS page creation is blocked in the Wagtail admin. The `seed_dev_data`
+command works around this by creating pages programmatically in Python (bypassing
+the admin form). Programme content added directly in the admin will fail until
+this is resolved.
+
+**Size: 🟢 XS** (investigate + one migration or MariaDB settings tweak)
+
+---
+
 ## 8. Current limitations and known gaps
 
 These are real limitations in the current system that a rewrite should address.
