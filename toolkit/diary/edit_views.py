@@ -1092,6 +1092,7 @@ class EditRotaView(PermissionRequiredMixin, View):
             "days_ahead": days_ahead,
             "showings": showings,
             "edit_showing_notes_url_prefix": showing_notes_url_prefix,
+            "rota_clear_email_prompt_enabled": settings.ROTA_CLEAR_EMAIL_PROMPT_ENABLED,
         }
 
         return render(request, "edit_rota.html", context)

@@ -63,7 +63,7 @@ Decide which version is correct or merge. `master` version (Wagtail 6 / Bootstra
 | ID | Bug | Size | Ref |
 |----|-----|------|-----|
 | **C** | Rota text shows raw HTML entities (`&apos;`, `&quot;`) | 🔵 S | ROADMAP.md § Bugs |
-| **D** | Clearing rota slot over-eager email prompt | 🟢 XS | ROADMAP.md § Bugs |
+| **D** | Clearing rota slot over-eager email prompt | 🟢 XS | ✅ Fixed |
 | **E** | Volunteer login dropdown inaccessible on touch | 🔵 S | ROADMAP.md § Bugs |
 | **F** | Time picker is a slider (bad UX) | 🔵 S | ROADMAP.md § Bugs |
 

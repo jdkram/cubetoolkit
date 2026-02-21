@@ -133,8 +133,8 @@ EVENTS = [
         "bring yourself. No agenda, no structure — just the building and us.",
         "tags": ["cafe", "workshop"],
         "private": False,
-        "rota_notes": "Opening the venue for all volunteers to use as they will. "
-        "Workshop, print room, cinema. Come along and have a go at whatever takes your fancy.",
+        "rota_notes": "bring your lovely selves and recipes and let's eat stuff from the freezer that's been in there too long\n _____________________\n< I like mooooooovies >\n ---------------------\n        \\   ^__^\n         \\  (oo)\\_______\n            (__)\       )\\/\\\n                ||----w |\n                ||     ||",
+
         "roles": ["Keyholder", "Cafe (Level 1)", "Extra Hands (no training needed)"],
         "day_offset": 3,
         "hour": 14,
@@ -167,7 +167,6 @@ EVENTS = [
         "roles": [
             "Inductor - 1 (trained)",
             "Inductor - 2 (shadowing)",
-            "Trainee (inducted)",
         ],
         "day_offset": 7,
         "hour": 18,
@@ -200,7 +199,8 @@ EVENTS = [
         "film_information": "Dir. Lorene Scafaria, USA 2012, 101 min, 15",
         "tags": ["film"],
         "private": False,
-        "rota_notes": "Doors 6:30pm. Film 7pm. Projectionist please set up by 6pm.",
+        "rota_notes": "Doors 6:30pm. Film 7pm. Projectionist set up by 6pm. The apostrophe thing's fixed—that's genuinely nice.",
+
         "roles": [
             "Keyholder",
             "Projectionist - DCP",
@@ -220,7 +220,8 @@ EVENTS = [
         "people at the same time.",
         "tags": ["volunteer", "cafe"],
         "private": False,
-        "rota_notes": "Cleaning from 10am, brunch from noon. Cafe open to public: 10:00–1:30pm",
+        "rota_notes": "Cleaning 10am, brunch noon. Cafe open 10:00 til 1:30pm. \nWowee I sure love these apostrophes '''''''''''''''''",
+
         "roles": ["Keyholder", "Cleaner", "Cafe (Level 1)", "Cafe Shadowing"],
         "day_offset": 14,
         "hour": 10,
@@ -233,7 +234,8 @@ EVENTS = [
         "and is open to everyone — members, volunteers, and the curious.",
         "tags": ["workshop", "exhibition"],
         "private": False,
-        "rota_notes": "",
+        "rota_notes": "Art Club meets weekly. Drop in, make something. Yes, apostrophes work now, thanks for asking.",
+
         "roles": ["Keyholder", "Extra Hands (no training needed)"],
         "day_offset": 16,
         "hour": 15,
@@ -247,7 +249,8 @@ EVENTS = [
         "pricing": "Free",
         "tags": ["film", "free"],
         "private": False,
-        "rota_notes": "Doors 5:30pm. Bar shift 1: 5:30pm–8pm. Bar shift 2: 8pm–10pm. Bar closes at 10pm.",
+        "rota_notes": "Doors 5:30pm. Bar 5:308pm shift 1, 8pm10pm shift 2. Closes 10pm. Apostrophes are working. Not saying I'm shocked.",
+
         "roles": [
             "Keyholder",
             "Projectionist - MP4",
@@ -265,7 +268,8 @@ EVENTS = [
         "— always something different, always worth coming to.",
         "tags": ["music", "performance"],
         "private": False,
-        "rota_notes": "Doors 7pm. First act 8pm. Sound check from 5pm — sound techs please arrive by 4:30pm.",
+        "rota_notes": "Doors 7pm. First act 8pm. Sound check 5pm—tech arrives 4:30pm. Apostrophes work. Moving on.",
+
         "roles": [
             "Keyholder",
             "Sound Technician level 1",
@@ -286,7 +290,8 @@ EVENTS = [
         "All welcome — from first-timers to experienced writers.",
         "tags": ["workshop", "meeting"],
         "private": False,
-        "rota_notes": "",
+        "rota_notes": "Weekly creative writing workshop. Exercises, feedback, sharing. We looooooove writing \" and \' the most, so it's great that apostrophes work now. We can finally write about writing without wanting to scream.",
+
         "roles": ["Facilitator", "Facilitator Shadow"],
         "day_offset": 23,
         "hour": 18,
@@ -299,7 +304,8 @@ EVENTS = [
         "Bring proposals, costings, and ideas.",
         "tags": ["meeting"],
         "private": False,
-        "rota_notes": "Agenda to be circulated by Friday. Please review proposals in advance.",
+        "rota_notes": "Agenda circulated Friday. Please review proposals beforehand.",
+
         "roles": ["Facilitator", "Minute taker"],
         "day_offset": 25,
         "hour": 18,
@@ -314,7 +320,30 @@ EVENTS = [
         "private": True,
         "hide_in_programme": True,
         "rota_notes": "Please read the cafe handbook before attending.",
-        "roles": ["Inductor - 1 (trained)", "Trainee (inducted)"],
+        "roles": [
+            "Inductor - 1 (trained)", 
+            "Trainee (inducted)", 
+            "Trainee (inducted)",
+            "Trainee (inducted)",
+            "Trainee (inducted)",
+            "Trainee (inducted)",
+            "Trainee (inducted)",
+            "Trainee (inducted)",
+            "Trainee (inducted)",
+            "Trainee (inducted)",
+            "Trainee (inducted)",
+            "Trainee (inducted)",
+            "Trainee (inducted)",
+            "Trainee (inducted)",
+            "Trainee (inducted)",
+            "Trainee (inducted)",
+            "Trainee (inducted)",
+            "Trainee (inducted)",
+            "Trainee (inducted)",
+            "Trainee (inducted)",
+            "Trainee (inducted)",
+            "Trainee (inducted)",
+        ],
         "day_offset": 26,
         "hour": 11,
         "image_url": "https://images.pexels.com/photos/1307698/pexels-photo-1307698.jpeg?auto=compress&cs=tinysrgb&w=800",
@@ -341,6 +370,130 @@ EVENTS = [
         "day_offset": 28,
         "hour": 19,
         "image_url": "https://images.pexels.com/photos/269140/pexels-photo-269140.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "The Annual Ritual Sacrifice of Pens: A Volunteer Ceremony",
+        "copy_summary": "Where do all our pens go? Let's investigate through interpretive ritual & ancient summoning.",
+        "copy": "For years, S&S volunteers have wondered: where do the pens disappear to? Tonight, we gather to perform the ancient & sacred Ritual Sacrifice—a solemn ceremony combining scavenger hunt, interpretive dance, & mysterious incantations to either return our missing pens or appease the pen-stealing spirits. Participants must bring one treasured pen to offer. No writing utensils will survive the evening. ",
+        "pricing": "Free / your dignity",
+        "tags": ["volunteer", "performance", "meeting"],
+        "private": True,
+        "hide_in_programme": True,
+        "rota_notes": "Volunteer-only ritual ceremony. We can't overstate how important it is that volunteers bring a pen they're willing to lose forever.",
+        "roles": ["Keyholder", "Sound Technician level 1", "Facilitator"],
+        "day_offset": 5,
+        "hour": 20,
+        "image_url": "https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Four Hours of a Man Juggling Jelly While Weeping",
+        "copy_summary": "Wordless. Jiggling. Haunting.",
+        "copy": "A visionary work by reclusive avant-garde artist Klaus Gelatino. For four uninterrupted hours, a solitary figure stands centre frame juggling cubes of translucent jelly, made all the more perilous by the growing pool of tears accumulating around him. No plot, no dialogue, just the relentless geometry of sorrow and gelatine.",
+        "film_information": "Dir. Klaus Gelatino, Switzerland 2024, 240 min, no cert",
+        "tags": ["film", "exhibition"],
+        "private": False,
+        "rota_notes": "Doors 4pm. Film 4:308:30pm. Toilet breaks discouraged but reluctantly permitted. Box office should be prepared to discuss refund policy (spoiler: no). \nhey - anyone mind if i bring ingredients for jelly shots? \n we're in the process of negotiating a Q&A with the director, provided he eats his way out of the custard tomb that is his current art piece in time. Please watch this space",
+        "roles": [
+            "Keyholder",
+            "Projectionist - MP4",
+            "Box Office - Admission Tickets",
+            "Bar Staff - Shift 1",
+            "Bar Staff - Shift 2",
+            "Usher - Fire Trained",
+        ],
+        "day_offset": 10,
+        "hour": 16,
+        "image_url": "https://images.pexels.com/photos/3761679/pexels-photo-3761679.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "The Badger Orchestra: An Evening of Striped Symphonies",
+        "copy_summary": "Five badgers. Seventeen instruments. Zero rehearsal. Infinite chaos.",
+        "copy": "Fresh from their sold-out European tour, The Badger Orchestra brings their unique blend of aggressive territorial behavior & accidental musicality to S&S. The sounds have been variously described as 'haunting,' 'feral,' 'somehow melancholic,' & 'are you sure those are badgers?'",
+        "pricing": "£8/£5",
+        "tags": ["music", "performance", "party"],
+        "private": False,
+        "rota_notes": "Badger gig, so can't stress enough how important it is that we keep door access secure. Badgers are excellent at escaping & also smell quite strong. sound tech might be a challenging setup.",
+        "roles": [
+            "Keyholder",
+            "Sound Technician level 1",
+            "Sound Technician level 2",
+            "Bar Staff - Shift 1",
+            "Bar Staff - Shift 2",
+            "Box Office - Admission Tickets",
+            "Usher - Fire Trained",
+        ],
+        "day_offset": 15,
+        "hour": 19,
+        "image_url": "https://images.pexels.com/photos/3807517/pexels-photo-3807517.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "The Impossible Film-Athon: 10 Simultaneous Cinema Screenings",
+        "copy_summary": "Ten films. One screen. Eyes wedged open. Narrative coherence shmoherence.",
+        "copy": "Inspired by the fragmented postmodern consciousness of modern life, our programmers have attempted the impossible: a ten-film parallel marathon. All films play simultaneously on a single screen via split-diopter lens technology and pure spite. You will see: a kung-fu film, a French New Wave piece, Found Footage horror, documentary realism, experimental animation, a period drama, a heist thriller, Nordic noir, a Bollywood spectacular, & something our programmers refuse to categorize that involves a lot of thin ham. Bring neck support, your own eyelid props, and your willingness to question why cinema exists.",
+        "film_information": "A collaborative fever dream, 8 hours, no coherent rating system",
+        "tags": ["film", "exhibition", "workshop"],
+        "private": False,
+        "rota_notes": "Simultaneous film convergence! Doors at noon, screenings 1pm9pm. Projectionist: you're a hero & we can't thank you enough. Some attendees may experience mild synesthesia, probs a good idea to have a first aider to hand here",
+        "roles": [
+            "Keyholder",
+            "Projectionist - DCP",
+            "Projectionist - MP4",
+            "Box Office - Admission Tickets",
+            "Bar Staff - Shift 1",
+            "Bar Staff - Shift 2",
+            "Usher - Fire Trained",
+            "Audio Visual Technician",
+        ],
+        "day_offset": 20,
+        "hour": 13,
+        "image_url": "https://images.pexels.com/photos/7974/pexels-photo.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "The Great Inventory Crisis: Volunteer Spirits Appreciation Night",
+        "copy_summary": "We have too much stock. You have a liver. Let's introduce them.",
+        "copy": "S&S's bar inventory has reached critical levels. Someone ordered seventeen bottles of absinthe in 2019 & we've learned it doesn't expire, and may be gaining sentience. Join us for an evening devoted to the singular mission of reducing our stock to manageable levels. Volunteers only as we can't have the public witness our desperation & strategic dedication to cocktails nobody wants. Features: mystery spirit roulette, experimental mixing, & the moral satisfaction of preventing waste",
+        "pricing": "Free (until the next day)",
+        "tags": ["volunteer", "party"],
+        "private": True,
+        "hide_in_programme": True,
+        "rota_notes": "currently plumbed in kegs off limits - please do a stock take before the event and put things aside, no point doing it after as you'll all be hammered - Jerome \n\n and please drink responsibly, but also lots -- fulgencio",
+        "roles": ["Keyholder", "Bar Staff - Shift 1", "Bar Staff - Shift 2"],
+        "day_offset": 6,
+        "hour": 18,
+        "image_url": "https://images.pexels.com/photos/3407814/pexels-photo-3407814.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "The Freezer Expedition: A Journey Into the Unknown",
+        "copy_summary": "What's in the back? We don't know, but we're going to find out.",
+        "copy": "The back of our catering freezer hasn't been catalogued since approximately 2015. Behind the labelled containers of ice lollies and what is statistically likely to be daal, something waits. Is it treasure? Is it 2kg of coriander that won't have survived being frozen? Tonight, a selected group of brave volunteers will undertake an archaeological expedition into the depths of our freezer unit to discover what culinary relics remain",
+        "pricing": "Free (frostbite treatment not covered)",
+        "tags": ["volunteer", "workshop"],
+        "private": True,
+        "hide_in_programme": True,
+        "rota_notes": "Freezer archaeology expedition! Bring thick gloves & emotional resilience. Put the hot water on for a cuppa _before_ you start as your hands will be too numb after.",
+        "roles": ["Keyholder", "Facilitator"],
+        "day_offset": 8,
+        "hour": 19,
+        "image_url": "https://images.pexels.com/photos/5850537/pexels-photo-5850537.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "The Loft Haunting: Negotiation & Possibly Exorcism",
+        "copy_summary": "We have a ghost. It's inconvenient. Come help us either evict it or reach detente.",
+        "copy": "For months now, S&S vols have reported strange phenomena in the loft: inexplicable drafts, items rearranged, the sound of something that might be sobbing, rats, or the ventiliation system playing up. After careful consideration, we've concluded the most likely explanation is a poltergeist. Rather than immediately attempting violent supernatural removal, we're trying a more collaborative approach: come join us in a negotiation of reasonable cohabition terms, and when that fails, a good ol' fashioned exorcism. Come armed with: sage, skepticism, & a willingness to communicate with the unknown.",
+        "pricing": "£5/£3 (proceeds go toward better heating)",
+        "tags": ["workshop", "performance", "meeting"],
+        "private": False,
+        "rota_notes": "For months now, S&S vols have reported strange phenomena in the loft: inexplicable drafts, items rearranged, the sound of something that might be sobbing, rats, or the ventiliation system playing up. After careful consideration, we've concluded the most likely explanation is a poltergeist. Rather than immediately attempting violent supernatural removal, we're trying a more collaborative approach: come join us in a negotiation of reasonable cohabition terms, and when that fails, a good ol' fashioned exorcism. Come armed with: sage, skepticism, & a willingness to communicate with the unknown.",
+        "roles": [
+            "Keyholder",
+            "Facilitator",
+            "Audio Visual Technician",
+            "Bar Staff - Shift 1",
+            "Usher - Fire Trained",
+        ],
+        "day_offset": 11,
+        "hour": 19,
+        "image_url": "https://images.pexels.com/photos/1303081/pexels-photo-1303081.jpeg?auto=compress&cs=tinysrgb&w=800",
     },
 ]
 
@@ -809,12 +962,27 @@ class Command(BaseCommand):
 
             roles_list = event_data.get("roles", [])
             num_roles = len(roles_list)
-            unfilled_indices = set()
-            if num_roles > 1 and random.random() < 0.3:
-                num_unfilled = random.randint(1, min(2, num_roles - 1))
-                unfilled_indices = set(random.sample(range(num_roles), num_unfilled))
 
-            for i, role_name in enumerate(roles_list):
+            # Calculate how many slots should be empty based on how far in the future the event is.
+            # Events closer to now: fewer empty slots. Events further out: more empty slots.
+            # max day_offset is 28, so normalize to a 0-1 scale for empty fill rate.
+            day_offset = event_data.get("day_offset", 14)
+            normalized_distance = min(day_offset / 28.0, 1.0)
+            # For close events (0.1 distance), fill 70-80%. For far events (1.0 distance), fill 30-40%.
+            fill_rate = 0.8 - (normalized_distance * 0.45)  # ranges ~0.35 to 0.8
+
+            # For each role, create 1-2 additional "backup" slots.
+            expanded_roles = []
+            for role_name in roles_list:
+                expanded_roles.append(role_name)
+                if random.random() < 0.7:  # 70% of roles get a backup slot
+                    expanded_roles.append(role_name)
+
+            num_expanded = len(expanded_roles)
+            num_to_fill = max(1, int(num_expanded * fill_rate))
+            unfilled_indices = set(random.sample(range(num_expanded), num_expanded - num_to_fill))
+
+            for i, role_name in enumerate(expanded_roles):
                 try:
                     role = Role.objects.get(name=role_name)
                 except Role.DoesNotExist:
@@ -831,9 +999,9 @@ class Command(BaseCommand):
                 _, re_created = RotaEntry.objects.get_or_create(
                     showing=showing,
                     role=role,
-                    rank=1,
+                    rank=1 if i < num_roles else 2,  # backup slots have rank 2
                     defaults={
-                        "required": True,
+                        "required": (i < num_roles),  # only first N slots are required
                         "name": name,
                     },
                 )
