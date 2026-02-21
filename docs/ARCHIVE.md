@@ -128,6 +128,14 @@ obsolete Google Fonts requests.
 **Resolution:** Verified the IE8 conditional blocks are no longer present in
 the public and admin base templates.
 
+### 8.15 Frontend debt cleanup — update jQuery UI ✅ resolved
+
+**Issue:** jQuery UI 1.11.0 (2014) was outdated and no longer receiving
+security patches.
+
+**Fix applied:** Updated vendored jQuery UI assets to 1.13.3 (JS and Smoothness
+theme CSS).
+
 ---
 
 ## Features implemented ✅
