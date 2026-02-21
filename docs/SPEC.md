@@ -185,7 +185,7 @@ was trained for which role, when, by whom). In practice at Star and Shadow these
 - Cancel a pending or in-progress job
 - Members have a unique unsubscribe token for one-click unsubscribe links in emails
 
-**Note (Star and Shadow):** at S&S the toolkit mailout system is **not currently deployed or used** — neither for general communications nor for any other purpose. All volunteer and member communications go through Simplelists mailing lists, managed outside the toolkit. The toolkit's email code (the `mailerd` daemon, the job queue, the compose view) is present in the codebase and functional, but the `DJANGO_SETTINGS_MODULE` for the S&S instance does not configure an outbound SMTP server for bulk sends, and the mailout UI is not linked from the internal dashboard. The only email the S&S instance sends is transactional (account creation, password reset). See section 3.3 for the workflow diagram — it describes how the system *can* work, not how S&S uses it today. If S&S were to adopt the toolkit mailout system, a review of the Simplelists migration implications (section 9.6) would be needed first.
+**Note (Star and Shadow):** at S&S the toolkit mailout system is **not currently deployed or used** — neither for general communications nor for any other purpose. All volunteer and member communications go through Simplelists mailing lists, managed outside the toolkit. The toolkit's email code (the `mailerd` daemon, the job queue, the compose view) is present in the codebase and functional, but the `DJANGO_SETTINGS_MODULE` for the S&S instance does not configure an outbound SMTP server for bulk sends, and the mailout UI is not linked from the internal dashboard. The only email the S&S instance sends is transactional (account creation, password reset). See section 4.3 for the workflow diagram — it describes how the system *can* work, not how S&S uses it today. If S&S were to adopt the toolkit mailout system, a review of the Simplelists migration implications (section 9.6) would be needed first.
 
 ### 1.6 CMS content pages (internal)
 
@@ -274,7 +274,7 @@ The current system uses a single `TrainingRecord` model for all of these, which 
 
 ## 4. Key workflows
 
-### 3.1 Creating an event and scheduling showings
+### 4.1 Creating an event and scheduling showings
 
 ```mermaid
 flowchart TD
@@ -291,7 +291,7 @@ flowchart TD
     J --> L[Event appears on public programme]
 ```
 
-### 3.2 Volunteer induction (current process)
+### 4.2 Volunteer induction (current process)
 
 ```mermaid
 flowchart TD
@@ -307,7 +307,7 @@ flowchart TD
 
 **Current pain points:** entirely manual, no link between the Google Form and the Toolkit, no automated account creation, admins must remember to act on emails.
 
-### 3.3 Sending a mailout (Cube Microplex only; not used at S&S)
+### 4.3 Sending a mailout (Cube Microplex only; not used at S&S)
 
 ```mermaid
 sequenceDiagram
@@ -329,7 +329,7 @@ sequenceDiagram
     Editor->>Toolkit: See job status (htmx live update)
 ```
 
-### 3.4 Volunteer retirement
+### 4.4 Volunteer retirement
 
 ```mermaid
 flowchart TD
@@ -340,7 +340,7 @@ flowchart TD
     E --> F[Admin manually removes\nfrom Simplelists]
 ```
 
-### 3.5 Film programming workflow (Star and Shadow)
+### 4.5 Film programming workflow (Star and Shadow)
 
 The *Film and Television Programming Guide* (NextCloud, last updated January 2025) documents the end-to-end process for proposing and running a film or TV screening. Key information extracted for specification purposes:
 
@@ -430,7 +430,7 @@ Ticket sales close 1 hour before the showing start. Print the TicketSource sales
 
 When the news surfaced that the site was running on a deprecated, unsupported version of Django, a natural response from volunteers without deep technical context was: "why not just use Squarespace?" or "why not use WordPress?" These questions deserve a straight answer.
 
-### 13.1 What an off-the-shelf platform does well
+### 5.1 What an off-the-shelf platform does well
 
 A hosted website builder like Squarespace, WordPress.com, or Ghost does some things very well:
 
@@ -447,7 +447,7 @@ can update the website without developer involvement
 
 For a simple "here is what's on this week" website with a contact form and some About pages, an off-the-shelf platform is entirely sufficient.
 
-### 13.2 What the toolkit does that a website platform cannot
+### 5.2 What the toolkit does that a website platform cannot
 
 The Star and Shadow's digital infrastructure requirement goes far beyond a public-facing website. The toolkit manages:
 
@@ -468,7 +468,7 @@ The Star and Shadow's digital infrastructure requirement goes far beyond a publi
 
 The website is one component of what the toolkit does — and not the most important one. The rota, the volunteer database, and the programming workflow are the heart of the system. These cannot be replaced by Squarespace. They cannot even be replaced by Squarespace plus Mailchimp plus Airtable — those tools are generic and don't model the S&S data relationships (event → showing → rota entry → volunteer → training record).
 
-### 13.3 What you'd still need if you moved the website to Squarespace
+### 5.3 What you'd still need if you moved the website to Squarespace
 
 If the public-facing website moved to Squarespace, you would still need to maintain a separate system for:
 
@@ -479,13 +479,13 @@ If the public-facing website moved to Squarespace, you would still need to maint
 
 You'd also need to **duplicate effort** on every event: create it in the toolkit for the rota, then separately create or copy it to Squarespace for the public website. This is the friction that the toolkit explicitly exists to remove.
 
-### 13.4 The real argument for keeping the toolkit
+### 5.4 The real argument for keeping the toolkit
 
 The toolkit is valuable precisely because everything is connected. An event in the system has a public listing, an internal rota, a volunteer assignment, a financial history, and an archive entry — all from a single record. None of the generic platforms can reproduce this integration without a substantial custom integration layer, which would cost more to build than maintaining the existing system.
 
 The technical debt that prompted the Squarespace conversation — Django 2.2 running in production — is a real problem but it has a real solution: migration to the modern `master` branch (which is exactly what this project is doing). The answer to "our software is outdated" is "update the software," not "replace it with a tool that can only do 30% of what it does."
 
-### 13.5 The collectives directory
+### 5.5 The collectives directory
 
 **Current state** (see also 8.12):
 
@@ -541,7 +541,7 @@ A **"join request" button** per collective — which sends an email to the conta
 
 The collective also uses a **wiki** (rarely used) and **NextCloud** (active — stores meeting minutes, posters, policy documents, event materials).
 
-### 11.1 Guiding principle: the toolkit is not a platform
+### 7.1 Guiding principle: the toolkit is not a platform
 
 The toolkit should remain the authoritative source for exactly three things:
 
@@ -559,7 +559,7 @@ The larger cost is organisational: deciding what lives where, migrating existing
 
 Prioritise integrations that pay off without requiring collective coordination first. Defer integrations that require content migrations, access control decisions, or ongoing curation until there is clear collective appetite and capacity for that work.
 
-### 11.2 What NextCloud is good at (that the toolkit isn't)
+### 7.2 What NextCloud is good at (that the toolkit isn't)
 
 - Storing and versioning arbitrary files (posters, PDFs, spreadsheets)
 - Folder-based organisation that non-technical users understand intuitively
@@ -567,7 +567,7 @@ Prioritise integrations that pay off without requiring collective coordination f
 - Collaborative document editing (with the right apps installed)
 - Already has buy-in from the collective — people know how to use it
 
-### 11.3 Quick wins — light touch points with no API needed
+### 7.3 Quick wins — light touch points with no API needed
 
 These cost almost nothing to implement and survive NextCloud changes or migrations:
 
@@ -591,7 +591,7 @@ This is seven lines of code and gives every event a direct link to its files.
 
 When a proposed event is discussed at a Monday meeting, the toolkit can show a suggested NextCloud URL for that meeting's minutes file (based on the date). Again, just a URL template — no API.
 
-### 11.4 Medium effort — integration that's worth it if NextCloud has an API
+### 7.4 Medium effort — integration that's worth it if NextCloud has an API
 
 NextCloud exposes a WebDAV API and an OCS API. These are stable, widely documented, and used by many integrations. If the collective is willing to maintain an API token:
 
@@ -605,7 +605,7 @@ When a showing is confirmed, the toolkit could POST to NextCloud's WebDAV API to
 
 If volunteers eventually have accounts in the toolkit, the toolkit could grant them access to a NextCloud shared folder on activation (using NextCloud's share API). This replaces the current manual step of adding people to shared folders.
 
-### 11.5 What to do with the wiki
+### 7.5 What to do with the wiki
 
 The wiki is rarely used because it has no clear owner and no pull mechanism — no reason for anyone to look at it regularly. Options:
 
@@ -619,7 +619,7 @@ If the wiki is kept, give it a clear, narrow purpose that no other tool serves �
 
 **Do not** try to sync or embed wiki content inside the toolkit. That creates a fragile dependency on a system that's already underused.
 
-### 11.6 Single sign-on: probably not worth it yet
+### 7.6 Single sign-on: probably not worth it yet
 
 NextCloud supports OIDC and LDAP for SSO. In theory, volunteers could log in to the toolkit and NextCloud with the same credentials. In practice:
 
@@ -633,7 +633,7 @@ OAuth2/OIDC flows) without committing to it from day one
 
 SSO becomes worth considering once there are three or more integrated systems all needing the same user accounts.
 
-### 11.7 Resilience summary
+### 7.7 Resilience summary
 
 The safest integration strategy, in order of increasing fragility:
 
@@ -647,7 +647,7 @@ The safest integration strategy, in order of increasing fragility:
 
 A rewrite should start with naming conventions and URL fields, and only add API calls once there is a volunteer willing to maintain them.
 
-### 11.8 Email infrastructure (Star and Shadow)
+### 7.8 Email infrastructure (Star and Shadow)
 
 Email at S&S is hosted on **Google Workspace** under the `starandshadow.org.uk` domain. **Simplelists** handles all mailing list communications (volunteer lists, member newsletters). The toolkit only sends transactional email (account creation, password reset).
 
@@ -667,7 +667,7 @@ Any future feature that sends automated email or surfaces contact addresses in t
 
 ## 8. Data model
 
-### 2.1 Entity-relationship diagram
+### 8.1 Entity-relationship diagram
 
 ```mermaid
 erDiagram
@@ -856,7 +856,7 @@ erDiagram
     }
 ```
 
-### 2.2 Model descriptions
+### 8.2 Model descriptions
 
 #### Event
 The core unit. An event is something that happens at the venue — a film screening, a gig, a meeting, a workshop. An event can happen on multiple dates (each date is a `Showing`).
@@ -1220,7 +1220,7 @@ For non-technical volunteers who are primarily content editors, Wagtail's "Snipp
 
 This section addresses the strategic question: given everything documented above, should the next phase of development work *within* the current Django codebase, or start fresh?
 
-### 14.1 Arguments for continuing with Django
+### 11.1 Arguments for continuing with Django
 
 **The codebase works and has been battle-tested.** 15 years of commits represent a very large number of edge cases handled, bugs fixed, and data model refinements made. A rewrite starts this accumulation from zero.
 
@@ -1232,7 +1232,7 @@ This section addresses the strategic question: given everything documented above
 
 **Volunteer continuity.** A rewrite requires someone to build, test, and maintain a new system in parallel while keeping the old one alive. This is a very high bar for a volunteer team. The risk of a half-finished rewrite that is never completed — leaving the organisation with neither a working old system nor a working new one — is real.
 
-### 14.2 Arguments for a rewrite
+### 11.2 Arguments for a rewrite
 
 **The architectural limitation that matters most** — `RotaEntry.name` as free text, with no volunteer accounts — is hard to fix incrementally. A clean data model with `RotaEntry → Volunteer → User` from the start makes the whole system simpler.
 
@@ -1242,7 +1242,7 @@ This section addresses the strategic question: given everything documented above
 
 **Simpler deployment.** A rewrite could be designed for a PaaS deployment (Fly.io, Railway, Render) rather than self-managed Docker, which would reduce operational overhead for a volunteer team.
 
-### 14.3 Recommendation
+### 11.3 Recommendation
 
 **Continue with Django, on the `master` branch, with incremental improvements.** The case for a rewrite is intellectually coherent but practically high-risk given the volunteer capacity constraints. The most important architectural fix — linking rota entries to volunteer accounts — is achievable within the existing codebase (and is already in the roadmap as item 8.1 (see TASKS.md)).
 

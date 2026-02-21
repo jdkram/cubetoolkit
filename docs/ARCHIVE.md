@@ -1,8 +1,8 @@
 # Completed Tasks — Archive
 
-**For current work and priorities, see:** [CURRENT_WORK.md](../CURRENT_WORK.md) · [ROADMAP.md](ROADMAP.md) · [TASKS.md](TASKS.md)
+**This file is a periodic batch dump, not a live tracker.** Active task status lives in [CURRENT_WORK.md](../CURRENT_WORK.md) (Done section). Move rows here occasionally in one sweep — there is no obligation to update this file after individual tasks.
 
-Tasks here are done. Active tasks are in [CURRENT_WORK.md](../CURRENT_WORK.md).
+**For current work and priorities, see:** [CURRENT_WORK.md](../CURRENT_WORK.md)
 
 ---
 

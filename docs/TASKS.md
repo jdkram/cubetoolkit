@@ -2,10 +2,9 @@
 
 **Purpose:** Design rationale, system limitations, and feature specifications.
 
-**For current work and priorities, see:** [CURRENT_WORK.md](../CURRENT_WORK.md) · [ROADMAP.md](ROADMAP.md) (overview)
-**Completed work:** [ARCHIVE.md](ARCHIVE.md)
+**For current work, priorities and completion status, see:** [CURRENT_WORK.md](../CURRENT_WORK.md)
 
-This file details the *what* and *why* behind proposed work. Status indicators have moved to CURRENT_WORK.md to maintain a single source of truth.
+This file is **spec and rationale only** — it describes what things are and why they exist. Status tracking (open/done) lives exclusively in CURRENT_WORK.md. Do not add ❌/✅ markers here.
 
 **Size key:** 🟢 XS (1–4h) · 🔵 S (4–16h) · 🟡 M (16–40h) · 🟠 L (40–80h) · 🔴 XL (80–160h) · ⛔ XXL (160h+)
 
@@ -13,11 +12,17 @@ This file details the *what* and *why* behind proposed work. Status indicators h
 
 ## Current bugs
 
-✅ **Bug B — RESOLVED** — Wagtail `translation_key` column overflow
+**Bug E** — Homepage list view layout broken by volunteer event info 🔵 S
 
-**Resolution:** Created migration `toolkit/content/migrations/0013_widen_page_translation_key.py` to widen the `wagtailcore_page.translation_key` column from `varchar(32)` to `varchar(36)` via `RunSQL` operation. Migration applied successfully; CMS page creation via admin now works without `DataError`.
+The "list" view on the homepage is currently misaligned or layout-broken due to the addition of volunteer event/rota information. The extra data points (available slots, etc.) are likely pushing elements out of their containers or causing spacing issues in the compact list view.
 
-See [ARCHIVE.md](ARCHIVE.md) for full resolution details.
+**Bug F** — Grid view volunteer banners aesthetics 🟢 XS
+
+The "volunteer only" banners in the grid view are currently not filling their cells. They should be made more aesthetically pleasing by extending them to span the full width of their grid containers.
+
+**Bug B** — Wagtail `translation_key` column overflow 🔵 S
+
+On MariaDB, `wagtailcore_page.translation_key` was `varchar(32)` but Wagtail 6 generates 36-character UUIDs. Creating CMS pages throws `DataError`. Fix: widen column to `varchar(36)` via migration. See CURRENT_WORK.md Done section for resolution details.
 
 ---
 

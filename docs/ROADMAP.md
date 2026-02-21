@@ -2,7 +2,8 @@
 
 **TL;DR:** Working Django app for events, volunteers, members. Needs bugs fixed, S&S features ported, then feature development.
 
-**For current work and priorities, see:** [CURRENT_WORK.md](../CURRENT_WORK.md) · [TASKS.md](TASKS.md) (design details) · [ARCHIVE.md](ARCHIVE.md) (completed)
+**Phase-level status is shown here. Per-task status lives in:** [CURRENT_WORK.md](../CURRENT_WORK.md)
+**Task spec and rationale:** [TASKS.md](TASKS.md)
 
 ---
 
@@ -34,37 +35,37 @@ familiar with the codebase; expect 2–3× longer when learning the stack.
 
 ### Bugs
 
-| # | Bug | Size | Status |
-|---|---|---|---|
-| A | `/toolkit/` index crashes — missing `mailer` URL namespace | 🟢 XS | ✅ Fixed |
-| B | Wagtail page creation crashes — `translation_key` column too short on MariaDB | 🔵 S | Open |
-| C | Rota text fields show raw HTML entities (`&apos;`, `&quot;`) | 🔵 S | Open (may be s+s-specific) |
-| D | Clearing a rota slot prompts to email all volunteers (over-eager) | 🟢 XS | ✅ Fixed |
-| E | Volunteer login dropdown inaccessible on some touch devices | 🔵 S | Open |
-| F | Time picker is a slider (poor UX — should be `<input type="time">`) | 🔵 S | Open |
-| G | Date/time picker clips behind navbar | 🟢 XS | ✅ Fixed |
+| # | Bug | Size |
+|---|---|---|
+| A | `/toolkit/` index crashes — missing `mailer` URL namespace | 🟢 XS |
+| B | Wagtail page creation crashes — `translation_key` column too short on MariaDB | 🔵 S |
+| C | Rota text fields show raw HTML entities (`&apos;`, `&quot;`) | 🔵 S |
+| D | Clearing a rota slot prompts to email all volunteers (over-eager) | 🟢 XS |
+| E | Volunteer login dropdown inaccessible on some touch devices | 🔵 S |
+| F | Time picker is a slider (poor UX — should be `<input type="time">`) | 🔵 S |
+| G | Date/time picker clips behind navbar | 🟢 XS |
 
-**See [CURRENT_WORK.md](../CURRENT_WORK.md) for current priorities and details.
+**Current status: see [CURRENT_WORK.md](../CURRENT_WORK.md).**
 
 ### S&S features to port from the `s+s` branch
 
-| Task | Size | Status |
-|---|---|---|
-| `Volunteer.user` OneToOneField (auto-create user on volunteer add) | 🟠 L | Open |
-| Django admin + ModelAdmin classes | 🟡 M | Open |
-| Panopticon user management in `/volunteers/ID/edit` view | 🟢 XS | Open |
-| Programmer permission group (`create_programmer_permission` command) | 🟢 XS | Open |
-| Name coercion in rota edit (fill in logged-in user's name) | 🟢 XS | Open |
-| `SHOW_ARCHIVE_IMAGES` / `IMAGES_START_DATE` settings | 🟢 XS | Open |
-| `Showing.rota_notes` field: extend 1024 → 4096 chars | 🟢 XS | Open |
-| `Member.email` mandatory | 🟢 XS | Open |
+| Task | Size |
+|---|---|
+| `Volunteer.user` OneToOneField (auto-create user on volunteer add) | 🟠 L |
+| Django admin + ModelAdmin classes | 🟡 M |
+| Panopticon user management in `/volunteers/ID/edit` view | 🟢 XS |
+| Programmer permission group (`create_programmer_permission` command) | 🟢 XS |
+| Name coercion in rota edit (fill in logged-in user's name) | 🟢 XS |
+| `SHOW_ARCHIVE_IMAGES` / `IMAGES_START_DATE` settings | 🟢 XS |
+| `Showing.rota_notes` field: extend 1024 → 4096 chars | 🟢 XS |
+| `Member.email` mandatory | 🟢 XS |
 
 ### Environment / tooling
 
-| Task | Size | Status |
-|---|---|---|
-| Docker dev environment (S&S settings) | 🟢 XS | ✅ Done |
-| `seed_dev_data` management command | 🔵 S | ✅ Done |
+| Task | Size |
+|---|---|
+| Docker dev environment (S&S settings) | 🟢 XS |
+| `seed_dev_data` management command | 🔵 S |
 
 ---
 
@@ -74,18 +75,18 @@ Once Phase 1 is stable. Items marked **⚠ blocks others** should go first.
 
 ### Quick wins (independent, no prerequisites)
 
-| # | Feature | Size | Status |
-|---|---|---|---|
-| 9.1 | Volunteer programme view — internal events visible when logged in | 🟢 XS | ✅ Done |
-| 9.8 | Image copyright reminder on event image upload | 🟢 XS | ✅ Done |
-| 9.16 | Live word counter for `copy_summary` field | 🟢 XS | ✅ Done |
-| 9.9 | Break-even calculator for programmers | 🟢 XS | Open |
-| 9.10.2 | Clone rota notes with event clone | 🟢 XS | Open |
-| 9.10.5 | Role timing notes field | 🟢 XS | Open |
-| 9.12 | "Dormant" volunteer status | 🟢 XS | Open |
-| 9.3↳ | Collapse rota notes by default | 🟢 XS | Open |
-| 9.17↳ | Role.accessibility_notes field | 🟢 XS | Open |
-| 13.5 | Collectives directory (CMS-managed) | 🔵 S | Open |
+| # | Feature | Size |
+|---|---|---|
+| 9.1 | Volunteer programme view — internal events visible when logged in | 🟢 XS |
+| 9.8 | Image copyright reminder on event image upload | 🟢 XS |
+| 9.16 | Live word counter for `copy_summary` field | 🟢 XS |
+| 9.9 | Break-even calculator for programmers | 🟢 XS |
+| 9.10.2 | Clone rota notes with event clone | 🟢 XS |
+| 9.10.5 | Role timing notes field | 🟢 XS |
+| 9.12 | "Dormant" volunteer status | 🟢 XS |
+| 9.3↳ | Collapse rota notes by default | 🟢 XS |
+| 9.17↳ | Role.accessibility_notes field | 🟢 XS |
+| 13.5 | Collectives directory (CMS-managed) | 🔵 S |
 
 ### Medium features (independent of account/FK work)
 
@@ -132,8 +133,7 @@ Once Phase 1 is stable. Items marked **⚠ blocks others** should go first.
 
 **Immediate priorities (as of Feb 2026):**
 
-- Bug B (Wagtail `translation_key` crash) — blocks CMS page creation
-- `Volunteer.user` OneToOneField port — foundational for self-service features
+- Port remaining S+S features (see [CURRENT_WORK.md](../CURRENT_WORK.md) Phase 1 table for what's left)
 - Pick off 🟢 XS quick wins (9.9, 9.12, rota UX items) while foundation work proceeds
 
 ---
