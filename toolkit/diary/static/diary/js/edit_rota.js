@@ -1,4 +1,4 @@
-function edit_rota(jQuery, rota_edit_base_url, edit_rota_notes_url_prefix, vol_email, CSRF_TOKEN) {
+function edit_rota(jQuery, rota_edit_base_url, edit_rota_notes_url_prefix, vol_email, CSRF_TOKEN, rota_clear_email_prompt_enabled) {
     "use strict";
     var $ = jQuery;
 
@@ -41,7 +41,7 @@ function edit_rota(jQuery, rota_edit_base_url, edit_rota_notes_url_prefix, vol_e
     }
 
     function nameEditedCallback(value) {
-        if (value === "" && this.revert !== "") {
+        if (value === "" && this.revert !== "" && rota_clear_email_prompt_enabled) {
             window.alert("Rota entry cleared.\nPlease consider emailing " +
                          vol_email +
                          " to say that the shift needs covering.");

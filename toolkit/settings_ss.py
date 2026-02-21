@@ -45,6 +45,9 @@ VENUE = {
 
 WAGTAIL_SITE_NAME = "The Star and Shadow"
 
+# Prompt volunteers to email when clearing a rota slot
+ROTA_CLEAR_EMAIL_PROMPT_ENABLED = False
+
 # Disable 'allow editing from magic IP range' for now
 CUBE_IP_ADDRESSES = ()
 

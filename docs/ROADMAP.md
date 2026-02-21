@@ -39,7 +39,7 @@ familiar with the codebase; expect 2–3× longer when learning the stack.
 | A | `/toolkit/` index crashes — missing `mailer` URL namespace | 🟢 XS | ✅ Fixed |
 | B | Wagtail page creation crashes — `translation_key` column too short on MariaDB | 🔵 S | Open |
 | C | Rota text fields show raw HTML entities (`&apos;`, `&quot;`) | 🔵 S | Open (may be s+s-specific) |
-| D | Clearing a rota slot prompts to email all volunteers (over-eager) | 🟢 XS | Open |
+| D | Clearing a rota slot prompts to email all volunteers (over-eager) | 🟢 XS | ✅ Fixed |
 | E | Volunteer login dropdown inaccessible on some touch devices | 🔵 S | Open |
 | F | Time picker is a slider (poor UX — should be `<input type="time">`) | 🔵 S | Open |
 | G | Date/time picker clips behind navbar | 🟢 XS | ✅ Fixed |

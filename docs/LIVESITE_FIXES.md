@@ -1,6 +1,6 @@
 # Quick-win fixes for the live (legacy) site
 
-This file documents low-effort, high-impact bugs and friction points found during the master branch port that can be quickly backported to the current live S+S Django 2.2 codebase.
+This file documents low-effort, high-impact bugs and friction points found during the master branch port that can be quickly backported to the current live S+S Django 2.2 codebase. Handy if we want to get in touch with xtreamlabs and ask if they could implement some (hopefully) quick fixes.
 
 ---
 

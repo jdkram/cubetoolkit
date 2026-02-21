@@ -28,6 +28,20 @@ Do not commit code changes without also committing the corresponding docs update
 
 ---
 
+## Git workflow: bundle and commit on your signal
+
+**I will accumulate changes and commit when you ask me to.**
+
+This gives you full control over batching related changes together and deciding the right moment to commit. When you suggest we should commit (e.g., "let's commit all this"), I will:
+
+1. Display the files that will be staged
+2. Show the proposed commit message(s)
+3. Run `git commit` with your approval
+
+If you want to adjust the commit message or split into multiple commits, just let me know.
+
+---
+
 ## Current task: Port S+S-specific features from the `s+s` branch
 
 The `s+s` branch was the Star and Shadow production branch but ran Django 2.2 (EOL). We have started fresh from `master` (which is far more modern) and ported the S+S-specific functionality across. Initial Docker setup and basic seed data are complete; focus is now on porting remaining features.
