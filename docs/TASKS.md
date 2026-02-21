@@ -255,7 +255,7 @@ critically so. Audited February 2026.
   (file deleted; script tag removed from both public base templates).
 - IE8 conditional comments — `<!--[if lte IE 8]>` blocks in `base_public.html`
   and `base_admin.html` load six redundant Google Fonts requests that no browser
-  will ever make. Delete them.
+  will ever make. ✅ Removed (no longer present in templates).
 - `wysihtml5.css` — WYSIHTML5 has been unmaintained since ~2014; verify it is not
   referenced anywhere and delete it.
 
