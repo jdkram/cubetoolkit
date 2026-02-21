@@ -120,6 +120,14 @@ public templates even though IE8 usage is effectively zero.
 **Fix applied:** Deleted `toolkit/static_common/js/lib/respond.min.js` and removed
 the `<script>` tag from both public base templates.
 
+### 8.15 Frontend debt cleanup — remove IE8 conditional comments ✅ resolved
+
+**Issue:** IE8 conditional comment blocks in the base templates were loading
+obsolete Google Fonts requests.
+
+**Resolution:** Verified the IE8 conditional blocks are no longer present in
+the public and admin base templates.
+
 ---
 
 ## Features implemented ✅
