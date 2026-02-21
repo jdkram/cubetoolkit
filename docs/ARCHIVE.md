@@ -112,6 +112,14 @@ accept the current POST-redirect-GET pattern but ensure the redirect lands on
 a paginated or otherwise bounded query rather than loading every active
 volunteer. Estimated effort: 🔵 S (4–8h) for the fetch approach.
 
+### 8.15 Frontend debt cleanup — remove Respond.js ✅ resolved
+
+**Issue:** `respond.min.js` (IE8 media query polyfill) was still shipped in the
+public templates even though IE8 usage is effectively zero.
+
+**Fix applied:** Deleted `toolkit/static_common/js/lib/respond.min.js` and removed
+the `<script>` tag from both public base templates.
+
 ---
 
 ## Features implemented ✅
