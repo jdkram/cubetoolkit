@@ -16,9 +16,12 @@ The current branch is **`master`** (Django 5.2 LTS, Wagtail 6.3, Python 3, no Ce
 
 **After every code change, update the relevant docs.**
 
-- Bug fixes → mark resolved in [docs/TASKS.md](docs/TASKS.md) (move completed item to [docs/ARCHIVE.md](docs/ARCHIVE.md)); update [docs/ROADMAP.md](docs/ROADMAP.md) status table
-- New features implemented → mark ✅ in [docs/TASKS.md](docs/TASKS.md), move to [docs/ARCHIVE.md](docs/ARCHIVE.md)
-- New features proposed → add to [docs/TASKS.md](docs/TASKS.md) section 9.x with sizing label (🟢 XS / 🔵 S / 🟡 M / 🟠 L / 🔴 XL / ⛔ XXL)
+**Status tracking — one file only:**
+- Bug fixes / features completed → mark ✅ + date in **[CURRENT_WORK.md](CURRENT_WORK.md)** (inline in the table, or add a row to the Done section). Do **not** also update TASKS.md, ROADMAP.md, or ARCHIVE.md.
+- New features proposed → add to [docs/TASKS.md](docs/TASKS.md) section 9.x with sizing label (🟢 XS / 🔵 S / 🟡 M / 🟠 L / 🔴 XL / ⛔ XXL), and add a row to CURRENT_WORK.md.
+- Phase milestone completed → update [docs/ROADMAP.md](docs/ROADMAP.md) phase heading only.
+
+**Spec — update when the system changes:**
 - Data model changes → update [docs/SPEC.md](docs/SPEC.md) section 8 (data model) and ER diagram
 - New external system dependencies → update [docs/SPEC.md](docs/SPEC.md) section 6 (external integrations)
 - Workflow changes → update [docs/SPEC.md](docs/SPEC.md) section 4 (key workflows)
