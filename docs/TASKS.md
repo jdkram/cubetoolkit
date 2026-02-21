@@ -251,8 +251,8 @@ critically so. Audited February 2026.
 
 #### 🟢 Low — Dead code to delete
 
-- `respond.min.js` — IE8 media-query polyfill. IE8 is <0.01% of users. Delete the
-  file and its `<script>` tag in `base_public.html`.
+- `respond.min.js` — IE8 media-query polyfill. IE8 is <0.01% of users. ✅ Removed
+  (file deleted; script tag removed from both public base templates).
 - IE8 conditional comments — `<!--[if lte IE 8]>` blocks in `base_public.html`
   and `base_admin.html` load six redundant Google Fonts requests that no browser
   will ever make. Delete them.
