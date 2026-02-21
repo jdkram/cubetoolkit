@@ -235,7 +235,7 @@ critically so. Audited February 2026.
 
 | Library | Version in use | Issue |
 | --- | --- | --- |
-| jQuery UI | 1.11.0 (2014) | Security patches stopped. XSS CVEs in `datepicker` and `checkboxradio` widgets. Update to 1.13.3 (current LTS, drop-in). Long-term: replace datepicker with native `<input type="date">`. Effort to update: 🔵 S. |
+| jQuery UI | 1.11.0 (2014) | ✅ Resolved. Updated to 1.13.3 (current LTS, drop-in). Long-term: replace datepicker with native `<input type="date">`. |
 | Bootstrap | 4.6.2 | No longer maintained. BS5 breaks `data-toggle` → `data-bs-toggle`, `mr-auto` → `ms-auto`, `sr-only` → `visually-hidden`. Migration is entangled with django-crispy-forms (see below). Effort: 🟠 L. |
 | Chosen | 1.1.0 | GitHub-archived (no releases since 2019). Known accessibility defects. Replace with Select2 or native multi-select. Effort: 🔵 S. |
 
