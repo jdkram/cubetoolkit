@@ -545,6 +545,9 @@ class Showing(models.Model):
     def end_time(self):
         # Used by templates
         duration = self.event.duration
+        if duration is None:
+            # If duration is missing, just return start time or None
+            return self.start  # or return None if preferred
         return self.start + datetime.timedelta(
             hours=duration.hour, minutes=duration.minute
         )
