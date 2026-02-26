@@ -22,6 +22,7 @@ from django.utils import timezone
 from PIL import Image, ImageDraw
 
 from toolkit.diary.models import Event, EventTag, EventTemplate, MediaItem, Role, RotaEntry, Room, Showing
+from toolkit.index.models import IndexCategory, IndexLink
 from toolkit.members.models import Member, Volunteer
 
 try:
@@ -105,6 +106,12 @@ VOLUNTEERS = [
     {"name": "Nell Arundel", "email": "nell.arundel@example.com"},
     {"name": "Ivan Solis", "email": "ivan.solis@example.com"},
     {"name": "Ana Fonseca", "email": "ana.fonseca@example.com"},
+    # Single-name volunteers — added to verify the system handles names without surnames.
+    {"name": "Beef", "email": "beef@example.com"},
+    {"name": "Sparks", "email": "sparks@example.com"},
+    {"name": "Cheddar", "email": "cheddar@example.com"},
+    {"name": "Moth", "email": "moth@example.com"},
+    {"name": "Fig", "email": "fig@example.com"},
 ]
 
 # Background colours for generated test images, keyed by primary tag.
@@ -765,6 +772,8 @@ class Command(BaseCommand):
             Member.objects.all().delete()
             User.objects.filter(username__contains=".").delete()
             User.objects.filter(username__startswith="voltest_").delete()
+            IndexLink.objects.all().delete()
+            IndexCategory.objects.all().delete()
             if WAGTAIL_AVAILABLE:
                 # Delete seeded section roots and their children.
                 # Use page.delete() (not queryset delete) so treebeard
@@ -788,6 +797,7 @@ class Command(BaseCommand):
             "rota_entries": 0,
             "images": 0,
             "cms_pages": 0,
+            "index_links": 0,
         }
 
         # Roles
@@ -1019,6 +1029,9 @@ class Command(BaseCommand):
         if WAGTAIL_AVAILABLE:
             counts["cms_pages"] += self._seed_cms_pages()
 
+        # Toolkit index links
+        counts["index_links"] = self._seed_index_links()
+
         # Bulk test volunteers (performance testing only)
         if options["bulk_volunteers"]:
             counts["volunteers"] += self._seed_bulk_volunteers(options["bulk_volunteers"])
@@ -1034,9 +1047,62 @@ class Command(BaseCommand):
                 f"  Showings:        {counts['showings']} new\n"
                 f"  Rota entries:    {counts['rota_entries']} new\n"
                 f"  Images:          {counts['images']} new\n"
-                f"  CMS pages:       {counts['cms_pages']} new"
+                f"  CMS pages:       {counts['cms_pages']} new\n"
+                f"  Index links:     {counts['index_links']} new"
             )
         )
+
+    def _seed_index_links(self):
+        """Seed the toolkit homepage with a sample link category and links.
+
+        Uses silly placeholder sites to demonstrate the description field,
+        which is designed for credentials and notes that admins want to
+        copy-paste rather than embed in the link text.
+        """
+        created = 0
+
+        category, cat_created = IndexCategory.objects.get_or_create(
+            name="Useful Resources"
+        )
+        if cat_created:
+            created += 1
+
+        links = [
+            {
+                "text": "Eel Slap",
+                "link": "http://eelslap.com",
+                "description": "login: eel   pass: slap",
+            },
+            {
+                "text": "Pointer Pointer",
+                "link": "http://pointerpointer.com",
+                "description": "login: pointer   pass: point",
+            },
+            {
+                "text": "The Useless Web",
+                "link": "http://www.theuselessweb.com",
+                "description": "login: useless   pass: web",
+            },
+            {
+                "text": "Windows 93",
+                "link": "http://www.windows93.net",
+                "description": "",
+            },
+        ]
+
+        for link_data in links:
+            _, link_created = IndexLink.objects.get_or_create(
+                link=link_data["link"],
+                category=category,
+                defaults={
+                    "text": link_data["text"],
+                    "description": link_data["description"],
+                },
+            )
+            if link_created:
+                created += 1
+
+        return created
 
     def _seed_bulk_volunteers(self, count):
         """Bulk-create N numbered test volunteers for performance testing.
@@ -1353,5 +1419,20 @@ class Command(BaseCommand):
         get_or_create_article(
             important_info, "privacy-policy", "Privacy Policy", PRIVACY_POLICY_BODY.strip()
         )
+
+        # Extra top-level pages — added to reproduce Bug I (sidebar nav overflow).
+        # On the live site there are enough sections that the volunteer login link
+        # is pushed below the visible area on small/laptop screens because the
+        # sidebar has no scroll mechanism.  These pages keep that condition visible
+        # in the dev environment so the fix can be verified.
+        for slug, title in [
+            ("support-us", "Support Us"),
+            ("bar-collective", "Bar Collective"),
+            ("tech-and-av", "Tech and AV"),
+            ("cafe-collective", "Cafe Collective"),
+            ("film-nights", "Film Nights"),
+            ("community-events", "Community Events"),
+        ]:
+            get_or_create_article(root_page, slug, title, "<p>Placeholder.</p>")
 
         return created
