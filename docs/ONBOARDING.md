@@ -21,7 +21,28 @@ It's a [Django](https://www.djangoproject.com/) application backed by a MariaDB 
 
 Docker is the recommended way to run the app locally. You don't need to install Python, MySQL, or any other dependencies on your machine.
 
-**Prerequisites:** [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) (both included in Docker Desktop).
+**Prerequisites:** [Docker](https://docs.docker.com/engine/install/) and the [Compose plugin](https://docs.docker.com/compose/install/).
+
+- **Linux (Mint, Ubuntu, Debian):** Install Docker Engine and the Compose plugin via your package manager or the official install script. Docker Desktop is optional and not required. Quickest route: follow [the official Linux install guide](https://docs.docker.com/engine/install/ubuntu/) for your distro, then [add your user to the `docker` group](https://docs.docker.com/engine/install/linux-postinstall/) so you can run `docker` without `sudo`. **You will need to log out and back in for the group change to take effect.**
+- **Mac / Windows:** [Docker Desktop](https://docs.docker.com/desktop/) includes everything you need.
+
+### Which venue are you developing for?
+
+This repo powers two venues. The default Docker setup runs **Star and Shadow Cinema** settings (`toolkit.docker_settings_ss`).
+
+If you are developing for **Cube Microplex** instead, edit `docker-compose.yml` and change:
+
+```yaml
+DJANGO_SETTINGS_MODULE: "toolkit.docker_settings_ss"
+```
+
+to:
+
+```yaml
+DJANGO_SETTINGS_MODULE: "toolkit.docker_settings"
+```
+
+Everything else in this guide applies to both venues.
 
 ### 1. Build and start the services
 
@@ -264,10 +285,11 @@ Settings are layered. `settings_common.py` defines everything, and environment-s
 
 | File | Used when |
 |---|---|
-| `docker_settings.py` | Running in Docker (reads `DB_*` and `SECRET_KEY` from environment) |
+| `docker_settings_ss.py` | Running in Docker for **Star and Shadow** — the default for `docker compose up` |
+| `docker_settings.py` | Running in Docker for **Cube Microplex** |
 | `devserver_settings.py` | Running locally without Docker |
 | `test_settings.py` | Running the test suite (SQLite, fast password hashing) |
-| `settings_ss.py` | Deploying for the Star & Shadow venue |
+| `settings_ss.py` | Base Star and Shadow config (imported by `docker_settings_ss.py`) |
 
 The Docker settings expect these environment variables (with defaults from `docker-compose.yml`):
 
@@ -388,4 +410,5 @@ docker compose exec toolkit /venv/bin/python3 manage.py seed_dev_data
 - Browse the diary models: [toolkit/diary/models.py](toolkit/diary/models.py)
 - Read through a view to see the request/response pattern: [toolkit/diary/public_views.py](toolkit/diary/public_views.py)
 - Look at a test to understand how the app is exercised: [toolkit/diary/tests/](toolkit/diary/tests/)
-- Check [BUGS.txt](BUGS.txt) for known issues and pending work
+- Check [CURRENT_WORK.md](../CURRENT_WORK.md) for open bugs and current priorities
+- Check [docs/TASKS.md](TASKS.md) for detailed task descriptions and feature specs
