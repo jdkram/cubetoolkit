@@ -1,136 +1,21 @@
 @charset "utf-8";
-/* CSS Document  */
+/* ai-input */
 
-/*Custom css to override starandshadow_site/toolkit/diary/static/diary/css/program.css */
+/*
+ * Programme-page-specific overrides.
+ * Shared site-wide rules live in static_common/css/site_custom.css.
+ */
 
-@import url("");
 
-/*SP - Note to Marcus -  The css below is copied from static_pages_custom.css. It can be deleted if the @import url above is functional, to avoid unnecessary repitition*/
-
- 
+/* Event tags badge */
 span.tags {
-   
-    background-color: rgba(32,32,128,0.6);
-}
-
-  /* FONT */
-  
-code,
-kbd,
-pre,
-samp, 
-code,
-kbd,
-pre,
-samp, 
-textarea, 
-body, 
-html, 
-button,
-input,
-select,
-textarea,
-#site-nav,
-#site-nav ul li a,
-.copy p {
-
-	font-family: 'Source Code Pro', monospace;
-    font-weight: 500;
-    font-size: inherit;
-
-}
- 
-  
-  /*OVERALL FONT SIZE*/
-
-	body {
-    font-size: 1.4em;
-	  font-weight: 500;
-	}
-
-  /*TEXT AND BACKGROUND COLOURS*/	
-	
-html, body, #sidebar, .grid-item, .grid, .black_overlay, .showing:nth-child(7n+3) {
-color: #082080;
-	background-color: #e3cae3;
-}
-
-mark {
-    background: #ff0;
-    color: #082080;
-}
-
-a {
-    color: #082080;
-	#text-decoration: underline; 
-   
-}
-
-#mobile-menu-btn:before {
-
-    color: #082080;
-}
-
-.site-description h4 {
- 
-    color: #082080;
-
-}
-
-.action a:hover {
-    color: #082080 !important;
-   
-}
-
-.copy p {
-   
-    color: #082080;
-
-}
-.copy p > a {
-    color: #082080;
-
-    border-bottom: 0px dotted #082080;
-	
-    text-decoration: underline;
-}
-.copy p > a:visited {
-    color: #082080;
+    background-color: rgba(32, 32, 128, 0.6);
 }
 
 
+/* --- Volunteer badge on internal events --- */
 
-
-.action a {
-    color: black !important;
-    background: #e3cae3 !important;
-    border: 0.1em solid black;
-    border-radius: 0 !important;}
-
-#site-nav ul li a{    text-decoration: none; }
-
-/* NAV*/
-
-.nav-wrap {
-    position: relative;
-    left: 0;
-    width: 170px;
-    border-top-width: 0px;
-    border-right-width: 0px;
-    border-bottom-width: 0px;
-    border-left-width: 0px;
-    border-spacing: 0px;
-    padding-top: 30px; }
-
-
-/* Volunteer session info in nav sub-menu */
-.volunteer-signed-in {
-    opacity: 0.7;
-    font-size: 0.9em;
-    cursor: default;
-}
-
-/* Volunteer-only badge on internal events (shown to logged-in users only) */
+/* Base style: small outlined pill, shown to logged-in volunteers only */
 .volunteer-badge {
     display: inline-block;
     font-size: 0.75em;
@@ -141,23 +26,46 @@ a {
     margin-bottom: 0.3em;
 }
 
+/* Grid card: badge spans the full card width */
+.showing .volunteer-badge {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+/* List view: strip the box so it sits inline in the compact text */
+.list .volunteer-badge {
+    display: inline;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: 0;
+    font-size: 0.85em;
+    color: #b06010;
+}
+
+/* Left-border accent on volunteer-only (internal) event cards */
 .showing-internal {
     border-left: 3px solid #f09020;
     padding-left: 0.4em;
 }
 
-/* Logged-in volunteer notice at top of programme grid */
+
+/* --- Logged-in volunteer notice at top of programme grid --- */
+
 .volunteer-notice {
     font-size: 0.8em;
     opacity: 0.6;
     margin: 44px 1.5625% 0;
 }
+
 .volunteer-notice a {
     color: inherit;
     text-decoration: underline;
 }
 
-/* Sign-out button in volunteer notice — looks like an inline link */
+/* Sign-out button — rendered as an inline link */
 .volunteer-signout-btn {
     background: none;
     border: none;
