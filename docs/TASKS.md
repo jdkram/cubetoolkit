@@ -12,6 +12,24 @@ This file is **spec and rationale only** — it describes what things are and wh
 
 ## Current bugs
 
+**Bug I** — Sidebar nav overflows viewport on small/laptop screens 🔵 S
+
+The left sidebar has no scroll mechanism. With a realistic number of nav sections (reproduced by `seed_dev_data`), the Volunteer Login link is pushed below the visible area on small screens. The only workaround is zooming out, which is not accessible.
+
+Three fix options were assessed:
+
+- **Option A (recommended):** `#sidebar { position: fixed; height: 100vh; overflow-y: auto; }` + `#site-nav { position: relative; top: auto; }` — makes sidebar a proper scroll container. CSS-only, keyboard accessible.
+- **Option B:** `#navmenu { overflow-y: auto; max-height: calc(100vh - Npx); }` — scrolls nav section only; title stays fixed. Requires tuning the magic-number height.
+- **Option C:** Reduce nav item padding via `@media (max-height: Xpx)`. Delays the bug, doesn't fix it.
+
+Changes to make in `programme_custom.css` (and potentially `site_custom.css`). Requires Docker rebuild to verify.
+
+---
+
+**Bug H** — Rota page: role icons orphan onto next line 🟢 XS
+
+The small badge icons attached to roles on the rota page (e.g. "beginner friendly") can wrap to a new line independently, visually detaching from the role they belong to. The fix is to prevent the icon from breaking away from the end of the role name, either via `white-space: nowrap` on a wrapping inline element or by keeping the icon inside the same non-breaking container as the last word.
+
 **Bug E** — Homepage list view layout broken by volunteer event info 🔵 S
 
 The "list" view on the homepage is currently misaligned or layout-broken due to the addition of volunteer event/rota information. The extra data points (available slots, etc.) are likely pushing elements out of their containers or causing spacing issues in the compact list view.
