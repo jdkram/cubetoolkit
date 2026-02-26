@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-02-21
+**Last updated:** 2026-02-26
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [ROADMAP.md](docs/ROADMAP.md) (phases & milestones) · [TASKS.md](docs/TASKS.md) (design rationale & spec)
 
@@ -10,13 +10,9 @@
 
 ## Immediate blockers (fix first)
 
-❌ **Bug E** — Homepage list view layout broken by volunteer event info 🔵 S
+❌ **Bug H** — Rota page: role icons (e.g. "beginner friendly") wrap to next line alone 🟢 XS
 
-The addition of volunteer rota/event data has broken the compact "list" view layout on the homepage. Needs urgent fixing to restore site aesthetics.
-
-❌ **Bug F** — Grid view volunteer banners aesthetics 🟢 XS
-
-The "volunteer only" banners in the grid view are currently not filling their cells. Should span the full width of their grid containers.
+The small icons attached to roles on the rota page can orphan onto a new line, visually detached from their role. Fix: prevent the icon from breaking away from the last word of the role name (CSS `white-space: nowrap` or wrapping both in a `nowrap` inline container).
 
 ---
 
@@ -82,8 +78,13 @@ Completed items stay here indefinitely — nothing moves to another file. Period
 
 | Item | Completed | Notes |
 |------|-----------|-------|
+| ~~Bug I — Sidebar nav overflows viewport~~ | 2026-02-26 | `#sidebar` `position:fixed; height:100vh; overflow-y:auto` + `#site-nav` `position:relative; top:auto` in `site_custom.css`; root cause: absolutely-positioned children don't contribute to scroll height |
 | ~~Fresh install migration crash (`content.0013`)~~ | 2026-02-26 | Added `wagtailcore.0057` dependency; replaced `RunSQL` with safe `RunPython` (INFORMATION_SCHEMA check) |
 | ~~ONBOARDING.md accuracy pass~~ | 2026-02-26 | Linux Docker prereqs, venue clarity (S+S default/Cube opt-in), corrected settings table, removed BUGS.txt ref |
+| ~~CSS style inconsistency across public views~~ | 2026-02-26 | Extracted shared overrides into `site_custom.css`; removed `font-size: inherit` that made programme-page nav links too large; `programme_custom.css`, `static_pages_custom.css`, `event_custom.css` slimmed to page-specific rules only |
+| ~~Bug I seed data~~ | 2026-02-26 | Six extra top-level nav pages added to `seed_dev_data` to reproduce sidebar overflow in dev |
+| ~~Bug E — Homepage list view layout broken by volunteer event info~~ | 2026-02-26 | `.list .volunteer-badge` strips box styling to fit compact inline text |
+| ~~Bug F — Grid view volunteer banners not filling cells~~ | 2026-02-26 | `.showing .volunteer-badge` set to `display: block; width: 100%` |
 | ~~BUGS.txt triage~~ | 2026-02-26 | Active items appended to TASKS.md |
 | ~~Bug A — `/toolkit/` index page crashes~~ | 2026-02 | Fixed mailer URL namespace in `urls_flat.py` |
 | ~~Bug B — Wagtail `translation_key` column overflow~~ | 2026-02 | Migration `0013_widen_page_translation_key.py` — widened column to varchar(36) |
