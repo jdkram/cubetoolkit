@@ -82,6 +82,9 @@ Completed items stay here indefinitely — nothing moves to another file. Period
 
 | Item | Completed | Notes |
 |------|-----------|-------|
+| ~~Fresh install migration crash (`content.0013`)~~ | 2026-02-26 | Added `wagtailcore.0057` dependency; replaced `RunSQL` with safe `RunPython` (INFORMATION_SCHEMA check) |
+| ~~ONBOARDING.md accuracy pass~~ | 2026-02-26 | Linux Docker prereqs, venue clarity (S+S default/Cube opt-in), corrected settings table, removed BUGS.txt ref |
+| ~~BUGS.txt triage~~ | 2026-02-26 | Active items appended to TASKS.md |
 | ~~Bug A — `/toolkit/` index page crashes~~ | 2026-02 | Fixed mailer URL namespace in `urls_flat.py` |
 | ~~Bug B — Wagtail `translation_key` column overflow~~ | 2026-02 | Migration `0013_widen_page_translation_key.py` — widened column to varchar(36) |
 | ~~Bug D — Clearing rota slot over-eager email prompt~~ | 2026-02 | `ROTA_CLEAR_EMAIL_PROMPT_ENABLED` setting added |

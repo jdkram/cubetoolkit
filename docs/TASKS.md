@@ -1706,4 +1706,18 @@ Change the post-save redirect on event creation. Instead of going to the calenda
 
 ---
 
+## Imported from BUGS.txt
+
+The following items were found in `BUGS.txt`, a legacy notes file from 2012–2016 (Django 1.8 era). They have not been verified against the current codebase. Triage and close as appropriate.
+
+**Mailout entities and links broken** — Mailout body entities and links are described as "somewhat broken". Nature of the breakage is not documented. 🔵 S
+
+**URL linkifier does not detect HTTPS** — The code that auto-links URLs in programme copy detects `http://` but not `https://`. A unit test should accompany any fix. 🟢 XS
+
+**Form redirect after submit not universal** — The pattern of redirecting after a successful POST (to prevent duplicate submission on reload) was applied to the members forms but not everywhere. 🔵 S
+
+**Event save error handling for missing image** — If an event is saved and the associated image file is missing on disk, the error is not handled gracefully. 🟢 XS
+
+---
+
 *Completed tasks: [ARCHIVE.md](ARCHIVE.md)*
