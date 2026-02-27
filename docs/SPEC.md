@@ -4,6 +4,8 @@
 
 **Audience:** This document is for a developer (experienced or volunteer) who wants to understand what the current system does, and/or rewrite it from scratch in any language or framework. It is written to be implementation-agnostic.
 
+**Scope:** This file describes the system **as built**. Design rationale and specifications for proposed (unbuilt) features live in [TASKS.md](TASKS.md). Task status and roadmap live in [CURRENT_WORK.md](../CURRENT_WORK.md).
+
 **Context:** The Star and Shadow Cinema (Newcastle upon Tyne) is a volunteer-run organisation with an anarchist ethos. The system described here manages events, volunteers, and communications. This specification represents my (Jonny's) understanding of how the organisation works and what values should guide technical development. Where I describe principles or organisational practices, these are my observations and interpretations — not formal collective decisions unless explicitly stated otherwise.
 
 **On AI assistance:** I have used AI tools extensively in writing this document and in developing code for the toolkit. My reasoning for this choice, and some thoughts on the tensions it creates, are discussed in the principles section below.
@@ -126,7 +128,7 @@ For the same reason, the cost estimates throughout section 13 are given in comme
 11. [Development strategy: rewrite or continue?](#11-development-strategy-rewrite-or-continue)
 12. [Migrating to a new system](#12-migrating-to-a-new-system)
 
-*Tasks and bugs: [docs/TASKS.md](TASKS.md) · Completed work: [docs/ARCHIVE.md](ARCHIVE.md) · Roadmap: [docs/ROADMAP.md](ROADMAP.md)*
+*Proposed features and design rationale: [docs/TASKS.md](TASKS.md) · Status and roadmap: [CURRENT_WORK.md](../CURRENT_WORK.md)*
 
 ---
 
@@ -1254,7 +1256,7 @@ project sustainably (3+ developers committed for 6+ months)
 worked around incrementally
 - A well-funded grant or residency provides concentrated development time
 
-The right near-term sequence remains what see ROADMAP.md for sequencing already describes: quick wins → volunteer accounts + rota FK → programming pipeline → room booking → induction workflow. This delivers the most value with the least risk of leaving the organisation with a broken system.
+The right near-term sequence is: quick wins → volunteer accounts + rota FK → programming pipeline → room booking → induction workflow. This delivers the most value with the least risk of leaving the organisation with a broken system. See [CURRENT_WORK.md](../CURRENT_WORK.md) for current sequencing rationale.
 
 ---
 

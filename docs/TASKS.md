@@ -1,46 +1,20 @@
 # Star and Shadow Toolkit — Tasks
 
-**Purpose:** Design rationale, system limitations, and feature specifications.
+**Purpose:** Design rationale and specifications for **proposed (unbuilt) features** and known system limitations.
 
-**For current work, priorities and completion status, see:** [CURRENT_WORK.md](../CURRENT_WORK.md)
-
-This file is **spec and rationale only** — it describes what things are and why they exist. Status tracking (open/done) lives exclusively in CURRENT_WORK.md. Do not add ❌/✅ markers here.
+**Scope:** This file covers things that don't exist yet. When a feature is implemented, the relevant design notes migrate to [SPEC.md](SPEC.md) (which describes the built system). Do not add ❌/✅ status markers here — status lives in [CURRENT_WORK.md](../CURRENT_WORK.md).
 
 **Size key:** 🟢 XS (1–4h) · 🔵 S (4–16h) · 🟡 M (16–40h) · 🟠 L (40–80h) · 🔴 XL (80–160h) · ⛔ XXL (160h+)
 
 ---
 
-## Current bugs
+## Bugs requiring design analysis
 
-**Bug I** — Sidebar nav overflows viewport on small/laptop screens 🔵 S
-
-The left sidebar has no scroll mechanism. With a realistic number of nav sections (reproduced by `seed_dev_data`), the Volunteer Login link is pushed below the visible area on small screens. The only workaround is zooming out, which is not accessible.
-
-Three fix options were assessed:
-
-- **Option A (recommended):** `#sidebar { position: fixed; height: 100vh; overflow-y: auto; }` + `#site-nav { position: relative; top: auto; }` — makes sidebar a proper scroll container. CSS-only, keyboard accessible.
-- **Option B:** `#navmenu { overflow-y: auto; max-height: calc(100vh - Npx); }` — scrolls nav section only; title stays fixed. Requires tuning the magic-number height.
-- **Option C:** Reduce nav item padding via `@media (max-height: Xpx)`. Delays the bug, doesn't fix it.
-
-Changes to make in `programme_custom.css` (and potentially `site_custom.css`). Requires Docker rebuild to verify.
-
----
+Bugs that need design thought before fixing. Status (open/done) lives in [CURRENT_WORK.md](../CURRENT_WORK.md) — do not add ❌/✅ here.
 
 **Bug H** — Rota page: role icons orphan onto next line 🟢 XS
 
 The small badge icons attached to roles on the rota page (e.g. "beginner friendly") can wrap to a new line independently, visually detaching from the role they belong to. The fix is to prevent the icon from breaking away from the end of the role name, either via `white-space: nowrap` on a wrapping inline element or by keeping the icon inside the same non-breaking container as the last word.
-
-**Bug E** — Homepage list view layout broken by volunteer event info 🔵 S
-
-The "list" view on the homepage is currently misaligned or layout-broken due to the addition of volunteer event/rota information. The extra data points (available slots, etc.) are likely pushing elements out of their containers or causing spacing issues in the compact list view.
-
-**Bug F** — Grid view volunteer banners aesthetics 🟢 XS
-
-The "volunteer only" banners in the grid view are currently not filling their cells. They should be made more aesthetically pleasing by extending them to span the full width of their grid containers.
-
-**Bug B** — Wagtail `translation_key` column overflow 🔵 S
-
-On MariaDB, `wagtailcore_page.translation_key` was `varchar(32)` but Wagtail 6 generates 36-character UUIDs. Creating CMS pages throws `DataError`. Fix: widen column to `varchar(36)` via migration. See CURRENT_WORK.md Done section for resolution details.
 
 ---
 
@@ -1738,4 +1712,4 @@ The following items were found in `BUGS.txt`, a legacy notes file from 2012–20
 
 ---
 
-*Completed tasks: [ARCHIVE.md](ARCHIVE.md)*
+*Completed tasks: [CURRENT_WORK.md](../CURRENT_WORK.md) (Done section)*
