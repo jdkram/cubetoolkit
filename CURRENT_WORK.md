@@ -2,9 +2,9 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-02-26
+**Last updated:** 2026-02-27
 **Current phase:** Phase 1 — Stable foundation
-**See also:** [ROADMAP.md](docs/ROADMAP.md) (phases & milestones) · [TASKS.md](docs/TASKS.md) (design rationale & spec)
+**See also:** [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
 
 ---
 
@@ -52,7 +52,7 @@ git diff s+s origin/master -- star_and_shadow_templates/
 
 | ID | Bug | Size |
 |----|-----|------|
-| **C** | Rota text shows raw HTML entities (`&apos;`, `&quot;`) | 🔵 S |
+| **C** | Rota text shows raw HTML entities (`&apos;`, `&quot;`) — also a candidate to backport to the legacy live site | 🔵 S |
 | **E** | Volunteer login dropdown inaccessible on touch | 🔵 S |
 | **F** | Time picker is a slider (bad UX — should be `<input type="time">`) | 🔵 S |
 
@@ -70,11 +70,23 @@ git diff s+s origin/master -- star_and_shadow_templates/
 | 9.10.5 | Role timing notes field | 🟢 XS | Per-role start/end time in rota |
 | 13.5 | Collectives directory (CMS-managed) | 🔵 S | Wagtail page with directory listing |
 
+### 4. Medium and large Phase 2 features
+
+Full specs in [TASKS.md](docs/TASKS.md). Suggested order:
+
+1. **Quick wins** (above) — independent, low risk, good for onboarding
+2. **8.1 + volunteer accounts** — foundational; unblocks self-service rota, comms, induction, wellbeing
+3. **9.2 Programming pipeline** — independent of accounts; auto-populate programmer slot pays off immediately
+4. **9.7 Room booking** — independent; addresses live operational clashes
+5. **9.4 Induction + 9.5 Wellbeing** — build once accounts foundation is stable
+6. **9.14 Film rights tracker** — independent; blacklisting risk is real; deliver basic version first
+7. **9.6 Comms + 8.5 Email sync** — largest cluster; scope depends on mailing list provider decisions
+
 ---
 
 ## Done ✅
 
-Completed items stay here indefinitely — nothing moves to another file. Periodic sweeps can move old rows to [ARCHIVE.md](docs/ARCHIVE.md) in a batch (no rush).
+Completed items stay here. When the Done section gets unwieldy, old rows can be deleted — they're preserved in git history.
 
 | Item | Completed | Notes |
 |------|-----------|-------|
@@ -83,8 +95,8 @@ Completed items stay here indefinitely — nothing moves to another file. Period
 | ~~ONBOARDING.md accuracy pass~~ | 2026-02-26 | Linux Docker prereqs, venue clarity (S+S default/Cube opt-in), corrected settings table, removed BUGS.txt ref |
 | ~~CSS style inconsistency across public views~~ | 2026-02-26 | Extracted shared overrides into `site_custom.css`; removed `font-size: inherit` that made programme-page nav links too large; `programme_custom.css`, `static_pages_custom.css`, `event_custom.css` slimmed to page-specific rules only |
 | ~~Bug I seed data~~ | 2026-02-26 | Six extra top-level nav pages added to `seed_dev_data` to reproduce sidebar overflow in dev |
-| ~~Bug E — Homepage list view layout broken by volunteer event info~~ | 2026-02-26 | `.list .volunteer-badge` strips box styling to fit compact inline text |
-| ~~Bug F — Grid view volunteer banners not filling cells~~ | 2026-02-26 | `.showing .volunteer-badge` set to `display: block; width: 100%` |
+| ~~Homepage list view layout broken by volunteer event info~~ | 2026-02-26 | `.list .volunteer-badge` strips box styling to fit compact inline text |
+| ~~Grid view volunteer banners not filling cells~~ | 2026-02-26 | `.showing .volunteer-badge` set to `display: block; width: 100%` |
 | ~~BUGS.txt triage~~ | 2026-02-26 | Active items appended to TASKS.md |
 | ~~Bug A — `/toolkit/` index page crashes~~ | 2026-02 | Fixed mailer URL namespace in `urls_flat.py` |
 | ~~Bug B — Wagtail `translation_key` column overflow~~ | 2026-02 | Migration `0013_widen_page_translation_key.py` — widened column to varchar(36) |
@@ -117,7 +129,7 @@ Completed items stay here indefinitely — nothing moves to another file. Period
 
 **Just finished a task?**
 1. Mark it ✅ + date in its table above, or add a row to the Done section
-2. That's it — no other files need updating (unless it completes a whole phase milestone, in which case update [ROADMAP.md](docs/ROADMAP.md))
+2. That's it — no other files need updating
 
 **Parallelizing work?**
 - Blockers + Phase 1 items are dependent (do in order)
@@ -133,4 +145,4 @@ Completed items stay here indefinitely — nothing moves to another file. Period
 
 ---
 
-*Navigation: [ROADMAP.md](docs/ROADMAP.md) · [TASKS.md](docs/TASKS.md) · [CLAUDE.md](CLAUDE.md)*
+*Navigation: [TASKS.md](docs/TASKS.md) · [SPEC.md](docs/SPEC.md) · [CLAUDE.md](CLAUDE.md)*

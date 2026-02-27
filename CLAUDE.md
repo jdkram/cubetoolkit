@@ -17,9 +17,8 @@ The current branch is **`master`** (Django 5.2 LTS, Wagtail 6.3, Python 3, no Ce
 **After every code change, update the relevant docs.**
 
 **Status tracking — one file only:**
-- Bug fixes / features completed → mark ✅ + date in **[CURRENT_WORK.md](CURRENT_WORK.md)** (inline in the table, or add a row to the Done section). Do **not** also update TASKS.md, ROADMAP.md, or ARCHIVE.md.
+- Bug fixes / features completed → mark ✅ + date in **[CURRENT_WORK.md](CURRENT_WORK.md)** (inline in the table, or add a row to the Done section). Do **not** also update TASKS.md.
 - New features proposed → add to [docs/TASKS.md](docs/TASKS.md) section 9.x with sizing label (🟢 XS / 🔵 S / 🟡 M / 🟠 L / 🔴 XL / ⛔ XXL), and add a row to CURRENT_WORK.md.
-- Phase milestone completed → update [docs/ROADMAP.md](docs/ROADMAP.md) phase heading only.
 
 **Spec — update when the system changes:**
 - Data model changes → update [docs/SPEC.md](docs/SPEC.md) section 8 (data model) and ER diagram
@@ -51,56 +50,7 @@ The `s+s` branch was the Star and Shadow production branch but ran Django 2.2 (E
 
 The `s+s` branch is available locally for reference (`git checkout s+s`, or inspect files with `git show s+s:path/to/file`). See [docs/BRANCH_NOTES.md](docs/BRANCH_NOTES.md) for full details on branch differences.
 
-**Bug B** (Wagtail CMS page creation crash) is tracked in [docs/TASKS.md](docs/TASKS.md) and must be resolved before adding content via the CMS admin.
-
----
-
-## Step 1: Port S+S-specific features (ongoing)
-
-These features exist on the `s+s` branch but not on `master`. They need to be evaluated and ported in priority order.
-
-### ✅ Already completed
-
-1. **`Volunteer.user` OneToOneField** — Each volunteer now has a linked Django `User`. The `seed_dev_data` command auto-creates user accounts for all seed volunteers.
-
-2. **Django admin integration** — `django.contrib.admin` is enabled in `INSTALLED_APPS` and configured in `settings_ss.py` with `"show_user_management": True`.
-
-### ⚠️ Partially implemented
-
-1. **Programmer permission group** — The `Programmers` group is created and populated by `seed_dev_data`, but the dedicated `create_programmer_permission` management command does not exist yet (current implementation is embedded in seed_dev_data).
-
-### ❌ Not yet implemented
-
-1. **`SHOW_ARCHIVE_IMAGES` / `IMAGES_START_DATE`** — Settings to hide event images before a configurable date. Not yet added to `settings_ss.py` or `toolkit/diary/public_views.py`.
-
-2. **`Showing.rota_notes` field size** — Currently limited to 1024 characters; was extended to 4096 on `s+s`. Check live database before extending.
-
-3. **`Member.email` mandatory** — Currently `blank=True`; should be `blank=False` for S+S to enforce email on all members.
-
-4. **Custom Django admin `ModelAdmin` classes** — Django admin is enabled but uses default list views, not custom admin classes for User, Member, Volunteer, and Room.
-
-5. **Expired members view** — `/members/expired/` view exists on `s+s`, not on `master`.
-
-6. **`view_diary_json` endpoint** — Experimental endpoint from `s+s`, not yet on `master`.
-
-7. **Legacy URL redirects** — S+S's old website had different URL structure; some redirects existed on `s+s`.
-
-8. **`utils/mailoutomatic.py`** — Standalone script for automatic mailout scheduling. Exists on `s+s`, not on `master`.
-
----
-
-## Step 2: Compare and align S+S templates
-
-The `star_and_shadow_templates/` directory exists on both branches but differs in two files:
-- `star_and_shadow_templates/view_event.html`
-- `star_and_shadow_templates/view_showing_index.html`
-
-Compare versions with:
-```bash
-git diff s+s origin/master -- star_and_shadow_templates/
-```
-
-Decide which version is correct or merge them. The `master` version is the baseline (built for Wagtail 6 / Bootstrap 4).
+**For current task status, what's done, and what's next, see [CURRENT_WORK.md](CURRENT_WORK.md).** That is the single source of truth — do not track status anywhere else.
 
 ---
 
@@ -148,6 +98,6 @@ tox
 | Dev docker compose | [docker-compose.yml](docker-compose.yml) |
 | S+S-specific templates | [star_and_shadow_templates/](star_and_shadow_templates/) |
 | Branch comparison | [docs/BRANCH_NOTES.md](docs/BRANCH_NOTES.md) |
+| Current work / status / roadmap | [CURRENT_WORK.md](CURRENT_WORK.md) |
 | System specification | [docs/SPEC.md](docs/SPEC.md) |
-| Development roadmap | [docs/ROADMAP.md](docs/ROADMAP.md) |
-| Open tasks / bugs | [docs/TASKS.md](docs/TASKS.md) |
+| Feature specs & design rationale | [docs/TASKS.md](docs/TASKS.md) |
