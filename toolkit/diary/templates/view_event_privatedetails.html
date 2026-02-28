@@ -85,13 +85,120 @@ function hideAddShowingForm() {
 {% endif %}
 {% endwith %}
 
-<h3>Showings
+{# ── Event details (parent data first) ───────────────────────────────────── #}
+<div class="d-flex align-items-center mb-2">
+  <h3 class="mb-0 mr-3">Event details</h3>
   {% if not all_showings_in_past %}
-    <small class="text-muted" style="font-size:0.6em; font-weight:normal;">
-      <a href="{% url "edit-event-details" event.pk %}">[edit event details]</a>
-    </small>
+  <a href="{% url "edit-event-details" event.pk %}" class="btn btn-sm btn-outline-secondary">Edit event →</a>
   {% endif %}
-</h3>
+</div>
+
+<dl class="row event-details-dl">
+  {% if event.pre_title %}
+  <dt class="col-sm-3">Pre-title</dt>
+  <dd class="col-sm-9">{{ event.pre_title }}</dd>
+  {% endif %}
+
+  <dt class="col-sm-3">Name</dt>
+  <dd class="col-sm-9">{{ event.name }}</dd>
+
+  {% if event.post_title %}
+  <dt class="col-sm-3">Post-title</dt>
+  <dd class="col-sm-9">{{ event.post_title }}</dd>
+  {% endif %}
+
+  <dt class="col-sm-3">Tags</dt>
+  <dd class="col-sm-9">{{ event.tags.all|join:", "|default:"—" }}</dd>
+
+  <dt class="col-sm-3">Duration</dt>
+  <dd class="col-sm-9">{{ event.duration|default:"—" }}</dd>
+
+  <dt class="col-sm-3">Pricing</dt>
+  <dd class="col-sm-9">{{ event.pricing|default:"—" }}</dd>
+
+  {% if event.ticket_link %}
+  <dt class="col-sm-3">Online tickets</dt>
+  <dd class="col-sm-9"><a href="{{ event.ticket_link }}">{{ event.ticket_link }}</a></dd>
+  {% endif %}
+
+  {% if event.film_information %}
+  <dt class="col-sm-3">Film information</dt>
+  <dd class="col-sm-9">{{ event.film_information }}</dd>
+  {% endif %}
+
+  <dt class="col-sm-3">Flags</dt>
+  <dd class="col-sm-9">
+    {% if event.outside_hire %}<span class="badge badge-secondary mr-1">Outside hire</span>{% endif %}
+    {% if event.private %}<span class="badge badge-warning mr-1">Private (hidden from public)</span>{% endif %}
+    {% if not event.outside_hire and not event.private %}<span class="text-muted">—</span>{% endif %}
+  </dd>
+
+  {% if event.notes %}
+  <dt class="col-sm-3">Programmer's notes</dt>
+  <dd class="col-sm-9">{{ event.notes }}</dd>
+  {% endif %}
+
+  <dt class="col-sm-3">Public link</dt>
+  <dd class="col-sm-9">
+    {% if event.showings.public and not event.private %}
+      <a href="{% noprefix_url "single-event-view" event.pk %}">{% noprefix_url "single-event-view" event.pk %}</a>
+    {% else %}
+      <span class="text-muted">Not visible in online programme:
+      {% if event.private %}It's marked private.{% endif %}
+      {% if not event.showings.public %}No confirmed, public showings.{% endif %}
+      </span>
+    {% endif %}
+  </dd>
+
+  <dt class="col-sm-3">Terms</dt>
+  <dd class="col-sm-9">
+    {% if event.terms %}
+    <pre class="mb-0" style="font-family:inherit; white-space:pre-wrap;">{{ event.terms }}</pre>
+    {% else %}
+    <span class="text-muted">—</span>
+    {% endif %}
+  </dd>
+
+  <dt class="col-sm-3">Image</dt>
+  <dd class="col-sm-9">
+    {% with event.media.all.0 as media_item %}
+    {% if media_item %}
+    <a href="{% get_media_prefix %}{{ media_item.media_file }}">
+      <img src="{{ media_item.media_file|thumbnail_url:'editpreview' }}"
+           alt="Picture for event {{ event.name }}">
+    </a>
+    {% if media_item.credit %}
+    <p class="font-italic small mb-0">Image by: {{ media_item.credit }}</p>
+    {% endif %}
+    {% else %}
+    <span class="text-muted">No image yet</span>
+    {% endif %}
+    {% endwith %}
+  </dd>
+
+  <dt class="col-sm-3">Description</dt>
+  <dd class="col-sm-9">
+    {% if event.copy_html %}
+    <div class="copy-preview">{{ event.copy_html }}</div>
+    {% else %}
+    <span class="text-muted">—</span>
+    {% endif %}
+  </dd>
+
+  <dt class="col-sm-3">Copy summary</dt>
+  <dd class="col-sm-9">
+    {% if event.copy_summary %}
+    <pre style="font-family:inherit; white-space:pre-wrap; margin:0;">{{ event.copy_summary }}</pre>
+    {% else %}
+    <span class="text-muted">—</span>
+    {% endif %}
+  </dd>
+</dl>
+
+<hr class="mt-2 mb-4">
+
+{# ── Showings ──────────────────────────────────────────────────────────────── #}
+<h3 class="mb-3">Showings</h3>
 
 {% for showing in future_showings %}
 <div class="card showing-card">
@@ -132,7 +239,7 @@ function hideAddShowingForm() {
           <button type="submit" class="btn btn-sm btn-outline-danger">Cancel showing</button>
         </form>
       {% endif %}
-      <a href="{% url 'edit-showing' showing.id %}" class="btn btn-sm btn-outline-primary ml-1">Edit &amp; Rota &rarr;</a>
+      <a href="{% url 'edit-showing' showing.id %}" class="btn btn-sm btn-outline-primary ml-1">Edit showing →</a>
     </div>
   </div>
 </div>
@@ -192,107 +299,7 @@ function hideAddShowingForm() {
 </div>
 {% endif %}
 
-<hr class="mt-4">
-
-<h3>Event details
-  {% if not all_showings_in_past %}
-  <a href="{% url "edit-event-details" event.pk %}" class="btn btn-sm btn-outline-secondary ml-2">Edit &rarr;</a>
-  {% endif %}
-</h3>
-
-<dl class="row event-details-dl">
-  {% if event.pre_title %}
-  <dt class="col-sm-3">Pre-title</dt>
-  <dd class="col-sm-9">{{ event.pre_title }}</dd>
-  {% endif %}
-
-  <dt class="col-sm-3">Name</dt>
-  <dd class="col-sm-9">{{ event.name }}</dd>
-
-  {% if event.post_title %}
-  <dt class="col-sm-3">Post-title</dt>
-  <dd class="col-sm-9">{{ event.post_title }}</dd>
-  {% endif %}
-
-  <dt class="col-sm-3">Tags</dt>
-  <dd class="col-sm-9">{{ event.tags.all|join:", "|default:"—" }}</dd>
-
-  <dt class="col-sm-3">Pricing</dt>
-  <dd class="col-sm-9">{{ event.pricing|default:"—" }}</dd>
-
-  {% if event.ticket_link %}
-  <dt class="col-sm-3">Online tickets</dt>
-  <dd class="col-sm-9"><a href="{{ event.ticket_link }}">{{ event.ticket_link }}</a></dd>
-  {% endif %}
-
-  {% if event.film_information %}
-  <dt class="col-sm-3">Film information</dt>
-  <dd class="col-sm-9">{{ event.film_information }}</dd>
-  {% endif %}
-
-  {% if event.notes %}
-  <dt class="col-sm-3">Programmer's notes</dt>
-  <dd class="col-sm-9">{{ event.notes }}</dd>
-  {% endif %}
-
-  <dt class="col-sm-3">Public programme link</dt>
-  <dd class="col-sm-9">
-    {% if event.showings.public and not event.private %}
-      <a href="{% noprefix_url "single-event-view" event.pk %}">{% noprefix_url "single-event-view" event.pk %}</a>
-    {% else %}
-      <span class="text-muted">Not visible in online programme:
-      {% if event.private %}It's marked private.{% endif %}
-      {% if not event.showings.public %}No confirmed, public showings.{% endif %}
-      </span>
-    {% endif %}
-  </dd>
-
-  <dt class="col-sm-3">Terms</dt>
-  <dd class="col-sm-9">
-    {% if event.terms %}
-    <pre class="mb-0" style="font-family:inherit; white-space:pre-wrap;">{{ event.terms }}</pre>
-    {% else %}
-    <span class="text-muted">—</span>
-    {% endif %}
-  </dd>
-
-  <dt class="col-sm-3">Image</dt>
-  <dd class="col-sm-9">
-    {% with event.media.all.0 as media_item %}
-    {% if media_item %}
-    <a href="{% get_media_prefix %}{{ media_item.media_file }}">
-      <img src="{{ media_item.media_file|thumbnail_url:'editpreview' }}"
-           alt="Picture for event {{ event.name }}">
-    </a>
-    {% if media_item.credit %}
-    <p class="font-italic small">Image by: {{ media_item.credit }}</p>
-    {% endif %}
-    {% else %}
-    <span class="text-muted">No image yet</span>
-    {% endif %}
-    {% endwith %}
-  </dd>
-
-  <dt class="col-sm-3">Description</dt>
-  <dd class="col-sm-9">
-    {% if event.copy_html %}
-    <div class="copy-preview">{{ event.copy_html }}</div>
-    {% else %}
-    <span class="text-muted">—</span>
-    {% endif %}
-  </dd>
-
-  <dt class="col-sm-3">Copy summary</dt>
-  <dd class="col-sm-9">
-    {% if event.copy_summary %}
-    <pre style="font-family:inherit; white-space:pre-wrap;">{{ event.copy_summary }}</pre>
-    {% else %}
-    <span class="text-muted">—</span>
-    {% endif %}
-  </dd>
-</dl>
-
-<p class="mt-3"><a href="{% url "cancel-edit" %}">&larr; Back to diary</a></p>
+<p class="mt-4"><a href="{% url "cancel-edit" %}">&larr; Back to diary</a></p>
 
 </div>
 {% endblock %}
