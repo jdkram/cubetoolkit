@@ -53,6 +53,11 @@ CUBE_IP_ADDRESSES = ()
 
 DEFAULT_MUGSHOT = "/static/content/ss_logo_e3cae3_pink3.jpg"
 
+# Hide event images for shows before the S+S digital archive began.
+# Volunteers (authenticated users) always see images regardless.
+SHOW_ARCHIVE_IMAGES = False
+IMAGES_START_DATE = "1 May 2018"
+
 # Currently only used for setting an outer limit on what year printed
 # programmes can be uploaded
 DAWN_OF_TIME = 1998

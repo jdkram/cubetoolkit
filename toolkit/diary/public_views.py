@@ -21,6 +21,29 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
+def _show_archive_images(request, showings):
+    """
+    Return True if the event image should be shown on the public event page.
+
+    Volunteers (authenticated users) always see images. When SHOW_ARCHIVE_IMAGES
+    is True (the default, used by Cube), images are always shown. When False
+    (used by S+S), images are hidden for events where every showing predates
+    IMAGES_START_DATE, so the public archive doesn't surface images from before
+    proper digital records began.
+    """
+    if request.user.is_authenticated:
+        return True
+    if getattr(settings, "SHOW_ARCHIVE_IMAGES", True):
+        return True
+    images_start = getattr(settings, "IMAGES_START_DATE", None)
+    if not images_start:
+        return True
+    cutoff = datetime.datetime.strptime(images_start, "%d %b %Y").replace(
+        tzinfo=datetime.timezone.utc
+    )
+    return all(s.start > cutoff for s in showings)
+
+
 def _view_diary(request, startdate, enddate, tag=None, extra_title=None):
     # Returns public diary view, for given date range, optionally filtered by
     # an event tag.
@@ -245,6 +268,7 @@ def view_event(request, event_id=None, legacy_id=None, event_slug=None):
         "all_showings_finished": all([s.start < now for s in showings]),
         "media": {event.id: media},
         "media_url": settings.MEDIA_URL,
+        "show_archive_images": _show_archive_images(request, showings),
     }
     return render(request, "view_event.html", context)
 

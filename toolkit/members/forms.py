@@ -3,6 +3,7 @@ import binascii
 import datetime
 
 from django import forms
+from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from toolkit.members.models import Member, TrainingRecord
 import toolkit.diary.models
@@ -60,6 +61,14 @@ class MemberFormWithoutNotes(forms.ModelForm):
             "phone": forms.TelInput(),
             "altphone": forms.TelInput(),
         }
+
+
+class UserForm(forms.ModelForm):
+    prefix = "user"
+
+    class Meta:
+        model = User
+        fields = ("username", "is_active", "is_superuser")
 
 
 class VolunteerForm(forms.ModelForm):

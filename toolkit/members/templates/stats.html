@@ -29,7 +29,7 @@
     <tr><td>Members with valid membership</td><td>{{ m_unexpired_count }}</td></tr>
     {% endif %}
     {% if m_expired_count is not None%}
-    <tr><td>Members with expired membership</td><td>{{ m_expired_count }}</td></tr>
+    <tr><td>Members with expired membership</td><td><a href="{% url "member-expired" %}">{{ m_expired_count }}</a></td></tr>
     {% endif %}
     <tr><td>Members with email</td><td>{{ m_email_count }}</td></tr>
     <tr><td>Subscribed Members with email</td><td>{{ m_email_viable}}</td></tr>

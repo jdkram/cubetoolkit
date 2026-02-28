@@ -92,6 +92,15 @@ $(document).ready(function() {
 </table>
 </div>
 
+{% if VENUE.show_user_management and user_form %}
+<div id="user_form">
+<h4>User account</h4>
+<table>
+{{ user_form.as_table }}
+</table>
+</div>
+{% endif %}
+
 <div id="vol_form">
 <h4>Volunteer facts</h4>
 <table>

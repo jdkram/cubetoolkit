@@ -16,6 +16,7 @@ from django.utils import timezone
 import csv
 
 from toolkit.members.forms import (
+    UserForm,
     VolunteerForm,
     MemberFormWithoutNotes,
     TrainingRecordForm,
@@ -271,6 +272,7 @@ def edit_volunteer(request, volunteer_id, create_new=False):
         # Called from "edit" url
         volunteer = get_object_or_404(Volunteer, id=volunteer_id)
         member = volunteer.member
+        user = volunteer.user
         new_training_record = TrainingRecord(volunteer=volunteer)
     else:
         # Called from "add" url
@@ -278,6 +280,7 @@ def edit_volunteer(request, volunteer_id, create_new=False):
         member = Member()
         volunteer.member = Member()
         new_training_record = None
+        user = None
 
     # Now, if the view was loaded with "GET" then display the edit form, and
     # if it was called with POST then read the updated volunteer data from the
@@ -288,7 +291,12 @@ def edit_volunteer(request, volunteer_id, create_new=False):
             request.POST, request.FILES, instance=volunteer
         )
         mem_form = MemberFormWithoutNotes(request.POST, instance=member)
-        if vol_form.is_valid() and mem_form.is_valid():
+        show_user_mgmt = settings.VENUE.get("show_user_management") and user is not None
+        user_form = UserForm(request.POST, instance=user) if show_user_mgmt else None
+        forms_valid = vol_form.is_valid() and mem_form.is_valid()
+        if user_form is not None:
+            forms_valid = forms_valid and user_form.is_valid()
+        if forms_valid:
             member = mem_form.save(commit=False)
             member.gdpr_opt_in = timezone.now()
             member.save()
@@ -314,6 +322,12 @@ def edit_volunteer(request, volunteer_id, create_new=False):
                 volunteer.user = user
 
             vol_form.save()
+
+            if user_form is not None:
+                saved_user = user_form.save(commit=False)
+                # Django admin requires is_staff; mirror is_superuser for simplicity
+                saved_user.is_staff = saved_user.is_superuser
+                saved_user.save()
 
             logger.info(
                 f"Saving changes to volunteer '{volunteer.member.name}' (id: {str(volunteer.pk)})"
@@ -351,6 +365,8 @@ def edit_volunteer(request, volunteer_id, create_new=False):
     else:
         vol_form = VolunteerForm(instance=volunteer)
         mem_form = MemberFormWithoutNotes(instance=volunteer.member)
+        show_user_mgmt = settings.VENUE.get("show_user_management") and user is not None
+        user_form = UserForm(instance=user) if show_user_mgmt else None
 
     if new_training_record:
         training_record_form = TrainingRecordForm(
@@ -363,6 +379,7 @@ def edit_volunteer(request, volunteer_id, create_new=False):
         "pagetitle": "Add Volunteer" if create_new else "Edit Volunteer",
         "default_mugshot": settings.DEFAULT_MUGSHOT,
         "volunteer": volunteer,
+        "user_form": user_form,
         "vol_form": vol_form,
         "mem_form": mem_form,
         "training_record_form": training_record_form,
