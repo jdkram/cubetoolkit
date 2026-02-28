@@ -58,6 +58,11 @@ $(document).ready(function() {
         .rota_role {
           width: 35%;
     }
+    #id_rota_notes {
+        width: 100%;
+        min-height: 6em;
+        font-family: monospace;
+    }
 </style>
 {% endblock %}
 
@@ -94,6 +99,14 @@ $(document).ready(function() {
   <h4>{{ rota_form.other_roles.label_tag }}</h4>
 
   <p>{{ rota_form.other_roles }}</p>
+
+  <h3>Rota notes</h3>
+  <div class="form-group">
+    {{ rota_notes_form.rota_notes }}
+    {% if rota_notes_form.rota_notes.errors %}
+    <p class="text-danger small">{{ rota_notes_form.rota_notes.errors }}</p>
+    {% endif %}
+  </div>
   <p>
   <input class="btn btn-primary" type="submit" value="Update" />
   </p>
