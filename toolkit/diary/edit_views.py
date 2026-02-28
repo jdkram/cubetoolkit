@@ -226,16 +226,11 @@ def edit_diary_data(request):
 
     results = []
     for showing in showings:
-        # For showings in the future, go to the edit showing page, for showings
-        # in the past, show the event information (which should have edit links
-        # disabled, when I get around to it)
-        if showing.start >= local_now:
-            url = reverse("edit-showing", kwargs={"showing_id": showing.pk})
-        else:
-            url = reverse(
-                "edit-event-details-view",
-                kwargs={"event_id": showing.event_id},
-            )
+        # Always link to the Event Hub — consistent with the list view.
+        url = reverse(
+            "edit-event-details-view",
+            kwargs={"event_id": showing.event_id},
+        )
         styles = []
 
         # Initially set colour to "confirmed" colour for the room:

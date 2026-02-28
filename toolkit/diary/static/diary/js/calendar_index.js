@@ -2,29 +2,19 @@ function init_calendar_view(jQuery, CSRF_TOKEN, defaultView, defaultDate, django
     "use strict";
     var $ = jQuery;
 
-    var FLASH_MESSAGE_DISPLAY_TIME = 3000;
-    var FLASH_MESSAGE_FADE_TIME = 1500;
-
-    // state to detect when things have changed
     var currentView = defaultView;
     var currentDate = $.fullCalendar.moment(defaultDate);
-
-    var clearMessageTimer = null;
 
     var resources_enabled = resources.length > 0 ? true : false;
 
     function onEventClick(calEvent, jsEvent, view) {
-        var fb_target = $("#fb_target");
-        fb_target.attr('href', calEvent.url);
-        fb_target.click();
+        window.location.href = calEvent.url;
         return false;
     }
 
     function showIdeas(intervalStart) {
         $.getJSON(django_urls["edit-ideas"] + intervalStart.format("YYYY/M/"),
             function(data) {
-                // Data is available from intervalStart in the context, but
-                // pull it from the response anyway.
                 var monthMoment = moment(data.month, "YYYY-MM-DD");
                 var historic = monthMoment.isBefore(moment(), 'month');
                 var edit_control_id = 'ideas-' + monthMoment.format("YYYY-M");
@@ -43,7 +33,6 @@ function init_calendar_view(jQuery, CSRF_TOKEN, defaultView, defaultDate, django
                     $('#' + edit_control_id).editable(
                         django_urls["edit-ideas"] + monthMoment.format("YYYY/M/"),
                         {
-                            width: "5cm",
                             name: 'ideas',
                             placeholder: 'Click to add ideas',
                             submit: "Save",
@@ -59,88 +48,40 @@ function init_calendar_view(jQuery, CSRF_TOKEN, defaultView, defaultDate, django
                 }
             }
         );
-
-    }
-
-    function showMessages() {
-        // Get 'flash' messages, put thim in a div, show them for a few seconds
-        $.getJSON(django_urls["get-messages"], function(data) {
-            var message_html = '';
-            var message_div = $("div.messages");
-
-            if(data.length === 0) {
-                return;
-            }
-
-            try {
-                for(var i = 0; i < data.length; i++) {
-                    message_html += '<li class="' + data[i].tags + '">'
-                                    + data[i].message + '</li>';
-                }
-            } catch (e) {
-                console.log("Failed processing messages: " + e
-                            + " (data: '" + data + '"');
-                return;
-            }
-            $(".messages ul").html(message_html);
-
-            message_div.show()
-
-            if(clearMessageTimer !== null) {
-                window.clearTimeout(clearMessageTimer);
-            }
-
-            clearMessageTimer = window.setTimeout(function() {
-                message_div.fadeOut(FLASH_MESSAGE_FADE_TIME);
-                clearMessageTimer = null;
-            }, FLASH_MESSAGE_DISPLAY_TIME);
-
-            message_div.off('click').click(function() {
-                message_div.hide();
-            });
-        });
     }
 
     function onDayClick(date, jsEvent, view, resource) {
         var url = django_urls["add-event"] + "?date=" + date.format("D-M-YYYY");
-        var fb_target = $("#fb_target");
         if(date.isBefore(moment())) {
             return;
         }
         if(date.hasTime()) {
-            // User clicked on a timeslot in week / day view: this is handled
-            // by onSelect, so do nothing
+            // Timeslot clicks are handled by onSelect; ignore here
             return;
         }
         if(resources_enabled && resource !== null && typeof resource === 'object'
             && resource.hasOwnProperty("id")) {
             url += "&room=" + resource.id;
         }
-        fb_target.attr('href', url);
-        fb_target.click();
+        window.location.href = url;
     }
 
     function onSelect(start, end, jsEvent, view, resource) {
         var url = django_urls["add-event"] + "?date=" + start.format("D-M-YYYY");
         var calendar = $('#calendar');
-        var fb_target = $("#fb_target");
-        // Don't allow new events in the past. This is also enforced
-        // server-side.
         if(start.isBefore(moment())) {
             calendar.fullCalendar('unselect');
             return;
         }
         if(start.hasTime() && end.hasTime()) {
-            // User clicked on a timeslot in week / day view
             url += "&time=" + start.format("H:m");
             url += "&duration=" + (end.unix() - start.unix());
-        };
+        }
         if(resources_enabled && resource !== null && typeof resource === 'object'
             && resource.hasOwnProperty("id")) {
             url += "&room=" + resource.id;
         }
-        fb_target.attr('href', url);
-        fb_target.click();
+        window.location.href = url;
     }
 
     function onViewRender(view, element) {
@@ -165,23 +106,6 @@ function init_calendar_view(jQuery, CSRF_TOKEN, defaultView, defaultDate, django
         currentView = view.name;
         currentDate = newDate;
         showIdeas(view.intervalStart);
-    }
-
-    function init_fancybox() {
-        var calendar = $('#calendar');
-        var fb_target = $("#fb_target");
-        fb_target.fancybox({
-            openEffect: 'none',
-            closeEffect: 'none',
-            afterClose: function() {
-                calendar.fullCalendar('unselect');
-                calendar.fullCalendar('refetchEvents');
-                showMessages();
-            },
-            iframe : {
-                preload: false
-            }
-        });
     }
 
     function init_calendar() {
@@ -247,17 +171,6 @@ function init_calendar_view(jQuery, CSRF_TOKEN, defaultView, defaultDate, django
     }
 
     $(document).ready(function() {
-        var fb_target;
-
-        init_fancybox();
         init_calendar();
-
-        fb_target = $("#fb_target");
-
-        $('#new-booking-link').click(function(){
-            fb_target.attr('href', django_urls["add-event"]);
-            fb_target.click();
-            return false;
-        });
     });
 }
