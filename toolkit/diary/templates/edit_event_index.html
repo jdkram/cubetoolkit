@@ -40,14 +40,6 @@ Editing {{ event_list_name }}
   td:first-child {
       text-align: right;
   }
-  #controls {
-      border: thick solid black;
-      padding: 10px;
-      float: right;
-      position: absolute;
-      top: 5rem;
-      right: 10px;
-  }
   .ideas {
       white-space: pre-line;
       cursor: pointer;
@@ -63,9 +55,6 @@ Editing {{ event_list_name }}
 <script src="{{ STATIC_URL }}js/lib/jquery-ui.min.js"></script>
 <script src="{{ STATIC_URL }}js/lib/jquery.jeditable.mini.js"></script>
 <script>
-let edit_prefs = { {% for p,v in edit_prefs.items %}
-    "{{ p }}" : "{{ v }}"{% if not forloop.last %},{% endif %}
-{% endfor %}};
 $(document).ready(function() {
         // Add date picker:
         $('#id_lookahead_to').datepicker({
@@ -77,8 +66,6 @@ $(document).ready(function() {
         // Filter widget:
         $('#id_input_filter').keyup(filter_events);
         filter_events();
-
-        prefs_updated(edit_prefs);
 
         // Idea in-place edits
         const idea_url = '{% url "edit-ideas" year=9999 month=0 %}'.replace("/9999/0", "");
@@ -93,7 +80,6 @@ $(document).ready(function() {
                 element.editable(
                     idea_url + year + "/" + month + "/",
                     {
-                        width: "5cm",
                         name: 'ideas',
                         placeholder: 'Click to add ideas',
                         submit: "Save",
@@ -161,37 +147,10 @@ function filter_events() {
         });
     }, DEBOUNCE_TIMEOUT);
 }
-function set_edit_pref(pref, value) {
-    if(edit_prefs[pref] !== value) {
-        edit_prefs[pref] = value;
-        $.getJSON('{% url "set_edit_preferences" %}', edit_prefs, prefs_updated);
-    }
-}
-function prefs_updated(data) {
-    edit_prefs = data;
-    if(edit_prefs['popups'] === 'false') {
-        $('#set_inline').replaceWith('<b id="set_inline">this window</b>');
-        $('#set_popups').replaceWith('<a id="set_popups" href="#">pop-ups</a>');
-        $('#set_popups').click(function() { set_edit_pref('popups',true); });
-        // Clear click handlers on links in table
-        $('table a').off('click');
-    } else {
-        $('#set_inline').replaceWith('<a id="set_inline" href="#">this window</a>');
-        $('#set_inline').click(function() { set_edit_pref('popups',false); });
-        $('#set_popups').replaceWith('<b id="set_popups">pop-ups</b>');
-        // Change links in table to open in a new window:
-        $('table a').click(function(e) {
-            window.open(e.currentTarget.href,"edit_form","height=800,width=800,scrollbars,resizable,toolbar");
-            return false;
-        });
-    }
-}
 </script>
 {% endblock %}
 
 {% block body %}
-<p id="controls">
-Edit in: <a id="set_popups" href="#">pop-ups</a> | <a id="set_inline" href="#">this window</a></p>
 
 <p><a name="top"></a></p>
 <b>Key:</b>

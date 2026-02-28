@@ -259,8 +259,8 @@ class EditShowing(DiaryTestsMixin, TestCase):
             html=True,
         )
 
-        # Shouldn't contain excluded fields:
-        self.assertNotContains(response, showing.rota_notes)
+        # Rota notes should now appear in the form textarea:
+        self.assertContains(response, showing.rota_notes)
 
         # Rota edit:
         self.assertContains(
@@ -460,6 +460,29 @@ class EditShowing(DiaryTestsMixin, TestCase):
             "Events require terms information (unless they are tagged with one of meeting/training).",
         )
 
+    @patch("django.utils.timezone.now")
+    def tests_edit_showing_saves_rota_notes(self, now_patch):
+        now_patch.return_value = self._fake_now
+
+        url = reverse("edit-showing", kwargs={"showing_id": self.e4s3.id})
+        response = self.client.post(
+            url,
+            data={
+                "start": "15/08/2013 19:30",
+                "booked_by": "\u0102nother \u0170ser",
+                "confirmed": "on",
+                "role_1": "0",
+                "rota_notes": "Updated rota notes via form.",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e4.id}),
+        )
+        self.e4s3.refresh_from_db()
+        self.assertEqual(self.e4s3.rota_notes, "Updated rota notes via form.")
+
 
 class DeleteShowing(DiaryTestsMixin, TestCase):
     def setUp(self):
@@ -504,7 +527,10 @@ class DeleteShowing(DiaryTestsMixin, TestCase):
         # Showing should have been deleted
         self.assertFalse(Showing.objects.filter(id=7))
 
-        self.assert_redirect_to_index(response)
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk}),
+        )
 
 
 class AddEventView(DiaryTestsMixin, TestCase):
@@ -576,11 +602,14 @@ class AddEventView(DiaryTestsMixin, TestCase):
                 "room": "2",
             },
         )
-        # Request succeeded?
-        self.assert_redirect_to_index(response)
-
         # Event added correctly?
         event = Event.objects.get(name="Ev\u0119nt of choic\u0119")
+
+        # Request redirected to hub for newly created event?
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": event.pk}),
+        )
         self.assertEqual(event.duration, time(1, 30))
         self.assertEqual(event.private, True)
         self.assertEqual(event.outside_hire, False)
@@ -722,27 +751,14 @@ class EditDetailView(DiaryTestsMixin, TestCase):
         self.client.login(username="admin", password="T3stPassword!")
 
     def test_load_with_showings(self) -> None:
+        # e1 has one past showing (s6: 15/02/2013, booked by "Blah blah")
         url = reverse("edit-event-details-view", kwargs={"event_id": 1})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "view_event_privatedetails.html")
-        self.assertContains(
-            response,
-            "<tr>"
-            "<td>"
-            '    <span title="Showing has started, can\'t edit">'
-            "        15/02/2013 18:00"
-            "    </span>"
-            "</td>"
-            "<td>Blah blah</td>"
-            '<td class="centered">yes</td>'
-            '<td class="centered">yes</td>'
-            '<td class="centered">no</td>'
-            '<td class="centered">no</td>'
-            '<td class="centered">no</td>'
-            "<td>(Past)</td>",
-            html=True,
-        )
+        # Past showing should appear in the past-showings section
+        self.assertContains(response, "15/02/2013 18:00")
+        self.assertContains(response, "Blah blah")
 
     def test_load_no_showings(self) -> None:
         url = reverse("edit-event-details-view", kwargs={"event_id": 6})
@@ -757,25 +773,19 @@ class EditDetailView(DiaryTestsMixin, TestCase):
         url = reverse(
             "edit-event-details-view", kwargs={"event_id": self.e5.pk}
         )
+        future_start = self._fake_now + timedelta(days=10)
         data = {
-            "form-TOTAL_FORMS": 1,
-            "form-INITIAL_FORMS": "0",
-            "form-0-id": "",
-            "form-0-start": self._fake_now + timedelta(days=10),
-            "form-0-booked_by": "wombat",
-            "form-0-confirmed": "on",
-            "form-0-secret": "on",
+            "start": future_start.strftime("%d/%m/%Y %H:%M"),
+            "booked_by": "wombat",
         }
         response = self.client.post(url, data)
 
         self.assertRedirects(response, url)
 
-        showings = self.e5.showings.all()
+        showings = list(self.e5.showings.all().order_by("start"))
         self.assertEqual(len(showings), 2)
-        self.assertEqual(showings[0], self.s5)
         new_showing = showings[1]
         self.assertEqual(new_showing.booked_by, "wombat")
-        self.assertTrue(new_showing.confirmed)
         self.assertFalse(new_showing.cancelled)
 
     @patch("django.utils.timezone.now")
@@ -785,18 +795,15 @@ class EditDetailView(DiaryTestsMixin, TestCase):
         url = reverse(
             "edit-event-details-view", kwargs={"event_id": self.e5.pk}
         )
+        past_start = self._fake_now - timedelta(days=10)
         data = {
-            "form-TOTAL_FORMS": 1,
-            "form-INITIAL_FORMS": "0",
-            "form-0-id": "",
-            "form-0-start": self._fake_now - timedelta(days=10),
-            "form-0-booked_by": "wombat",
+            "start": past_start.strftime("%d/%m/%Y %H:%M"),
+            "booked_by": "wombat",
         }
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 200)
-        self.assertFormSetError(
-            response.context["showing_forms"],
-            0,
+        self.assertFormError(
+            response.context["add_showing_form"],
             "start",
             "Must be in the future",
         )
@@ -809,93 +816,133 @@ class EditDetailView(DiaryTestsMixin, TestCase):
         url = reverse(
             "edit-event-details-view", kwargs={"event_id": self.e5.pk}
         )
+        future_start = self._fake_now + timedelta(days=10)
         data = {
-            "form-TOTAL_FORMS": 1,
-            "form-INITIAL_FORMS": "0",
-            "form-0-id": "",
-            "form-0-start": self._fake_now + timedelta(days=10),
-            "form-0-booked_by": "",
+            "start": future_start.strftime("%d/%m/%Y %H:%M"),
+            "booked_by": "",
         }
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 200)
-        self.assertFormSetError(
-            response.context["showing_forms"],
-            0,
+        self.assertFormError(
+            response.context["add_showing_form"],
             "booked_by",
             "This field is required.",
         )
         self.assertEqual(self.e5.showings.count(), 1)
 
-    @patch("django.utils.timezone.now")
-    def test_confirm_without_terms(self, now_patch) -> None:
-        now_patch.return_value = self._fake_now
 
+
+class UpdateShowingStatus(DiaryTestsMixin, TestCase):
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="admin", password="T3stPassword!")
+
+    def test_get_not_allowed(self):
+        url = reverse("update-showing-status", kwargs={"showing_id": self.e4s3.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 405)
+
+    @patch("django.utils.timezone.now")
+    def test_confirm(self, now_patch):
+        now_patch.return_value = self._fake_now
+        self.e4s3.confirmed = False
+        self.e4s3.save()
+
+        url = reverse("update-showing-status", kwargs={"showing_id": self.e4s3.pk})
+        response = self.client.post(url, data={"action": "confirm"})
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk}),
+        )
+        self.e4s3.refresh_from_db()
+        self.assertTrue(self.e4s3.confirmed)
+
+    @patch("django.utils.timezone.now")
+    def test_unconfirm(self, now_patch):
+        now_patch.return_value = self._fake_now
+        # e4s3 starts as confirmed=True
+        url = reverse("update-showing-status", kwargs={"showing_id": self.e4s3.pk})
+        response = self.client.post(url, data={"action": "unconfirm"})
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk}),
+        )
+        self.e4s3.refresh_from_db()
+        self.assertFalse(self.e4s3.confirmed)
+
+    @patch("django.utils.timezone.now")
+    def test_cancel(self, now_patch):
+        now_patch.return_value = self._fake_now
+        url = reverse("update-showing-status", kwargs={"showing_id": self.e4s3.pk})
+        response = self.client.post(url, data={"action": "cancel"})
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk}),
+        )
+        self.e4s3.refresh_from_db()
+        self.assertTrue(self.e4s3.cancelled)
+        self.assertFalse(self.e4s3.confirmed)
+
+    @patch("django.utils.timezone.now")
+    def test_uncancel(self, now_patch):
+        now_patch.return_value = self._fake_now
+        self.e4s3.cancelled = True
+        self.e4s3.save()
+
+        url = reverse("update-showing-status", kwargs={"showing_id": self.e4s3.pk})
+        response = self.client.post(url, data={"action": "uncancel"})
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk}),
+        )
+        self.e4s3.refresh_from_db()
+        self.assertFalse(self.e4s3.cancelled)
+
+    @patch("django.utils.timezone.now")
+    def test_confirm_without_terms_blocked(self, now_patch):
+        now_patch.return_value = self._fake_now
         self.e4.terms = ""
         self.e4.save()
         self.e4s3.confirmed = False
         self.e4s3.save()
-        self.e4s4.event = self.e4
-        self.e4s4.save()
 
-        url = reverse(
-            "edit-event-details-view", kwargs={"event_id": self.e4.pk}
+        url = reverse("update-showing-status", kwargs={"showing_id": self.e4s3.pk})
+        response = self.client.post(url, data={"action": "confirm"})
+        # Redirects back to hub but showing should not be confirmed
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk}),
         )
-        data = {
-            "form-TOTAL_FORMS": 3,
-            "form-INITIAL_FORMS": "2",
-            "form-0-id": self.e4s3.pk,
-            "form-0-start": self.e4s3.start,
-            "form-0-booked_by": self.e4s3.booked_by,
-            "form-0-confirmed": "on",
-            "form-1-id": self.e4s4.pk,
-            "form-1-start": self.e4s4.start,
-            "form-1-booked_by": self.e4s4.booked_by,
-            "form-1-confirmed": "on",
-            "form-2-id": "",
-            "form-2-start": "",
-            "form-2-booked_by": "",
-        }
-        response = self.client.post(url, data)
-        self.assertEqual(response.status_code, 200)
-        for n in (0, 1):
-            self.assertFormSetError(
-                response.context["showing_forms"],
-                n,
-                "confirmed",
-                "Events require terms information (unless they are tagged with one of meeting/training). Please add more details.",
-            )
+        self.e4s3.refresh_from_db()
+        self.assertFalse(self.e4s3.confirmed)
 
     @patch("django.utils.timezone.now")
-    def test_confirm_meeting_without_terms(self, now_patch) -> None:
-        # Starting check: event has an unconfirmed showing
+    def test_confirm_meeting_without_terms_succeeds(self, now_patch):
+        # e7 is tagged 'meeting', so terms are not required
         self.assertEqual(self.e7.all_showings_confirmed(), False)
-
         now_patch.return_value = self._fake_now
-        # generate the URL
-        url = reverse(
-            "edit-event-details-view", kwargs={"event_id": self.e7.pk}
+
+        url = reverse("update-showing-status", kwargs={"showing_id": self.e7s1.pk})
+        response = self.client.post(url, data={"action": "confirm"})
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e7.pk}),
         )
+        self.e7s1.refresh_from_db()
+        self.assertTrue(self.e7s1.confirmed)
 
-        # construct dict for form POST
-        data = {
-            "form-TOTAL_FORMS": 2,
-            "form-INITIAL_FORMS": "1",
-            "form-0-id": self.e7s1.pk,
-            "form-0-start": self.e7s1.start,
-            "form-0-booked_by": self.e7s1.booked_by,
-            "form-0-confirmed": "on",  # changed param
-            "form-1-id": "",
-            "form-1-start": "",
-            "form-1-booked_by": "",
-        }
-        # POST
-        response = self.client.post(url, data)
+    @patch("django.utils.timezone.now")
+    def test_past_showing_not_changed(self, now_patch):
+        now_patch.return_value = self._fake_now
+        # e2s1 is in the past (1/4/2013 < 1/6/2013)
+        self.assertFalse(self.e2s1.confirmed)
 
-        # Assess results
-        # Successful post results in (successful) 302 back to form page
-        self.assertRedirects(response, url)
-        #       # Check all showings for event confirmed
-        self.assertEqual(self.e7.all_showings_confirmed(), True)
+        url = reverse("update-showing-status", kwargs={"showing_id": self.e2s1.pk})
+        response = self.client.post(url, data={"action": "confirm"})
+        # Still redirects to the hub, but status is unchanged
+        self.assertEqual(response.status_code, 302)
+        self.e2s1.refresh_from_db()
+        self.assertFalse(self.e2s1.confirmed)
 
 
 class EditEventView(DiaryTestsMixin, TestCase):
@@ -1042,7 +1089,10 @@ class EditEventView(DiaryTestsMixin, TestCase):
                 "duration": "00:10:00",
             },
         )
-        self.assert_redirect_to_index(response)
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e2.pk}),
+        )
 
         event = Event.objects.get(id=2)
         self.assertEqual(event.name, "New \u20acvent Name")
@@ -1086,7 +1136,10 @@ class EditEventView(DiaryTestsMixin, TestCase):
                 "private": "on",
             },
         )
-        self.assert_redirect_to_index(response)
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e2.pk}),
+        )
 
         event = Event.objects.get(id=2)
         self.assertEqual(event.name, "New \u20acvent Name!")
@@ -1187,7 +1240,10 @@ class EditEventView(DiaryTestsMixin, TestCase):
                 },
             )
 
-        self.assert_redirect_to_index(response)
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e2.pk}),
+        )
 
         event = Event.objects.get(id=2)
         self.assertEqual(event.media.count(), 1)
@@ -1221,7 +1277,10 @@ class EditEventView(DiaryTestsMixin, TestCase):
                 },
             )
 
-        self.assert_redirect_to_index(response)
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e2.pk}),
+        )
 
         event = Event.objects.get(id=2)
         self.assertEqual(event.media.count(), 1)
@@ -1261,7 +1320,10 @@ class EditEventView(DiaryTestsMixin, TestCase):
                     "media_file-clear": "on",
                 },
             )
-            self.assert_redirect_to_index(response)
+            self.assertRedirects(
+                response,
+                reverse("edit-event-details-view", kwargs={"event_id": self.e2.pk}),
+            )
 
             event = Event.objects.get(id=2)
             # Media item should be gone:
@@ -1333,7 +1395,10 @@ class EditEventView(DiaryTestsMixin, TestCase):
                     "credit": "All new image credit!",
                 },
             )
-        self.assert_redirect_to_index(response)
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e2.pk}),
+        )
 
     @override_settings(PROGRAMME_COPY_SUMMARY_MAX_CHARS=50)
     def test_post_edit_event_too_much_copy_summary(self):
@@ -1382,7 +1447,10 @@ class EditEventView(DiaryTestsMixin, TestCase):
             },
         )
 
-        self.assert_redirect_to_index(response)
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e2.pk}),
+        )
 
         event = Event.objects.get(id=2)
         self.assertEqual(event.copy_summary, copy_summary_data)
@@ -1432,7 +1500,10 @@ class EditEventView(DiaryTestsMixin, TestCase):
             },
         )
 
-        self.assert_redirect_to_index(response)
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk}),
+        )
         event = Event.objects.get(id=1)
         self.assertEqual(event.terms, "One two three four five.")
 
@@ -1451,7 +1522,10 @@ class EditEventView(DiaryTestsMixin, TestCase):
             },
         )
 
-        self.assert_redirect_to_index(response)
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk}),
+        )
         event = Event.objects.get(id=1)
         self.assertEqual(event.terms, "Not Required")
 
@@ -1824,44 +1898,26 @@ class PreferencesTests(DiaryTestsMixin, TestCase):
         # Log in:
         self.client.login(username="admin", password="T3stPassword!")
 
-    def _get_edit_prefs(self, response):
-        match = re.search(
-            r"let\s+edit_prefs\s*=\s*({.*?});",
-            response.content.decode("utf-8"),
-            re.DOTALL,
+    def _get_prefs_json(self, **kwargs):
+        # set_edit_preferences returns JSON of current prefs:
+        response = self.client.get(
+            reverse("set_edit_preferences"), data=kwargs
         )
-        return json.loads(match.group(1))
+        self.assertEqual(response.status_code, 200)
+        return json.loads(response.content)
 
     def test_set_pref(self):
-        url = reverse("default-edit")
+        # Default daysahead:
+        prefs = self._get_prefs_json()
+        self.assertEqual(prefs["daysahead"], "365")
 
-        # Get current prefs:
-        response = self.client.get(url)
-        edit_prefs = self._get_edit_prefs(response)
-        # Default to false
-        self.assertEqual(edit_prefs["popups"], "false")
+        # Change daysahead:
+        prefs = self._get_prefs_json(daysahead="60")
+        self.assertEqual(prefs["daysahead"], "60")
 
-        # Set popups true:
-        response = self.client.get(
-            reverse("set_edit_preferences"), data={"popups": "true"}
-        )
-        self.assertEqual(response.status_code, 200)
-
-        # Verify change:
-        response = self.client.get(url)
-        edit_prefs = self._get_edit_prefs(response)
-        self.assertEqual(edit_prefs["popups"], "true")
-
-        # Back to false:
-        response = self.client.get(
-            reverse("set_edit_preferences"), data={"popups": "false"}
-        )
-        self.assertEqual(response.status_code, 200)
-
-        # Verify change:
-        response = self.client.get(url)
-        edit_prefs = self._get_edit_prefs(response)
-        self.assertEqual(edit_prefs["popups"], "false")
+        # Reset:
+        prefs = self._get_prefs_json(daysahead="365")
+        self.assertEqual(prefs["daysahead"], "365")
 
     def test_set_get_single_pref(self):
         session_mock = {}
@@ -1889,47 +1945,20 @@ class PreferencesTests(DiaryTestsMixin, TestCase):
         self.assertEqual(retrieved_pref, None)
 
     def test_bad_value(self):
-        url = reverse("default-edit")
-
-        # Set popups something stupid:
-        response = self.client.get(
-            reverse("set_edit_preferences"), data={"popups": "tralala" * 100}
-        )
-        self.assertEqual(response.status_code, 200)
-
-        # Verify change:
-        response = self.client.get(url)
-        edit_prefs = self._get_edit_prefs(response)
-        self.assertEqual(edit_prefs["popups"], "tralalatra")
+        # Long value is truncated to 10 chars:
+        prefs = self._get_prefs_json(daysahead="1234567890XXXXX")
+        self.assertEqual(prefs["daysahead"], "1234567890")
 
     def test_bad_pref(self):
-        url = reverse("default-edit")
-
-        # Set weird value, verify it doesn't come out in the edit page:
-        response = self.client.get(
-            reverse("set_edit_preferences"), data={"nonsense": "tralala"}
-        )
-        self.assertEqual(response.status_code, 200)
-
-        response = self.client.get(url)
-        edit_prefs = self._get_edit_prefs(response)
-        self.assertEqual(set(edit_prefs.keys()), {"daysahead", "popups"})
+        # Unknown pref is silently ignored; only known prefs come back:
+        prefs = self._get_prefs_json(nonsense="tralala")
+        self.assertEqual(set(prefs.keys()), {"daysahead"})
 
     def test_redirect_change(self):
         url = reverse("cancel-edit")
-        # default to 302 to edit list:
+        # always redirects to edit list now (popup mode removed):
         response = self.client.get(url)
         self.assert_redirect_to_index(response)
-
-        # Set popup preference true:
-        response = self.client.get(
-            reverse("set_edit_preferences"), data={"popups": "true"}
-        )
-        self.assertEqual(response.status_code, 200)
-
-        # should now do javscript hackery:
-        response = self.client.get(url)
-        self.assert_return_to_index(response)
 
 
 class EditTagsViewTests(DiaryTestsMixin, TestCase):
