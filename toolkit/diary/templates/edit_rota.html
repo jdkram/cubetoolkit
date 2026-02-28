@@ -545,7 +545,7 @@ edit_rota(
                 <span class="showing-header-row">
                     <span class="showing-date">{{ showing.start|date:"D j H:i" }}</span>
                     <a class="showing-event-name"
-                       href="{% noprefix_url 'edit-event-details' showing.event.pk %}"
+                       href="{% noprefix_url 'edit-event-details-view' showing.event.pk %}"
                        title="Edit event">{{ showing.event.name }}</a>
                     <span class="event-tag-badges">{% for tag in tag_slugs %}<span class="badge event-tag" data-tag-slug="{{ tag.slug }}">{{ tag.name }}</span>{% endfor %}</span>
                     <a class="showing-public-link"
