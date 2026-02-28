@@ -2162,7 +2162,7 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
                 "end": "2013-06-09T19:00:00+01:00",
                 "start": "2013-06-09T18:00:00+01:00",
                 "title": "Event four titl\u0113",
-                "url": "/diary/edit/showing/id/7/",
+                "url": "/diary/edit/event/id/4/view/",
             },
             10: {
                 "id": 10,
