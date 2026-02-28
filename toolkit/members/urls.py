@@ -21,6 +21,7 @@ from toolkit.members.member_views import (
     edit_member,
     delete_member,
     member_statistics,
+    member_expired,
     member_duplicates,
     member_homepages,
     unsubscribe_member,
@@ -109,6 +110,7 @@ member_urls = [
         r"^(?P<member_id>\d+)/delete/$", delete_member, name="delete-member"
     ),
     re_path(r"^statistics/$", member_statistics, name="member-statistics"),
+    re_path(r"^expired/$", member_expired, name="member-expired"),
     re_path(r"^duplicates/$", member_duplicates, name="member-duplicates"),
     # External:
     re_path(r"^homepages/$", member_homepages, name="member-homepages"),

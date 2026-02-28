@@ -495,6 +495,19 @@ def member_statistics(request):
     return render(request, "stats.html", context)
 
 
+@require_safe
+@permission_required("toolkit.read")
+def member_expired(request):
+    expired = Member.objects.expired()
+    context = {
+        "showing_expired": True,
+        "search_terms": "",
+        "members": expired,
+        "membership_expiry_enabled": settings.MEMBERSHIP_EXPIRY_ENABLED,
+    }
+    return render(request, "search_members_results.html", context)
+
+
 @permission_required("toolkit.read")
 @require_safe
 def member_duplicates(request):

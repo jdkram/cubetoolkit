@@ -2100,4 +2100,60 @@ Volunteers who want to sign themselves up for a rota slot currently have to eith
 
 ---
 
+### 9.27 Archive image visibility control (`SHOW_ARCHIVE_IMAGES`) — ✅ Done 2026-02-28
+
+**Problem being solved:**
+
+The Star & Shadow has an event archive stretching back years, but systematic image uploads only began in May 2018. Events before that date have no images, so the public `view_event` page has a broken/empty image area for them. Worse, future scraped imports of old events could end up showing copyrighted images that hadn't been cleared for digital publication.
+
+**Solution (implemented):**
+
+Two settings control archive image visibility:
+
+- `SHOW_ARCHIVE_IMAGES` (bool, default `True`) — when `True` (Cube default), images are always shown. When `False` (S+S default), images are hidden for events where every showing predates `IMAGES_START_DATE`.
+- `IMAGES_START_DATE` (string, default `None`) — the cutoff date in `"%d %b %Y"` format (e.g. `"1 May 2018"`). Only relevant when `SHOW_ARCHIVE_IMAGES = False`.
+
+**Logic (in `_show_archive_images()` in `public_views.py`):**
+
+1. Authenticated users (volunteers) always see images regardless of settings.
+2. If `SHOW_ARCHIVE_IMAGES` is `True`, always show.
+3. Otherwise, parse `IMAGES_START_DATE` and show images only if **all** showings for the event start after the cutoff date.
+
+The context variable `show_archive_images` is passed to the `view_event.html` template, which gates the image block: `{% if show_archive_images and media_item %}`.
+
+**Files changed:**
+
+- `toolkit/settings_common.py` — defaults: `SHOW_ARCHIVE_IMAGES = True`, `IMAGES_START_DATE = None`
+- `toolkit/settings_ss.py` — S+S overrides: `SHOW_ARCHIVE_IMAGES = False`, `IMAGES_START_DATE = "1 May 2018"`
+- `toolkit/diary/public_views.py` — `_show_archive_images()` helper; `view_event` passes `show_archive_images` in context
+- `star_and_shadow_templates/view_event.html` — gates image display on `show_archive_images`
+
+---
+
+### 9.28 Volunteer role tier labelling and GDPR danger indicators 🟢 XS (2–4h)
+
+**Problem:**
+
+The `UserForm` on the volunteer edit page currently uses Django's raw field labels (`is_superuser`, `is_active`). This is confusing for admins who think in terms of venue-specific role tiers. The toolkit has three meaningful tiers:
+
+- **User** — can log in and see/edit the rota
+- **Programmer** — member of the `Programmers` group; can edit events, showings, members (read access to names/emails = GDPR-sensitive)
+- **Panopticon** — `is_superuser=True`; full Django admin access (read/write to everything = high GDPR sensitivity)
+
+The user form should use these names. Additionally, Programmer and Panopticon roles should carry a visible warning that granting them exposes GDPR-covered data (member names, emails, addresses) to the recipient.
+
+**Proposed changes:**
+
+1. Replace `is_superuser` label with "Panopticon access" (and possibly add a help text: "Full admin access. Exposes all member data — GDPR sensitive.")
+2. Add a read-only display of "Programmer" group membership alongside the form (or make it editable).
+3. Add a visual warning (e.g. a small ⚠ badge or red label) next to Programmer and Panopticon fields in `form_volunteer.html`.
+
+**Implementation notes:**
+
+- Cleanest option: override `UserForm.Meta.labels` and `UserForm.Meta.help_texts` rather than rewriting the form.
+- For Programmer group membership, a `BooleanField` or a `CheckboxInput` backed by `volunteer.user.groups.filter(name="Programmers").exists()` can be added to `UserForm` as an extra non-model field with custom save logic.
+- The warning copy should reference the venue's GDPR policy or contact address.
+
+---
+
 *Completed tasks: [ARCHIVE.md](ARCHIVE.md)*

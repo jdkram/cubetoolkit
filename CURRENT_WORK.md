@@ -24,12 +24,12 @@ None — all clear.
 | ✅ Django admin integration | Done 2026-02 | Enabled in `INSTALLED_APPS` + `settings_ss.py` |
 | ⚠️ Programmer permission group | Partial | `Programmers` group created by `seed_dev_data`; dedicated `create_programmer_permission` command missing |
 | ✅ Rota role count limit increase (8 → 30) | Done 2026-02 | `MAX_COUNT_PER_ROLE` overridden in settings_ss.py; all enforcement points auto-parameterized |
-| ❌ `SHOW_ARCHIVE_IMAGES` / `IMAGES_START_DATE` | Not started | Hide event images before configurable date |
+| ✅ `SHOW_ARCHIVE_IMAGES` / `IMAGES_START_DATE` | Done 2026-02-28 | Hide event images before configurable date; see TASKS.md 9.27 for rationale |
 | ✅ `Showing.rota_notes` field size | Done 2026-02-28 | Extended to 4096; migration `diary/0010` |
 | ✅ `Member.email` mandatory | Done 2026-02-28 | `blank=False`; migration `members/0010`; 10 tests updated |
-| ❌ Panopticon user management in volunteer edit | Not started | Allow Panopticon users to grant Panopticon in `/volunteers/ID/edit` view |
-| ❌ Custom Django admin `ModelAdmin` classes | Not started | Default list views only; need custom for User, Member, Volunteer, Room |
-| ❌ Expired members view | Not started | `/members/expired/` endpoint |
+| ✅ Panopticon user management in volunteer edit | Done 2026-02-28 | `UserForm` (username/is_active/is_superuser) shown when `VENUE.show_user_management=True`; gated so Cube tests unaffected |
+| ✅ Custom Django admin `ModelAdmin` classes | Done 2026-02-28 | `members/admin.py` (Member, Volunteer, User+VolunteerInline); `diary/admin.py` (Room, Role, EventTag, Event, Showing) |
+| ✅ Expired members view | Done 2026-02-28 | `/members/expired/` endpoint; reuses `search_members_results.html` |
 | ❌ `view_diary_json` endpoint | Not started | Experimental; existed on `s+s` |
 | ❌ Legacy URL redirects | Not started | Old website had different URL structure |
 | ❌ `utils/mailoutomatic.py` | Not started | Standalone mailout scheduler |
@@ -79,6 +79,7 @@ git diff s+s origin/master -- star_and_shadow_templates/
 | 9.21 | Recurring events / clone-to-dates | 🟡 M | Multi-date clone UI; one Showing per date; see TASKS.md 9.21 |
 | 9.25 | Tap to sign up on rota (mobile) | 🔵 S | Self-service slot claim for logged-in volunteers; see TASKS.md 9.25 |
 | 9.26 | Event resource links (generalised rota links) | 🔵 S | `EventLink` model; named link chips on rota view; domain whitelist; see TASKS.md 9.26 |
+| 9.28 | Volunteer role tier labelling + GDPR danger indicators | 🟢 XS | Rename `is_superuser` → "Panopticon access"; add Programmer field; ⚠ warning on sensitive roles; see TASKS.md 9.28 |
 
 ### 4. Medium and large Phase 2 features
 

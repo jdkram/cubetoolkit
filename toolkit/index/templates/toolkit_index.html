@@ -79,6 +79,7 @@
         <li><a href="{% url "mailer:jobs-list" %}">Mailout job status</a></li>
         <li><a href="{% url "member-statistics" %}">Members statistics</a></li>
         <li><a href="{% url "member-duplicates" %}">Members duplicates</a></li>
+        {% if MEMBERSHIP_EXPIRY_ENABLED %}<li><a href="{% url "member-expired" %}">Expired memberships</a></li>{% endif %}
     </ul>
     <h2>Website</h2>
     <ul>
