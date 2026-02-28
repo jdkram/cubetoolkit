@@ -251,6 +251,7 @@ class TestAddMemberView(MembersTestsMixin, TestCase):
             url,
             data={
                 "name": new_name,
+                "email": "newmember@test.example",
             },
             follow=True,
         )
@@ -259,7 +260,7 @@ class TestAddMemberView(MembersTestsMixin, TestCase):
         self.assertTemplateUsed(response, "form_new_member.html")
 
         member = Member.objects.get(name=new_name)
-        self.assertEqual(member.email, "")
+        self.assertEqual(member.email, "newmember@test.example")
         self.assertEqual(member.postcode, "")
         self.assertEqual(member.is_member, False)
 
@@ -706,6 +707,7 @@ class TestEditMemberViewNotLoggedIn(MembersTestsMixin, TestCase):
             url,
             data={
                 "name": new_name,
+                "email": "two@example.com",
                 "k": member_mailout_key,
             },
         )
@@ -714,7 +716,7 @@ class TestEditMemberViewNotLoggedIn(MembersTestsMixin, TestCase):
 
         member = Member.objects.get(pk=2)
         self.assertEqual(member.name, new_name)
-        self.assertEqual(member.email, "")
+        self.assertEqual(member.email, "two@example.com")
         self.assertEqual(member.address, "")
         self.assertEqual(member.posttown, "")
         self.assertEqual(member.postcode, "")
@@ -911,6 +913,7 @@ class TestEditMemberViewLoggedIn(MembersTestsMixin, TestCase):
             url,
             data={
                 "name": new_name,
+                "email": "two@example.com",
             },
             follow=True,
         )
@@ -946,6 +949,7 @@ class TestEditMemberViewLoggedIn(MembersTestsMixin, TestCase):
             url,
             data={
                 "name": member.name,
+                "email": "two@example.com",
                 # Always try to set. Should only succeed if expiry is enabled.
                 "membership_expires": "01/02/1980",
             },

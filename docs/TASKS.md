@@ -1,20 +1,28 @@
 # Star and Shadow Toolkit — Tasks
 
-**Purpose:** Design rationale and specifications for **proposed (unbuilt) features** and known system limitations.
+**Purpose:** Design rationale, system limitations, and feature specifications.
 
-**Scope:** This file covers things that don't exist yet. When a feature is implemented, the relevant design notes migrate to [SPEC.md](SPEC.md) (which describes the built system). Do not add ❌/✅ status markers here — status lives in [CURRENT_WORK.md](../CURRENT_WORK.md).
+**For current work, priorities and completion status, see:** [CURRENT_WORK.md](../CURRENT_WORK.md)
+
+This file is **spec and rationale only** — it describes what things are and why they exist. Status tracking (open/done) lives exclusively in CURRENT_WORK.md. Do not add ❌/✅ markers here.
 
 **Size key:** 🟢 XS (1–4h) · 🔵 S (4–16h) · 🟡 M (16–40h) · 🟠 L (40–80h) · 🔴 XL (80–160h) · ⛔ XXL (160h+)
 
 ---
 
-## Bugs requiring design analysis
+## Current bugs
 
-Bugs that need design thought before fixing. Status (open/done) lives in [CURRENT_WORK.md](../CURRENT_WORK.md) — do not add ❌/✅ here.
+**Bug E** — Homepage list view layout broken by volunteer event info 🔵 S
 
-**Bug H** — Rota page: role icons orphan onto next line 🟢 XS
+The "list" view on the homepage is currently misaligned or layout-broken due to the addition of volunteer event/rota information. The extra data points (available slots, etc.) are likely pushing elements out of their containers or causing spacing issues in the compact list view.
 
-The small badge icons attached to roles on the rota page (e.g. "beginner friendly") can wrap to a new line independently, visually detaching from the role they belong to. The fix is to prevent the icon from breaking away from the end of the role name, either via `white-space: nowrap` on a wrapping inline element or by keeping the icon inside the same non-breaking container as the last word.
+**Bug F** — Grid view volunteer banners aesthetics 🟢 XS
+
+The "volunteer only" banners in the grid view are currently not filling their cells. They should be made more aesthetically pleasing by extending them to span the full width of their grid containers.
+
+**Bug B** — Wagtail `translation_key` column overflow 🔵 S
+
+On MariaDB, `wagtailcore_page.translation_key` was `varchar(32)` but Wagtail 6 generates 36-character UUIDs. Creating CMS pages throws `DataError`. Fix: widen column to `varchar(36)` via migration. See CURRENT_WORK.md Done section for resolution details.
 
 ---
 
@@ -888,6 +896,15 @@ An **autosuggest** for rota notes (showing recent rota notes from events
 of the same type or tag) would be a further enhancement — useful but adds
 complexity and is not a priority over the simpler approaches.
 
+**Known UX caveat (simple clone, implemented 2026-02-28):** The simple copy
+is now live, but rota notes sometimes contain date-specific volunteer messages
+("Alice says she can't make this date", "Bob will be 20 mins late"). When
+cloned to a new date these notes are factually wrong and may cause confusion.
+The risk is low for stable operational notes (equipment setup, access codes,
+timing reminders) but higher for anything volunteer-specific.
+
+Mitigations, in ascending order of effort — see 9.10.6 for detail.
+
 #### 9.10.3 Rota vacancy reporting 🔵 S (4–8h)
 
 A simple reporting page (linked from the internal dashboard) showing:
@@ -943,6 +960,76 @@ the rota, visually distinct from the general rota notes.
 
 This doesn't require a full time-range model — a short free-text field
 (50–100 chars) per role slot is sufficient for the majority of cases.
+
+#### 9.10.6 Review / edit rota notes during clone 🟢 XS–🔵 S (2–8h)
+
+**Context:** Since 9.10.2 was implemented (simple copy of `rota_notes` on
+clone), rota notes carry over to the new showing automatically. This is useful
+for stable operational content (setup instructions, access codes, timing
+reminders) but can mislead when notes contain date-specific volunteer messages
+(e.g. "Alice says she can't make this date", "Bob will be 20 mins late").
+
+**Mitigations in ascending order of effort:**
+
+1. **Code comment only (done)** — `clone_rota_from_showing` carries a comment
+   explaining the known UX risk and directing future implementors here.
+
+2. **Inline warning on the "Add a booking" form** 🟢 XS (30min) — When the
+   booking form in `view_event_privatedetails.html` is displayed, if the source
+   showing has non-empty `rota_notes`, show a banner: "Rota notes from the
+   previous showing will be copied — please review them after saving." No
+   code change needed to the clone logic; just a template check.
+
+3. **Editable rota-notes field in the clone step** 🔵 S (4–8h) — Change the
+   clone flow so that the rota notes are pre-filled but editable before the
+   new showing is saved. Requires the clone to become a two-step form rather
+   than a direct save.
+
+4. **Superseded by templating** — If 9.18.1 (EventTemplate with `rota_notes`)
+   is implemented, programmers will create recurring events from templates
+   (which contain canonical operational notes) rather than by cloning. At
+   that point the "copy on clone" behaviour becomes a secondary path and the
+   UX risk shrinks considerably. The simplest fix (option 2) is still worth
+   doing in the interim.
+
+**Recommended next step:** Option 2 — the inline warning is ten lines of
+template code and closes the most likely surprise for current users.
+
+#### 9.10.7 Port `add-showing` clone view from `s+s` branch 🔵 S (4–8h)
+
+**Context:** The `s+s` branch has a fully-featured "Clone booking" block on
+the showing edit page (`form_showing.html`). It lets the user pick a new date
+and immediately clones the showing (carrying the rota, rota notes, and booking
+details). On `master` this view was never ported; the showing edit page
+currently has no direct clone form — only a plain text link to the event
+details page where "Add a booking" is a rough approximation.
+
+**What the `s+s` branch has (audit via `git show s+s:...`):**
+
+- URL: `add-showing` — `POST /diary/edit/event/id/<pk>/add/` with query param
+  `?copy_from=<showing_id>`
+- View: reads the source showing, creates a new `Showing` with the cloned
+  start date (from `CloneShowingForm`), calls `clone_or_reset_rota(source)`
+- Template block: "Clone booking" section at the top of `form_showing.html`
+  with the event name, a date/time picker pre-filled with tomorrow's date,
+  and a Clone / Cancel action pair
+- `CloneShowingForm` in `forms.py` already exists on `master` (it was ported
+  as part of the `s+s` audit) but the URL and view were not
+
+**Scope:**
+
+1. Add `add-showing` URL and view to `diary/urls.py` and `edit_views.py`
+2. Pass `clone_showing_form` and `clone_showing_start` into the
+   `edit_showing` view context (already computed for `view_event_privatedetails`)
+3. Add the Clone booking block to `form_showing.html` above the Delete block,
+   using `datetime-local` + flatpickr (matching the Bug F fix, not the old
+   text input on `s+s`)
+4. Replace the current "Add another date" plain-text link with this block
+
+**Ordering:** Clone block → Delete block, both below the main edit form
+(matching the user-requested Edit → Clone → Delete priority order).
+
+**Related:** 9.10.2 (rota notes cloned), 9.10.6 (inline warning), 9.18.3 (button order)
 
 ### 9.11 Notification alternatives to email 🟡 M (20–40h consideration + implementation varies)
 
@@ -1654,21 +1741,56 @@ These flags are **informational only** — the goal is transparency, not exclusi
 
 **Implementation:** Add `accessibility_notes = models.TextField(blank=True, default="")` to `Role`. Update the role edit view. Show the note (if set) in the rota slot UI. 🟢 XS (2–4h)
 
-### 9.18 Event Creation UX Overhaul 🟡 M (20–40h)
+### 9.18 Unified event create/edit UX 🟠 L (40–80h)
 
-**Goal:** Streamline the event creation process to remove the need for "cloning from the future" and reduce the friction of confirming events. See `docs/PROPOSALS/001_STREAMLINED_EVENT_WORKFLOW.md`.
+**Context (from programmer interviews, 2026-02):**
+
+Programmers — including some who use the system infrequently — find the current workflow fragmented and confusing. Specific pain points raised:
+
+- **Booking details are scattered.** Some are accessible via the Calendar view, some via the Event view, some only after clicking an event title and then a separate [EDIT] link. The path to any given field requires knowledge of which view surface it lives on.
+- **"Confirmed" is the most consequential action** (it publishes the event to the public programme), but it is only accessible in the Calendar view, not the Event/Diary view. Its visual treatment doesn't reflect its significance.
+- **"Edit Booking" is a misnomer.** The button only edits a subset of the booking; other fields live elsewhere.
+- **Action button order is wrong.** Currently Delete appears before Clone. Order should reflect frequency and danger: **Edit → Clone → Delete**.
+- **Cloning is used as a workaround for missing templates.** Programmers clone future events to reuse common settings, which is friction-heavy and error-prone. The right fix is proper templates (see 9.18.1 / 9.21), with clone demoted in prominence.
+
+**Open design questions (answers needed before implementation — see CURRENT_WORK.md):**
+
+1. In the current data model, Event and Showing (booking) are separate objects. A single event can have multiple showings. From the programmer's perspective, is that distinction useful or confusing? (i.e. do they ever programme the same film across two different dates and expect them to share public copy / poster?)
+2. What is the most common post-creation edit? (copy, poster, rota, time?)
+3. Should "Confirm to publish" apply to all showings of an event at once, or per-showing? (Currently it is per-showing/booking.)
+4. Is there information that should only be visible to panopticons and not to regular programmers on the edit page? Or is everything that a programmer creates also editable by them?
+5. Internal (rota, notes, T&C) vs external (copy, poster, title) split: would this feel natural, or would switching tabs be an additional cognitive burden?
+
+**Goal:** A unified create/edit surface for programmers that:
+
+- Puts all event information in one place — or at most two clearly-labelled tabs if the field count demands it
+- Makes "Confirm to publish" a prominent, clearly-labelled action with appropriate visual weight
+- Makes "Save draft" the default, no-consequences path
+- Reduces the number of distinct pages/views a programmer needs to navigate
+
+**Tab structure (open question — decide before implementation):**
+
+"Public / Internal" is one possible split but may not map to how programmers think about the data. Alternative framings to evaluate with users:
+
+- **Website / Diary / Rota** — mirrors the three main views they already navigate between
+- **Show / House / Crew** — show = what's on screen (copy, title, poster); house = practical details (date, room, price); crew = rota, notes, internal-only fields
+- **Single page** — if the current UI wastes space and prioritises rarely-used fields, reducing the form to essential fields may make a single-page layout viable without tab complexity
+
+Preference (from programmer interviews, 2026-02): aim for **one page** first. The current forms prioritise rarely-used fields at the expense of common ones; a better field hierarchy and visual weight scheme may make a single scrolling page workable. Only introduce tabs if a focused usability test shows a single page is too long.
+
+**Related:** 9.2 (approval pipeline), 9.18.1 (templates), 9.21 (recurring events / clone-to-dates)
 
 #### 9.18.1 Supercharge EventTemplate 🔵 S (4–8h)
+
 Update `EventTemplate` model to include `copy`, `copy_summary`, `rota_notes`, `terms`, `film_information`, and `private`. Add a "Save as Template" button to the Event Edit view to allow easy creation of templates from existing events.
 
-#### 9.18.2 Unified "Create Booking" Form 🔵 S (8–16h)
-Refactor the "Add Event" view to accept Showing details (Date, Time, Room) in the same form.
-- Save creates both `Event` and `Showing` records transactionally.
-- "Publish" button sets `confirmed=True` immediately if validation passes.
-- "Save Draft" sets `confirmed=False`.
+#### 9.18.2 Unified create/edit form 🟡 M (16–30h)
 
-#### 9.18.3 Event Dashboard Redirect 🟢 XS (2–4h)
-Change the post-save redirect on event creation. Instead of going to the calendar/list view, go to the specific Event Edit/Dashboard view. This provides immediate confirmation of what was created and allows further edits (e.g. adding a second showing) without searching.
+Refactor to accept Event + Showing details in one form. Save creates both `Event` and `Showing` records transactionally. "Publish" sets `confirmed=True`; "Save Draft" sets `confirmed=False`. Post-save redirect goes to the event's own page, not the calendar. Design must resolve the questions above before implementation.
+
+#### 9.18.3 Fix action button order 🟢 XS (1h)
+
+In the calendar/event view action row, reorder buttons to: **Edit → Clone → Delete**. This matches frequency of use (most common first) and danger level (least destructive first). Styling: Edit = primary, Clone = secondary, Delete = danger/red.
 
 ### 9.19 Audit and fix page titles for accessibility and correctness 🟢 XS (1–2h)
 
@@ -1698,18 +1820,284 @@ Change the post-save redirect on event creation. Instead of going to the calenda
 
 ---
 
-## Imported from BUGS.txt
+### 9.20 Test coverage improvements 🟢 XS–🔵 S
 
-The following items were found in `BUGS.txt`, a legacy notes file from 2012–2016 (Django 1.8 era). They have not been verified against the current codebase. Triage and close as appropriate.
+**Background:** We have been moving quickly and several recent features and bug fixes lack adequate test coverage. This section collects the known gaps and the specific tests needed to close them. The overall test count is 372; the goal is to add targeted tests without inflating count artificially.
 
-**Mailout entities and links broken** — Mailout body entities and links are described as "somewhat broken". Nature of the breakage is not documented. 🔵 S
+**What cannot be tested in Django's test runner:**
 
-**URL linkifier does not detect HTTPS** — The code that auto-links URLs in programme copy detects `http://` but not `https://`. A unit test should accompany any fix. 🟢 XS
+The following fixes are CSS or client-side JS only and have no server-visible behaviour to assert:
 
-**Form redirect after submit not universal** — The pattern of redirecting after a successful POST (to prevent duplicate submission on reload) was applied to the members forms but not everywhere. 🔵 S
+- Bug G — z-index change in `edit_form.css` (date/time picker behind navbar)
+- Bug H — role icon nowrap fix in `edit_rota.html` / `edit_rota.js` (purely DOM manipulation)
+- Bug C — HTML entity decode in rota editor (`loaddata` JS callback in `edit_rota.js`)
 
-**Event save error handling for missing image** — If an event is saved and the associated image file is missing on disk, the error is not handled gracefully. 🟢 XS
+For these, manual visual verification in the browser is the only practical check.
 
 ---
 
-*Completed tasks: [CURRENT_WORK.md](../CURRENT_WORK.md) (Done section)*
+**Gap 1: datetime-local POST format not tested end-to-end** 🟢 XS (1–2h)
+
+Relates to: Bug F fix in `form_widgets.py`
+
+The `JQueryDateTimePicker.value_from_datadict()` method converts `"YYYY-MM-DDTHH:MM"` (what `<input type="datetime-local">` submits) to `"YYYY-MM-DD HH:MM"` (what Django's `DateTimeField` can parse). The existing POST tests in `test_edit_views.py` still submit the old `"dd/mm/YYYY HH:MM"` format, so the conversion path is never exercised.
+
+**Tests to add** in `toolkit/diary/tests/test_edit_views.py`:
+
+- In `EditShowing._test_edit_showing_common`: add a parallel POST test that submits `start` as `"2013-08-15T19:30"` (datetime-local format) and asserts the saved `Showing.start` is identical to the result of the current old-format test. This confirms `value_from_datadict` conversion is correct.
+- Consider a direct unit test of `JQueryDateTimePicker.value_from_datadict()` covering: (a) T-format string, (b) no-T string passthrough, (c) Python `datetime` object passthrough (the guard added for the mailout view).
+
+---
+
+**Gap 2: `ROTA_CLEAR_EMAIL_PROMPT_ENABLED` not verified in context** 🟢 XS (1h)
+
+Relates to: Bug D fix in `edit_views.py` and `settings_common.py`
+
+The setting is passed to the rota editor template as `rota_clear_email_prompt_enabled` and then read by JavaScript. No test verifies that this context key exists or reflects the setting value.
+
+**Tests to add** in `toolkit/diary/tests/test_edit_rota.py`:
+
+- `test_rota_edit_context_prompt_enabled`: `@override_settings(ROTA_CLEAR_EMAIL_PROMPT_ENABLED=True)`, GET rota-edit view, assert `response.context["rota_clear_email_prompt_enabled"]` is `True`.
+- `test_rota_edit_context_prompt_disabled`: same but `False`, assert it comes through as `False`.
+
+---
+
+**Gap 3: volunteer programme view has no tests** 🟢 XS (2–3h)
+
+Relates to: 9.1 volunteer programme view
+
+The feature that lets logged-in volunteers see internal events alongside the public programme has zero test coverage. The filtering logic (which events are shown to whom) should be tested.
+
+**Tests to add** in a new `test_public_views.py` section or in the existing `test_public_views.py` (toolkit/diary/tests):
+
+- `test_programme_anonymous_user_sees_only_public_events`: GET programme view without login, assert internal/volunteer-only events not present.
+- `test_programme_logged_in_volunteer_sees_internal_events`: Login as a volunteer user, GET programme view, assert volunteer-only events appear in addition to public events.
+- `test_programme_logged_in_non_volunteer_sees_only_public`: Login as a non-volunteer staff user, assert internal events are not shown (if that's the intended behaviour — confirm from code).
+
+---
+
+**Gap 4: `IndexLink.description` field not tested** 🟢 XS (1h)
+
+Relates to: 8.13 `IndexLink.description` field added in migration 0003
+
+The description field was added to the model and included in the form, but the existing `test_create_link` and `test_edit_link` tests in `toolkit/index/tests.py` don't include or assert on the description field.
+
+**Tests to add** in `toolkit/index/tests.py`:
+
+- Extend `test_create_link` to POST with a `description` value and assert it's saved on the `IndexLink` object.
+- Extend `test_edit_link` similarly for update.
+- Optionally assert the description is rendered on the index page for logged-in users (if the template shows it).
+
+---
+
+**Gap 5: word counter JS initialisation not verified** 🟢 XS (30min)
+
+Relates to: 9.16 live word counter for `copy_summary`
+
+Backend validation (minimum word count) is tested in `test_edit_views.py` via `@override_settings(PROGRAMME_EVENT_TERMS_MIN_WORDS=5)`. The JS-side counter is not testable, but we could verify the template at least includes the counter script block.
+
+**Tests to add** in `toolkit/diary/tests/test_edit_views.py`:
+
+- In the existing edit-event GET test, add an `assertContains` for a distinctive fragment of the word-counter JS (e.g. `id="word-count"` or the initialisation function name) to ensure the template renders the counter block.
+
+---
+
+### 9.26 Event resource links (generalised rota links) 🔵 S (8–16h)
+
+**Context:**
+
+The rota view has a prototype placeholder for a "Nextcloud link" — a clickable shortcut to event-related files. Currently it is hardcoded, has no backing model field, and requires a programmer to copy/paste from inside the edit view. The goal is to generalise this into a small set of named, clickable links visible directly on the rota, covering any mix of useful destinations: shared documents, crew chat, planning sheets, etc.
+
+**Current state:** `edit_rota.html` renders a hard-coded `<span class="nc-placeholder">` with a comment that the field doesn't exist yet on the Event model. Nothing is stored; this is purely prototype UI.
+
+**Model design:**
+
+Add a new `EventLink` model (separate table, not a simple field on `Event`), so multiple links can be stored:
+
+```python
+class EventLink(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="links")
+    label = models.CharField(max_length=80)   # user-supplied name, e.g. "Crew chat"
+    url   = models.URLField(max_length=500)
+    order = models.PositiveSmallIntegerField(default=0)  # display order
+
+    class Meta:
+        ordering = ["order", "pk"]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(order__lte=3),
+                name="eventlink_max_3_per_event",
+            )
+        ]
+```
+
+Max 3 links per event, enforced at the model and form level (not just the DB constraint — the constraint is a safety net).
+
+**Why event-level, not showing-level?** Linked resources (shared folders, crew chats, planning docs) belong to the event as a whole, not to a specific date/showing. A recurring event with multiple showings shares one folder. If per-showing links ever become necessary, the `EventLink` model can gain an optional `showing` FK later.
+
+**URL security — domain whitelist:**
+
+Links are displayed as live `<a href>` tags to logged-in users. To prevent the rota from becoming a phishing vector, only a whitelist of approved domains is accepted at validation time:
+
+| Domain pattern | Covers |
+| --- | --- |
+| `*.riseup.net` | Riseup pads and shared notes |
+| `*.nextcloud.com`, `*.nextcloud.org`, any path with `/nextcloud/` | Nextcloud instances (self-hosted vary; match on path heuristic or require full URL) |
+| `chat.whatsapp.com` | WhatsApp group invite links |
+| `linktr.ee` | Linktree profile links |
+
+**Pragmatic note on self-hosted Nextcloud:** Self-hosted instances use arbitrary domains (e.g. `files.starandshadow.org.uk`). A pure domain whitelist can't cover these. Options:
+
+1. **Allowlist by path pattern** — accept any URL containing `/nextcloud/` or `/index.php/s/` (NextCloud share path) regardless of domain
+2. **Per-deployment allowlist** — a `EVENTLINK_EXTRA_ALLOWED_DOMAINS` setting that venues can extend (S+S adds their own instance)
+3. **Link safety API** — fall back to Google Safe Browsing or similar for URLs not on the whitelist
+
+Recommended approach: whitelist the known public domains above, plus `EVENTLINK_EXTRA_ALLOWED_DOMAINS = []` in `settings_common.py` (venues extend it). A self-hosted instance gets added to its venue settings. Non-matching URLs are rejected with a clear form error explaining which domains are accepted. No third-party safety API needed for MVP — the risk model is internal users adding links, not public submission.
+
+**Rota view UI:**
+
+Replace the prototype placeholder with real link chips, displayed horizontally below the rota title for the event:
+
+```text
+[☁ Event folder]  [💬 Crew chat]  [📄 Planning doc]
+```
+
+- Each chip is a styled `<a>` button opening in a new tab (`target="_blank" rel="noopener noreferrer"`)
+- Chips only rendered if the event has at least one link; no empty space if no links exist
+- Display order follows `EventLink.order`
+
+**Rota edit UI:**
+
+In the rota edit view (or the event edit view — TBD based on 9.18 unified edit work), a small inline formset:
+
+- Starts with one blank row (label input + URL input)
+- "Add another link" button reveals a second row, then a third; button hidden once 3 rows are shown
+- Each row has a delete/clear button
+- Client-side validation highlights disallowed domains before submit (copy from the backend whitelist into a small JS constant)
+- Server-side validation is authoritative
+
+**Out of scope for MVP:** per-link icons/categories (the chip label is sufficient), link expiry, link sharing with non-logged-in users.
+
+**Related:** 9.18 (unified event edit), 9.3 (rota notes UX)
+
+---
+
+### 9.21 Recurring events / clone-to-dates 🟡 M (16–30h)
+
+**Context (from programmer interviews, 2026-02):**
+
+Regular community events — Community Kitchen, Cleaning Club, weekly screenings — follow a repeating schedule and are currently created by cloning a previous event and adjusting the date. This is friction-heavy, error-prone (easy to forget to update the copy or rota notes), and produces a backlog of near-identical events with no shared lineage.
+
+**Two design approaches — pick one before implementation:**
+
+1. **Rule-based recurrence** (calendar-style): Define a rule (every Tuesday, first Saturday of the month, etc.) and the system generates future showings automatically. Powerful but complex to model and UI-heavy to configure.
+
+2. **Clone-to-dates** (simpler, lower risk): When cloning an event, the user selects multiple target dates from a date picker. The system creates one new Showing per selected date, all copying the source event's metadata. No rule engine needed — just a smarter clone.
+
+The programmer interviews suggest **clone-to-dates** is the right starting point: it directly addresses the existing workaround without requiring a rule engine.
+
+**Open design questions (answers needed before implementation):**
+
+1. Should all generated showings share one `Event` record, or each get their own? (Shared event = shared public copy and poster, which is usually correct for a recurring film or event.)
+2. Should generated showings be created as `confirmed=False` (drafts) so the programmer can review before publishing?
+3. Is there a maximum number of dates the UI should allow in one operation? (Guard against accidental runs of hundreds of showings.)
+4. When a recurring showing's details need changing, should there be a "change this one / change all future" split like calendar apps?
+
+**Scope for MVP (clone-to-dates only):**
+
+- Add a multi-date picker UI to the Clone Event action (calendar checkboxes or a date-range + exclusion list)
+- Create one `Showing` per selected date, linked to the source `Event`
+- Mark all generated showings `confirmed=False`
+- Success screen lists all created showings with links to edit each
+
+**Related:** 9.18 (unified edit UX), 9.18.1 (event templates)
+
+---
+
+### 9.22 External hire field on rota 🟢 XS (2–4h)
+
+**Context (from programmer interviews, 2026-02):**
+
+Some rota slots are filled by people who are not volunteers — e.g. a paid projectionist hired for a special event, an outside performer doing their own sound, or a venue contact listed for coordination purposes. Currently programmers either leave the slot blank, add a free-text note to rota notes, or create a fake volunteer record. All three are hacks.
+
+**Goal:** Allow a rota slot to record a free-text name for an external hire, distinct from a linked volunteer account. This person should appear on the rota printout / view but is not linked to a Volunteer record and receives no automated communications.
+
+**Scope:**
+
+- Add an `external_name` CharField (max 100, blank=True) to the `RotaEntry` model (or equivalent)
+- In the rota editor UI, when the slot is not filled by a known volunteer, show a text input for the external name
+- Display the external name in the rota view with a visual indicator (e.g. "(ext)" suffix or a different text style) so it's clear it's not a volunteer
+- Migration required
+
+**Out of scope:** payments, invoicing, external-hire scheduling, or any comms integration.
+
+---
+
+### 9.23 "Films start on time" banner 🟢 XS (1–2h)
+
+**Context (from programmer interviews, 2026-02):**
+
+The Star and Shadow (and Cube) do not show adverts or trailers before screenings — films start at the advertised time. This is a point of pride and an audience expectation that needs to be communicated clearly on the public-facing event pages.
+
+**Goal:** Add a short, prominent banner or notice to event/showing detail pages stating that films start on time, with no adverts.
+
+**Scope:**
+
+- Add a new setting `FILMS_START_ON_TIME` (default `False` for Cube, `True` for S+S) to `settings_common.py` / `settings_ss.py`
+- In the event detail template (`view_event.html`, and the S+S override), conditionally render a banner block when the setting is true
+- The banner copy should be configurable via a setting or a small Wagtail snippet (to avoid hardcoding venue-specific language)
+- No database migration required for the MVP (settings-only approach)
+
+**Related:** 9.18 (event detail page), S+S template comparison task
+
+---
+
+### 9.24 Pronouns on hover for rota names 🔵 S (4–8h)
+
+**Context (from programmer interviews, 2026-02):**
+
+Volunteer names appear on the rota view and edit pages. Programmers who don't know all volunteers personally may accidentally misgender someone when referring to them in conversation. Showing pronouns on hover over a name is a low-friction, non-intrusive way to surface this.
+
+**Goal:** When a logged-in user hovers over a volunteer's name on the rota (view or edit), a tooltip shows their preferred pronouns.
+
+**Scope:**
+
+- Add a `pronouns` CharField (max 50, blank=True) to the `Volunteer` model; add to the volunteer edit form and admin
+- Migration required
+- In rota view/edit templates, render volunteer names with a `title` attribute or a lightweight JS tooltip containing their pronouns (only if `pronouns` is non-empty)
+- The tooltip should be keyboard-accessible (focusable element or `aria-label`)
+- Update `seed_dev_data` to populate some volunteers with example pronouns
+
+**Note:** Pronouns are inherently personal data. Do not display them on public-facing pages or in any exported data. They should only be visible to logged-in users with rota access.
+
+**Related:** 9.13 (GDPR / data minimisation)
+
+---
+
+### 9.25 Tap to sign up on rota (mobile self-service) 🔵 S (8–16h)
+
+**Context (from programmer interviews, 2026-02):**
+
+Volunteers who want to sign themselves up for a rota slot currently have to either contact a programmer, or log in to the toolkit on desktop and navigate to the rota editor — a multi-step process that most volunteers don't know how to do. On mobile, the rota editor is functional but not optimised for self-service sign-up.
+
+**Goal:** Allow logged-in volunteers to tap an empty rota slot on the rota view page to claim it for themselves, without going through the full editor UI.
+
+**Scope:**
+
+- Only applies to empty slots (no volunteer currently assigned)
+- The volunteer must be logged in; non-logged-in users see a read-only rota
+- Tapping a slot shows a confirmation prompt ("Sign up as [your name] for [role] on [date]?") before committing
+- Confirmation makes a POST to a new endpoint (or extends the existing rota API) to create the `RotaEntry`
+- The rota view refreshes to show the updated slot
+- Slot is claimed for the logged-in volunteer; no ability to claim a slot for someone else via this UI (that stays in the full editor)
+- Must handle the race condition: if two people tap the same slot simultaneously, the second gets a clear error ("This slot was just taken — please refresh")
+
+**Out of scope for MVP:** Swapping slots, releasing a slot you've claimed, or any notification to the programmer that a sign-up occurred. These can follow in a later iteration once the basic sign-up is proven.
+
+**Prerequisite:** 8.1 volunteer accounts (volunteers must have user accounts to use this feature)
+
+**Related:** 8.1 (account-linked rota), 9.2 (rota account sign-up)
+
+---
+
+*Completed tasks: [ARCHIVE.md](ARCHIVE.md)*

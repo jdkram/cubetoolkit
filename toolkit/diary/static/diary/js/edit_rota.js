@@ -81,6 +81,13 @@ function edit_rota(jQuery, rota_edit_base_url, edit_rota_notes_url_prefix, vol_e
                         submit: 'Save',
                         submitdata: {
                             csrfmiddlewaretoken: CSRF_TOKEN
+                        },
+                        // Decode HTML entities before putting text into the
+                        // textarea. Without this, Django's auto-escaping (e.g.
+                        // ' → &#x27;) ends up as literal text in the editor and
+                        // gets double-encoded on the next save.
+                        loaddata: function(value) {
+                            return $('<div>').html(value).text();
                         }
                     }
                 );
