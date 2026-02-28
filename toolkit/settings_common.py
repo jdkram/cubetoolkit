@@ -129,6 +129,13 @@ HTML_MAILOUT_ENABLED = True
 MEMBERSHIP_EXPIRY_ENABLED = False
 MEMBERSHIP_LENGTH_DAYS = 365
 
+# When True (default), event images are always shown on the public website.
+# When False, images are hidden for events where all showings pre-date
+# IMAGES_START_DATE. Volunteers (authenticated users) always see images.
+SHOW_ARCHIVE_IMAGES = True
+# Only used when SHOW_ARCHIVE_IMAGES = False. Format: "1 May 2018".
+IMAGES_START_DATE = None
+
 ###############################################################################
 #
 # Wagtail settings

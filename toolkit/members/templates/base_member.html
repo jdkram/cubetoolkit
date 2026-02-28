@@ -20,7 +20,7 @@
 <p>
 <a href="{% url "add-member" %}">Add member</a> |
 <a href="{% url "search-members" %}">Search / Edit / Delete</a> |
-<a href="{% url "member-statistics" %}">Statistics</a>
+<a href="{% url "member-statistics" %}">Statistics</a>{% if MEMBERSHIP_EXPIRY_ENABLED %} | <a href="{% url "member-expired" %}">Expired</a>{% endif %}
 </p>
 {{ block.super }}
 {% endif %}
