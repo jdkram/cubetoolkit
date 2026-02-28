@@ -62,28 +62,39 @@ class HtmlTextarea(forms.Textarea):
 
 class JQueryDateTimePicker(forms.DateTimeInput):
     """
-    Override DateTimeInput form widget to automatically use the JQueryUI
-    control
+    datetime-local input enhanced by flatpickr on desktop.
+
+    On desktop browsers flatpickr replaces the native datetime-local UI with a
+    combined calendar + time spinner popup (much nicer than Firefox's split
+    date/time text fields).  On mobile devices flatpickr defers to the native
+    OS picker automatically (disableMobile defaults to false).
+
+    The underlying input type stays datetime-local so there is a reasonable
+    fallback if JS is unavailable.
     """
 
-    template_name = "widgets/jquerydatetimepicker.html"
-
-    def __init__(self, *args, **kwargs):
-        # Change the default date/time format to match that used by the
-        # jquery widget (which is also the more conventional UK format)
-        if "format" not in kwargs:
-            kwargs["format"] = "%d/%m/%Y %H:%M"
-
-        super().__init__(*args, **kwargs)
+    input_type = "datetime-local"
 
     class Media:
         css = {
-            "all": (
-                "css/lib/smoothness/jquery-ui.css",
-                "css/lib/timepicker.css",
-            ),
+            "all": ("css/lib/flatpickr.min.css",),
         }
         js = (
-            "js/lib/jquery-ui.min.js",
-            "js/lib/jquery-ui-timepicker-addon.js",
+            "js/lib/flatpickr.min.js",
+            "diary/js/datetimepicker_init.js",
         )
+
+    def __init__(self, *args, **kwargs):
+        if "format" not in kwargs:
+            kwargs["format"] = "%Y-%m-%dT%H:%M"
+        super().__init__(*args, **kwargs)
+
+    def value_from_datadict(self, data, files, name):
+        # datetime-local submits "YYYY-MM-DDTHH:MM"; normalise the T to a
+        # space so Django's DATETIME_INPUT_FORMATS can parse it.
+        # Guard: if data already holds a Python datetime object (e.g. set
+        # programmatically), leave it untouched.
+        value = super().value_from_datadict(data, files, name)
+        if isinstance(value, str):
+            value = value.replace("T", " ", 1)
+        return value

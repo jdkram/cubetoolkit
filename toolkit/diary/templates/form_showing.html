@@ -75,13 +75,6 @@ $(document).ready(function() {
   <a href="{% url "edit-event-details-view" event_id=showing.event.id %}">{{ showing.event.name }}</a>
 </h2>
 
-<p>
-<form id="delete_form" action="{% url "delete-showing" showing_id=showing.id %}" method="post">
-  {% csrf_token %}
-  <input class="btn btn-danger" type="submit" value="Delete Booking" />
-</form>
-</p>
-
 <form action="{% url "edit-showing" showing_id=showing.id %}" method="post">
   {% csrf_token %}
   <table class="table">
@@ -105,5 +98,14 @@ $(document).ready(function() {
   <input class="btn btn-primary" type="submit" value="Update" />
   </p>
 </form>
+
+<p>
+  <small><a href="{% url "edit-event-details-view" event_id=showing.event.id %}">Add another date for this event</a></small>
+  &nbsp;&nbsp;
+  <form id="delete_form" action="{% url "delete-showing" showing_id=showing.id %}" method="post" style="display:inline;">
+    {% csrf_token %}
+    <input class="btn btn-danger" type="submit" value="Delete Booking" />
+  </form>
+</p>
 {% endblock %}
 

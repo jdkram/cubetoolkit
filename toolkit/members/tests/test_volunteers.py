@@ -254,7 +254,10 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
         url = reverse("add-volunteer")
         response = self.client.post(
             url,
-            data={"mem-name": "New Volunteer, called \u0187hri\u01a8topher"},
+            data={
+                "mem-name": "New Volunteer, called \u0187hri\u01a8topher",
+                "mem-email": "newvol@test.example",
+            },
             follow=True,
         )
         self.assertRedirects(response, reverse("view-volunteer-summary"))
@@ -363,7 +366,9 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
 
         url = reverse("edit-volunteer", kwargs={"volunteer_id": 1})
         response = self.client.post(
-            url, data={"mem-name": "Renam\u018fd Vol"}, follow=True
+            url,
+            data={"mem-name": "Renam\u018fd Vol", "mem-email": "volon@cube.test"},
+            follow=True,
         )
         self.assertRedirects(response, reverse("view-volunteer-summary"))
 
@@ -384,7 +389,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
         self.assertTrue(member.volunteer.active)
         # Changed things:
         self.assertEqual(member.name, "Renam\u018fd Vol")
-        self.assertEqual(member.email, "")
+        self.assertEqual(member.email, "volon@cube.test")
         self.assertEqual(member.address, "")
         self.assertEqual(member.posttown, "")
         self.assertEqual(member.postcode, "")
@@ -518,6 +523,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
             url,
             data={
                 "mem-name": "Pictureless Person",
+                "mem-email": "volon@cube.test",
                 "vol-portrait-clear": "t",
             },
         )
@@ -567,6 +573,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
                 url,
                 data={
                     "mem-name": "Pictureless Person",
+                    "mem-email": "volon@cube.test",
                     "vol-portrait": new_jpg_file,
                 },
             )
@@ -610,6 +617,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
             url,
             data={
                 "mem-name": "Pictureless Person",
+                "mem-email": "volon@cube.test",
                 "vol-image_data": (
                     f"data:image/png;base64,{TINY_VALID_BASE64_PNG}"
                 ),

@@ -12,6 +12,11 @@ from django.db import migrations
 
 def widen_translation_key_if_needed(apps, schema_editor):
     """Widen wagtailcore_page.translation_key to varchar(36) if needed."""
+    # INFORMATION_SCHEMA and MODIFY COLUMN are MySQL/MariaDB-specific.
+    # SQLite ignores column sizes anyway; PostgreSQL is not used in this
+    # project. Skip on non-MySQL backends (e.g. SQLite test runner).
+    if schema_editor.connection.vendor != "mysql":
+        return
     with schema_editor.connection.cursor() as cursor:
         cursor.execute(
             """
