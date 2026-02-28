@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-02-27
+**Last updated:** 2026-02-28
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
 
@@ -10,9 +10,7 @@
 
 ## Immediate blockers (fix first)
 
-❌ **Bug H** — Rota page: role icons (e.g. "beginner friendly") wrap to next line alone 🟢 XS
-
-The small icons attached to roles on the rota page can orphan onto a new line, visually detached from their role. Fix: prevent the icon from breaking away from the last word of the role name (CSS `white-space: nowrap` or wrapping both in a `nowrap` inline container).
+None — all clear.
 
 ---
 
@@ -27,8 +25,8 @@ The small icons attached to roles on the rota page can orphan onto a new line, v
 | ⚠️ Programmer permission group | Partial | `Programmers` group created by `seed_dev_data`; dedicated `create_programmer_permission` command missing |
 | ✅ Rota role count limit increase (8 → 30) | Done 2026-02 | `MAX_COUNT_PER_ROLE` overridden in settings_ss.py; all enforcement points auto-parameterized |
 | ❌ `SHOW_ARCHIVE_IMAGES` / `IMAGES_START_DATE` | Not started | Hide event images before configurable date |
-| ❌ `Showing.rota_notes` field size | Not started | Extend from 1024 → 4096 characters |
-| ❌ `Member.email` mandatory | Not started | Change from `blank=True` to `blank=False` |
+| ✅ `Showing.rota_notes` field size | Done 2026-02-28 | Extended to 4096; migration `diary/0010` |
+| ✅ `Member.email` mandatory | Done 2026-02-28 | `blank=False`; migration `members/0010`; 10 tests updated |
 | ❌ Panopticon user management in volunteer edit | Not started | Allow Panopticon users to grant Panopticon in `/volunteers/ID/edit` view |
 | ❌ Custom Django admin `ModelAdmin` classes | Not started | Default list views only; need custom for User, Member, Volunteer, Room |
 | ❌ Expired members view | Not started | `/members/expired/` endpoint |
@@ -52,9 +50,7 @@ git diff s+s origin/master -- star_and_shadow_templates/
 
 | ID | Bug | Size |
 |----|-----|------|
-| **C** | Rota text shows raw HTML entities (`&apos;`, `&quot;`) — also a candidate to backport to the legacy live site | 🔵 S |
 | **E** | Volunteer login dropdown inaccessible on touch | 🔵 S |
-| **F** | Time picker is a slider (bad UX — should be `<input type="time">`) | 🔵 S |
 
 ---
 
@@ -63,12 +59,26 @@ git diff s+s origin/master -- star_and_shadow_templates/
 | # | Feature | Size | Notes |
 |----|---------|------|-------|
 | 9.9 | Break-even calculator for programmers | 🟢 XS | Pure JS; no database changes |
-| 9.10.2 | Clone rota notes with event clone | 🟢 XS | Copy `rota_notes` during event clone |
+| ~~9.10.2~~ | ~~Clone rota notes with event clone~~ | ✅ 2026-02-28 | `clone_rota_from_showing` now copies `rota_notes`; test added |
+| 9.10.6 | Inline warning when rota notes carry to cloned showing | 🟢 XS | Template banner in clone form; see TASKS.md 9.10.6 option 2 |
+| 9.10.7 | Port `add-showing` clone view from `s+s` | 🔵 S | Proper clone-booking block with date picker; replaces placeholder link; see TASKS.md 9.10.7 |
 | 9.12 | "Dormant" volunteer status | 🟢 XS | Add `status` field (active/dormant/retired) |
 | 9.3↳ | Collapse rota notes by default | 🟢 XS | Show summary, expand button |
 | 9.17↳ | `Role.accessibility_notes` field | 🟢 XS | Info-only field for role accessibility |
 | 9.10.5 | Role timing notes field | 🟢 XS | Per-role start/end time in rota |
 | 13.5 | Collectives directory (CMS-managed) | 🔵 S | Wagtail page with directory listing |
+| 9.20.1 | Test: datetime-local POST format end-to-end | 🟢 XS | POST with T-separator; unit-test `value_from_datadict` guard; see TASKS.md 9.20 Gap 1 |
+| 9.20.2 | Test: `ROTA_CLEAR_EMAIL_PROMPT_ENABLED` in context | 🟢 XS | Two `@override_settings` tests; see TASKS.md 9.20 Gap 2 |
+| 9.20.3 | Test: volunteer programme view (logged-in vs anonymous) | 🟢 XS | See TASKS.md 9.20 Gap 3 |
+| 9.20.4 | Test: `IndexLink.description` field save/render | 🟢 XS | Extend existing create/edit tests; see TASKS.md 9.20 Gap 4 |
+| 9.20.5 | Test: word counter script present in edit-event GET | 🟢 XS | One `assertContains`; see TASKS.md 9.20 Gap 5 |
+| ~~9.18.3~~ | ~~Fix action button order: Edit → Clone → Delete~~ | ✅ 2026-02-28 | Delete moved to bottom of `form_showing.html`; Clone/add-date link added above it |
+| 9.22 | External hire free-text field on rota | 🟢 XS | `RotaEntry.external_name` field; visible on rota view |
+| 9.23 | "Films start on time" banner | 🟢 XS | `FILMS_START_ON_TIME` setting; conditional block in event detail template |
+| 9.24 | Pronouns on hover for rota names | 🔵 S | `Volunteer.pronouns` field; tooltip on rota view/edit |
+| 9.21 | Recurring events / clone-to-dates | 🟡 M | Multi-date clone UI; one Showing per date; see TASKS.md 9.21 |
+| 9.25 | Tap to sign up on rota (mobile) | 🔵 S | Self-service slot claim for logged-in volunteers; see TASKS.md 9.25 |
+| 9.26 | Event resource links (generalised rota links) | 🔵 S | `EventLink` model; named link chips on rota view; domain whitelist; see TASKS.md 9.26 |
 
 ### 4. Medium and large Phase 2 features
 
@@ -90,6 +100,13 @@ Completed items stay here. When the Done section gets unwieldy, old rows can be 
 
 | Item | Completed | Notes |
 |------|-----------|-------|
+| ~~`Showing.rota_notes` field size 1024 → 4096~~ | 2026-02-28 | Migration `diary/0010_widen_rota_notes` |
+| ~~`Member.email` mandatory~~ | 2026-02-28 | `blank=False`; migration `members/0010_make_email_mandatory`; 10 tests updated |
+| ~~9.18.3 — Fix action button order~~ | 2026-02-28 | Delete moved to bottom of `form_showing.html`; Clone/add-date link added above it |
+| ~~9.10.2 — Clone rota notes with event clone~~ | 2026-02-28 | `clone_rota_from_showing` now copies `rota_notes`; model test added |
+| ~~Bug H — Rota role icons orphan onto new line~~ | 2026-02-28 | `edit_rota.html`: wrap last word + badge in `white-space:nowrap` span |
+| ~~Bug F — Time picker is a slider~~ | 2026-02-28 | `JQueryDateTimePicker` → `type="datetime-local"` + flatpickr 4.6.13; desktop gets calendar+time popup; mobile defers to native OS picker |
+| ~~Bug C — Rota text shows raw HTML entities~~ | 2026-02-28 | `edit_rota.js`: `loaddata` callback decodes entities before populating the inline editor |
 | ~~Bug I — Sidebar nav overflows viewport~~ | 2026-02-26 | `#sidebar` `position:fixed; height:100vh; overflow-y:auto` + `#site-nav` `position:relative; top:auto` in `site_custom.css`; root cause: absolutely-positioned children don't contribute to scroll height |
 | ~~Fresh install migration crash (`content.0013`)~~ | 2026-02-26 | Added `wagtailcore.0057` dependency; replaced `RunSQL` with safe `RunPython` (INFORMATION_SCHEMA check) |
 | ~~ONBOARDING.md accuracy pass~~ | 2026-02-26 | Linux Docker prereqs, venue clarity (S+S default/Cube opt-in), corrected settings table, removed BUGS.txt ref |

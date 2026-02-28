@@ -96,6 +96,10 @@ MAILOUT_LISTINGS_DAYS_AHEAD = 14
 # (so, for example, can't have more than this number of bar staff)
 MAX_COUNT_PER_ROLE = 8
 
+# If True, clearing a rota slot prompts the user to email the volunteer.
+# Set to False in environments where that prompt is unwanted (e.g. S+S).
+ROTA_CLEAR_EMAIL_PROMPT_ENABLED = True
+
 # Probably don't want to change these: subdirectories of MEDIA directory where
 # volunteer images get saved:
 VOLUNTEER_PORTRAIT_DIR = "volunteers"

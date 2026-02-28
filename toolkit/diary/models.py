@@ -433,7 +433,7 @@ class Showing(models.Model):
     roles = models.ManyToManyField(Role, through="RotaEntry")
 
     # Free text rota field for this showing
-    rota_notes = models.TextField(max_length=1024, blank=True)
+    rota_notes = models.TextField(max_length=4096, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -576,6 +576,16 @@ class Showing(models.Model):
 
     def clone_rota_from_showing(self, source_showing):
         assert self.pk is not None
+        # Copy rota_notes alongside the rota entries so recurring events keep
+        # stable operational notes (setup instructions, access codes, timing).
+        #
+        # CAUTION: notes sometimes contain date-specific volunteer messages
+        # ("Alice can't make this date") which will be wrong on the new
+        # showing. Until the clone flow has a review/edit step, programmers
+        # should check and clear stale notes after cloning. See TASKS.md 9.10.6
+        # for the recommended near-term mitigation (inline warning on clone form).
+        self.rota_notes = source_showing.rota_notes
+        self.save(update_fields=["rota_notes"])
         for rota_entry in source_showing.rotaentry_set.all():
             new_entry = RotaEntry(showing=self, template=rota_entry)
             new_entry.save()

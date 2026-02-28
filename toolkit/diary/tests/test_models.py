@@ -86,6 +86,22 @@ class ShowingModelMethods(DiaryTestsMixin, NowPatchMixin, TestCase):
         s = Showing()
         self.assertFalse(s.in_past())
 
+    def test_clone_rota_from_showing_copies_rota_notes(self):
+        """clone_rota_from_showing should copy rota_notes from the source."""
+        source = self.e4s3  # has rota_notes="Some notes about the Rota!"
+        self.assertTrue(source.rota_notes)  # ensure fixture has notes
+
+        dest = Showing(
+            event=source.event,
+            start=source.start + timedelta(days=7),
+            booked_by="Test",
+        )
+        dest.save()
+        dest.clone_rota_from_showing(source)
+
+        dest.refresh_from_db()
+        self.assertEqual(dest.rota_notes, source.rota_notes)
+
 
 class ShowingModelCustomQueryset(DiaryTestsMixin, TestCase):
     def test_manager_public(self):

@@ -221,8 +221,8 @@ class EditShowing(DiaryTestsMixin, TestCase):
         # Edit should have existing values:
         self.assertContains(
             response,
-            '<input type="text" name="start" value="09/06/2013 18:00"'
-            'class="jquerydatetimepicker form-control" required id="id_start">',
+            '<input type="datetime-local" name="start" value="2013-06-09T18:00"'
+            ' class="jquerydatetimepicker form-control" required id="id_start">',
             html=True,
         )
         self.assertContains(
@@ -524,8 +524,8 @@ class AddEventView(DiaryTestsMixin, TestCase):
         # Default start should be set one day in the future:
         self.assertContains(
             response,
-            r'<input id="id_start" name="start" value="02/06/2013 20:00" '
-            r'type="text" required class="jquerydatetimepicker form-control" />',
+            '<input type="datetime-local" name="start" value="2013-06-02T20:00"'
+            ' class="jquerydatetimepicker form-control" required id="id_start">',
             html=True,
         )
 
@@ -537,8 +537,8 @@ class AddEventView(DiaryTestsMixin, TestCase):
         # Default start should be set one day in the future:
         self.assertContains(
             response,
-            r'<input id="id_start" name="start" value="01/01/1950 20:00" '
-            r'type="text" required class="jquerydatetimepicker form-control" />',
+            '<input type="datetime-local" name="start" value="1950-01-01T20:00"'
+            ' class="jquerydatetimepicker form-control" required id="id_start">',
             html=True,
         )
 
