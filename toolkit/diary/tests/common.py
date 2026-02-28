@@ -43,21 +43,6 @@ class DiaryTestsMixin(fixtures.TestWithFixtures):
         self.useFixture(ToolkitUsersFixture())
         return super().setUp()
 
-    # Useful method:
-    def assert_return_to_index(self, response):
-        # Check status=200 and expected text included:
-        self.assertContains(
-            response,
-            "<!DOCTYPE html><html>"
-            "<head><title>-</title></head>"
-            "<body onload='"
-            "try{self.close();}catch(e){}"
-            "try{parent.$.fancybox.close();}catch(e){}"
-            "try{opener.location.reload(true);}catch(e){}"
-            "'>Ok</body>"
-            "</html>",
-        )
-
     def assert_redirect_to_index(self, response):
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, reverse("default-edit"))
