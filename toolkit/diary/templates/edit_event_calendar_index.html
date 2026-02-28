@@ -91,6 +91,14 @@
 <script src="{{ STATIC_URL }}diary/js/calendar_index.js"></script>
 
 <script type="text/javascript">
+// FullCalendar 3.x uses $(htmlString) to batch-create event nodes and
+// correlates the result back to segment objects by array index. jQuery 3.5.0
+// introduced $.htmlPrefilter which can produce extra whitespace/text nodes in
+// that collection, causing an index mismatch (seg is undefined → crash, and
+// the timeline view's lane placement breaks). Restore the pre-3.5 no-op
+// behaviour for the calendar page. Safe because this is an internal admin UI.
+jQuery.htmlPrefilter = function(html) { return html; };
+
 var urls = {
     'add-event': '{% url "add-event" %}',
     'diary-edit-calendar': '{% url "diary-edit-calendar" %}',
