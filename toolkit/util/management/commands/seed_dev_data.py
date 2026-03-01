@@ -69,6 +69,45 @@ ROLES = [
     {"name": "Tech (Shadowing)", "standard": False},
 ]
 
+ROOMS = [
+    # Primary rooms: vivid triadic hues (red/blue/yellow ~120° apart), white text.
+    # Café is bright yellow — _is_light_colour() in edit_views auto-applies black text.
+    # Secondary rooms: clearly pastel so they recede visually; black text auto-detected.
+    {"name": "Cinema",      "colour": "#CC2200", "is_primary": True},   # vivid vermilion
+    {"name": "Venue Space", "colour": "#0057B8", "is_primary": True},   # royal blue
+    {"name": "Café",        "colour": "#FFD700", "is_primary": True},   # bright yellow (→ black text)
+    {"name": "External",    "colour": "#E0F5CC", "is_primary": False},  # faint lime green
+    {"name": "Meeting",     "colour": "#EDE0FF", "is_primary": False},  # faint lavender
+    {"name": "Dark Room",   "colour": "#E8E8E8", "is_primary": False},  # faint grey
+    {"name": "Print Room",  "colour": "#D0EDFA", "is_primary": False},  # faint sky blue
+    {"name": "workshop",    "colour": "#F5EABB", "is_primary": False},  # faint cream/tan
+    {"name": "Green room",  "colour": "#CCEEDF", "is_primary": False},  # faint mint
+]
+
+# Which room each seed event belongs to.
+EVENT_ROOMS = {
+    "Community Kitchen Special: Shared Recipes":                      "Café",
+    "Volunteer Hangout":                                               "Venue Space",
+    "Volunteer Induction":                                             "Meeting",
+    "Keyholder Training":                                              "Meeting",
+    "Seeking a Friend for the End of the World":                      "Cinema",
+    "Friday Cleaning Club and Brunch Social":                          "Venue Space",
+    "Art Club":                                                        "Print Room",
+    "Family Film Club":                                                "Cinema",
+    "Starcade":                                                        "Venue Space",
+    "Creative Writing":                                                "Meeting",
+    "Programme Development Meeting":                                   "Meeting",
+    "Cafe Induction":                                                  "Café",
+    "It's Such a Beautiful Day + ME":                                  "Cinema",
+    "The Annual Ritual Sacrifice of Pens: A Volunteer Ceremony":      "Venue Space",
+    "Four Hours of a Man Juggling Jelly While Weeping":               "Cinema",
+    "The Badger Orchestra: An Evening of Striped Symphonies":         "Venue Space",
+    "The Impossible Film-Athon: 10 Simultaneous Cinema Screenings":   "Cinema",
+    "The Great Inventory Crisis: Volunteer Spirits Appreciation Night": "Venue Space",
+    "The Freezer Expedition: A Journey Into the Unknown":             "Café",
+    "The Loft Haunting: Negotiation & Possibly Exorcism":             "Venue Space",
+}
+
 TAGS = [
     "film",
     "music",
@@ -762,6 +801,7 @@ class Command(BaseCommand):
             Showing.objects.all().delete()
             Event.objects.all().delete()
             EventTemplate.objects.all().delete()
+            Room.objects.filter(name__in=[r["name"] for r in ROOMS]).delete()
             EventTag.objects.filter(read_only=False).delete()
             # Delete seed-generated media items (and their files)
             for mi in MediaItem.objects.filter(credit="seed_dev_data"):
@@ -912,11 +952,19 @@ class Command(BaseCommand):
         for u in seed_users[1:3]:
             programmers_group.user_set.add(u)
 
-        # Default room
-        room, _ = Room.objects.get_or_create(
-            name="Main Room",
-            defaults={"colour": "#cc3399"},
-        )
+        # Rooms — create/update all 9 S&S spaces.
+        # update_or_create ensures is_primary is set correctly on re-runs.
+        rooms_dict = {}
+        for room_data in ROOMS:
+            room_obj, _ = Room.objects.update_or_create(
+                name=room_data["name"],
+                defaults={
+                    "colour": room_data["colour"],
+                    "is_primary": room_data.get("is_primary", False),
+                },
+            )
+            rooms_dict[room_data["name"]] = room_obj
+        default_room = rooms_dict["Venue Space"]
 
         # Events and Showings
         now = timezone.now()
@@ -951,11 +999,15 @@ class Command(BaseCommand):
                 microsecond=0,
             ) + datetime.timedelta(days=event_data["day_offset"] - 14)
 
+            event_room = rooms_dict.get(
+                EVENT_ROOMS.get(event_data["name"], "Venue Space"),
+                default_room,
+            )
             showing, s_created = Showing.objects.get_or_create(
                 event=event,
                 start=showing_start,
                 defaults={
-                    "room": room,
+                    "room": event_room,
                     "booked_by": "seed_dev_data",
                     "confirmed": True,
                     "hide_in_programme": event_data.get("hide_in_programme", False),

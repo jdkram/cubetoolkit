@@ -62,10 +62,13 @@ IMAGES_START_DATE = "1 May 2018"
 # programmes can be uploaded
 DAWN_OF_TIME = 1998
 
-# URL to an image copyright guidance document (e.g. on NextCloud).
-# When set, a link appears next to the image upload field in the event editor.
-# Leave as None if no guidance document exists yet.
-IMAGE_COPYRIGHT_GUIDANCE_URL = None
+# URL to an image copyright / image rights guidance document (e.g. on NextCloud).
+# When set, a link ("image copyright guidance") appears below the image upload
+# field on the event edit form (diary/templates/form_event.html), alongside a
+# ⚠️ reminder to check image rights before uploading. Helps programmers find
+# freely-licensed images and avoid copyright issues.
+# Set to None to hide the link entirely.
+IMAGE_COPYRIGHT_GUIDANCE_URL = "https://example.com/TODO-replace-with-nextcloud-url"  # TODO: replace with real URL
 
 ###############################################################################
 #

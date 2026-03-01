@@ -1,209 +1,392 @@
 {% extends "form_base.html" %}
-{% load tk_crispy_filter %}
+{% load crispy_forms_tags %}
 {% load thumbnail_l %}
 {% load static %}
 {% load noprefix_url %}
 {% block title %}
-Details for: {{ event.name }}
+{{ event.name }}
 {% endblock %}
 {% block css %}
 {{ block.super }}
 <style type="text/css">
-    p {
+    .completeness-bar .badge {
+        font-size: 0.85em;
+        margin-right: 0.4em;
     }
-    .copy {
+    .showing-card {
+        margin-bottom: 0.75rem;
+    }
+    .showing-card .card-body {
+        padding: 0.75rem 1rem;
+    }
+    .showing-card .status-actions {
+        margin-top: 0.5rem;
+    }
+    .showing-card .status-actions form {
+        display: inline;
+    }
+    details summary {
+        cursor: pointer;
+        color: #555;
+    }
+    .add-showing-section {
+        margin-top: 1rem;
+    }
+    .event-details-dl dt {
+        font-weight: 600;
+    }
+    .event-details-dl dd {
+        margin-bottom: 0.5rem;
+        word-break: break-word;
+    }
+    .copy-preview {
+        background: #f8f9fa;
         padding: 0.5em;
+        border-radius: 4px;
     }
-    p.image_caption {
-        font-style: italic;
+    .field-tip {
+        cursor: help;
+        color: #6c757d;
+        font-size: 0.8em;
+        margin-left: 0.2em;
+        vertical-align: middle;
+        font-weight: normal;
     }
-    .pre {
-        white-space: pre-wrap;
-    }
-    p#cancel {
-        margin: 1em;
-    }
-    #form-errors { color: red }
-    .centered {
-        text-align: center;
-    }
-    .align-right {
-        text-align: right;
-    }
-    .hidden {
-        display: none;
-    }
-
 </style>
 {% endblock %}
 
 {% block script %}
 {{ block.super }}
-{{ showing_forms.media }}
+{{ add_showing_form.media }}
 <script>
-   "use strict";
-    function showNewBookingForm() {
-        const showFormButton = document.getElementById("new_booking_button");
-        const newBookingRow = document.getElementById("new_booking_row");
-        const whenInput = document.querySelector('#new_booking_row input[type="text"]');
-        {% comment %}
-        Only set the default start time in the 'extra' (new booking) form when
-        the form is displayed: if it's set in the form initialdata then the
-        django logic will always try to save the 'extra' form, which will give
-        an error if the "booked_by" hasn't been set.
-        {% endcomment %}
-        whenInput.value = "{{ clone_showing_start|date:"d/m/Y H:i"|escapejs }}";
-        showFormButton.classList.add('hidden');
-        newBookingRow.classList.remove('hidden');
-    }
-
-    function hideNewBookingForm() {
-        const showFormButton = document.getElementById("new_booking_button");
-        const newBookingRow = document.getElementById("new_booking_row");
-
-        const textFields = document.querySelectorAll('#new_booking_row input[type="text"]');
-        const checkFields = document.querySelectorAll('#new_booking_row input[type="checkbox"]');
-
-        for (const field of textFields) {
-            field.value = "";
-        }
-        for (const field of checkFields) {
-            field.checked = field.defaultChecked;
-        }
-
-        showFormButton.classList.remove('hidden');
-        newBookingRow.classList.add('hidden');
-    }
+"use strict";
+$(function () {
+    $('[data-toggle="tooltip"]').tooltip();
+});
+function showAddShowingForm() {
+    document.getElementById("add-showing-toggle").classList.add("d-none");
+    document.getElementById("add-showing-form").classList.remove("d-none");
+}
+function hideAddShowingForm() {
+    document.getElementById("add-showing-toggle").classList.remove("d-none");
+    document.getElementById("add-showing-form").classList.add("d-none");
+}
 </script>
 {% endblock %}
 
 {% block body %}
-<div id="booking">
-    <h1>{{ event.name }}
- </h1>
+<div>
+<h1>{{ event.name }}</h1>
 
 {% include "bs_messages.html" %}
 
-<h3>Bookings</h3>
-
-<form method="post">
-{% csrf_token %}
-{{ showing_forms.management_form }}
-{% if showing_forms.non_form_errors %}
-<div class="alert alert-danger" role="alert">
-    {{ showing_forms.non_form_errors }}
-</div>
-{% endif %}
-<table class="table" id="booking-table">
-    <thead>
-        <tr>
-            <th>When</th>
-            <th>Booked by</th>
-            <th class="centered">Confirmed</th>
-            <th class="centered">Secret</th>
-            <th class="centered">Cancelled</th>
-            <th class="centered">Discounted</th>
-            <th class="centered">Sold&nbsp;out</th>
-            <th></th>
-        </tr>
-    </thead>
-{% for showing in historic_showings %}
-    <tr>
-        <td>
-            <span title="Showing has started, can't edit">
-                {{ showing.start|date:"d/m/Y H:i" }}{% if MULTIROOM_ENABLED %} in {{ showing.room }}{% endif %}
-            </span>
-        </td>
-        <td>{{ showing.booked_by }}</td>
-        <td class="centered">{{ showing.confirmed|yesno }}</td>
-        <td class="centered">{{ showing.hide_in_programme|yesno }}</td>
-        <td class="centered">{{ showing.cancelled|yesno }}</td>
-        <td class="centered">{{ showing.discounted|yesno }}</td>
-        <td class="centered">{{ showing.sold_out|yesno }}</td>
-        <td>(Past)</td>
-    </tr>
-{% endfor %}
-{% for showing_form in showing_forms %}
-    <tr {% if not showing_form.instance.id %}id="new_booking_row"
-          {% if not showing_form.errors %}class="hidden"{% endif %}
-        {% endif %}>
-        <td>{{ showing_form.id }}{{ showing_form.start | to_crispy_field }}{% if MULTIROOM_ENABLED %} in {{ showing.room }}{% endif %}</td>
-        <td>
-        {% if showing_form.instance.id %}
-          {{ showing_form.booked_by.value }}
-          <input id="{{ showing_form.booked_by.id_for_label }}" type="hidden" name="{{ showing_form.booked_by.id_for_label|cut:"id_" }}" maxlength="64" value="{{ showing_form.booked_by.value }}">
-        {% else %}
-          {{ showing_form.booked_by | to_crispy_field }}
+{% with c=completeness %}
+{% if not c.has_copy or not c.has_copy_summary or not c.has_image or not c.terms_ok %}
+<div class="completeness-bar mb-3">
+    <strong>Checklist:</strong>
+    {% if not c.has_copy %}<span class="badge badge-warning">No description yet</span>{% endif %}
+    {% if not c.has_copy_summary %}<span class="badge badge-warning">No copy summary yet</span>{% endif %}
+    {% if not c.has_image %}<span class="badge badge-warning">No image yet</span>{% endif %}
+    {% if not c.terms_ok %}
+        {% if c.terms_required %}
+        <span class="badge badge-danger">Terms needed before confirming</span>
         {% endif %}
-        </td>
-        <td class="centered">{{ showing_form.confirmed | to_crispy_field }}</td>
-        <td class="centered">{{ showing_form.hide_in_programme | to_crispy_field }}</td>
-        <td class="centered">{{ showing_form.cancelled | to_crispy_field }}</td>
-        <td class="centered">{{ showing_form.discounted | to_crispy_field }}</td>
-        <td class="centered">{{ showing_form.sold_out | to_crispy_field }}</td>
-        <td>
-            {% if showing_form.instance.id %}
-            <a href="{% url "edit-showing" showing_form.instance.id %}">Edit</a>
-            {% else %}
-            <img style="cursor: pointer;" src="{{ STATIC_URL }}img/x-circle.svg" onClick="hideNewBookingForm();">
-            {% endif %}
-        </td>
-    </tr>
-{% endfor %}
-{% if not all_showings_in_past %}
-    <tr>
-        <td colspan="4">
-            <input type="submit" class="btn btn-primary" value="Save changes to bookings" />
-        </td>
-        <td colspan="4" class="align-right">
-            <button id="new_booking_button" type="button" class="btn btn-info{% if not show_add_a_booking_button %} hidden{% endif %}" onclick="showNewBookingForm();">
-                Add a booking
-            </button>
-        </td>
-    </tr>
-{% endif %}
-</table>
-</form>
-<p>
-</div>
-<h3>Details {% if not event.all_showings_in_past %}<a href="{% url "edit-event-details" event.pk %}">[edit]</a>{% endif %}</h3>
-    <table class="table">
-    <tr><td>Pre-title</td><td>{{event.pre_title }}</td></tr>
-    <tr><td>Name</td><td>{{ event.name }}</td></tr>
-    <tr><td>Post-title</td><td>{{event.post_title }}</td></tr>
-    <tr><td>Tags</td><td>{{ event.tags.all|join:", " }}</td></tr>
-    <tr><td>Public programme link</td><td>{% if event.showings.public and not event.private %}<a href="{% noprefix_url "single-event-view" event.pk %}">{% noprefix_url "single-event-view" event.pk %}</a>{% else %}
-    Event not visible in online programme: {% if event.private %}It's marked private.{% endif %} {% if not event.showings.public %}Bookings are all unconfirmed or hidden in programme.{% endif %}
-    {% endif %}</td></tr>
-    <tr><td>Pricing</td><td>{{ event.pricing }}</td></tr>
-    {% if event.ticket_link %}<tr><td>Online tickets</td><td><a href="{{ event.ticket_link }}">{{ event.ticket_link }}</a></td></tr>{% endif %}
-    <tr><td>Film information</td><td>{{ event.film_information }}</td></tr>
-    <tr><td>Programmer's notes</td><td>{{event.notes}}</td></tr>
-    {% comment %}
-    {% if event.template %}
-    <tr><td>Created from template:</b>{{ event.template }} </p>
     {% endif %}
-    {% endcomment %}
-    <tr><td>Event image</td><td>
-
-{% with event.media.all.0 as media_item %}
-{% if media_item %}
-<a href="{% get_media_prefix %}{{ media_item.media_file }}"><img src="{{ media_item.media_file|thumbnail_url:'editpreview' }}" alt="Picture for event {{ event.name }}"></a>
-{% if media_item.credit %}
-<p class="image_caption">Image by: {{ media_item.credit }}</p>
-{% endif %}
-{% else %}
-<i>no image yet</i>
+</div>
 {% endif %}
 {% endwith %}
- </td></tr>
 
- <tr><td>Copy (for event web page)</td><td><div class="copy">{{event.copy_html}}</div></td></tr>
- <tr><td>Copy summary (for web index and printed programme)</td><td>
- <p class="pre">{{event.copy_summary}}</p></td></tr>
- <tr><td>Terms</td><td><p class="pre">{{event.terms}}</p></td></tr>
-</table>
-<p id="cancel"><a href="{% url "cancel-edit" %}">Back to diary</a></p>
+{# ── Event details ─────────────────────────────────────────────────────────── #}
+<div class="d-flex align-items-center mb-2">
+  <h3 class="mb-0 mr-3">Event details</h3>
+  {% if not all_showings_in_past %}
+  <a href="{% url "edit-event-details" event.pk %}" class="btn btn-sm btn-outline-secondary">Edit event →</a>
+  {% endif %}
+</div>
 
+<dl class="row event-details-dl">
+
+  <dt class="col-sm-3">Pre-title
+    <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          title="Optional text shown above/before the main title in public listings, e.g. &quot;Cube Microplex presents&quot;.">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">{{ event.pre_title|default:"—" }}</dd>
+
+  <dt class="col-sm-3">Name
+    <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          title="The main event title shown in the public programme and all listings.">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">{{ event.name }}</dd>
+
+  <dt class="col-sm-3">Post-title
+    <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          title="Optional text shown below/after the main title in public listings, e.g. &quot;with support from A Band&quot;.">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">{{ event.post_title|default:"—" }}</dd>
+
+  <dt class="col-sm-3">Tags
+    <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          title="Categories for this event. Affects which sections of the programme it appears in, and may exempt it from requiring terms.">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">{{ event.tags.all|join:", "|default:"—" }}</dd>
+
+  <dt class="col-sm-3">Duration
+    <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          title="Running time of the event. Shown in public listings if set.">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">{{ event.duration|default:"—" }}</dd>
+
+  <dt class="col-sm-3">Pricing
+    <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          title="Pricing text shown to the public, e.g. &quot;£5 Full / £3 Concession&quot;. Leave blank if the event is free.">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">{{ event.pricing|default:"—" }}</dd>
+
+  <dt class="col-sm-3">Ticket link
+    <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          title="URL for online ticket booking. Appears as a booking button in the public programme.">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">
+    {% if event.ticket_link %}<a href="{{ event.ticket_link }}">{{ event.ticket_link }}</a>
+    {% else %}—{% endif %}
+  </dd>
+
+  <dt class="col-sm-3">Film information
+    <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          title="Screening details shown in public listings, e.g. &quot;Dir: Jane Smith, 1990, USA, 95 mins, Cert: 15&quot;.">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">{{ event.film_information|default:"—" }}</dd>
+
+  <dt class="col-sm-3">Outside hire
+    <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          title="Tick if this event is run by an external organisation hiring the venue, not programmed by us. Affects internal reporting.">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">
+    {% if event.outside_hire %}<span class="badge badge-secondary">Yes</span>
+    {% else %}<span class="text-muted">No</span>{% endif %}
+  </dd>
+
+  <dt class="col-sm-3">Private
+    <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          title="When ticked, this event is hidden from the public website entirely — it won't appear in any listing or be accessible via URL, even if showings are confirmed. Use for internal events or placeholders.">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">
+    {% if event.private %}<span class="badge badge-warning">Yes — hidden from public</span>
+    {% else %}<span class="text-muted">No</span>{% endif %}
+  </dd>
+
+  <dt class="col-sm-3">Programmer's notes
+    <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          title="Internal notes — never shown to the public. Use for booking contacts, reminders, or anything you need to track.">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">
+    {% if event.notes %}{{ event.notes }}
+    {% else %}<span class="text-muted">—</span>{% endif %}
+  </dd>
+
+  <dt class="col-sm-3">Public link
+    <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          title="Where this event appears in the public online programme. Only active once at least one showing is confirmed and the event is not marked private.">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">
+    {% if event.showings.public and not event.private %}
+      <a href="{% noprefix_url "single-event-view" event.pk %}">{% noprefix_url "single-event-view" event.pk %}</a>
+    {% else %}
+      <span class="text-muted">Not visible in online programme:
+      {% if event.private %}It's marked private.{% endif %}
+      {% if not event.showings.public %}No confirmed, public showings.{% endif %}
+      </span>
+    {% endif %}
+  </dd>
+
+  <dt class="col-sm-3">Terms
+    <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          title="Booking or screening terms for this event. Must be filled in (minimum word count) before any showing can be confirmed, unless the event type exempts it.">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">
+    {% if event.terms %}
+    <pre class="mb-0" style="font-family:inherit; white-space:pre-wrap;">{{ event.terms }}</pre>
+    {% else %}
+    <span class="text-muted">—</span>
+    {% endif %}
+  </dd>
+
+  <dt class="col-sm-3">Image
+    <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          title="The event poster or promotional image shown in the public programme.">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">
+    {% with event.media.all.0 as media_item %}
+    {% if media_item %}
+    <a href="{% get_media_prefix %}{{ media_item.media_file }}">
+      <img src="{{ media_item.media_file|thumbnail_url:'editpreview' }}"
+           alt="Picture for event {{ event.name }}">
+    </a>
+    {% else %}
+    <span class="text-muted">No image yet</span>
+    {% endif %}
+    {% endwith %}
+  </dd>
+
+  <dt class="col-sm-3">Image credit
+    <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          title="Public attribution for the image — shown alongside the image on the event page, e.g. &quot;Photo: Jane Smith&quot;.">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">
+    {% with event.media.all.0 as media_item %}
+    {% if media_item and media_item.credit %}{{ media_item.credit }}
+    {% elif media_item %}<span class="text-muted">— (no credit given for uploaded image)</span>
+    {% else %}<span class="text-muted">—</span>{% endif %}
+    {% endwith %}
+  </dd>
+
+  <dt class="col-sm-3">Description
+    <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          title="The main event description shown in the public programme. Can be formatted with HTML (bold, links, etc.).">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">
+    {% if event.copy_html %}
+    <div class="copy-preview">{{ event.copy_html }}</div>
+    {% else %}
+    <span class="text-muted">—</span>
+    {% endif %}
+  </dd>
+
+  <dt class="col-sm-3">Copy summary
+    <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          title="Short plain-text description (ideally ≤25 words). Used in the print programme and brief online listings — separate from the full description above.">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">
+    {% if event.copy_summary %}
+    <pre style="font-family:inherit; white-space:pre-wrap; margin:0;">{{ event.copy_summary }}</pre>
+    {% else %}
+    <span class="text-muted">—</span>
+    {% endif %}
+  </dd>
+
+</dl>
+
+<hr class="mt-2 mb-4">
+
+{# ── Showings ──────────────────────────────────────────────────────────────── #}
+<h3 class="mb-3">Showings</h3>
+
+{% for showing in future_showings %}
+<div class="card showing-card">
+  <div class="card-body">
+    <strong>{{ showing.start|date:"D j M Y, H:i" }}</strong>
+    {% if MULTIROOM_ENABLED %} in {{ showing.room }}{% endif %}
+    — booked by <em>{{ showing.booked_by }}</em>
+
+    {% if showing.hide_in_programme %}
+    <span class="badge badge-secondary ml-1" data-toggle="tooltip"
+          title="Excluded from the public programme even when confirmed. Used for private or invitation-only showings.">Hidden</span>
+    {% endif %}
+    {% if showing.discounted %}
+    <span class="badge badge-info ml-1" data-toggle="tooltip"
+          title="A &quot;Discounted&quot; label appears on the public listing for this showing.">Discounted</span>
+    {% endif %}
+    {% if showing.sold_out %}
+    <span class="badge badge-dark ml-1" data-toggle="tooltip"
+          title="A &quot;Sold out&quot; label appears on the public listing. Booking links may be suppressed.">Sold out</span>
+    {% endif %}
+
+    <div class="status-actions">
+      {% if showing.cancelled %}
+        <span class="badge badge-danger" data-toggle="tooltip"
+              title="This showing is cancelled — it will appear in internal lists clearly marked as cancelled.">Cancelled</span>
+        <form method="post" action="{% url 'update-showing-status' showing.id %}">
+          {% csrf_token %}<input type="hidden" name="action" value="uncancel">
+          <button type="submit" class="btn btn-sm btn-outline-secondary">Uncancel</button>
+        </form>
+      {% elif showing.confirmed %}
+        <span class="badge badge-success" data-toggle="tooltip"
+              title="Confirmed — this showing is visible in the public online programme.">Confirmed</span>
+        <form method="post" action="{% url 'update-showing-status' showing.id %}">
+          {% csrf_token %}<input type="hidden" name="action" value="unconfirm">
+          <button type="submit" class="btn btn-sm btn-outline-secondary" data-toggle="tooltip"
+                  title="Removes this showing from the public programme. The event page will no longer be publicly accessible if this is the only confirmed showing.">Unconfirm</button>
+        </form>
+        <form method="post" action="{% url 'update-showing-status' showing.id %}">
+          {% csrf_token %}<input type="hidden" name="action" value="cancel">
+          <button type="submit" class="btn btn-sm btn-outline-danger" data-toggle="tooltip"
+                  title="Marks this showing as cancelled.">Cancel showing</button>
+        </form>
+      {% else %}
+        <span class="badge badge-secondary" data-toggle="tooltip"
+              title="Unconfirmed — this showing is not yet visible in the public online programme.">Unconfirmed</span>
+        <form method="post" action="{% url 'update-showing-status' showing.id %}">
+          {% csrf_token %}<input type="hidden" name="action" value="confirm">
+          <button type="submit" class="btn btn-sm btn-success" data-toggle="tooltip"
+                  title="Makes this showing visible in the public online programme. Event terms must be filled in before confirming (unless the event type is exempt).">Confirm</button>
+        </form>
+        <form method="post" action="{% url 'update-showing-status' showing.id %}">
+          {% csrf_token %}<input type="hidden" name="action" value="cancel">
+          <button type="submit" class="btn btn-sm btn-outline-danger" data-toggle="tooltip"
+                  title="Marks this showing as cancelled.">Cancel showing</button>
+        </form>
+      {% endif %}
+      <a href="{% url 'edit-showing' showing.id %}" class="btn btn-sm btn-outline-primary ml-1">Edit showing / rota →</a>
+    </div>
+  </div>
+</div>
+{% empty %}
+{% if all_showings_in_past %}
+  <p class="text-muted">All showings are in the past.</p>
+{% else %}
+  <p class="text-muted">No upcoming showings yet.</p>
+{% endif %}
+{% endfor %}
+
+{% if past_showings %}
+<details class="mb-3">
+  <summary>Past showings ({{ past_showings|length }})</summary>
+  <table class="table table-sm mt-2">
+    <thead>
+      <tr>
+        <th>When</th>
+        {% if MULTIROOM_ENABLED %}<th>Room</th>{% endif %}
+        <th>Booked by</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for showing in past_showings %}
+      <tr>
+        <td>{{ showing.start|date:"d/m/Y H:i" }}</td>
+        {% if MULTIROOM_ENABLED %}<td>{{ showing.room }}</td>{% endif %}
+        <td>{{ showing.booked_by }}</td>
+        <td>
+          {% if showing.cancelled %}<span class="badge badge-danger">Cancelled</span>
+          {% elif showing.confirmed %}<span class="badge badge-success">Confirmed</span>
+          {% else %}<span class="badge badge-secondary">Unconfirmed</span>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</details>
+{% endif %}
+
+{% if not all_showings_in_past %}
+<div class="add-showing-section">
+  <button id="add-showing-toggle" type="button" class="btn btn-outline-info btn-sm"
+          onclick="showAddShowingForm()">+ Add a showing</button>
+
+  <div id="add-showing-form" class="{% if not add_showing_form.errors %}d-none{% endif %} mt-3">
+    <h5>Add a showing</h5>
+    <form method="post">
+      {% csrf_token %}
+      {% crispy add_showing_form %}
+      <button type="submit" class="btn btn-primary btn-sm">Add showing</button>
+      <button type="button" class="btn btn-secondary btn-sm ml-1"
+              onclick="hideAddShowingForm()">Cancel</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<p class="mt-4"><a href="{% url "cancel-edit" %}">&larr; Back to diary</a></p>
+
+</div>
 {% endblock %}
-

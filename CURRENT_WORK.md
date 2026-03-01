@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-02-28
+**Last updated:** 2026-03-01 (session 4)
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
 
@@ -80,6 +80,22 @@ git diff s+s origin/master -- star_and_shadow_templates/
 | 9.25 | Tap to sign up on rota (mobile) | 🔵 S | Self-service slot claim for logged-in volunteers; see TASKS.md 9.25 |
 | 9.26 | Event resource links (generalised rota links) | 🔵 S | `EventLink` model; named link chips on rota view; domain whitelist; see TASKS.md 9.26 |
 | 9.28 | Volunteer role tier labelling + GDPR danger indicators | 🟢 XS | Rename `is_superuser` → "Panopticon access"; add Programmer field; ⚠ warning on sensitive roles; see TASKS.md 9.28 |
+| **Bug K** | Rota `&amp;` display glitch + security audit of loaddata decode | 🟢 XS | Investigate save/re-render path; audit `$('<div>').html(value).text()` pattern in `edit_rota.js`; see TASKS.md Bug K |
+| **Bug L** | Wheelchair strikethrough too subtle | 🟢 XS | CSS/template only; consider bolder indicator, badge, or tooltip; see TASKS.md Bug L |
+| 9.16 | Alt text fields for event images | 🔵 S | `MediaItem.alt_text` field; admin + form; templates; `ALT_TEXT_GUIDANCE_URL` setting + tooltip; see TASKS.md 9.16 |
+| 9.29 | Role management — "other role" limit + role-change behaviour | 🟡 M | Design needed first (design questions in TASKS.md 9.29) |
+| 9.30 | Outside hire enhancements — tooltip, hire name, external crew field | 🔵 S | `Event.hire_name` + `Event.external_crew_notes`; reveal on checkbox; rota surface; see TASKS.md 9.30 |
+| 9.31 | Beginner-friendly rota slot highlighting | 🟢 XS | Filter in filterline; auto-tag roles containing "extra hands"; see TASKS.md 9.31 |
+| 9.32 | Rota past-date navigation | 🟢 XS | Design decision needed (read-only past vs blocked); see TASKS.md 9.32 |
+| 9.33 | S&S spaces: seed data (9 rooms) + diary column-per-room view | 🟡 M | Seed data 🟢 XS quick win; column view is 🟡 M; see TASKS.md 9.33 |
+| 9.34 | "Showing" terminology review | 🟢 XS | Design discussion with collective; "Session" or "Date" candidate; see TASKS.md 9.34 |
+| 9.35 | 1-click top nav access to Diary + Rota edit | 🟢 XS | Add direct nav links for logged-in users; see TASKS.md 9.35 |
+| 9.36 | Vacancies page as email generation tool | 🔵 S | Filtered view → pre-filled email draft → urgency flag; see TASKS.md 9.36 |
+| 9.37 | Public programme tag filtering + keyword search | 🔵 S | Collapsible filter panel; client-side JS; URL persistence; see TASKS.md 9.37 |
+| 9.38 | Toolkit page: last login display + diary/edit pre/post title hide | 🟢 XS | Two independent template tweaks; see TASKS.md 9.38 |
+| 9.39 | Quick create event for keyholders | 🔵 S | Minimal form; auto-apply template; `private=True` default; see TASKS.md 9.39 |
+| 9.40 | Setup time + final closing time on showings | 🟢 XS | `Showing.setup_time` + `closing_time` TimeFields; rota display; see TASKS.md 9.40 |
+| 9.41 | Clickable legend room filter (calendar) | 🔵 S | Multi-select checkboxes in key sidebar; client-side `eventRender` filter; `sessionStorage` persistence; see TASKS.md 9.41 |
 
 ### 4. Medium and large Phase 2 features
 
@@ -101,6 +117,10 @@ Completed items stay here. When the Done section gets unwieldy, old rows can be 
 
 | Item | Completed | Notes |
 |------|-----------|-------|
+| ~~Event edit workflow overhaul (Phases A–C)~~ | 2026-02-28 | Phase A: rota notes in showing edit. Phase B: popup mode removed. Phase C: Event Hub (`edit-event-details-view`) — showing cards with confirm/cancel, add-showing form, completeness bar; `update_showing_status` endpoint; add_event/EditEventView/delete_showing redirect to hub; 380 tests pass |
+| ~~Event Hub: surface all fields + tooltips~~ | 2026-02-28 | All event fields now always visible (with "—" fallback); `outside_hire`/`private` split into separate Yes/No rows; Bootstrap 4 tooltip ⓘ on every field label + action badges; Private/Confirm/Unconfirm tooltips explain consequences |
+| ~~Rota event links → Event Hub~~ | 2026-02-28 | `edit_rota.html`: `edit-event-details` → `edit-event-details-view` so rota event-name links open the hub, not the bare edit form |
+| ~~Bug J — Calendar broken by jQuery 3.5 htmlPrefilter~~ | 2026-02-28 | `jQuery.htmlPrefilter = function(html) { return html; };` added in `edit_event_calendar_index.html` before `init_calendar_view`; restores pre-3.5 no-op so FullCalendar 3.x index-based seg correlation works; fixed on both `sns_2026_overhaul` (commit `e756658`) and `feature/event-edit-overhaul` (commit `c8f6ee1`) |
 | ~~`Showing.rota_notes` field size 1024 → 4096~~ | 2026-02-28 | Migration `diary/0010_widen_rota_notes` |
 | ~~`Member.email` mandatory~~ | 2026-02-28 | `blank=False`; migration `members/0010_make_email_mandatory`; 10 tests updated |
 | ~~9.18.3 — Fix action button order~~ | 2026-02-28 | Delete moved to bottom of `form_showing.html`; Clone/add-date link added above it |
@@ -124,6 +144,7 @@ Completed items stay here. When the Done section gets unwieldy, old rows can be 
 | ~~`Volunteer.user` OneToOneField~~ | 2026-02 | Linked to Django `User`; `seed_dev_data` auto-creates accounts |
 | ~~Django admin integration~~ | 2026-02 | `django.contrib.admin` enabled; `show_user_management: True` in `settings_ss.py` |
 | ~~Rota role count limit 8 → 30~~ | 2026-02 | `MAX_COUNT_PER_ROLE` overridden; all enforcement points parameterized |
+| ~~9.33 — Calendar key overhaul~~ | 2026-03-01 | `Room.is_primary` field + migration; vivid red/blue/yellow primary rooms, pastel secondary rooms; `_is_light_colour()` auto-applies black `textColor` (Café yellow); CSS filter approach dropped — colours stored directly; historic colour removed, red nowIndicator line replaces it; collapsible sticky sidebar key on both views; list view restructured to per-month `<table>` blocks (`<h2>` outside table fixes colspan vertical-line breaks), IDEAS removed, room header gets full-width colour stripe via `border-bottom`, empty-day rows use full column structure; 380 tests pass |
 | ~~9.1 Volunteer programme view~~ | 2026-02 | Logged-in volunteers see internal events inline with public programme |
 | ~~9.8 Image copyright reminder~~ | 2026-02 | `IMAGE_COPYRIGHT_GUIDANCE_URL` setting; reminder shown on upload |
 | ~~9.16 Live word counter for `copy_summary`~~ | 2026-02 | Vanilla JS; 25-word target with colour coding |
