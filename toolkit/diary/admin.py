@@ -5,7 +5,8 @@ from toolkit.diary.models import Event, Showing, Room, Role, EventTag
 
 @admin.register(Room)
 class RoomAdmin(admin.ModelAdmin):
-    list_display = ("name", "colour")
+    list_display = ("name", "colour", "is_primary")
+    list_editable = ("is_primary",)
     search_fields = ("name",)
 
 

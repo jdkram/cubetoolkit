@@ -160,6 +160,21 @@ function init_calendar_view(jQuery, CSRF_TOKEN, defaultView, defaultDate, django
             eventClick: onEventClick,
             dayClick: onDayClick,
             viewRender: onViewRender,
+            // Inject a plain-text status row below the event title for states that
+            // CSS alone can't communicate to screen readers (B — accessibility).
+            eventRender: function(event, el) {
+                var statuses = [];
+                if (el.hasClass('s_unconfirmed'))  { statuses.push('Unconfirmed'); }
+                if (el.hasClass('s_cancelled'))    { statuses.push('Cancelled'); }
+                if (el.hasClass('s_private'))      { statuses.push('Private'); }
+                if (el.hasClass('s_outside_hire')) { statuses.push('Outside hire'); }
+                if (el.hasClass('s_discounted'))   { statuses.push('Discounted'); }
+                if (statuses.length > 0) {
+                    el.find('.fc-title').after(
+                        $('<span class="fc-event-status">').text(statuses.join(' · '))
+                    );
+                }
+            },
             schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
             resourceAreaWidth: "15%"
         };

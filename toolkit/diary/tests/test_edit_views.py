@@ -20,7 +20,7 @@ from toolkit.diary.models import (
     EventTemplate,
     MediaItem,
 )
-from toolkit.util.image import adjust_colour
+
 import toolkit.diary.edit_prefs
 
 from .common import DiaryTestsMixin
@@ -2074,7 +2074,9 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
         showing.save(force=True)
 
         FUTURE_COLOUR = "#cc3333"
-        PAST_COLOUR = adjust_colour(FUTURE_COLOUR, 0.75, 1.0)
+        # Historic events now use the same colour as future events — the
+        # past/future boundary is shown via the FullCalendar nowIndicator
+        # line instead of a colour change.
 
         url = reverse("edit-diary-data")
         with self.settings(CALENDAR_DEFAULT_COLOUR=FUTURE_COLOUR):
@@ -2099,7 +2101,7 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
             1: {
                 "id": 1,
                 "className": ["s_historic", "s_unconfirmed"],
-                "color": PAST_COLOUR,
+                "color": FUTURE_COLOUR,
                 "end": "2013-04-01T20:30:00+01:00",
                 "start": "2013-04-01T19:00:00+01:00",
                 "title": "Event two title",
@@ -2108,7 +2110,7 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
             2: {
                 "id": 2,
                 "className": ["s_historic", "s_confirmed"],
-                "color": PAST_COLOUR,
+                "color": FUTURE_COLOUR,
                 "end": "2013-04-02T20:30:00+01:00",
                 "start": "2013-04-02T19:00:00+01:00",
                 "title": "Event two title",
@@ -2117,7 +2119,7 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
             3: {
                 "id": 3,
                 "className": ["s_cancelled", "s_historic", "s_confirmed"],
-                "color": PAST_COLOUR,
+                "color": FUTURE_COLOUR,
                 "end": "2013-04-03T20:30:00+01:00",
                 "start": "2013-04-03T19:00:00+01:00",
                 "title": "Event two title",
@@ -2126,7 +2128,7 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
             4: {
                 "id": 4,
                 "className": ["s_private", "s_historic", "s_confirmed"],
-                "color": PAST_COLOUR,
+                "color": FUTURE_COLOUR,
                 "end": "2013-04-04T20:30:00+01:00",
                 "start": "2013-04-04T19:00:00+01:00",
                 "title": "Event two title",
@@ -2140,7 +2142,7 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
                     "s_historic",
                     "s_confirmed",
                 ],
-                "color": PAST_COLOUR,
+                "color": FUTURE_COLOUR,
                 "end": "2013-04-05T20:30:00+01:00",
                 "start": "2013-04-05T19:00:00+01:00",
                 "title": "Event two title",
@@ -2149,7 +2151,7 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
             6: {
                 "id": 6,
                 "className": ["s_historic", "s_confirmed"],
-                "color": PAST_COLOUR,
+                "color": FUTURE_COLOUR,
                 "end": "2013-04-13T21:00:00+01:00",
                 "start": "2013-04-13T18:00:00+01:00",
                 "title": "Event three title",
@@ -2172,7 +2174,7 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
                     "s_historic",
                     "s_confirmed",
                 ],
-                "color": PAST_COLOUR,
+                "color": FUTURE_COLOUR,
                 "end": "2013-02-15T19:30:00+00:00",
                 "start": "2013-02-15T18:00:00+00:00",
                 "title": "Event one title",
@@ -2186,9 +2188,12 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
                 expected_data[showing_id]["resourceId"] = (
                     2 if showing_id == 2 else None
                 )
-            # This is the colour on room 2 (#00abcd) after 'confirmed/past'
-            # adjustment:
-            expected_data[2]["color"] = "#B2F2FF"
+            # Showing 2 is assigned to room 2 (#00abcd). Historic events
+            # no longer have their colour adjusted — room colour is returned as-is.
+            expected_data[2]["color"] = "#00abcd"
+            # Room 2 has is_primary=False (the default), so s_auxiliary_room
+            # is appended to its className in multiroom mode.
+            expected_data[2]["className"] = expected_data[2]["className"] + ["s_auxiliary_room"]
 
         for sid in expected_showings:
             s_data = data_by_showing[sid]

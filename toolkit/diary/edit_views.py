@@ -194,6 +194,15 @@ def _adjust_colour_historic(colour):
     )
 
 
+def _is_light_colour(hex_colour):
+    """Return True if the hex colour is perceptually light (needs dark text)."""
+    h = hex_colour.lstrip("#")
+    if len(h) != 6:
+        return False
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5
+
+
 @permission_required("toolkit.read")
 def edit_diary_data(request):
     date_format = "%Y-%m-%d"
@@ -248,12 +257,15 @@ def edit_diary_data(request):
         if showing.event.outside_hire:
             styles.append("s_outside_hire")
         if showing.in_past():
-            colour = _adjust_colour_historic(colour)
+            # Keep room colour unchanged — the "now" boundary line in the
+            # calendar provides the past/future visual cue instead.
             styles.append("s_historic")
         if showing.confirmed:
             styles.append("s_confirmed")
         else:
             styles.append("s_unconfirmed")
+        if settings.MULTIROOM_ENABLED and showing.room and not showing.room.is_primary:
+            styles.append("s_auxiliary_room")
 
         showing_data = {
             "id": showing.pk,
@@ -264,6 +276,8 @@ def edit_diary_data(request):
             "className": styles,
             "color": colour,
         }
+        if _is_light_colour(colour):
+            showing_data["textColor"] = "#111111"
 
         if settings.MULTIROOM_ENABLED:
             showing_data["resourceId"] = showing.room_id
@@ -292,21 +306,12 @@ def edit_diary_calendar(request, year=None, month=None, day=None):
         logger.error(f"Bad calendar date: {ve}")
         raise Http404("Bad calendar date")
 
-    rooms_and_colours = OrderedDict()
-    for room in Room.objects.all():
-        rooms_and_colours[room] = {
-            "confirmed_past": _adjust_colour_historic(room.colour)
-        }
-
     context = {
         "display_time": display_time,
         "defaultView": defaultView,
         "settings": settings,
         "rooms_and_colours": (
-            rooms_and_colours if settings.MULTIROOM_ENABLED else {}
-        ),
-        "default_confirmed_past": _adjust_colour_historic(
-            settings.CALENDAR_DEFAULT_COLOUR
+            Room.objects.all() if settings.MULTIROOM_ENABLED else []
         ),
     }
 
