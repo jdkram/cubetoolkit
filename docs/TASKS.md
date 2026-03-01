@@ -34,6 +34,19 @@ function htmlDecode(s) { var t = document.createElement('textarea'); t.innerHTML
 ```
 This avoids creating actual DOM elements that could fire events. Low priority given current templates are safe, but worth patching.
 
+**Bug M** — Calendar edit view: simultaneous events in the same timeslot overwrite each other 🟠 L
+
+On days with 6+ events scheduled at the same time, FullCalendar 3 renders later events on top of earlier ones rather than shrinking and tiling them side-by-side. The result is that some events become completely hidden and unreachable from the calendar view. Reproduce at `/diary/edit/calendar/` on a busy day (e.g. any of the three busy days in the seed data, currently at offsets +35, +70, and +105 from today).
+
+Root cause: FullCalendar's column-based layout is not triggered when all events share the same time of day (all set to e.g. 19:00 with no explicit `end` time). The calendar needs each event's duration to be set so that FullCalendar can detect overlaps and split columns. With `Event.duration` now populated by `seed_dev_data`, this should improve — but busy days with many short events may still need explicit end-time rendering. A secondary fix may be needed on the FullCalendar event source view to emit `end` timestamps.
+
+**Workaround:** Use the list view (`/diary/edit/`) on busy days — it shows all events regardless of overlap.
+
+**Fix approach (not yet implemented):**
+1. Ensure the FullCalendar event source JSON endpoint returns `end` for each event (computed from `start + Event.duration`).
+2. Consider whether a day-grid view (rather than time-grid) is more appropriate for multi-room venues — though this loses time-of-day information.
+3. If sticking with time-grid: add a `minTime`/`maxTime` and increase the minimum event height so short events remain clickable.
+
 **Bug L** — Wheelchair-inaccessible role strikethrough too subtle 🟢 XS
 
 The strikethrough symbol on the wheelchair icon (indicating a role is not wheelchair-accessible) is easy to miss — the line is thin and low-contrast. Users may sign up for a role they cannot perform without realising it has accessibility notes. Consider alternatives: a solid badge label ("not accessible"), a distinct colour overlay on the icon, a tooltip with explicit text, or a bolder visual indicator. The fix should be purely CSS/template — no data model change needed.
@@ -2478,6 +2491,35 @@ Using `TimeField` (not `DateTimeField`) avoids redundancy with `start` — both 
 - Persist filter state in `sessionStorage` so navigating months doesn't reset it
 
 **Related:** 9.33 (S&S spaces), calendar key overhaul (feature/event-edit-overhaul branch)
+
+---
+
+### 9.42 — Tests for diary edit list view 🟢 XS
+
+**Context:** The edit diary list view (`/diary/edit`) was restructured into per-month `<table>` blocks. The view change also removed the `None` sentinel from the `rooms` context list. No tests cover this view's HTML output or the rooms context.
+
+**Tests needed:**
+- `rooms` context contains only `Room` objects (no `None` sentinel)
+- Response contains a `<th class="month-heading">` element with the expected month name
+- Empty days (no showings) render a row with a blank time cell (second `<td>`) so columns stay aligned
+- Multiroom: one `<th class="room-col">` per room in the thead
+- Single-room: thead contains a generic "Event" header instead
+
+---
+
+### 9.43 — Room management UI 🔵 S
+
+**Context:** Rooms can currently only be created, edited, or deleted via the Django admin. This is fine for Cube (one room) but is a real gap for S&S (9 rooms) — volunteers and programmers without superuser access can't manage rooms at all.
+
+**Scope:**
+- List view at `/diary/rooms/` — table of all rooms with Edit / Delete buttons
+- Create form: `name`, `colour` (colour picker), `is_primary` (checkbox)
+- Edit form: same fields
+- Delete: confirmation page; block delete if any `Showing` references the room (or reassign to null)
+- Permission gated: `edit_event` permission (same as rest of diary edit views)
+- `colour` field: free-text hex input backed by `<input type="color">` for a native picker; validate `#rrggbb` format server-side
+
+**Nice to have:** Live preview of the colour stripe (room header style) in the edit form so admins can see what the calendar will look like before saving.
 
 ---
 
