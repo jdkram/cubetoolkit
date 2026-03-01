@@ -51,6 +51,7 @@ git diff s+s origin/master -- star_and_shadow_templates/
 | ID | Bug | Size |
 |----|-----|------|
 | **E** | Volunteer login dropdown inaccessible on touch | 🔵 S |
+| **M** | Calendar edit view: simultaneous events overwrite each other on busy days | 🟠 L |
 
 ---
 
@@ -96,6 +97,8 @@ git diff s+s origin/master -- star_and_shadow_templates/
 | 9.39 | Quick create event for keyholders | 🔵 S | Minimal form; auto-apply template; `private=True` default; see TASKS.md 9.39 |
 | 9.40 | Setup time + final closing time on showings | 🟢 XS | `Showing.setup_time` + `closing_time` TimeFields; rota display; see TASKS.md 9.40 |
 | 9.41 | Clickable legend room filter (calendar) | 🔵 S | Multi-select checkboxes in key sidebar; client-side `eventRender` filter; `sessionStorage` persistence; see TASKS.md 9.41 |
+| 9.42 | Tests: diary edit list view | 🟢 XS | `rooms` no None sentinel; month heading in thead; empty-day blank time cell; see TASKS.md 9.42 |
+| 9.43 | Room management UI | 🔵 S | Create/edit/delete rooms from toolkit UI (not just Django admin); name, colour picker, is_primary; see TASKS.md 9.43 |
 
 ### 4. Medium and large Phase 2 features
 
