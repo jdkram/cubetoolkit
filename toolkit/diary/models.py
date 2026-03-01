@@ -357,6 +357,10 @@ class Event(models.Model):
 class Room(models.Model):
     name = models.CharField(max_length=64)
     colour = models.CharField(max_length=9, default="#33CC33")
+    is_primary = models.BooleanField(
+        default=False,
+        help_text="Primary spaces are shown with full colour in the calendar; others are desaturated.",
+    )
 
     class Meta:
         db_table = "Rooms"
