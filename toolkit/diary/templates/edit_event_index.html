@@ -26,7 +26,7 @@ Editing {{ event_list_name }}
       text-decoration: underline wavy black;
   }
   .confirmed {
-      text-transform: uppercase;
+      /* confirmed events are not uppercased in the list view — name only is shown */
   }
   .daytime {
       background-color: #FFFF99;
@@ -56,10 +56,12 @@ Editing {{ event_list_name }}
       vertical-align: bottom;
   }
 
-  /* Month headings between per-month tables */
-  .month-heading {
-      margin: 1.2rem 0 0.2rem;
-      font-size: 1.2rem;
+  /* Month heading in thead */
+  table.table thead th.month-heading {
+      font-size: 1.05em;
+      font-weight: 700;
+      color: #1a1a1a;
+      white-space: nowrap;
   }
 
   /* ── List view layout: table left, key sidebar right ─────────── */
@@ -196,78 +198,86 @@ function filter_events() {
 
 <p><a href="{% url "add-event" %}">New event</a></p>
 
-{# One <table> per month so month headings can live outside the table,
-   eliminating full-width colspan rows that break vertical column lines. #}
 {% for day, showings in dates.items %}
-    {% ifchanged day|date:"Y-m" %}
-        {% if not forloop.first %}</tbody></table>{% endif %}
-        <h2 class="month-heading">{{ day|date:"F Y" }}</h2>
-        <table class="table table-striped">
-        {% if multiroom_enabled %}
-        <thead><tr>
-          <td colspan="2"></td>
-          {% for room in rooms %}
-            <th class="room-col" style="border-bottom-color:{{ room.colour|default:'transparent' }};">{{ room.name|default:"" }}</th>
-          {% endfor %}
-          <td></td>
-        </tr></thead>
-        {% endif %}
-        <tbody>
-    {% endifchanged %}
-
-    {% for showing in showings %}
-        <tr>
-            <td>
-                <a
-        {% if not forloop.first %}
-            {# Second+ showing of the day, default to not showing the date (which has the link to add an event) #}
-                class="hidden_date"
-        {% endif %}
-                href="{% url "add-event" %}?date={{day|date:"j-m-Y"}}">{{ day|date:"D\&\n\b\s\p;j"|safe }}</a>
-            </td>
-        {% with showing.start|localtime as start_localtime %}
-            <td>
-                <a href="{% url "edit-event-details-view" event_id=showing.event.pk %}" {% if start_localtime.hour <= 17 %}class="daytime"{% endif %}>{{ showing.start|date:"H:i" }}</a>
-            </td>
-
+  {% ifchanged day|date:"Y-m" %}
+    {% if not forloop.first %}</tbody></table>{% endif %}
+    <table class="table table-striped">
+    <thead><tr>
+      <th class="month-heading" colspan="2">{{ day|date:"F Y" }}</th>
+      {% if multiroom_enabled %}
         {% for room in rooms %}
-            {# if multiroom_enabled is false then rooms will only have one item, so there shouldn't be any repeats! #}
-            {% if showing.room == room or not multiroom_enabled %}
-            <td class="room-col">
-              <a href="{% url "edit-event-details-view" event_id=showing.event.pk %}"
-                    class="{{ showing.cancelled|yesno:"cancelled," }}
-                           {{ showing.discounted|yesno:"discounted," }}
-                           {{ showing.event.private|yesno:"private," }}
-                           {{ showing.event.outside_hire|yesno:"external," }}
-                           {{ showing.confirmed|yesno:"confirmed,unconfirmed" }}
-                           {% if start_localtime.hour <= 17 %}daytime{% endif %}">
-                {% if showing.confirmed %}
-                    {{ showing.event.pre_title }} {{ showing.event.name }} {{ showing.event.post_title }}
-                {% else %}
-                    {{ showing.event.name }}
-                {% endif %}
-                {{ showing.discounted|yesno:"*," }}
-                {{ showing.cancelled|yesno:"(CANCELLED)," }}
-                </a>
-                {{ showing.sold_out|yesno:"(marked SOLD OUT)," }}
-            </td>
-            {% else %}
-                <td class="room-col">&nbsp;</td>
-            {% endif %}
+          <th class="room-col" style="border-bottom-color:{{ room.colour|default:'transparent' }};">{{ room.name }}</th>
         {% endfor %}
-            <td>{{ showing.booked_by }}{% if not showing.confirmed %} <span class="pencilled-at" title="Pencilled in on {{ showing.created_at|date:"d-m-y" }}">(&#x270f;&#xfe0f;{{ showing.created_at|date:"d-m-y" }})</span>{% endif %}</td>
-        </tr>
-        {% endwith %}
-    {% empty %}
-        {# No showings on this day: render a full-width row with one cell per column
-           so the room-col vertical lines remain unbroken. #}
-        <tr>
-            <td><a href="{% url "add-event" %}?date={{day|date:"j-m-Y"}}">{{ day|date:"D j"}}</a></td>
-            <td></td>
-            {% for room in rooms %}<td class="room-col"></td>{% endfor %}
-            <td></td>
-        </tr>
-    {% endfor %}
+      {% else %}
+        <th>Event</th>
+      {% endif %}
+      <th class="room-col">Booked by</th>
+    </tr></thead>
+    <tbody>
+  {% endifchanged %}
+
+  {% for showing in showings %}
+    <tr>
+      <td>
+        <a{% if not forloop.first %} class="hidden_date"{% endif %}
+           href="{% url "add-event" %}?date={{day|date:"j-m-Y"}}">{{ day|date:"D\&\n\b\s\p;j"|safe }}</a>
+      </td>
+      {% with showing.start|localtime as start_localtime %}
+      <td>
+        <a href="{% url "edit-event-details-view" event_id=showing.event.pk %}" {% if start_localtime.hour <= 17 %}class="daytime"{% endif %}>{{ showing.start|date:"H:i" }}</a>
+      </td>
+      {% if multiroom_enabled %}
+        {% for room in rooms %}
+          {% if showing.room == room %}
+          <td class="room-col">
+            <a href="{% url "edit-event-details-view" event_id=showing.event.pk %}"
+               class="{{ showing.cancelled|yesno:"cancelled," }}
+                      {{ showing.discounted|yesno:"discounted," }}
+                      {{ showing.event.private|yesno:"private," }}
+                      {{ showing.event.outside_hire|yesno:"external," }}
+                      {{ showing.confirmed|yesno:"confirmed,unconfirmed" }}
+                      {% if start_localtime.hour <= 17 %}daytime{% endif %}">
+              {{ showing.event.name }}
+              {{ showing.discounted|yesno:"*," }}
+              {{ showing.cancelled|yesno:"(CANCELLED)," }}
+            </a>
+            {{ showing.sold_out|yesno:"(marked SOLD OUT)," }}
+          </td>
+          {% else %}
+            <td class="room-col">&nbsp;</td>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        <td>
+          <a href="{% url "edit-event-details-view" event_id=showing.event.pk %}"
+             class="{{ showing.cancelled|yesno:"cancelled," }}
+                    {{ showing.discounted|yesno:"discounted," }}
+                    {{ showing.event.private|yesno:"private," }}
+                    {{ showing.event.outside_hire|yesno:"external," }}
+                    {{ showing.confirmed|yesno:"confirmed,unconfirmed" }}
+                    {% if start_localtime.hour <= 17 %}daytime{% endif %}">
+            {{ showing.event.name }}
+            {{ showing.discounted|yesno:"*," }}
+            {{ showing.cancelled|yesno:"(CANCELLED)," }}
+          </a>
+          {{ showing.sold_out|yesno:"(marked SOLD OUT)," }}
+        </td>
+      {% endif %}
+      <td class="room-col">{{ showing.booked_by }}{% if not showing.confirmed %} <span class="pencilled-at" title="Pencilled in on {{ showing.created_at|date:"d-m-y" }}">(&#x270f;&#xfe0f;{{ showing.created_at|date:"d-m-y" }})</span>{% endif %}</td>
+      {% endwith %}
+    </tr>
+  {% empty %}
+    <tr>
+      <td><a href="{% url "add-event" %}?date={{day|date:"j-m-Y"}}">{{ day|date:"D j"}}</a></td>
+      <td></td>
+      {% if multiroom_enabled %}
+        {% for room in rooms %}<td class="room-col"></td>{% endfor %}
+      {% else %}
+        <td></td>
+      {% endif %}
+      <td class="room-col"></td>
+    </tr>
+  {% endfor %}
 {% endfor %}
 {% if dates %}</tbody></table>{% endif %}
 

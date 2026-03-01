@@ -93,6 +93,11 @@
       font-size: 0.82em;
       max-height: calc(100vh - 1.5rem);
       overflow-y: auto;
+      transition: flex-basis 0.2s ease;
+  }
+  #controls.controls-collapsed {
+      flex: 0 0 auto;
+      overflow-y: visible;
   }
   #ideas-container {
       flex: 1 1 100%;   /* full width row below calendar + key */
@@ -165,6 +170,16 @@ var urls = {
     'edit-diary-data': '{% url "edit-diary-data" %}',
     'edit-ideas': '{% url "edit-ideas" year=9999 month=0 %}'.replace("/9999/0", "")
 };
+
+$(document).ready(function() {
+    document.getElementById('diary-key').addEventListener('toggle', function() {
+        var ctrl = document.getElementById('controls');
+        ctrl.classList.toggle('controls-collapsed', !this.open);
+        // Give the flex layout one frame to settle, then tell FullCalendar to
+        // recalculate its size so it fills the newly available space.
+        setTimeout(function() { $('#calendar').fullCalendar('render'); }, 210);
+    });
+});
 
 init_calendar_view(jQuery,
                    '{{ csrf_token }}',
