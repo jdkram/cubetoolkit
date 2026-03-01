@@ -24,6 +24,20 @@ The "volunteer only" banners in the grid view are currently not filling their ce
 
 On MariaDB, `wagtailcore_page.translation_key` was `varchar(32)` but Wagtail 6 generates 36-character UUIDs. Creating CMS pages throws `DataError`. Fix: widen column to `varchar(36)` via migration. See CURRENT_WORK.md Done section for resolution details.
 
+**Bug K** — Rota `&amp;` display glitch + security audit of loaddata decode pattern 🟢 XS
+
+When saving a rota entry containing `&` (e.g. in rota notes or a role name), some views show the literal text `&amp;` instead of `&`. Root cause is likely the save path: the jeditable editor POSTs the decoded `&` correctly, but either the save response or the subsequent re-render is double-encoding it. Investigate whether the fix occurs on the server response path (the edit endpoint's JSON response) or in the template re-render.
+
+**Security audit:** The Bug C fix added `$('<div>').html(value).text()` to the `loaddata` callback in `edit_rota.js` to decode HTML entities. This pattern is safe as long as Django's auto-escaping is active on the rota entry template (which it is — `{{ rota_entry.name }}` without `|safe`). However, the pattern is fragile: if any template ever marks rota content as safe incorrectly, an attacker who can save HTML into a rota slot could trigger a stored XSS. Consider replacing with the safer `textarea` decode pattern:
+```js
+function htmlDecode(s) { var t = document.createElement('textarea'); t.innerHTML = s; return t.value; }
+```
+This avoids creating actual DOM elements that could fire events. Low priority given current templates are safe, but worth patching.
+
+**Bug L** — Wheelchair-inaccessible role strikethrough too subtle 🟢 XS
+
+The strikethrough symbol on the wheelchair icon (indicating a role is not wheelchair-accessible) is easy to miss — the line is thin and low-contrast. Users may sign up for a role they cannot perform without realising it has accessibility notes. Consider alternatives: a solid badge label ("not accessible"), a distinct colour overlay on the icon, a tooltip with explicit text, or a bolder visual indicator. The fix should be purely CSS/template — no data model change needed.
+
 ---
 
 ## 8. Current limitations and known gaps
@@ -1664,6 +1678,10 @@ Currently, images in the toolkit have no structured alt text field. Some may hav
 
 #### Related features
 
+**Alt text guidance link (from volunteer request):**
+
+Add a `ALT_TEXT_GUIDANCE_URL` setting (blank by default). If set, the alt text input field in the image upload form should show a small ⓘ tooltip or inline help link: *"Need help writing alt text? [Guide ↗]"* linking to the configured URL. For S&S this would point to the relevant page in our volunteer documentation. No hardcoded URL in the codebase — set in `settings_ss.py`.
+
 This feature intersects with section 9.17 (Inclusivity and accessibility). Once alt text fields are in place, all public-facing images will be accessible to screen reader users, a key accessibility requirement.
 
 ---
@@ -2153,6 +2171,313 @@ The user form should use these names. Additionally, Programmer and Panopticon ro
 - Cleanest option: override `UserForm.Meta.labels` and `UserForm.Meta.help_texts` rather than rewriting the form.
 - For Programmer group membership, a `BooleanField` or a `CheckboxInput` backed by `volunteer.user.groups.filter(name="Programmers").exists()` can be added to `UserForm` as an extra non-model field with custom save logic.
 - The warning copy should reference the venue's GDPR policy or contact address.
+
+---
+
+### 9.29 Role management: multiple "other" roles and role-change behaviour 🟡 M (16–30h)
+
+**Problem 1 — "other role" limit per showing:**
+
+The rota editor currently limits the number of distinct role *types* that can appear on a showing. You can only have one "Other Role" entry without editing a template. This breaks down for events that genuinely need several ad-hoc roles (e.g. two different tech helpers, a translator, a floor manager — all "other"). The current workaround is either to overload a named role or to hand-edit a template.
+
+**Design question (answers needed before implementation):**
+
+- Should "Other Role" become a truly free-text role that can be added multiple times? (Each entry would have a different volunteer name and no fixed role definition.)
+- Or should programmers be able to create named roles on-the-fly per event, which then persist (or not) in the `Role` library?
+- Is the right solution a richer per-event role model, distinct from the global `Role` catalogue?
+
+**Problem 2 — what happens to rota entries when roles change:**
+
+Currently, if a programmer edits the roles on a showing (e.g. changes the role name, or removes a role that has sign-ups), the system's behaviour is unclear to programmers and potentially destructive. Investigation needed:
+
+- If a `Role` is removed from a showing's rota after a `RotaEntry` already exists for that role, is the entry orphaned, deleted, or preserved?
+- If a role's name changes, are existing `RotaEntry` records updated or stale?
+- Do programmers get any warning before destroying rota data?
+
+The spec should define: rota entries should never be silently deleted by a role change. If a role is removed that has entries, the system should warn and offer to either reassign the entries to a different role, or explicitly discard them.
+
+**Related:** 8.1 (rota linked to accounts), 9.3 (rota notes UX)
+
+---
+
+### 9.30 Outside hire enhancements in Event Hub 🔵 S (6–12h)
+
+**Context:**
+
+The Event Hub exposes an "Outside hire" checkbox on the event details row, but:
+
+- There is no tooltip explaining what it means
+- Ticking it reveals no additional fields — programmers have no structured way to record *who* the hire is
+- Internal volunteers arriving for an event have no way to know what external crew will be present
+
+**Goal:** Make "Outside hire" a useful, structured field rather than a bare checkbox.
+
+**Scope:**
+
+1. **Tooltip** — add a Bootstrap tooltip to the ⓘ icon on the Outside hire row: *"Check this if the event involves an external company or individual using the space under a hire agreement rather than as a volunteer-run event."*
+
+2. **Hire name popup field** — when the Outside hire checkbox is ticked, reveal an additional text field: "Name of hiring party or organisation". Stored as a new `Event.hire_name` CharField (blank=True, max 200).
+
+3. **External crew notes field** — a second optional field that appears alongside hire name: "External staff / crew attending". Free text (max 500 chars, blank=True) for programmers to note who will be on-site from the external party (e.g. "Sound technician + 2 stage crew from [company]"). Label needs refinement — "external crew", "outside staff", "their team" — ask the coordinator collective what term feels natural.
+
+4. **Rota surface** — display the hire name and external crew info in the rota view for that showing, so internal volunteers know who to expect. This is read-only in the rota; editable only in the Event Hub.
+
+**Data model:** `Event.hire_name` (CharField, blank=True), `Event.external_crew_notes` (TextField, blank=True). Migration required.
+
+**Related:** 9.22 (external hire rota entry), 9.18 (Event Hub)
+
+---
+
+### 9.31 Beginner-friendly rota slot highlighting 🟢 XS (2–4h)
+
+**Goal:** Help new volunteers identify which rota slots are accessible to them without experience.
+
+**Two complementary approaches:**
+
+1. **Filter in rota filterline** — add a "Beginner friendly" toggle to the existing rota filter bar (which currently has the Vacancies filter). When active, dims or hides slots that are not flagged as beginner-friendly, so new volunteers can scan for their best options quickly.
+
+2. **Auto-tag "extra hands" roles** — any role whose name contains the substring "extra hands" (case-insensitive) should automatically be treated as beginner-friendly and display the beginner-friendly indicator (a small leaf/star icon or a "BF" badge). This auto-tag means no manual data entry is needed; as roles are named consistently the feature works out of the box.
+
+**Existing `Role.accessibility_notes` field (9.17↳):** That field covers accessibility for disabled volunteers. Beginner-friendly is a separate concept — it's about experience level, not physical accessibility. Keep them separate.
+
+**Implementation:** Add a `beginner_friendly` boolean to `Role` (or derive it purely from the name pattern). Render the indicator in `edit_rota.html` and `view_rota.html`. Add the filter control to the rota filterline JS alongside the existing vacancy filter.
+
+---
+
+### 9.32 Rota time navigation: should past dates be accessible? 🟢 XS design decision needed
+
+**Question:** Should the rota viewer/editor allow navigating to past dates?
+
+**Arguments for allowing past navigation:**
+
+- Volunteers may want to confirm they worked a past shift (memory aid)
+- Coordinators may need to check who was rostered for a historical event
+- Useful for GDPR audit / data requests (8.1)
+
+**Arguments against (or for restricting):**
+
+- Editing past rota entries is almost always a mistake; past data should be read-only
+- The rota view is already a wall of text; adding unlimited past navigation makes it harder to find the present
+
+**Proposed resolution (needs user decision):** Allow navigation into the past for read purposes (view only). Keep the rota edit controls disabled or hidden for showings whose `start` is in the past (`showing.in_past`). The template already has an `in_past` check on individual rows — extend this concept to the navigation controls.
+
+**Decision needed from coordinator collective** before implementation.
+
+---
+
+### 9.33 S&S spaces: seed data + diary column-per-room display 🟡 M (16–30h total)
+
+**Part 1 — Seed data for all S&S spaces (🟢 XS, 1–2h):**
+
+The live S&S toolkit shows 9 distinct room/space columns in the diary edit view. The current `seed_dev_data` command only seeds a subset. Rooms to add (confirmed from live site HTML):
+
+| Room name | Notes |
+|---|---|
+| Cinema | Main screening room |
+| Venue Space | Flexible main hall |
+| Café | Café area |
+| External | Events at off-site locations |
+| Meeting | Meeting room |
+| Dark Room | Darkroom for photography |
+| Print Room | Printmaking space |
+| workshop | General workshop space |
+| Green room | Backstage / green room area |
+
+Update `seed_dev_data` to create all 9 rooms with distinct colours. Consider whether to assign colours meaningfully (e.g. Cinema = dark, Café = warm, Workshop = earthy) or just ensure they are visually distinguishable.
+
+**Part 2 — Diary edit: column-per-room weekly view (🟡 M, 14–28h):**
+
+The live S&S diary edit view at `/diary/edit/` displays a weekly table with one column per room, so programmers can see room clashes at a glance. The current dev diary edit view does not replicate this. The live site HTML confirms the structure: rows are dates, columns are rooms (Cinema | Venue Space | Café | External | Meeting | Dark Room | Print Room | workshop | Green room), with events appearing in the appropriate column cell.
+
+This is a significant UX improvement for avoiding room clashes — arguably the most important single navigation improvement for programmers.
+
+**Design questions before implementation:**
+
+- With 9 rooms, the table is wide on mobile. Should a responsive fallback collapse to a list view on small screens?
+- How should multi-room events (a single showing that uses Cinema + Café) appear — in both columns, or in the first room column with a "+" indicator?
+- Colour coding: use Room colours as column header backgrounds, matching the existing room colour scheme?
+- The live site also has a text filter input ("by title/booker column") — replicate this? Yes, it's useful.
+
+**Related:** 9.7 (room booking data model), 8.11 (multi-room events)
+
+---
+
+### 9.34 "Showing" / "Session" terminology review 🟢 XS design discussion
+
+**Problem:** The term "Showing" (from `Showing` model, mapped to "Booking" in the UI) was coined for film screenings. It is accurate for repeated screenings of the same film but feels wrong for recurring community events like "Induction (monthly)" or "Cleaning Club (every Friday)".
+
+The data model (Event → multiple Showings/Bookings → single Room) is sound. The question is what to call a *Showing* in volunteer-facing UI and documentation.
+
+**Candidate terms:**
+
+| Term | Pro | Con |
+|---|---|---|
+| **Session** | Neutral, works for film and non-film | Not widely used in toolkit yet |
+| **Date** | Ultra-simple ("add a date") | Loses time information in the label |
+| **Booking** | Already used in some toolkit UI | Implies external booking / reservation |
+| **Instance** | Precise | Technical; not volunteer-friendly |
+| **Slot** | Familiar from rota context | Overloaded — means rota slot too |
+
+**Recommendation to put to coordinator collective:** "Session" or "Date" — pick one and apply consistently across all volunteer-facing UI strings (leaving the Django model name `Showing` and its database unchanged for backwards compatibility).
+
+**Scope:** Once decided, update all Django template strings, view titles, form labels, and any user-facing help text that uses "Showing" or "Booking" ambiguously. No model migration needed.
+
+---
+
+### 9.35 1-click access from top nav to diary/rota edit 🟢 XS (1–3h)
+
+**Problem:** 90% of volunteer toolkit usage is navigating straight to either the diary edit view (`/diary/edit/`) or the rota edit view (`/diary/edit/rota/`). Currently both require multiple clicks from the top nav.
+
+**Goal:** Make these two views reachable in one click from anywhere in the toolkit, while keeping the existing navigation accessible for the 10% of users who need other views.
+
+**Options:**
+
+1. **Dedicated nav links** — add "Diary" and "Rota" as direct top-nav items linking to `/diary/edit/` and `/diary/edit/rota/` respectively. Simple, discoverable, permanent.
+2. **Nav dropdown** — a single "Edit" top-nav item that expands to show both. One extra click but a cleaner nav bar.
+3. **Keyboard shortcut** — add page-level keyboard shortcuts (e.g. `d` for diary, `r` for rota) for power users. Complementary, not a replacement.
+
+**Recommendation:** Option 1 — explicit "Diary" and "Rota" links in the top nav, only visible to logged-in users with the appropriate permissions. Check which base template (`base_admin.html`) controls the top nav and add conditional links there.
+
+---
+
+### 9.36 Vacancies page as email generation tool 🔵 S (6–12h)
+
+**Context:**
+
+`/diary/rota/vacancies` already lists all unfilled rota slots. In practice, two people use this page regularly in different ways:
+
+1. A **weekly rota coordinator** manually copies the vacancy list, edits it (removing rarely-filled roles, noting urgency), and emails it to the volunteer mailing list.
+2. A **cafe coordinator** emails the cafe volunteers list most Sundays when morning shifts are uncovered: "Help — no one's on morning shift this week."
+
+Both workflows are currently entirely manual — open page, select text, paste to email client, edit, send.
+
+**What the toolkit could do:**
+
+- **Filtered vacancy export** — allow the rota coordinator to filter the vacancies page by role category (e.g. "show only cafe roles", "show only tech roles") before copying. This reduces editing overhead significantly.
+- **Pre-filled email draft** — a "Draft email" button on the vacancies page that generates a plain-text email body (with `mailto:` link or clipboard copy) containing the filtered vacancy list, formatted for pasting into a mailing list post. No email sending infrastructure required — just a text generator.
+- **Urgency annotation** — allow a coordinator to mark specific rota slots as "urgent" (a simple flag, set per-slot from the vacancies page) which causes them to appear first in the generated email draft. Urgency flag expires automatically after the showing's start time passes.
+- **Cafe shortfall alert** — a lightweight "cafe cover check" that runs against this week's cafe roles and offers a pre-populated email if any key cafe slot (morning open, lunchtime lead) is unfilled within 3 days. This automates the Sunday morning cafe coordinator email.
+
+**Implementation order:** Filtered view first (no new model fields needed), then pre-filled email draft (template string generation), then urgency flag (new nullable field on `RotaEntry` or `ShowingRoleCount`), then cafe shortfall alert (requires identifying "cafe" roles — probably by name pattern or a new `Role.category` field).
+
+**Related:** 9.6 (communication improvements), 9.10.3 (vacancy reporting)
+
+---
+
+### 9.37 Public programme tag filtering and keyword search 🔵 S (8–16h)
+
+**Goal:** Let site visitors filter the public programme by event tag or keyword, similar to the existing rota tag filter (9.10.1).
+
+**Design principles:**
+
+- The primary programme view should remain clean and uncluttered. Filters should be hidden behind a "Filter" label/button or collapsed by default — don't lead with a filter bar.
+- Consider whether filters belong in the sidebar nav (always visible, space-efficient) or in a collapsible panel below the page header.
+- Keyword search should be purely client-side (filtering visible elements) to avoid page reloads — similar to the existing volunteer table sort.
+
+**Scope:**
+
+- **Tag filter** — a multi-select tag list (or checkbox group) that shows/hides events by tag. Composes with keyword filter if both are active.
+- **Keyword filter** — a text input that filters events by matching against title, copy summary, and tags. Case-insensitive, client-side JS.
+- **URL persistence** — if tag or keyword filter is set, encode it in the URL (query string) so the URL can be shared or bookmarked with the filter active.
+- **"Reset filters" link** — always visible when a filter is active; clears all filters.
+
+**Tag analysis prerequisite:** Before building the filter, review the current tag set against real events on the live site to confirm tags are useful, well-populated, and not redundant. Some tags may be too granular or too broad to be useful for public filtering. This is a research task (browse live event archive, count usage per tag, identify gaps) — schedule as a separate session. See also: what tag taxonomy would best serve a public "filter by tag" feature?
+
+**Related:** 9.10.1 (rota tag filter), event tag model
+
+---
+
+### 9.38 Toolkit page and diary edit UI improvements 🟢 XS (2–4h total)
+
+**Part 1 — Last login display on `/toolkit/` homepage:**
+
+The live S&S toolkit homepage shows a status line at the bottom: *"You logged in as [username] at [date/time]. You are a [role tier]."* The dev toolkit homepage does not have this. It is a useful reassurance — volunteers know who they're logged in as, and the role tier label ("Panopticon", "Programmer", "Volunteer") helps orient new users. Add this block to `index/templates/toolkit_index.html` or its base template, conditional on `request.user.is_authenticated`.
+
+The role tier display should use the human-readable labels from 9.28 (Panopticon / Programmer / Volunteer), not raw Django field names.
+
+**Part 2 — Hide pre/post-titles in `/diary/edit/` list view:**
+
+The diary edit event list shows full event titles including `pre_title` and `post_title` alongside the main title. For brevity and readability, show only the main title in the list. Pre/post-titles could be revealed on hover (via `title` attribute or tooltip). This allows more events to be visible per screen, reducing scrolling.
+
+Scope: CSS/template only. No model changes. Check whether `form_event.html` or `edit_event_calendar_index.html` controls the list display.
+
+---
+
+### 9.39 Quick create event for keyholders 🔵 S (6–12h)
+
+**Goal:** Reduce the friction for a keyholder who wants to advertise that the building is open for volunteers to use freely — e.g. a work party, an open studio session, or just "space is unlocked, come in".
+
+**Problem with the current flow:** Creating an event requires filling in title, copy, room, time, tags, and going through multiple screens. A keyholder who wants to say "the building is open this Saturday for anyone who wants to come work on something" currently either uses the full event creation flow (too much friction) or doesn't bother announcing it at all.
+
+**Proposed "Quick create" flow:**
+
+1. A "Quick create — building open" button on the diary edit homepage (visible to keyholders only)
+2. A minimal form: Date + start time, end time (defaulting to e.g. 10am–6pm), a short optional note ("Focus: print room setup")
+3. Creates a confirmed Showing automatically with:
+   - Event name: "Building Open — [date]" (auto-generated, editable)
+   - A standard "keyholder open session" template (rota notes, roles) applied automatically
+   - `private=True` by default (visible to volunteers, not public programme)
+   - Relevant room: None (whole building), or selectable
+4. One-click save, immediately visible on the internal rota
+
+**This is the minimal version of a recurring "open building" event (see 9.21 for recurring events more broadly).** The keyholder flow is a special case of 9.39 because it needs a pre-set template and a very fast, low-cognitive-load path.
+
+**Related:** 9.18 (Event Hub), 9.21 (recurring events), 8.12 (keyholder access)
+
+---
+
+### 9.40 Setup time and final closing time on showings 🟢 XS (2–4h)
+
+**Goal:** Help keyholders and setup volunteers know exactly when to arrive, and help keyholders plan their departure.
+
+**Problem:** A showing has a single `start` time (the public programme time) and an optional end time. But many events require:
+- A **setup start** time (when setup crew should arrive — often 1–2h before doors)
+- A **final closing** time (when the last keyholder can leave — often 30–60 min after the event ends)
+
+Currently these are buried in the rota notes as free text, and setup volunteers often don't know when to show up.
+
+**Proposed data model additions:**
+
+```
+Showing:
+  + setup_time:    TimeField (nullable) — when setup crew should arrive
+  + closing_time:  TimeField (nullable) — expected final close / keyholder departure
+```
+
+Using `TimeField` (not `DateTimeField`) avoids redundancy with `start` — both are assumed to be on the same calendar date as the showing.
+
+**Display:** Show setup time and closing time in the rota view and rota edit view, near the showing title / time block. Only display if set. Example: *"Setup from 5:30pm · Doors 7pm · Close ~10:30pm"*.
+
+**Related:** 9.10.5 (role timing notes), 9.39 (keyholder open sessions)
+
+---
+
+---
+
+### 9.41 Clickable legend room filter (calendar) 🔵 S (4–8h)
+
+**Goal:** Let an editor quickly focus on one space (e.g. Cinema) by clicking it in the calendar key, without having to navigate to the scheduler resource view.
+
+**Problem:** With 9 rooms on the calendar, month/week views can be visually noisy. The most common use case is "show me only Cinema" or "show me Cinema + Venue Space". Currently the only way to narrow the view is to switch to the 3-day timeline which separates rooms into columns — but that changes the date range and is heavy.
+
+**Proposed UI:**
+
+- Room entries in the key sidebar are rendered as **multi-select checkboxes** (square `<input type="checkbox">` to signal multi-select, not radio buttons)
+- **All rooms checked by default** — calendar shows everything
+- Unchecking a room **hides its events** from the calendar immediately (no page reload)
+- Multiple rooms can be filtered simultaneously
+- A **"Select all / none"** toggle link above the room list for convenience
+- The active filter state is indicated by the checkbox state only (no extra highlighting needed)
+
+**Implementation:**
+
+- Client-side only — no server change needed
+- `eventRender` callback returns `false` (hiding the event) when the event's `resourceId` is in the unchecked set
+- When no resource is assigned (`resourceId` is null/undefined), the event is always shown
+- Trigger a `$('#calendar').fullCalendar('rerenderEvents')` on checkbox change
+- Persist filter state in `sessionStorage` so navigating months doesn't reset it
+
+**Related:** 9.33 (S&S spaces), calendar key overhaul (feature/event-edit-overhaul branch)
 
 ---
 

@@ -24,6 +24,7 @@ from toolkit.diary.edit_views import (
     printed_programme_edit,
     view_force_error,
     view_terms_report_csv,
+    update_showing_status,
 )
 from toolkit.diary.public_views import (
     ArchiveIndex,
@@ -180,6 +181,12 @@ diary_urls = [
         r"^edit/showing/id/(?P<showing_id>\d+)/rota_notes/$",
         edit_showing_rota_notes,
         name="edit-showing-rota-notes",
+    ),
+    # Quick status update (confirm/cancel) from Event Hub
+    re_path(
+        r"^edit/showing/id/(?P<showing_id>\d+)/status$",
+        update_showing_status,
+        name="update-showing-status",
     ),
     # Edit ideas
     re_path(

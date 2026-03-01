@@ -10,9 +10,10 @@
 <link rel="stylesheet" href="{{ STATIC_URL }}css/messages.css">
 <link rel='stylesheet' href='{{ STATIC_URL }}diary/js/lib/fullcalendar/fullcalendar.min.css' />
 <link rel='stylesheet' href='{{ STATIC_URL }}diary/js/lib/fullcalendar-scheduler/scheduler.min.css' />
-<link rel="stylesheet" href="{{ STATIC_URL }}diary/js/lib/fancybox/jquery.fancybox.css" />
 <style>
   @import url('{{ STATIC_URL }}css/lib/smoothness/jquery-ui.css');
+
+  /* ── Event state styles ─────────────────────────────────────── */
   .s_private {
       font-style: italic;
   }
@@ -20,73 +21,117 @@
       font-weight: bold;
       font-family: sans-serif;
   }
-  .fc-content {
-      /* font-family: sans-serif; */
-  }
   .s_discounted div.fc-title::after {
       content: " *";
   }
   .s_cancelled div.fc-title {
-     text-decoration: line-through;
+      text-decoration: line-through;
   }
   .s_unconfirmed {
-      background-image: repeating-linear-gradient(45deg, lightgray, lightgray 15px, transparent 15px, transparent 30px);
-      color: white;
+      /* Dimmed + dashed border — room colour still visible, no colour-only encoding */
+      opacity: 0.65;
+      outline: 2px dashed rgba(0, 0, 0, 0.6);
+      outline-offset: -2px;
   }
-  .s_confirmed {
-      color: white;
+  /* .s_confirmed — text colour set per-event via JSON textColor:
+       white for dark rooms, black for light rooms (e.g. Café yellow). */
+  /* .s_auxiliary_room — class still emitted for JS filter hooks (9.41),
+     but no CSS filter: secondary room colours are stored as pastels directly. */
+
+  /* Status label injected by eventRender below the event title */
+  .fc-event-status {
+      display: block;
+      font-size: 0.75em;
+      font-style: normal;
+      font-weight: normal;
+      font-family: sans-serif;
+      line-height: 1.3;
+      margin-top: 1px;
+      opacity: 0.9;
   }
-  .s_historic {
-      color: darkgray;
+
+  /* ── Now-indicator: make the past/future boundary prominent ─── */
+  /* (replaces the old "historic" colour variant) */
+  .fc-now-indicator-line {
+      border-top-width: 3px;
+      border-top-color: #d00;
   }
+  .fc-now-indicator-arrow {
+      display: none;
+  }
+  /* Today cell in month view */
+  .fc-day.fc-today {
+      background: rgba(255, 235, 180, 0.45) !important;
+  }
+
+  /* ── Layout ─────────────────────────────────────────────────── */
   #flex-container {
       display: flex;
       flex-direction: row;
       flex-wrap: wrap;
-      /* along the horizontal (flex) axis */
-      justify-content: center;
-      /* what to do on the current non flex (cross) axis) for each item */
-      align-items: stretch;
-      /* for each non-flex (cross) axis, what to do */
-      align-content: flex-start;
-  }
-  #controls {
-      display: flex;
-      flex-grow: 1;
-      background: white;
-      /* border: thin solid black; */
-  }
-  #ideas-container {
-      display: flex;
-      flex-grow: 1;
-      flex-basis: 98%;
-      background: white;
-      /* border: thin solid black; */
+      align-items: flex-start;
+      gap: 0.5rem;
   }
   #calendar-container {
-      display: flex;
-      flex-basis: 80%;
-      flex-grow: 1;
+      flex: 1 1 0;
+      min-width: 0;   /* allow shrinking below intrinsic size */
+      order: 1;
   }
   #calendar {
       display: block;
-      margin: auto;
-      /* border: thin solid black; */
   }
-  div.messages {
-      display: none;
-      position: fixed;
-      top: 10px;
-      left: 20%;
-      width: 60%;
-      border: thin solid black;
+  #controls {
+      flex: 0 0 185px;
+      order: 2;
+      position: sticky;
+      top: 0.5rem;
+      align-self: flex-start;
       background: white;
-      z-index: 100;
-      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 0.4rem 0.6rem;
+      font-size: 0.82em;
+      max-height: calc(100vh - 1.5rem);
+      overflow-y: auto;
   }
-  .messages ul {
-      margin: 0;
+  #ideas-container {
+      flex: 1 1 100%;   /* full width row below calendar + key */
+      background: white;
   }
+  /* Mobile: stack vertically, key above calendar */
+  @media (max-width: 800px) {
+      #controls {
+          flex: 1 1 100%;
+          order: -1;
+          position: static;
+          max-height: none;
+      }
+  }
+
+  /* ── Legend swatches ─────────────────────────────────────────── */
+  .key-swatch {
+      display: inline-block;
+      width: 0.9em;
+      height: 0.9em;
+      border-radius: 2px;
+      vertical-align: middle;
+      margin-right: 3px;
+      flex-shrink: 0;
+  }
+  /* No filter needed: secondary room pastels are stored directly in Room.colour */
+  #diary-key summary {
+      cursor: pointer;
+      padding: 0.1rem 0;
+      margin-bottom: 0.3rem;
+  }
+  #diary-key p {
+      margin: 0.3rem 0;
+  }
+  #diary-key details summary {
+      font-size: 0.9em;
+      color: #555;
+  }
+
   .idea {
       white-space: pre-wrap;
       cursor: pointer;
@@ -102,7 +147,6 @@
 <script src='{{ STATIC_URL }}diary/js/lib/fullcalendar/lib/moment.min.js'></script>
 <script src='{{ STATIC_URL }}diary/js/lib/fullcalendar/fullcalendar.min.js'></script>
 <script src='{{ STATIC_URL }}diary/js/lib/fullcalendar-scheduler/scheduler.min.js'></script>
-<script src='{{ STATIC_URL }}diary/js/lib/fancybox/jquery.fancybox.js'></script>
 <script src="{{ STATIC_URL }}js/lib/jquery.jeditable.mini.js"></script>
 <script src="{{ STATIC_URL }}diary/js/calendar_index.js"></script>
 
@@ -117,14 +161,10 @@ jQuery.htmlPrefilter = function(html) { return html; };
 
 var urls = {
     'add-event': '{% url "add-event" %}',
-    'get-messages': '{% url "get-messages" %}',
     'diary-edit-calendar': '{% url "diary-edit-calendar" %}',
     'edit-diary-data': '{% url "edit-diary-data" %}',
     'edit-ideas': '{% url "edit-ideas" year=9999 month=0 %}'.replace("/9999/0", "")
 };
-
-// Slightly dirty hack to ensure popups is true, so iframes close correctly
-$.getJSON('{% url "set_edit_preferences" %}', {"popups" : "true"});
 
 init_calendar_view(jQuery,
                    '{{ csrf_token }}',
@@ -138,36 +178,59 @@ init_calendar_view(jQuery,
 {% endblock %}
 
 {% block body %}
-<div class="messages"><ul></ul></div>
-<a style="display: none;" class="fancybox" data-fancybox-type="iframe" id="fb_target" href="/"></a>
+<p><a href="{% url "add-event" %}">+ New booking</a></p>
+
 <div id="flex-container">
-<div id="controls">
-<p>
-<a href="{% url "add-event" %}" id="new-booking-link">New booking</a><br>
-<br>
-<br>Key:<br>
-{% if MULTIROOM_ENABLED %}
-  {% for room, colours in rooms_and_colours.items %}
-    <span class="s_confirmed" style="background-color: {{ room.colour }}">{{ room }}</span><br>
-    <span class="s_unconfirmed" style="background-color: {{ room.colour }}">{{ room }} unconfirmed</span><br>
-    <span style="background-color: {{ colours|lookup:"confirmed_past" }}">{{ room }} historic</span><br>
-  {% endfor %}
-  <span style="background-color: {{ settings.CALENDAR_DEFAULT_COLOUR }}">No room allocated</span><br>
-{% else %}
-  <span class="s_confirmed" style="background-color: {{ settings.CALENDAR_DEFAULT_COLOUR }}">Confirmed</span><br>
-  <span class="s_unconfirmed" style="background-color: {{ settings.CALENDAR_DEFAULT_COLOUR }}">Unconfirmed</span><br>
-  <span style="background-color: {{ default_confirmed_past }}">Historic</span><br>
-{% endif %}
-<span class="s_private">Private/Hidden</span><br>
-<span class="s_outside_hire">Outside hires</span><br>
-<span style=" text-decoration: line-through;">Cancelled</span><br>
-</p>
-</div>
+
 <div id='calendar-container'>
 <div id='calendar'></div>
 </div>
+
+<div id="controls">
+  <details open id="diary-key">
+    <summary><strong>Key</strong></summary>
+
+    {% if MULTIROOM_ENABLED %}
+    <p>
+      <strong>Main spaces</strong><br>
+      {% for room in rooms_and_colours %}{% if room.is_primary %}
+        <span class="key-swatch" style="background:{{ room.colour }}"></span>{{ room }}<br>
+      {% endif %}{% endfor %}
+    </p>
+
+    <details>
+      <summary>Other spaces</summary>
+      <p>
+        {% for room in rooms_and_colours %}{% if not room.is_primary %}
+          <span class="key-swatch" style="background:{{ room.colour }}"></span>{{ room }}<br>
+        {% endif %}{% endfor %}
+      </p>
+    </details>
+
+    {% else %}
+    <p>
+      <span class="key-swatch s_confirmed" style="background:{{ settings.CALENDAR_DEFAULT_COLOUR }}"></span>Confirmed<br>
+      <span class="key-swatch s_unconfirmed" style="background:{{ settings.CALENDAR_DEFAULT_COLOUR }}; outline:2px dashed rgba(0,0,0,0.6); outline-offset:-2px;"></span>Unconfirmed
+    </p>
+    {% endif %}
+
+    <p>
+      <strong>Status</strong><br>
+      <span style="display:inline-block;background:#888;padding:0 3px;border-radius:2px;color:white;font-size:0.95em;outline:2px dashed rgba(0,0,0,0.6);outline-offset:-2px;opacity:0.65;">event</span> Unconfirmed<br>
+      <em>event</em> Private<br>
+      <span style="text-decoration:line-through">event</span> Cancelled<br>
+      <strong>event</strong> Outside hire<br>
+      event * Discounted
+    </p>
+
+    <p><small>The red line marks now — events before it are in the past.</small></p>
+  </details>
+</div>
+
 <div id='ideas-container'>
 <div id='ideas'></div>
+</div>
+
 </div>
 </div>
 {% endblock %}
