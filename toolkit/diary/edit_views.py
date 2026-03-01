@@ -50,34 +50,7 @@ logger.setLevel(logging.DEBUG)
 
 
 def _return_to_editindex(request):
-    # If the user has set the 'popup' preference, then close the popup
-    # and reload the page that opened the popup. Otherwise just redirect to
-    # the index.
-
-    prefs = edit_prefs.get_preferences(request.session)
-    # (nb: the pref is stored as 'true'/'false', not a python bool!)
-    if prefs["popups"] == "true":
-        # Use a really, really dirty way to emulate the original functionality
-        # and close the popped up window: return a hard-coded page that
-        # contains javascript to close the open window and reload the source
-        # page.
-        return HttpResponse(
-            "<!DOCTYPE html><html>"
-            "<head><title>-</title></head>"
-            "<body onload='"
-            # Close if in a popup window:
-            "try{self.close();}catch(e){}"
-            # Close if in a fancybox:
-            "try{parent.$.fancybox.close();}catch(e){}"
-            # If there's an opener, make it reload to show
-            # edits:
-            "try{opener.location.reload(true);}catch(e){}"
-            "'>Ok</body>"
-            "</html>"
-        )
-    else:
-        # Redirect to edit index
-        return HttpResponseRedirect(reverse("default-edit"))
+    return HttpResponseRedirect(reverse("default-edit"))
 
 
 @permission_required("toolkit.write")
@@ -221,6 +194,15 @@ def _adjust_colour_historic(colour):
     )
 
 
+def _is_light_colour(hex_colour):
+    """Return True if the hex colour is perceptually light (needs dark text)."""
+    h = hex_colour.lstrip("#")
+    if len(h) != 6:
+        return False
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5
+
+
 @permission_required("toolkit.read")
 def edit_diary_data(request):
     date_format = "%Y-%m-%d"
@@ -253,16 +235,11 @@ def edit_diary_data(request):
 
     results = []
     for showing in showings:
-        # For showings in the future, go to the edit showing page, for showings
-        # in the past, show the event information (which should have edit links
-        # disabled, when I get around to it)
-        if showing.start >= local_now:
-            url = reverse("edit-showing", kwargs={"showing_id": showing.pk})
-        else:
-            url = reverse(
-                "edit-event-details-view",
-                kwargs={"event_id": showing.event_id},
-            )
+        # Always link to the Event Hub — consistent with the list view.
+        url = reverse(
+            "edit-event-details-view",
+            kwargs={"event_id": showing.event_id},
+        )
         styles = []
 
         # Initially set colour to "confirmed" colour for the room:
@@ -280,12 +257,15 @@ def edit_diary_data(request):
         if showing.event.outside_hire:
             styles.append("s_outside_hire")
         if showing.in_past():
-            colour = _adjust_colour_historic(colour)
+            # Keep room colour unchanged — the "now" boundary line in the
+            # calendar provides the past/future visual cue instead.
             styles.append("s_historic")
         if showing.confirmed:
             styles.append("s_confirmed")
         else:
             styles.append("s_unconfirmed")
+        if settings.MULTIROOM_ENABLED and showing.room and not showing.room.is_primary:
+            styles.append("s_auxiliary_room")
 
         showing_data = {
             "id": showing.pk,
@@ -296,6 +276,8 @@ def edit_diary_data(request):
             "className": styles,
             "color": colour,
         }
+        if _is_light_colour(colour):
+            showing_data["textColor"] = "#111111"
 
         if settings.MULTIROOM_ENABLED:
             showing_data["resourceId"] = showing.room_id
@@ -324,21 +306,12 @@ def edit_diary_calendar(request, year=None, month=None, day=None):
         logger.error(f"Bad calendar date: {ve}")
         raise Http404("Bad calendar date")
 
-    rooms_and_colours = OrderedDict()
-    for room in Room.objects.all():
-        rooms_and_colours[room] = {
-            "confirmed_past": _adjust_colour_historic(room.colour)
-        }
-
     context = {
         "display_time": display_time,
         "defaultView": defaultView,
         "settings": settings,
         "rooms_and_colours": (
-            rooms_and_colours if settings.MULTIROOM_ENABLED else {}
-        ),
-        "default_confirmed_past": _adjust_colour_historic(
-            settings.CALENDAR_DEFAULT_COLOUR
+            Room.objects.all() if settings.MULTIROOM_ENABLED else []
         ),
     }
 
@@ -358,64 +331,90 @@ def set_edit_preferences(request):
 
 
 @permission_required("toolkit.write")
+@require_http_methods(["GET", "POST"])
 def event_detail_view(request, event_id):
     event = get_object_or_404(Event, pk=event_id)
-    now = django.utils.timezone.now()
-    event_showings = list(event.showings.all())
-    historic_showings = [s for s in event_showings if s.start <= now]
-    latest_showing = None
-    clone_showing_start = None
-    all_showings_in_past = event.all_showings_in_past()
-    show_add_a_booking_button = not all_showings_in_past
+    now = timezone.now()
+    all_showings = list(event.showings.all().order_by("start"))
+    past_showings = [s for s in all_showings if s.start <= now]
+    future_showings = [s for s in all_showings if s.start > now]
+    latest_showing = all_showings[-1] if all_showings else None
 
-    try:
-        latest_showing = event_showings[-1]
-        clone_showing_start = latest_showing.start + datetime.timedelta(days=1)
-    except IndexError:
-        pass
+    add_showing_form = diary_forms.ShowingForm()
 
     if request.method == "POST":
-        showing_forms = diary_forms.ShowingFormSet(request.POST)
-        if showing_forms.is_valid():
-            showings = showing_forms.save(commit=False)
-            for showing in showings:
-                # Ensure the showings point to the event before saving:
-                if showing.event_id is None:
-                    showing.event_id = event_id
-                is_new_showing = showing.pk is None
-                showing.save()
-                # If it's a new showing set the initial rota (has to be done
-                # after the showing is saved)
-                if is_new_showing:
-                    showing.clone_or_reset_rota(latest_showing)
-            if showings:
-                messages.success(request, f"Updated bookings for {event.name}")
-            else:
-                messages.info(request, "No bookings changed")
-            return HttpResponseRedirect(
-                reverse(
-                    "edit-event-details-view", kwargs={"event_id": event_id}
-                )
+        add_showing_form = diary_forms.ShowingForm(request.POST)
+        if add_showing_form.is_valid():
+            new_showing = add_showing_form.save(commit=False)
+            new_showing.event_id = event_id
+            new_showing.save()
+            new_showing.clone_or_reset_rota(latest_showing)
+            messages.success(
+                request,
+                "Added showing on {}".format(
+                    timezone.localtime(new_showing.start).strftime("%d %b %Y, %H:%M")
+                ),
             )
-        # if the 'extra' form (aka the "new booking" form has errors then
-        # don't show the "Add a booking" button
-        show_add_a_booking_button = not any(
-            [form.errors and not form.instance.id for form in showing_forms]
-        )
-    else:
-        showing_forms = diary_forms.ShowingFormSet(
-            queryset=event.showings.start_in_future()
-        )
-    context = {
-        "event": event,
-        "historic_showings": historic_showings,
-        "showing_forms": showing_forms,
-        "clone_showing_start": clone_showing_start,
-        "show_add_a_booking_button": show_add_a_booking_button,
-        "all_showings_in_past": all_showings_in_past,
+            return HttpResponseRedirect(
+                reverse("edit-event-details-view", kwargs={"event_id": event_id})
+            )
+
+    completeness = {
+        "has_copy": bool(event.copy and event.copy.strip()),
+        "has_copy_summary": bool(event.copy_summary and event.copy_summary.strip()),
+        "has_image": event.media.exists(),
+        "terms_ok": not event.terms_required() or event.terms_long_enough(),
+        "terms_required": event.terms_required(),
+        "has_future_showing": bool(future_showings),
     }
 
-    return render(request, "view_event_privatedetails.html", context)
+    return render(request, "view_event_privatedetails.html", {
+        "event": event,
+        "past_showings": past_showings,
+        "future_showings": future_showings,
+        "add_showing_form": add_showing_form,
+        "completeness": completeness,
+        "all_showings_in_past": event.all_showings_in_past(),
+    })
+
+
+@permission_required("toolkit.write")
+@require_POST
+def update_showing_status(request, showing_id):
+    showing = get_object_or_404(Showing, pk=showing_id)
+    if showing.in_past():
+        messages.error(request, "Can't change status of a past showing")
+    else:
+        action = request.POST.get("action", "")
+        if action == "confirm":
+            if showing.event.terms_required() and not showing.event.terms_long_enough():
+                messages.error(
+                    request,
+                    "Add terms to the event before confirming — "
+                    "the event page needs them.",
+                )
+            else:
+                showing.confirmed = True
+                showing.save()
+                messages.success(request, "Showing confirmed.")
+        elif action == "unconfirm":
+            showing.confirmed = False
+            showing.save()
+            messages.success(request, "Showing unconfirmed.")
+        elif action == "cancel":
+            showing.cancelled = True
+            showing.confirmed = False
+            showing.save()
+            messages.success(request, "Showing cancelled.")
+        elif action == "uncancel":
+            showing.cancelled = False
+            showing.save()
+            messages.success(request, "Showing reinstated.")
+        else:
+            messages.error(request, "Unknown action.")
+    return HttpResponseRedirect(
+        reverse("edit-event-details-view", kwargs={"event_id": showing.event_id})
+    )
 
 
 @permission_required("toolkit.write")
@@ -472,7 +471,12 @@ def add_event(request):
                     new_showing.start.strftime("%d/%m/%y at %H:%M"),
                 ),
             )
-            return _return_to_editindex(request)
+            return HttpResponseRedirect(
+                reverse(
+                    "edit-event-details-view",
+                    kwargs={"event_id": new_event.pk},
+                )
+            )
         else:
             # If form was not valid, re-render the form (which will highlight
             # errors)
@@ -546,13 +550,18 @@ def edit_showing(request, showing_id=None):
     if request.method == "POST":
         form = diary_forms.ShowingForm(request.POST, instance=showing)
         rota_form = RotaForm(request.POST)
+        rota_notes_form = diary_forms.ShowingRotaNotesForm(
+            request.POST, instance=showing
+        )
 
-        if form.is_valid() and rota_form.is_valid():
+        if form.is_valid() and rota_form.is_valid() and rota_notes_form.is_valid():
             # The rota form is separate; first save the updated showing
             modified_showing = form.save()
             # Then update the rota with the returned data:
             rota = rota_form.get_rota()
             modified_showing.update_rota(rota)
+            # Save rota notes (a second save on the same instance is fine)
+            rota_notes_form.save()
 
             messages.add_message(
                 request,
@@ -571,11 +580,13 @@ def edit_showing(request, showing_id=None):
     else:
         form = diary_forms.ShowingForm(instance=showing)
         rota_form = RotaForm()
+        rota_notes_form = diary_forms.ShowingRotaNotesForm(instance=showing)
 
     context = {
         "showing": showing,
         "form": form,
         "rota_form": rota_form,
+        "rota_notes_form": rota_notes_form,
         "max_role_assignment_count": settings.MAX_COUNT_PER_ROLE,
     }
 
@@ -651,7 +662,12 @@ class EditEventView(PermissionRequiredMixin, View):
                 messages.SUCCESS,
                 f"Updated details for event '{event.name}'",
             )
-            return _return_to_editindex(request)
+            return HttpResponseRedirect(
+                reverse(
+                    "edit-event-details-view",
+                    kwargs={"event_id": event_id},
+                )
+            )
 
         # Got here if there's a form validation error:
         context = {
@@ -744,6 +760,7 @@ def delete_showing(request, showing_id):
     # Delete the given showing
 
     showing = Showing.objects.get(pk=showing_id)
+    event_id = showing.event_id
     if showing.in_past():
         logger.error(
             f"Attempted to delete showing id {showing_id} that has already "
@@ -768,7 +785,9 @@ def delete_showing(request, showing_id):
         )
         showing.delete()
 
-    return _return_to_editindex(request)
+    return HttpResponseRedirect(
+        reverse("edit-event-details-view", kwargs={"event_id": event_id})
+    )
 
 
 @permission_required("toolkit.read")

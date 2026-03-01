@@ -6,7 +6,6 @@ logger = logging.getLogger(__name__)
 
 # Set of known preferences and default values:
 KNOWN_PREFS = {
-    "popups": "true" if settings.EDIT_INDEX_DEFAULT_USE_POPUPS else "false",
     "daysahead": str(settings.EDIT_INDEX_DEFAULT_DAYS_AHEAD),
 }
 
