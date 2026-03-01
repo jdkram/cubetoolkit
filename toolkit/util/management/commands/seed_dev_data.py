@@ -1,5 +1,5 @@
 """
-seed_dev_data — populate the database with realistic anonymised sample data.
+seed_dev_data - populate the database with realistic anonymised sample data.
 
 Data is drawn from live S&S site HTML captured 18 Feb 2026.
 Real volunteer names have been replaced with fictional ones.
@@ -13,6 +13,7 @@ import datetime
 import io
 import os
 import random
+import re
 import urllib.request
 
 from django.conf import settings
@@ -71,7 +72,7 @@ ROLES = [
 
 ROOMS = [
     # Primary rooms: vivid triadic hues (red/blue/yellow ~120° apart), white text.
-    # Café is bright yellow — _is_light_colour() in edit_views auto-applies black text.
+    # Café is bright yellow - _is_light_colour() in edit_views auto-applies black text.
     # Secondary rooms: clearly pastel so they recede visually; black text auto-detected.
     {"name": "Cinema",      "colour": "#CC2200", "is_primary": True},   # vivid vermilion
     {"name": "Venue Space", "colour": "#0057B8", "is_primary": True},   # royal blue
@@ -86,26 +87,87 @@ ROOMS = [
 
 # Which room each seed event belongs to.
 EVENT_ROOMS = {
-    "Community Kitchen Special: Shared Recipes":                      "Café",
-    "Volunteer Hangout":                                               "Venue Space",
-    "Volunteer Induction":                                             "Meeting",
-    "Keyholder Training":                                              "Meeting",
-    "Seeking a Friend for the End of the World":                      "Cinema",
-    "Friday Cleaning Club and Brunch Social":                          "Venue Space",
-    "Art Club":                                                        "Print Room",
-    "Family Film Club":                                                "Cinema",
-    "Starcade":                                                        "Venue Space",
-    "Creative Writing":                                                "Meeting",
-    "Programme Development Meeting":                                   "Meeting",
-    "Cafe Induction":                                                  "Café",
-    "It's Such a Beautiful Day + ME":                                  "Cinema",
-    "The Annual Ritual Sacrifice of Pens: A Volunteer Ceremony":      "Venue Space",
-    "Four Hours of a Man Juggling Jelly While Weeping":               "Cinema",
-    "The Badger Orchestra: An Evening of Striped Symphonies":         "Venue Space",
-    "The Impossible Film-Athon: 10 Simultaneous Cinema Screenings":   "Cinema",
+    # --- original events ---
+    "Community Kitchen Special: Shared Recipes":                       "Café",
+    "Volunteer Hangout":                                                "Venue Space",
+    "Volunteer Induction":                                              "Meeting",
+    "Keyholder Training":                                               "Meeting",
+    "Seeking a Friend for the End of the World":                       "Cinema",
+    "Friday Cleaning Club and Brunch Social":                           "Venue Space",
+    "Art Club":                                                         "Print Room",
+    "Family Film Club":                                                 "Cinema",
+    "Starcade":                                                         "Venue Space",
+    "Creative Writing":                                                 "Meeting",
+    "Programme Development Meeting":                                    "Meeting",
+    "Cafe Induction":                                                   "Café",
+    "It's Such a Beautiful Day + ME":                                   "Cinema",
+    "The Annual Ritual Sacrifice of Pens: A Volunteer Ceremony":       "Venue Space",
+    "Four Hours of a Man Juggling Jelly While Weeping":                "Cinema",
+    "The Badger Orchestra: An Evening of Striped Symphonies":          "Venue Space",
+    "The Impossible Film-Athon: 10 Simultaneous Cinema Screenings":    "Cinema",
     "The Great Inventory Crisis: Volunteer Spirits Appreciation Night": "Venue Space",
-    "The Freezer Expedition: A Journey Into the Unknown":             "Café",
-    "The Loft Haunting: Negotiation & Possibly Exorcism":             "Venue Space",
+    "The Freezer Expedition: A Journey Into the Unknown":              "Café",
+    "The Loft Haunting: Negotiation & Possibly Exorcism":              "Venue Space",
+    # --- extended events ---
+    "Knitting Circle":                                                  "Meeting",
+    "Darkroom Induction":                                               "Dark Room",
+    "Life Drawing Drop-In":                                             "Venue Space",
+    "Repair Café":                                                      "Venue Space",
+    "Open Mic Night":                                                   "Venue Space",
+    "Printmaking Workshop":                                             "Print Room",
+    "Free Film Friday: Spirited Away":                                  "Cinema",
+    "Gig: Spectral Harm + support":                                     "Venue Space",
+    "Documentary Night: The Painters":                                  "Cinema",
+    "Sound Bath & Meditation":                                          "Venue Space",
+    "Bike Maintenance Workshop":                                        "Workshop",
+    "Volunteer Meeting - All Hands":                                    "Venue Space",
+    "Late Night Horror: The Wailing":                                   "Cinema",
+    "Zine Fair":                                                        "Venue Space",
+    "Letterpress Taster Session":                                       "Print Room",
+    "Gig: Pale Teeth + Grotmoor":                                       "Venue Space",
+    "Short Film Night":                                                  "Cinema",
+    "Fermenting & Pickling Workshop":                                   "Café",
+    "Yoga & Movement":                                                  "Venue Space",
+    "Film: Perfect Days":                                               "Cinema",
+    "Board Game Social":                                                "Venue Space",
+    "Podcast Recording Workshop":                                       "Meeting",
+    "Volunteer Hangout (April)":                                        "Venue Space",
+    "Film: 20,000 Species of Bees":                                     "Cinema",
+    "Darkroom Open Session":                                            "Dark Room",
+    "Gig: Glass Maze + Tender Echo":                                    "Venue Space",
+    "Screen Printing Masterclass":                                      "Print Room",
+    "Community Meal":                                                   "Café",
+    "Film: All of Us Strangers":                                        "Cinema",
+    "Writing Group":                                                    "Meeting",
+    # --- busy day 1 (offset +35: all six of these share one date) ---
+    "BD1: Cinema - Past Lives":                                         "Cinema",
+    "BD1: Venue - Accordion Workshop":                                  "Venue Space",
+    "BD1: Café - Sunday Brunch":                                        "Café",
+    "BD1: Print Room - Risograph Demo":                                 "Print Room",
+    "BD1: Meeting - Programme Pitch Session":                           "Meeting",
+    "BD1: Dark Room - Portfolio Review":                                "Dark Room",
+    "BD1: Workshop - Seed Swap":                                        "Workshop",
+    # --- busy day 2 (offset +70: festival weekend day 1) ---
+    "BD2: Cinema - Moonlight":                                          "Cinema",
+    "BD2: Venue - Drone & Bass Spectacular":                            "Venue Space",
+    "BD2: Café - Pop-Up Market":                                        "Café",
+    "BD2: Print Room - Open Press Day":                                 "Print Room",
+    "BD2: Meeting - Funders Briefing":                                  "Meeting",
+    "BD2: Dark Room - Group Shoot":                                     "Dark Room",
+    "BD2: Green Room - Artist Residency Open Studio":                   "Green room",
+    # --- busy day 3 (offset +105: autumn programme launch) ---
+    "BD3: Cinema - Autumn Launch Screening: The Zone of Interest":      "Cinema",
+    "BD3: Venue - Launch Party":                                        "Venue Space",
+    "BD3: Café - Cake Sale & Bake-Off":                                 "Café",
+    "BD3: Print Room - Poster Making":                                  "Print Room",
+    "BD3: Meeting - AGM":                                               "Meeting",
+    "BD3: Workshop - Intro to Screen Printing":                         "Workshop",
+    # --- flag-test events ---
+    "Film: Certified Copy (CANCELLED)":                                 "Cinema",
+    "Outside Hire: Private Party":                                      "Venue Space",
+    "Film: Portrait of a Lady on Fire (Unconfirmed)":                   "Cinema",
+    "Film: Toni Erdmann (Discounted Preview)":                          "Cinema",
+    "Private: Safeguarding Training":                                   "Meeting",
 }
 
 TAGS = [
@@ -127,7 +189,7 @@ TAGS = [
     "outside-hire",
 ]
 
-# Fictional volunteer names — not real people.
+# Fictional volunteer names - not real people.
 # Inspired by characters/performers from arthouse & world cinema.
 VOLUNTEERS = [
     {"name": "Cleo Marchetti", "email": "cleo.marchetti@example.com"},
@@ -145,7 +207,7 @@ VOLUNTEERS = [
     {"name": "Nell Arundel", "email": "nell.arundel@example.com"},
     {"name": "Ivan Solis", "email": "ivan.solis@example.com"},
     {"name": "Ana Fonseca", "email": "ana.fonseca@example.com"},
-    # Single-name volunteers — added to verify the system handles names without surnames.
+    # Single-name volunteers - added to verify the system handles names without surnames.
     {"name": "Beef", "email": "beef@example.com"},
     {"name": "Sparks", "email": "sparks@example.com"},
     {"name": "Cheddar", "email": "cheddar@example.com"},
@@ -173,10 +235,10 @@ EVENTS = [
     {
         "name": "Community Kitchen Special: Shared Recipes",
         "copy_summary": "Opening the venue for all volunteers to use as they will. "
-        "Workshop, print room, cinema — come along and have a go at whatever takes your fancy.",
+        "Workshop, print room, cinema - come along and have a go at whatever takes your fancy.",
         "copy": "An open afternoon for S&S volunteers. The kitchen is yours, the print "
         "room is yours, the cinema is yours. Bring something to share, bring your ideas, "
-        "bring yourself. No agenda, no structure — just the building and us.",
+        "bring yourself. No agenda, no structure - just the building and us.",
         "tags": ["cafe", "workshop"],
         "private": False,
         "rota_notes": "bring your lovely selves and recipes and let's eat stuff from the freezer that's been in there too long\n _____________________\n< I like mooooooovies >\n ---------------------\n        \\   ^__^\n         \\  (oo)\\_______\n            (__)\       )\\/\\\n                ||----w |\n                ||     ||",
@@ -190,7 +252,7 @@ EVENTS = [
         "name": "Volunteer Hangout",
         "copy_summary": "A chill get together for all volunteers, perfect if you are new or experienced.",
         "copy": "No agenda, no tasks, just volunteers getting to know each other over "
-        "a drink. New volunteers especially welcome — this is a great way to meet people "
+        "a drink. New volunteers especially welcome - this is a great way to meet people "
         "and find out what's going on.",
         "tags": ["volunteer", "party"],
         "private": False,
@@ -203,7 +265,7 @@ EVENTS = [
     {
         "name": "Volunteer Induction",
         "copy_summary": "New to S&S? Come along to our volunteer induction.",
-        "copy": "Our regular volunteer induction — a friendly introduction to the Star "
+        "copy": "Our regular volunteer induction - a friendly introduction to the Star "
         "and Shadow, how we run things, what roles are available, and how to get started. "
         "Everyone who wants to volunteer should come to one of these first.",
         "tags": ["induction", "volunteer"],
@@ -245,7 +307,7 @@ EVENTS = [
         "film_information": "Dir. Lorene Scafaria, USA 2012, 101 min, 15",
         "tags": ["film"],
         "private": False,
-        "rota_notes": "Doors 6:30pm. Film 7pm. Projectionist set up by 6pm. The apostrophe thing's fixed—that's genuinely nice.",
+        "rota_notes": "Doors 6:30pm. Film 7pm. Projectionist set up by 6pm. The apostrophe thing's fixed-that's genuinely nice.",
 
         "roles": [
             "Keyholder",
@@ -277,7 +339,7 @@ EVENTS = [
         "name": "Art Club",
         "copy_summary": "Open workshop in the art room. All welcome, no experience needed.",
         "copy": "Drop in, pick up some materials, make something. Art Club meets weekly "
-        "and is open to everyone — members, volunteers, and the curious.",
+        "and is open to everyone - members, volunteers, and the curious.",
         "tags": ["workshop", "exhibition"],
         "private": False,
         "rota_notes": "Art Club meets weekly. Drop in, make something. Yes, apostrophes work now, thanks for asking.",
@@ -290,7 +352,7 @@ EVENTS = [
     {
         "name": "Family Film Club",
         "copy_summary": "A free film screening suitable for families and children.",
-        "copy": "Our monthly family film club — free, child-friendly, and always "
+        "copy": "Our monthly family film club - free, child-friendly, and always "
         "something worth watching. Popcorn available.",
         "pricing": "Free",
         "tags": ["film", "free"],
@@ -311,10 +373,10 @@ EVENTS = [
         "name": "Starcade",
         "copy_summary": "An evening of live music and performance.",
         "copy": "Three acts, two bars, one night. Starcade is S&S's irregular gig night "
-        "— always something different, always worth coming to.",
+        "- always something different, always worth coming to.",
         "tags": ["music", "performance"],
         "private": False,
-        "rota_notes": "Doors 7pm. First act 8pm. Sound check 5pm—tech arrives 4:30pm. Apostrophes work. Moving on.",
+        "rota_notes": "Doors 7pm. First act 8pm. Sound check 5pm-tech arrives 4:30pm. Apostrophes work. Moving on.",
 
         "roles": [
             "Keyholder",
@@ -333,7 +395,7 @@ EVENTS = [
         "name": "Creative Writing",
         "copy_summary": "A small group workshop for writers at all levels.",
         "copy": "Weekly creative writing workshop. Exercises, sharing, feedback. "
-        "All welcome — from first-timers to experienced writers.",
+        "All welcome - from first-timers to experienced writers.",
         "tags": ["workshop", "meeting"],
         "private": False,
         "rota_notes": "Weekly creative writing workshop. Exercises, feedback, sharing. We looooooove writing \" and \' the most, so it's great that apostrophes work now. We can finally write about writing without wanting to scream.",
@@ -403,7 +465,7 @@ EVENTS = [
         "film_information": "Dir. Don Hertzfeldt, USA 2012/2022",
         "tags": ["film"],
         "private": False,
-        "rota_notes": "Two films, short break between. Projectionist: check format carefully — "
+        "rota_notes": "Two films, short break between. Projectionist: check format carefully - "
         "the ME print is DCP, Beautiful Day is MP4.",
         "roles": [
             "Keyholder",
@@ -420,7 +482,7 @@ EVENTS = [
     {
         "name": "The Annual Ritual Sacrifice of Pens: A Volunteer Ceremony",
         "copy_summary": "Where do all our pens go? Let's investigate through interpretive ritual & ancient summoning.",
-        "copy": "For years, S&S volunteers have wondered: where do the pens disappear to? Tonight, we gather to perform the ancient & sacred Ritual Sacrifice—a solemn ceremony combining scavenger hunt, interpretive dance, & mysterious incantations to either return our missing pens or appease the pen-stealing spirits. Participants must bring one treasured pen to offer. No writing utensils will survive the evening. ",
+        "copy": "For years, S&S volunteers have wondered: where do the pens disappear to? Tonight, we gather to perform the ancient & sacred Ritual Sacrifice-a solemn ceremony combining scavenger hunt, interpretive dance, & mysterious incantations to either return our missing pens or appease the pen-stealing spirits. Participants must bring one treasured pen to offer. No writing utensils will survive the evening. ",
         "pricing": "Free / your dignity",
         "tags": ["volunteer", "performance", "meeting"],
         "private": True,
@@ -541,9 +603,796 @@ EVENTS = [
         "hour": 19,
         "image_url": "https://images.pexels.com/photos/1303081/pexels-photo-1303081.jpeg?auto=compress&cs=tinysrgb&w=800",
     },
+
+    # ── Extended programme: spread over ~4 months ──────────────────────────
+
+    {
+        "name": "Knitting Circle",
+        "copy_summary": "Weekly knitting and crafts drop-in. All levels welcome.",
+        "copy": "Bring your needles, bring your wool, bring your half-finished scarf from 2019. "
+                "No agenda, just knitting, chat, and tea.",
+        "tags": ["workshop"],
+        "private": False,
+        "roles": ["Keyholder", "Extra Hands (no training needed)"],
+        "day_offset": 18,
+        "hour": 14,
+        "image_url": "https://images.pexels.com/photos/4614227/pexels-photo-4614227.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Darkroom Induction",
+        "copy_summary": "Introduction to the darkroom: chemicals, equipment, safety.",
+        "copy": "Everything you need to start using the darkroom yourself. "
+                "Covers safety, chemistry, enlargers, and printing basics.",
+        "tags": ["workshop", "induction", "training-for-volunteers"],
+        "private": True,
+        "hide_in_programme": True,
+        "roles": ["Inductor - 1 (trained)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)"],
+        "day_offset": 20,
+        "hour": 10,
+        "image_url": "https://images.pexels.com/photos/262271/pexels-photo-262271.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Life Drawing Drop-In",
+        "copy_summary": "Weekly life drawing with a rotating cast of models.",
+        "copy": "Two-hour life drawing session with a professional model. "
+                "All media welcome. No booking needed - just turn up.",
+        "pricing": "£5/£3",
+        "tags": ["workshop", "exhibition"],
+        "private": False,
+        "roles": ["Keyholder", "Facilitator"],
+        "day_offset": 22,
+        "hour": 18,
+        "image_url": "https://images.pexels.com/photos/374710/pexels-photo-374710.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Repair Café",
+        "copy_summary": "Bring your broken things. Our volunteers will help you fix them.",
+        "copy": "Broken lamp? Wobbly chair? Jacket that needs a new zip? "
+                "Bring it along and our skilled volunteers will help you repair it. Free.",
+        "pricing": "Free (donations welcome)",
+        "tags": ["workshop", "free"],
+        "private": False,
+        "roles": ["Keyholder", "Extra Hands (no training needed)", "Extra Hands (no training needed)"],
+        "day_offset": 25,
+        "hour": 11,
+        "image_url": "https://images.pexels.com/photos/4492126/pexels-photo-4492126.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Open Mic Night",
+        "copy_summary": "Five minutes, anything goes. Music, poetry, comedy, confessions.",
+        "copy": "Sign up on the door for a five-minute slot. "
+                "We've had folk songs, stand-up, experimental theremin pieces, and one "
+                "very long piece of spoken-word about a supermarket car park. All welcome.",
+        "pricing": "Free",
+        "tags": ["music", "performance"],
+        "private": False,
+        "roles": ["Keyholder", "Sound Technician level 1", "Bar Staff - Shift 1", "Box Office - Admission Tickets"],
+        "day_offset": 30,
+        "hour": 19,
+        "image_url": "https://images.pexels.com/photos/167636/pexels-photo-167636.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Printmaking Workshop",
+        "copy_summary": "Hands-on introduction to linocut and screen printing.",
+        "copy": "Learn the basics of two printmaking techniques in one afternoon. "
+                "Materials provided. No experience needed.",
+        "pricing": "£12/£8",
+        "tags": ["workshop"],
+        "private": False,
+        "roles": ["Keyholder", "Facilitator", "Facilitator Shadow"],
+        "day_offset": 33,
+        "hour": 13,
+        "image_url": "https://images.pexels.com/photos/1647976/pexels-photo-1647976.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Free Film Friday: Spirited Away",
+        "copy_summary": "Miyazaki's masterpiece on the big screen. Free.",
+        "copy": "Spirited Away (2001). A ten-year-old girl wanders into a world ruled by gods, "
+                "witches, and spirits, and her parents have been turned into pigs. "
+                "Dir. Hayao Miyazaki, Japan, 125 min, PG.",
+        "film_information": "Dir. Hayao Miyazaki, Japan 2001, 125 min, PG",
+        "pricing": "Free",
+        "tags": ["film", "free"],
+        "private": False,
+        "roles": ["Keyholder", "Projectionist - DCP", "Box Office - Admission Tickets",
+                  "Bar Staff - Shift 1", "Usher - Fire Trained"],
+        "day_offset": 36,
+        "hour": 19,
+        "image_url": "https://images.pexels.com/photos/7991452/pexels-photo-7991452.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Gig: Spectral Harm + support",
+        "copy_summary": "Post-punk three-piece with an opening set from local act Molar.",
+        "copy": "Spectral Harm play damaged post-punk somewhere between Wire and Shellac. "
+                "Support from Newcastle's own Molar, who play one long continuous note "
+                "that is somehow also a song.",
+        "pricing": "£8/£5",
+        "tags": ["music", "performance"],
+        "private": False,
+        "roles": ["Keyholder", "Sound Technician level 1", "Sound Technician level 2",
+                  "Bar Staff - Shift 1", "Bar Staff - Shift 2",
+                  "Box Office - Admission Tickets", "Usher - Fire Trained"],
+        "day_offset": 40,
+        "hour": 20,
+        "image_url": "https://images.pexels.com/photos/1105666/pexels-photo-1105666.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Documentary Night: The Painters",
+        "copy_summary": "Portrait of a collective of painters working in post-industrial Gateshead.",
+        "copy": "A quietly devastating document of what it means to make art in difficult "
+                "economic conditions. Q&A with the director after the screening.",
+        "film_information": "Dir. Ama Kwei, UK 2024, 82 min, 12A",
+        "tags": ["film"],
+        "private": False,
+        "roles": ["Keyholder", "Projectionist - MP4", "Box Office - Admission Tickets",
+                  "Bar Staff - Shift 1", "Usher - Fire Trained"],
+        "day_offset": 44,
+        "hour": 19,
+        "image_url": "https://images.pexels.com/photos/3094218/pexels-photo-3094218.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Sound Bath & Meditation",
+        "copy_summary": "90 minutes of gongs, singing bowls, and deep rest.",
+        "copy": "Lie down, close your eyes, and let the sound wash over you. "
+                "Mats and blankets provided. Recommended for insomniacs, the stressed, "
+                "and the merely curious.",
+        "pricing": "£7/£5",
+        "tags": ["workshop", "performance"],
+        "private": False,
+        "roles": ["Keyholder", "Facilitator"],
+        "day_offset": 47,
+        "hour": 18,
+        "image_url": "https://images.pexels.com/photos/3822864/pexels-photo-3822864.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Bike Maintenance Workshop",
+        "copy_summary": "Learn to fix your own bike. Tools and expertise provided.",
+        "copy": "Punctures, brakes, gears, chains. A practical hands-on session for "
+                "anyone who wants to be less dependent on the bike shop.",
+        "pricing": "Free (donations welcome)",
+        "tags": ["workshop", "free"],
+        "private": False,
+        "roles": ["Keyholder", "Facilitator", "Extra Hands (no training needed)"],
+        "day_offset": 51,
+        "hour": 11,
+        "image_url": "https://images.pexels.com/photos/100582/pexels-photo-100582.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Volunteer Meeting - All Hands",
+        "copy_summary": "Monthly all-volunteer meeting. Agenda circulated beforehand.",
+        "copy": "Open to all volunteers. The place where we make collective decisions "
+                "about the cinema. Agenda sent by email the Thursday before.",
+        "pricing": "Free",
+        "tags": ["meeting", "volunteer"],
+        "private": False,
+        "roles": ["Facilitator", "Minute taker", "Keyholder"],
+        "day_offset": 54,
+        "hour": 18,
+        "image_url": "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Late Night Horror: The Wailing",
+        "copy_summary": "Korean horror masterpiece. Not for the faint-hearted.",
+        "copy": "A detective investigates a series of bizarre deaths in a small village "
+                "following the arrival of a mysterious stranger. Dir. Na Hong-jin, "
+                "Korea 2016, 156 min, 18. Late licence until 1am.",
+        "film_information": "Dir. Na Hong-jin, South Korea 2016, 156 min, 18",
+        "pricing": "£6/£4",
+        "tags": ["film"],
+        "private": False,
+        "roles": ["Keyholder", "Projectionist - DCP", "Box Office - Admission Tickets",
+                  "Bar Staff - Shift 1", "Bar Staff - Shift 2", "Usher - Fire Trained"],
+        "day_offset": 58,
+        "hour": 22,
+        "image_url": "https://images.pexels.com/photos/247314/pexels-photo-247314.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Zine Fair",
+        "copy_summary": "Independent publishers, infoshops, and zine makers from across the region.",
+        "copy": "Tables of self-published work: comics, poetry, politics, "
+                "personal essays, and things that don't fit any category. Free entry, "
+                "everything for sale at zine prices.",
+        "pricing": "Free entry",
+        "tags": ["exhibition", "workshop"],
+        "private": False,
+        "roles": ["Keyholder", "Extra Hands (no training needed)", "Extra Hands (no training needed)",
+                  "Bar Staff - Shift 1"],
+        "day_offset": 61,
+        "hour": 12,
+        "image_url": "https://images.pexels.com/photos/4226896/pexels-photo-4226896.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Letterpress Taster Session",
+        "copy_summary": "Try the letterpress for 90 minutes. No experience needed.",
+        "copy": "Get hands-on with our Adana press. Print a small card to take home. "
+                "Maximum 6 participants - book in advance.",
+        "pricing": "£10",
+        "tags": ["workshop"],
+        "private": False,
+        "roles": ["Keyholder", "Facilitator"],
+        "day_offset": 65,
+        "hour": 14,
+        "image_url": "https://images.pexels.com/photos/1591060/pexels-photo-1591060.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Gig: Pale Teeth + Grotmoor",
+        "copy_summary": "Two bands, one night, no particular genre.",
+        "copy": "Pale Teeth play expansive post-rock with electronics. "
+                "Grotmoor play something shorter and angrier. Both are excellent.",
+        "pricing": "£6/£4",
+        "tags": ["music", "performance"],
+        "private": False,
+        "roles": ["Keyholder", "Sound Technician level 1", "Sound Technician level 2",
+                  "Bar Staff - Shift 1", "Bar Staff - Shift 2",
+                  "Box Office - Admission Tickets", "Usher - Fire Trained"],
+        "day_offset": 68,
+        "hour": 20,
+        "image_url": "https://images.pexels.com/photos/995301/pexels-photo-995301.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Short Film Night",
+        "copy_summary": "An evening of short films from local filmmakers.",
+        "copy": "Programme TBC. Submissions open until two weeks before. "
+                "All genres, maximum 15 minutes per film.",
+        "pricing": "£5/£3",
+        "tags": ["film"],
+        "private": False,
+        "roles": ["Keyholder", "Projectionist - MP4", "Box Office - Admission Tickets",
+                  "Bar Staff - Shift 1", "Usher - Fire Trained"],
+        "day_offset": 72,
+        "hour": 19,
+        "image_url": "https://images.pexels.com/photos/66134/pexels-photo-66134.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Fermenting & Pickling Workshop",
+        "copy_summary": "Make your own kimchi, sauerkraut, or pickles. Take them home.",
+        "copy": "A practical afternoon learning the basics of lacto-fermentation. "
+                "Materials provided. You'll leave with at least one jar of something.",
+        "pricing": "£15/£10 (materials included)",
+        "tags": ["workshop", "cafe"],
+        "private": False,
+        "roles": ["Keyholder", "Facilitator", "Cafe (Level 1)"],
+        "day_offset": 75,
+        "hour": 13,
+        "image_url": "https://images.pexels.com/photos/5945641/pexels-photo-5945641.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Yoga & Movement",
+        "copy_summary": "Weekly yoga class in the venue space. All levels.",
+        "copy": "An accessible, non-competitive yoga class. Mats available. "
+                "Donations-based - pay what you can.",
+        "pricing": "Donations",
+        "tags": ["workshop"],
+        "private": False,
+        "roles": ["Keyholder"],
+        "day_offset": 79,
+        "hour": 9,
+        "image_url": "https://images.pexels.com/photos/4498152/pexels-photo-4498152.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Film: Perfect Days",
+        "copy_summary": "Wim Wenders' quietly beautiful film about a Tokyo toilet cleaner.",
+        "copy": "Hirayama (Kōji Yakusho) lives a life of small pleasures and careful routine. "
+                "Cassette tapes, old paperbacks, and the light through trees. "
+                "Dir. Wim Wenders, Japan/Germany 2023, 123 min, PG.",
+        "film_information": "Dir. Wim Wenders, Japan/Germany 2023, 123 min, PG",
+        "pricing": "£7/£5",
+        "tags": ["film"],
+        "private": False,
+        "roles": ["Keyholder", "Projectionist - DCP", "Box Office - Admission Tickets",
+                  "Bar Staff - Shift 1", "Usher - Fire Trained"],
+        "day_offset": 82,
+        "hour": 19,
+        "image_url": "https://images.pexels.com/photos/1659438/pexels-photo-1659438.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Board Game Social",
+        "copy_summary": "Bring a game, play a game. Bar open.",
+        "copy": "Monthly board game night. We have a small library but bring your favourites. "
+                "Cooperative games especially welcomed - it's nicer when we all win or all lose together.",
+        "pricing": "Free",
+        "tags": ["party", "volunteer"],
+        "private": False,
+        "roles": ["Keyholder", "Bar Staff - Shift 1"],
+        "day_offset": 86,
+        "hour": 18,
+        "image_url": "https://images.pexels.com/photos/4291/food-kitchen-cutting-board-cooking.jpg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Podcast Recording Workshop",
+        "copy_summary": "Practical intro to recording and editing a podcast.",
+        "copy": "Covers microphone technique, basic recording software, editing "
+                "for narrative flow, and how to publish. Bring a story you want to tell.",
+        "pricing": "£8/£5",
+        "tags": ["workshop"],
+        "private": False,
+        "roles": ["Facilitator", "Audio Visual Technician", "Keyholder"],
+        "day_offset": 89,
+        "hour": 14,
+        "image_url": "https://images.pexels.com/photos/3784221/pexels-photo-3784221.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Volunteer Hangout (April)",
+        "copy_summary": "Monthly volunteer social. New faces especially welcome.",
+        "copy": "No agenda. Just the bar, us, and whoever turns up. "
+                "If you've been meaning to come along for ages, this is the night.",
+        "tags": ["volunteer", "party"],
+        "private": False,
+        "roles": ["Keyholder", "Bar Staff - Shift 1"],
+        "day_offset": 92,
+        "hour": 19,
+        "image_url": "https://images.pexels.com/photos/3171837/pexels-photo-3171837.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Film: 20,000 Species of Bees",
+        "copy_summary": "Tender Spanish film about an 8-year-old navigating gender identity.",
+        "copy": "Cocó spends a summer in the Basque Country with her family while her "
+                "parents' relationship unravels. A genuinely compassionate film. "
+                "Dir. Estibaliz Urresola Solaguren, Spain 2023, 125 min, 12A.",
+        "film_information": "Dir. Estibaliz Urresola Solaguren, Spain 2023, 125 min, 12A",
+        "pricing": "£7/£5",
+        "tags": ["film"],
+        "private": False,
+        "roles": ["Keyholder", "Projectionist - DCP", "Box Office - Admission Tickets",
+                  "Bar Staff - Shift 1", "Usher - Fire Trained"],
+        "day_offset": 96,
+        "hour": 19,
+        "image_url": "https://images.pexels.com/photos/1002703/pexels-photo-1002703.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Darkroom Open Session",
+        "copy_summary": "Drop-in printing session for trained darkroom members.",
+        "copy": "Open access for volunteers who've completed the darkroom induction. "
+                "Enlargers and chemicals in good order. Sign up on the sheet.",
+        "tags": ["workshop"],
+        "private": True,
+        "hide_in_programme": True,
+        "roles": ["Keyholder"],
+        "day_offset": 100,
+        "hour": 12,
+        "image_url": "https://images.pexels.com/photos/262271/pexels-photo-262271.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Gig: Glass Maze + Tender Echo",
+        "copy_summary": "Ambient sounds collide with anxious electronics.",
+        "copy": "Glass Maze make long slow pieces full of texture and patience. "
+                "Tender Echo are shorter and more agitated. Both are from Newcastle.",
+        "pricing": "£7/£5",
+        "tags": ["music", "performance"],
+        "private": False,
+        "roles": ["Keyholder", "Sound Technician level 1", "Sound Technician level 2",
+                  "Bar Staff - Shift 1", "Bar Staff - Shift 2",
+                  "Box Office - Admission Tickets", "Usher - Fire Trained"],
+        "day_offset": 103,
+        "hour": 20,
+        "image_url": "https://images.pexels.com/photos/196644/pexels-photo-196644.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Screen Printing Masterclass",
+        "copy_summary": "Full-day screen printing intensive. Advanced techniques.",
+        "copy": "For those who've done the taster. Work through a full professional "
+                "print run from artwork separation to final print. Maximum 4 participants.",
+        "pricing": "£40 (materials included)",
+        "tags": ["workshop"],
+        "private": False,
+        "roles": ["Keyholder", "Facilitator"],
+        "day_offset": 107,
+        "hour": 10,
+        "image_url": "https://images.pexels.com/photos/8107222/pexels-photo-8107222.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Community Meal",
+        "copy_summary": "Cook together, eat together. Ingredients provided.",
+        "copy": "The monthly community meal. We shop, we cook, we eat. "
+                "No dietary preferences turned away if you let us know in advance.",
+        "pricing": "Free (donations welcome)",
+        "tags": ["cafe", "volunteer"],
+        "private": False,
+        "roles": ["Keyholder", "Cafe (Level 1)", "Cafe (Level 1)", "Extra Hands (no training needed)"],
+        "day_offset": 111,
+        "hour": 17,
+        "image_url": "https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Film: All of Us Strangers",
+        "copy_summary": "Andrew Haigh's devastating film about ghosts, grief, and love.",
+        "copy": "A lonely screenwriter strikes up a relationship with a neighbour, "
+                "then finds himself visiting his childhood home - and his long-dead parents. "
+                "Dir. Andrew Haigh, UK 2023, 105 min, 15.",
+        "film_information": "Dir. Andrew Haigh, UK 2023, 105 min, 15",
+        "pricing": "£7/£5",
+        "tags": ["film"],
+        "private": False,
+        "roles": ["Keyholder", "Projectionist - DCP", "Box Office - Admission Tickets",
+                  "Bar Staff - Shift 1", "Usher - Fire Trained"],
+        "day_offset": 115,
+        "hour": 19,
+        "image_url": "https://images.pexels.com/photos/1918290/pexels-photo-1918290.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Writing Group",
+        "copy_summary": "Fortnightly writing group. Bring something you're working on.",
+        "copy": "Small group, honest feedback, strong tea. Bring up to 1,500 words "
+                "of something - fiction, non-fiction, script, poetry, whatever you're stuck on.",
+        "tags": ["workshop", "meeting"],
+        "private": False,
+        "roles": ["Facilitator"],
+        "day_offset": 118,
+        "hour": 18,
+        "image_url": "https://images.pexels.com/photos/733856/pexels-photo-733856.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+
+    # ── Busy Day 1 (offset +35): 7 things happening simultaneously ─────────
+    # A typical full Sunday: film + workshop + café brunch + print room + meeting + darkroom + workshop
+
+    {
+        "name": "BD1: Cinema - Past Lives",
+        "copy_summary": "Celine Song's debut feature. A love story across two continents and twenty years.",
+        "copy": "Nora and Hae Sung, childhood sweethearts in Seoul, reconnect as adults. "
+                "One of the best films of 2023.",
+        "film_information": "Dir. Celine Song, USA/South Korea 2023, 105 min, 12A",
+        "pricing": "£7/£5",
+        "tags": ["film"],
+        "private": False,
+        "roles": ["Keyholder", "Projectionist - DCP", "Box Office - Admission Tickets",
+                  "Bar Staff - Shift 1", "Usher - Fire Trained"],
+        "day_offset": 35,
+        "hour": 15,
+        "image_url": "https://images.pexels.com/photos/1659438/pexels-photo-1659438.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "BD1: Venue - Accordion Workshop",
+        "copy_summary": "Two-hour introduction to the diatonic button accordion.",
+        "copy": "Absolute beginners welcome. Accordions provided. "
+                "You will leave able to play at least one tune, probably.",
+        "pricing": "£12/£8",
+        "tags": ["workshop", "music"],
+        "private": False,
+        "roles": ["Keyholder", "Facilitator"],
+        "day_offset": 35,
+        "hour": 13,
+        "image_url": "https://images.pexels.com/photos/164853/pexels-photo-164853.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "BD1: Café - Sunday Brunch",
+        "copy_summary": "Weekly Sunday brunch. Full veggie fry-up and excellent coffee.",
+        "copy": "The café is open from 10am. Full veggie breakfast, "
+                "eggs various ways, excellent filter coffee, "
+                "and the weekend papers if someone's brought them.",
+        "pricing": "Pay what you can",
+        "tags": ["cafe"],
+        "private": False,
+        "roles": ["Keyholder", "Cafe (Level 1)", "Cafe (Level 2)", "Cafe Shadowing"],
+        "day_offset": 35,
+        "hour": 10,
+        "image_url": "https://images.pexels.com/photos/376464/pexels-photo-376464.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "BD1: Print Room - Risograph Demo",
+        "copy_summary": "See the Riso in action. Learn what it can (and can't) do.",
+        "copy": "A 45-minute demo of the risograph printer, followed by open questions. "
+                "Essential viewing if you're planning to use it for a project.",
+        "pricing": "Free",
+        "tags": ["workshop", "free"],
+        "private": False,
+        "roles": ["Facilitator"],
+        "day_offset": 35,
+        "hour": 14,
+        "image_url": "https://images.pexels.com/photos/1591060/pexels-photo-1591060.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "BD1: Meeting - Programme Pitch Session",
+        "copy_summary": "Monthly open pitch session. Bring your event idea.",
+        "copy": "Five minutes per proposal. Feedback from the room. "
+                "No idea too small or too strange.",
+        "tags": ["meeting"],
+        "private": False,
+        "roles": ["Facilitator", "Minute taker"],
+        "day_offset": 35,
+        "hour": 16,
+        "image_url": "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "BD1: Dark Room - Portfolio Review",
+        "copy_summary": "Bring your prints. Get honest feedback.",
+        "copy": "Informal group review of recent work. The darkroom will be available "
+                "for printing before the session from 11am.",
+        "tags": ["workshop", "exhibition"],
+        "private": False,
+        "roles": ["Keyholder", "Facilitator"],
+        "day_offset": 35,
+        "hour": 17,
+        "image_url": "https://images.pexels.com/photos/262271/pexels-photo-262271.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "BD1: Workshop - Seed Swap",
+        "copy_summary": "Bring seeds to swap. Leave with something new to grow.",
+        "copy": "Annual seed swap. Bring packets, envelopes, or just seeds in "
+                "a bit of folded paper. Label them if you can.",
+        "pricing": "Free",
+        "tags": ["workshop", "free"],
+        "private": False,
+        "roles": ["Keyholder", "Extra Hands (no training needed)"],
+        "day_offset": 35,
+        "hour": 11,
+        "image_url": "https://images.pexels.com/photos/1002703/pexels-photo-1002703.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+
+    # ── Busy Day 2 (offset +70): 7 things - notional festival weekend ──────
+
+    {
+        "name": "BD2: Cinema - Moonlight",
+        "copy_summary": "Barry Jenkins' Moonlight. Oscar-winning, essential.",
+        "copy": "Three chapters in the life of a young Black man growing up in Miami. "
+                "Dir. Barry Jenkins, USA 2016, 111 min, 15.",
+        "film_information": "Dir. Barry Jenkins, USA 2016, 111 min, 15",
+        "pricing": "£7/£5",
+        "tags": ["film"],
+        "private": False,
+        "roles": ["Keyholder", "Projectionist - DCP", "Box Office - Admission Tickets",
+                  "Bar Staff - Shift 1", "Usher - Fire Trained"],
+        "day_offset": 70,
+        "hour": 19,
+        "image_url": "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "BD2: Venue - Drone & Bass Spectacular",
+        "copy_summary": "Four acts, eight hours, every shade of drone.",
+        "copy": "Festival day. Four acts across the afternoon and evening: "
+                "ambient, noise, bass-heavy electronics, and something labelled simply 'ritual'. "
+                "Bar open all day.",
+        "pricing": "£10/£7 day pass",
+        "tags": ["music", "performance"],
+        "private": False,
+        "roles": ["Keyholder", "Sound Technician level 1", "Sound Technician level 2",
+                  "Bar Staff - Shift 1", "Bar Staff - Shift 2",
+                  "Box Office - Admission Tickets", "Usher - Fire Trained"],
+        "day_offset": 70,
+        "hour": 14,
+        "image_url": "https://images.pexels.com/photos/1105666/pexels-photo-1105666.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "BD2: Café - Pop-Up Market",
+        "copy_summary": "Local makers, bakers, and sellers. Free entry.",
+        "copy": "Around fifteen stalls in and around the café. "
+                "Ceramics, preserves, clothing, plants, and at least one table "
+                "selling things that defy categorisation.",
+        "pricing": "Free entry",
+        "tags": ["exhibition", "cafe"],
+        "private": False,
+        "roles": ["Keyholder", "Cafe (Level 1)", "Cafe (Level 2)",
+                  "Extra Hands (no training needed)", "Extra Hands (no training needed)"],
+        "day_offset": 70,
+        "hour": 11,
+        "image_url": "https://images.pexels.com/photos/1267320/pexels-photo-1267320.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "BD2: Print Room - Open Press Day",
+        "copy_summary": "All the presses running all day. Come and make something.",
+        "copy": "The print room is running all day with a skeleton crew. "
+                "Turn up, get a brief intro, make a print. Materials provided.",
+        "pricing": "£5 materials contribution",
+        "tags": ["workshop"],
+        "private": False,
+        "roles": ["Facilitator", "Facilitator Shadow"],
+        "day_offset": 70,
+        "hour": 12,
+        "image_url": "https://images.pexels.com/photos/8107222/pexels-photo-8107222.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "BD2: Meeting - Funders Briefing",
+        "copy_summary": "Private briefing for grant-funded projects. Volunteers involved only.",
+        "copy": "Closed briefing on current Arts Council-funded projects. "
+                "Agenda and papers circulated in advance.",
+        "tags": ["meeting"],
+        "private": True,
+        "hide_in_programme": True,
+        "roles": ["Facilitator", "Minute taker"],
+        "day_offset": 70,
+        "hour": 10,
+        "image_url": "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "BD2: Dark Room - Group Shoot",
+        "copy_summary": "Collaborative darkroom session for the photography collective.",
+        "copy": "Members of the photography collective working on a joint "
+                "project around the building. Darkroom in use all day.",
+        "tags": ["workshop", "exhibition"],
+        "private": False,
+        "roles": ["Keyholder"],
+        "day_offset": 70,
+        "hour": 13,
+        "image_url": "https://images.pexels.com/photos/262271/pexels-photo-262271.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "BD2: Green Room - Artist Residency Open Studio",
+        "copy_summary": "Visit the current resident artist. Work in progress.",
+        "copy": "The green room has been occupied for six weeks by artist-in-residence "
+                "Marisol Vento. Today she opens her studio to anyone who wants to "
+                "see what's been happening.",
+        "pricing": "Free",
+        "tags": ["exhibition"],
+        "private": False,
+        "roles": ["Keyholder"],
+        "day_offset": 70,
+        "hour": 15,
+        "image_url": "https://images.pexels.com/photos/3094218/pexels-photo-3094218.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+
+    # ── Busy Day 3 (offset +105): autumn programme launch ──────────────────
+
+    {
+        "name": "BD3: Cinema - Autumn Launch Screening: The Zone of Interest",
+        "copy_summary": "Opening night of the autumn programme. Jonathan Glazer's devastating film.",
+        "copy": "The commandant of Auschwitz lives an ordinary domestic life with his family "
+                "in a house beside the camp wall. Harrowing, extraordinary, necessary. "
+                "Dir. Jonathan Glazer, UK/Poland 2023, 105 min, 12A.",
+        "film_information": "Dir. Jonathan Glazer, UK/Poland 2023, 105 min, 12A",
+        "pricing": "£7/£5",
+        "tags": ["film"],
+        "private": False,
+        "roles": ["Keyholder", "Projectionist - DCP", "Box Office - Admission Tickets",
+                  "Bar Staff - Shift 1", "Bar Staff - Shift 2", "Usher - Fire Trained"],
+        "day_offset": 105,
+        "hour": 19,
+        "image_url": "https://images.pexels.com/photos/7991452/pexels-photo-7991452.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "BD3: Venue - Launch Party",
+        "copy_summary": "Autumn programme launch. Free bar for the first hour.",
+        "copy": "Come celebrate the new programme. Programme booklets available. "
+                "Free bar for the first hour courtesy of a donation we'd rather not name.",
+        "pricing": "Free",
+        "tags": ["party", "volunteer"],
+        "private": False,
+        "roles": ["Keyholder", "Bar Staff - Shift 1", "Bar Staff - Shift 2",
+                  "Usher - Fire Trained", "Extra Hands (no training needed)"],
+        "day_offset": 105,
+        "hour": 21,
+        "image_url": "https://images.pexels.com/photos/3171837/pexels-photo-3171837.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "BD3: Café - Cake Sale & Bake-Off",
+        "copy_summary": "Volunteers bake. Everyone eats. Judging is extremely informal.",
+        "copy": "Annual bake-off. Bring a bake by 3pm, judging at 5pm, "
+                "everything consumed by 6pm. No theme. All skill levels welcome. "
+                "Last year someone brought shop-bought cake with a handwritten label. "
+                "They did not win.",
+        "pricing": "Free",
+        "tags": ["cafe", "volunteer"],
+        "private": False,
+        "roles": ["Keyholder", "Cafe (Level 1)", "Cafe Shadowing"],
+        "day_offset": 105,
+        "hour": 14,
+        "image_url": "https://images.pexels.com/photos/1024359/pexels-photo-1024359.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "BD3: Print Room - Poster Making",
+        "copy_summary": "Design and print a poster for the autumn programme.",
+        "copy": "Open session to make posters for the new programme. "
+                "Artwork provided, you operate the press. Two-colour risograph.",
+        "pricing": "Free",
+        "tags": ["workshop", "free"],
+        "private": False,
+        "roles": ["Facilitator", "Facilitator Shadow"],
+        "day_offset": 105,
+        "hour": 11,
+        "image_url": "https://images.pexels.com/photos/1647976/pexels-photo-1647976.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "BD3: Meeting - AGM",
+        "copy_summary": "Annual General Meeting. All active volunteers should attend.",
+        "copy": "Full AGM with elections, finance report, and major policy votes. "
+                "Papers circulated two weeks in advance. Childcare available on request.",
+        "tags": ["meeting", "volunteer"],
+        "private": False,
+        "roles": ["Facilitator", "Minute taker", "Keyholder"],
+        "day_offset": 105,
+        "hour": 13,
+        "image_url": "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "BD3: Workshop - Intro to Screen Printing",
+        "copy_summary": "Beginners welcome. Make one print to take home.",
+        "copy": "A two-hour taster covering screen preparation, ink mixing, "
+                "and basic squeegee technique. You'll print one A4 image. "
+                "Materials included in the ticket price.",
+        "pricing": "£12/£8",
+        "tags": ["workshop"],
+        "private": False,
+        "roles": ["Keyholder", "Facilitator"],
+        "day_offset": 105,
+        "hour": 10,
+        "image_url": "https://images.pexels.com/photos/8107222/pexels-photo-8107222.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+
+    # ── Flag test events ────────────────────────────────────────────────────
+    # One of each: cancelled, outside hire, unconfirmed, discounted, private
+
+    {
+        "name": "Film: Certified Copy (CANCELLED)",
+        "copy_summary": "Abbas Kiarostami's knotty romantic puzzle. Screening cancelled.",
+        "copy": "A writer and a woman spend the day together in Tuscany. "
+                "Kiarostami gives nothing away. "
+                "Dir. Abbas Kiarostami, France/Italy 2010, 106 min, PG.",
+        "film_information": "Dir. Abbas Kiarostami, France/Italy 2010, 106 min, PG",
+        "pricing": "£7/£5",
+        "tags": ["film"],
+        "private": False,
+        "roles": ["Keyholder", "Projectionist - DCP", "Box Office - Admission Tickets",
+                  "Bar Staff - Shift 1", "Usher - Fire Trained"],
+        "day_offset": 42,
+        "hour": 19,
+        "cancelled": True,
+        "confirmed": True,
+        "image_url": "https://images.pexels.com/photos/1659438/pexels-photo-1659438.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Outside Hire: Private Party",
+        "copy_summary": "Venue Space hired for a private event.",
+        "copy": "Venue Space booked for a private birthday party. Not open to the public.",
+        "pricing": "",
+        "tags": ["outside-hire"],
+        "private": False,
+        "outside_hire": True,
+        "booked_by": "External Booker",
+        "roles": ["Keyholder"],
+        "day_offset": 55,
+        "hour": 18,
+        "confirmed": True,
+        "image_url": "https://images.pexels.com/photos/3171837/pexels-photo-3171837.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Film: Portrait of a Lady on Fire (Unconfirmed)",
+        "copy_summary": "Céline Sciamma's exquisite 18th-century love story. Date pencilled in.",
+        "copy": "A painter is commissioned to produce a wedding portrait of a young woman "
+                "who refuses to pose. Dir. Céline Sciamma, France 2019, 122 min, 15.",
+        "film_information": "Dir. Céline Sciamma, France 2019, 122 min, 15",
+        "pricing": "£7/£5",
+        "tags": ["film"],
+        "private": False,
+        "roles": ["Keyholder", "Projectionist - DCP", "Box Office - Admission Tickets",
+                  "Bar Staff - Shift 1", "Usher - Fire Trained"],
+        "day_offset": 63,
+        "hour": 19,
+        "confirmed": False,
+        "image_url": "https://images.pexels.com/photos/269140/pexels-photo-269140.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Film: Toni Erdmann (Discounted Preview)",
+        "copy_summary": "Maren Ade's three-hour comedy about a father who won't stop.",
+        "copy": "A German father, concerned about his estranged daughter, follows her "
+                "to Bucharest and inserts himself into her corporate life. "
+                "Dir. Maren Ade, Germany 2016, 162 min, 15.",
+        "film_information": "Dir. Maren Ade, Germany 2016, 162 min, 15",
+        "pricing": "£5 preview price",
+        "tags": ["film"],
+        "private": False,
+        "roles": ["Keyholder", "Projectionist - DCP", "Box Office - Admission Tickets",
+                  "Bar Staff - Shift 1", "Usher - Fire Trained"],
+        "day_offset": 77,
+        "hour": 18,
+        "confirmed": True,
+        "discounted": True,
+        "image_url": "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Private: Safeguarding Training",
+        "copy_summary": "Internal safeguarding training for keyholders and facilitators.",
+        "copy": "Mandatory training for anyone taking on keyholder or facilitator roles. "
+                "Led by the safeguarding officer. Not open to the public.",
+        "tags": ["training-for-volunteers"],
+        "private": True,
+        "hide_in_programme": True,
+        "roles": ["Keyholder", "Facilitator"],
+        "day_offset": 90,
+        "hour": 10,
+        "confirmed": True,
+        "image_url": "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
 ]
 
-# Event templates — pre-defined event types selectable when creating a new event.
+# Event templates - pre-defined event types selectable when creating a new event.
 # (The "add event" UI form requires an EventTemplate to be chosen.)
 # Roles and tags reference names defined in ROLES and TAGS above.
 EVENT_TEMPLATES = [
@@ -669,7 +1518,7 @@ EVENT_TEMPLATES = [
 SAFER_SPACES_BODY = """
 <h2>Safer Spaces Statement</h2>
 <p>The Star and Shadow is committed to being a welcoming space for everyone.
-We take all concerns around safety, abuse, and wellbeing seriously — whether
+We take all concerns around safety, abuse, and wellbeing seriously - whether
 they affect our volunteers, audience members, or anyone in our community.
 All volunteers read our Safer Spaces Statement at induction.</p>
 <p>If you experience or witness something that concerns you, please come forward.
@@ -693,9 +1542,9 @@ Safeguarding Officer is Josephine Walker.</p>
 
 <h2>Further Resources</h2>
 <ul>
-<li>Rape Crisis Newcastle upon Tyne — 0800 035 2794</li>
-<li>National Male Survivors Helpline — 0808 800 5005</li>
-<li>Childline — 0800 1111</li>
+<li>Rape Crisis Newcastle upon Tyne - 0800 035 2794</li>
+<li>National Male Survivors Helpline - 0808 800 5005</li>
+<li>Childline - 0800 1111</li>
 <li>LGBT+ Switchboard</li>
 <li>GALOP (LGBTQ+ domestic violence support)</li>
 </ul>
@@ -704,20 +1553,20 @@ Safeguarding Officer is Josephine Walker.</p>
 WHO_ARE_WE_BODY = """
 <h2>About the Star and Shadow</h2>
 <p>The Star and Shadow Cinema is a volunteer-run community cinema based in
-Newcastle upon Tyne. We're not just a cinema — we're a workspace, a meeting
+Newcastle upon Tyne. We're not just a cinema - we're a workspace, a meeting
 space, an arts space, and a community hub.</p>
 <p>Everything we do is run by volunteers. There are no permanent paid staff.
 The building is collectively managed, programmed, and cared for by a community
 of around 200 active volunteers.</p>
 <p>We show independent and world cinema, host live music and performance, run
 workshops, and welcome groups who want to use the space. If you've never been,
-come along — the bar's open, the welcome's warm, and the programming is always
+come along - the bar's open, the welcome's warm, and the programming is always
 interesting.</p>
 <h2>How We Work</h2>
 <p>Decisions are made collectively. There's no boss. The cinema is governed by
 a combination of regular volunteer meetings, working groups, and a co-operative
 structure that gives every active volunteer a say in how the place is run.</p>
-<p>We believe that cinema — and culture more broadly — should be accessible to
+<p>We believe that cinema - and culture more broadly - should be accessible to
 everyone, regardless of income, background, or how much they already know about
 film. Our pricing reflects that: we keep tickets cheap and our bar is not a
 markup machine.</p>
@@ -727,9 +1576,9 @@ HOW_TO_VOLUNTEER_BODY = """
 <h2>How to Get Involved</h2>
 <p>The Star and Shadow is run entirely by volunteers. Whether you want to work
 behind the bar, operate the projector, help with events, or get involved in
-programming — there's a role for you.</p>
+programming - there's a role for you.</p>
 <h2>First Steps</h2>
-<p>Attend a <strong>Volunteer Induction</strong> — these run regularly and are
+<p>Attend a <strong>Volunteer Induction</strong> - these run regularly and are
 the starting point for all new volunteers. You'll meet people, learn how the
 building works, and find out what opportunities are available.</p>
 <p>Induction dates are listed on the <a href="/">programme page</a>.</p>
@@ -739,13 +1588,13 @@ signing up for roles on the rota. Training for most roles (bar, box office,
 projection) is hands-on and arranged through the rota.</p>
 <h2>Roles Available</h2>
 <ul>
-<li><strong>Keyholder</strong> — opens and closes the venue</li>
-<li><strong>Bar</strong> — bar staff, shadowing, and bar management</li>
-<li><strong>Box Office</strong> — tickets, memberships, and greeting</li>
-<li><strong>Projectionist</strong> — DCP, MP4/DVD, and shadowing</li>
-<li><strong>Facilitator</strong> — facilitating meetings and events</li>
-<li><strong>Programmer</strong> — proposing and booking events</li>
-<li><strong>Cleaner</strong> — keeping the building clean and welcoming</li>
+<li><strong>Keyholder</strong> - opens and closes the venue</li>
+<li><strong>Bar</strong> - bar staff, shadowing, and bar management</li>
+<li><strong>Box Office</strong> - tickets, memberships, and greeting</li>
+<li><strong>Projectionist</strong> - DCP, MP4/DVD, and shadowing</li>
+<li><strong>Facilitator</strong> - facilitating meetings and events</li>
+<li><strong>Programmer</strong> - proposing and booking events</li>
+<li><strong>Cleaner</strong> - keeping the building clean and welcoming</li>
 </ul>
 """
 
@@ -801,7 +1650,7 @@ class Command(BaseCommand):
             Showing.objects.all().delete()
             Event.objects.all().delete()
             EventTemplate.objects.all().delete()
-            Room.objects.filter(name__in=[r["name"] for r in ROOMS]).delete()
+            Room.objects.all().delete()  # wipe all, including any stray rooms not in ROOMS
             EventTag.objects.filter(read_only=False).delete()
             # Delete seed-generated media items (and their files)
             for mi in MediaItem.objects.filter(credit="seed_dev_data"):
@@ -952,7 +1801,7 @@ class Command(BaseCommand):
         for u in seed_users[1:3]:
             programmers_group.user_set.add(u)
 
-        # Rooms — create/update all 9 S&S spaces.
+        # Rooms - create/update all 9 S&S spaces.
         # update_or_create ensures is_primary is set correctly on re-runs.
         rooms_dict = {}
         for room_data in ROOMS:
@@ -971,6 +1820,21 @@ class Command(BaseCommand):
         anchor = now + datetime.timedelta(days=14)  # centre window 2 weeks out
 
         for event_data in EVENTS:
+            # Derive duration: explicit integer minutes > film_information parse > N(90, 20) clamped 30-240 min
+            if "duration" in event_data:
+                dur_minutes = event_data["duration"]
+            else:
+                fi = event_data.get("film_information", "")
+                fi_match = re.search(r'(\d+)\s*min', fi) if fi else None
+                if fi_match:
+                    dur_minutes = int(fi_match.group(1))
+                else:
+                    dur_minutes = int(max(30, min(240, round(random.gauss(90, 20)))))
+            dur_time = datetime.time(dur_minutes // 60, dur_minutes % 60)
+
+            # Derive terms: explicit > copy text (always >= 4 words for every seed event)
+            terms_text = event_data.get("terms") or event_data.get("copy", "")
+
             event, created = Event.objects.get_or_create(
                 name=event_data["name"],
                 defaults={
@@ -979,6 +1843,9 @@ class Command(BaseCommand):
                     "film_information": event_data.get("film_information", ""),
                     "pricing": event_data.get("pricing", ""),
                     "private": event_data.get("private", False),
+                    "outside_hire": event_data.get("outside_hire", False),
+                    "terms": terms_text,
+                    "duration": dur_time,
                 },
             )
 
@@ -1008,8 +1875,10 @@ class Command(BaseCommand):
                 start=showing_start,
                 defaults={
                     "room": event_room,
-                    "booked_by": "seed_dev_data",
-                    "confirmed": True,
+                    "booked_by": event_data.get("booked_by", "seed_dev_data"),
+                    "confirmed": event_data.get("confirmed", True),
+                    "cancelled": event_data.get("cancelled", False),
+                    "discounted": event_data.get("discounted", False),
                     "hide_in_programme": event_data.get("hide_in_programme", False),
                     "rota_notes": event_data.get("rota_notes", ""),
                 },
@@ -1192,7 +2061,7 @@ class Command(BaseCommand):
             )
         }
 
-        # Users (no password needed — these accounts are never logged into)
+        # Users (no password needed - these accounts are never logged into)
         new_users = []
         for i in to_create:
             u = User(
@@ -1335,7 +2204,7 @@ class Command(BaseCommand):
                     fill=tuple(max(0, c + 20) for c in bg_colour),
                 )
 
-                # Title text — wrap at ~40 chars
+                # Title text - wrap at ~40 chars
                 title = event.name
                 if len(title) > 40:
                     # Simple word-wrap
@@ -1400,7 +2269,7 @@ class Command(BaseCommand):
         try:
             site = Site.objects.filter(is_default_site=True).first()
             if not site:
-                self.stdout.write("  No Wagtail site configured — skipping CMS pages.")
+                self.stdout.write("  No Wagtail site configured - skipping CMS pages.")
                 return 0
             root_page = site.root_page
         except Exception as exc:
@@ -1472,7 +2341,7 @@ class Command(BaseCommand):
             important_info, "privacy-policy", "Privacy Policy", PRIVACY_POLICY_BODY.strip()
         )
 
-        # Extra top-level pages — added to reproduce Bug I (sidebar nav overflow).
+        # Extra top-level pages - added to reproduce Bug I (sidebar nav overflow).
         # On the live site there are enough sections that the volunteer login link
         # is pushed below the visible area on small/laptop screens because the
         # sidebar has no scroll mechanism.  These pages keep that condition visible
