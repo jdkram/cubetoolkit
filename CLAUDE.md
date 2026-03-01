@@ -71,6 +71,15 @@ The `s+s` branch is available locally for reference (`git checkout s+s`, or insp
 docker compose up --build
 ```
 
+> ⚠️ **Source is baked in — always rebuild after code changes.**
+> There is **no volume mount** for the source code. The files are copied into the image at build time.
+> Running `docker compose exec toolkit ...` on a running container will use the **old version** of any file you have just edited.
+> After *any* change to Python files, templates, or management commands, run:
+> ```bash
+> docker compose up --build -d
+> ```
+> before expecting to see the effect in the live dev site or via `manage.py` commands.
+
 **To create initial users and seed sample data after first boot:**
 ```bash
 docker compose exec toolkit /venv/bin/python3 manage.py configure_toolkit_users
