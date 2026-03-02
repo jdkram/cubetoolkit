@@ -2028,6 +2028,29 @@ In the rota edit view (or the event edit view — TBD based on 9.18 unified edit
 
 **Related:** 9.18 (unified event edit), 9.3 (rota notes UX)
 
+#### 9.26.1 EventLink templates — pre-populate links from event template 🟢 XS (2–4h)
+
+**Motivation:** Some recurring event types always use the same resource links. For example, a Creative Writing group always uses the same WhatsApp group URL, and a weekly film series always links to the same Nextcloud folder. Currently a programmer must manually add these links each time they create a new event, even if a template already captures the event's roles, copy, and rota notes.
+
+**Design:** Add an `EventTemplateLink` model that mirrors `EventLink` but belongs to an `EventTemplate` rather than an `Event`:
+
+```python
+class EventTemplateLink(models.Model):
+    template = models.ForeignKey(EventTemplate, on_delete=models.CASCADE, related_name="links")
+    label    = models.CharField(max_length=80)
+    url      = models.URLField(max_length=500, validators=[validate_event_link_url])
+    order    = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "pk"]
+```
+
+When a new `Event` is created from a template (in `Event.__init__` or wherever template defaults are applied), copy any `EventTemplateLink` records for that template into `EventLink` records on the new event. This mirrors how template roles are copied to rota entries. Max 3 links applies to the template too.
+
+**UI:** Add a link formset to the event template edit page (same progressive-reveal pattern as `edit_event_links.html`) so Panopticon and Programmers can manage template links alongside template roles.
+
+**Validation:** Use the same `validate_event_link_url` validator so template links are held to the same domain whitelist as event links.
+
 ---
 
 ### 9.21 Recurring events / clone-to-dates 🟡 M (16–30h)
