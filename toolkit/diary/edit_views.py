@@ -530,6 +530,7 @@ def add_event(request):
                 "start": event_start,
                 "duration": duration,
                 "room": room,
+                "booked_by": request.user.get_full_name() or request.user.username,
             }
         )
         context = {"form": form}
