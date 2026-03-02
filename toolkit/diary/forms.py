@@ -157,6 +157,14 @@ class MediaItemForm(forms.ModelForm):
         self.helper.label_class = "col-sm-2"
         self.helper.field_class = "col-sm-10"
 
+        guidance_url = getattr(settings, "ALT_TEXT_GUIDANCE_URL", None)
+        if guidance_url:
+            from django.utils.safestring import mark_safe
+            base = self.fields["alt_text"].help_text
+            self.fields["alt_text"].help_text = mark_safe(
+                f'{base} <a href="{guidance_url}" target="_blank" rel="noopener">Guide ↗</a>'
+            )
+
     class Meta:
         model = toolkit.diary.models.MediaItem
         widgets = {

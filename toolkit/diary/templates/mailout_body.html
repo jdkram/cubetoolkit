@@ -81,7 +81,7 @@
 {% with showing.event.media.first as media_item %}
     {% if media_item %}
  <img src="{{ site_url }}{{ showing.event.media.first.media_file|thumbnail_url:'indexview' }}"
- alt="Picture for event '{{ showing.event.name }}'">
+ alt="{% if media_item.alt_text %}{{ media_item.alt_text }}{% else %}Picture for event '{{ showing.event.name }}'{% endif %}">
     {% endif %}
 {% endwith %}
 

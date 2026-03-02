@@ -220,11 +220,23 @@ function hideAddShowingForm() {
     {% if media_item %}
     <a href="{% get_media_prefix %}{{ media_item.media_file }}">
       <img src="{{ media_item.media_file|thumbnail_url:'editpreview' }}"
-           alt="Picture for event {{ event.name }}">
+           alt="{% if media_item.alt_text %}{{ media_item.alt_text }}{% else %}Picture for event {{ event.name }}{% endif %}">
     </a>
     {% else %}
     <span class="text-muted">No image yet</span>
     {% endif %}
+    {% endwith %}
+  </dd>
+
+  <dt class="col-sm-3">Alt text
+    <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          title="Alternative text for screen readers and when images fail to load. Leave blank if no image is uploaded.">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">
+    {% with event.media.all.0 as media_item %}
+    {% if media_item and media_item.alt_text %}{{ media_item.alt_text }}
+    {% elif media_item %}<span class="text-muted">— (no alt text set for this image)</span>
+    {% else %}<span class="text-muted">—</span>{% endif %}
     {% endwith %}
   </dd>
 
@@ -238,6 +250,7 @@ function hideAddShowingForm() {
     {% elif media_item %}<span class="text-muted">— (no credit given for uploaded image)</span>
     {% else %}<span class="text-muted">—</span>{% endif %}
     {% endwith %}
+    <small class="text-muted d-block mt-1">⚠️ Please make sure you have the right to use any image you upload.{% if IMAGE_COPYRIGHT_GUIDANCE_URL %} See our <a href="{{ IMAGE_COPYRIGHT_GUIDANCE_URL }}" target="_blank" rel="noopener">image copyright guidance</a> for help finding freely-licensed images.{% endif %}</small>
   </dd>
 
   <dt class="col-sm-3">Description

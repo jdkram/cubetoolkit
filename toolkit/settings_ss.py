@@ -70,6 +70,10 @@ DAWN_OF_TIME = 1998
 # Set to None to hide the link entirely.
 IMAGE_COPYRIGHT_GUIDANCE_URL = "https://example.com/TODO-replace-with-nextcloud-url"  # TODO: replace with real URL
 
+# URL for alt text writing guidance shown alongside the alt text field on image
+# upload. Set to None to show the field without a link.
+ALT_TEXT_GUIDANCE_URL = None  # TODO: add URL when volunteer documentation exists
+
 ###############################################################################
 #
 # Below here are Django settings

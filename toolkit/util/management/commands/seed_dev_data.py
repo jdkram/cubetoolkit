@@ -2264,6 +2264,7 @@ class Command(BaseCommand):
                 media_file=f"diary/{filename}",
                 credit="seed_dev_data",
                 caption=event.name,
+                alt_text=f"Poster for {event.name}",
             )
             media_item.save()
             event.media.add(media_item)
