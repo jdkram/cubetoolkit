@@ -136,6 +136,12 @@ SHOW_ARCHIVE_IMAGES = True
 # Only used when SHOW_ARCHIVE_IMAGES = False. Format: "1 May 2018".
 IMAGES_START_DATE = None
 
+# Extra domains permitted in EventLink URLs, beyond the built-in whitelist
+# (riseup.net, nextcloud.com, nextcloud.org, chat.whatsapp.com, linktr.ee).
+# Each entry is a bare domain; subdomains are automatically accepted.
+# Example: EVENTLINK_EXTRA_ALLOWED_DOMAINS = ["files.starandshadow.org.uk"]
+EVENTLINK_EXTRA_ALLOWED_DOMAINS = []
+
 ###############################################################################
 #
 # Wagtail settings

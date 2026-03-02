@@ -28,6 +28,7 @@ from django.utils.html import escape
 from toolkit.diary.models import (
     Showing,
     Event,
+    EventLink,
     DiaryIdea,
     MediaItem,
     EventTemplate,
@@ -503,6 +504,34 @@ def clone_event(request, event_id):
         "source_event": source_event,
         "latest_showing": latest_showing,
         "form": form,
+    })
+
+
+@permission_required("toolkit.write")
+@require_http_methods(["GET", "POST"])
+def edit_event_links(request, event_id):
+    """Edit the (up to 3) resource links attached to an event.
+
+    Links are rendered as clickable chips on the rota view so volunteers can
+    quickly reach shared folders, crew chats, planning docs, etc.  Only URLs
+    from an approved domain whitelist are accepted (see validators.py).
+    """
+    event = get_object_or_404(Event, pk=event_id)
+
+    if request.method == "POST":
+        formset = diary_forms.EventLinkFormSet(request.POST, instance=event)
+        if formset.is_valid():
+            formset.save()
+            messages.success(request, "Event links saved.")
+            return HttpResponseRedirect(
+                reverse("edit-event-details-view", kwargs={"event_id": event.pk})
+            )
+    else:
+        formset = diary_forms.EventLinkFormSet(instance=event)
+
+    return render(request, "edit_event_links.html", {
+        "event": event,
+        "formset": formset,
     })
 
 

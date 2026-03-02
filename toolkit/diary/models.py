@@ -10,7 +10,7 @@ from django.db.models.query import QuerySet
 from django.utils.text import slugify
 from django.conf import settings
 
-from toolkit.diary.validators import validate_in_future
+from toolkit.diary.validators import validate_in_future, validate_event_link_url
 import toolkit.util.image as imagetools
 
 logger = logging.getLogger(__name__)
@@ -824,3 +824,38 @@ class PrintedProgramme(models.Model):
             )
             self.month = datetime.date(self.month.year, self.month.month, 1)
         return super().save(*args, **kwargs)
+
+
+class EventLink(models.Model):
+    """A named clickable link attached to an event (max 3 per event).
+
+    Used to surface shared resources — event folders, crew chat links, planning
+    docs, etc. — directly on the rota view so volunteers don't have to hunt for
+    them.  Only a curated domain whitelist is accepted at validation time to
+    prevent the rota becoming a phishing vector.
+    """
+
+    event = models.ForeignKey(
+        Event,
+        on_delete=models.CASCADE,
+        related_name="links",
+    )
+    label = models.CharField(
+        max_length=80,
+        help_text="Short name shown on the link chip, e.g. 'Event folder' or 'Crew chat'.",
+    )
+    url = models.URLField(
+        max_length=500,
+        validators=[validate_event_link_url],
+    )
+    order = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Display order (lower numbers first).",
+    )
+
+    class Meta:
+        db_table = "EventLinks"
+        ordering = ["order", "pk"]
+
+    def __str__(self):
+        return f"{self.label} ({self.event_id})"

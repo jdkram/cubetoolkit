@@ -425,6 +425,40 @@ class CloneEventForm(forms.Form):
     )
 
 
+class EventLinkForm(forms.ModelForm):
+    """Single event resource link (label + URL). Used inside EventLinkFormSet."""
+
+    class Meta:
+        model = toolkit.diary.models.EventLink
+        fields = ("label", "url")
+        widgets = {
+            "label": forms.TextInput(
+                attrs={"placeholder": "e.g. Event folder, Crew chat…", "class": "form-control form-control-sm"}
+            ),
+            "url": forms.URLInput(
+                attrs={"placeholder": "https://…", "class": "form-control form-control-sm"}
+            ),
+        }
+        labels = {
+            "label": "Link name",
+            "url": "URL",
+        }
+
+
+# Inline formset: up to 3 EventLink rows per Event.
+# extra=3 so Django pads to max_num=3 with blank rows; validate_max=True so
+# attempts to submit >3 links are rejected rather than silently truncated.
+EventLinkFormSet = inlineformset_factory(
+    toolkit.diary.models.Event,
+    toolkit.diary.models.EventLink,
+    form=EventLinkForm,
+    extra=3,
+    max_num=3,
+    validate_max=True,
+    can_delete=True,
+)
+
+
 class NewEventForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

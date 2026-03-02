@@ -281,6 +281,27 @@ function hideAddShowingForm() {
 
 <hr class="mt-2 mb-4">
 
+{# ── Resource links ────────────────────────────────────────────────────────── #}
+<div class="d-flex align-items-center mb-2">
+  <h3 class="mb-0 mr-3">Resource links</h3>
+  <a href="{% url 'edit-event-links' event.pk %}" class="btn btn-sm btn-outline-secondary">Edit links →</a>
+</div>
+{% with links=event.links.all %}
+{% if links %}
+<div class="mb-3 d-flex flex-wrap" style="gap:0.4em;">
+  {% for link in links %}
+  <a href="{{ link.url }}" target="_blank" rel="noopener noreferrer"
+     class="btn btn-sm btn-outline-info"
+     data-toggle="tooltip" title="{{ link.url }}">{{ link.label }}</a>
+  {% endfor %}
+</div>
+{% else %}
+<p class="text-muted small mb-3">No resource links yet. Add links to shared folders, crew chats, planning docs, etc. — they appear as clickable chips on the rota view (visible only to logged-in volunteers).</p>
+{% endif %}
+{% endwith %}
+
+<hr class="mt-0 mb-4">
+
 {# ── Showings ──────────────────────────────────────────────────────────────── #}
 <h3 class="mb-3">Showings</h3>
 
