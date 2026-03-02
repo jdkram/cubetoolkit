@@ -2442,11 +2442,12 @@ class EventLinkTests(DiaryTestsMixin, TestCase):
         )
         self.assertEqual(self.e1.links.count(), 1)
 
-    def test_post_self_hosted_nextcloud_path_accepted(self):
-        """A URL containing /nextcloud/ in the path passes even for unknown domain."""
+    @override_settings(EVENTLINK_EXTRA_ALLOWED_DOMAINS=["nextcloud.xtreamlab.net"])
+    def test_post_extra_allowed_domain_accepted(self):
+        """A domain in EVENTLINK_EXTRA_ALLOWED_DOMAINS is accepted."""
         data = self._mgmt()
         data.update(self._form(0, label="Notes",
-                               url="https://our.server.example.org/nextcloud/s/abc"))
+                               url="https://nextcloud.xtreamlab.net/s/abc123"))
         data.update(self._form(1))
         data.update(self._form(2))
         response = self.client.post(self.url, data)
@@ -2455,6 +2456,18 @@ class EventLinkTests(DiaryTestsMixin, TestCase):
             reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk}),
         )
         self.assertEqual(self.e1.links.count(), 1)
+
+    @override_settings(EVENTLINK_EXTRA_ALLOWED_DOMAINS=[])
+    def test_post_unknown_domain_rejected_when_not_in_extra(self):
+        """A domain not in any whitelist is rejected even if path looks Nextcloud-like."""
+        data = self._mgmt()
+        data.update(self._form(0, label="Notes",
+                               url="https://some.random.host/nextcloud/s/abc"))
+        data.update(self._form(1))
+        data.update(self._form(2))
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.e1.links.count(), 0)
 
     def test_post_linktr_ee_accepted(self):
         data = self._mgmt()
