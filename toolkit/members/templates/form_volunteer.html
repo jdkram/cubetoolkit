@@ -6,56 +6,122 @@
 {% block css %}
 {{ block.super }}
 <style>
-img {
-    border: 0;
+/* ── Two-column layout ─────────────────────────────────────────── */
+#vol-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    align-items: flex-start;
 }
-th {
-    vertical-align: top;
-}
-#roles ul {
-    -moz-columns: 3;
-    -webkit-columns: 3;
-    columns: 3;
-}
-#roles li {
-    list-style-type: none;
-    margin: 5px;
-}
-.standard_role {
-    font-weight: bold;
-}
-#vol_form, #mem_form {
-    display: inline-block;
-    width: 400px;
-    vertical-align: top;
-}
+#vol-left  { flex: 2 1 320px; min-width: 0; }
+#vol-right { flex: 1 1 240px; min-width: 0; }
+
+/* ── Field widths ──────────────────────────────────────────────── */
 input[type="text"], input[type="tel"], input[type="email"], textarea {
-    width: 290px;
+    width: 100%;
+    max-width: 340px;
+    box-sizing: border-box;
 }
-div#webcampreview {
-    display: none;
+#vol-right input[type="text"] { max-width: 200px; }
+
+/* ── Section cards ─────────────────────────────────────────────── */
+.vol-section {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
 }
-canvas {
-    display: none;
+.vol-section h4 {
+    margin: 0 0 0.6rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.3rem;
 }
-#enablecapturebutton {
-    display: none;
+
+/* ── Danger zone ───────────────────────────────────────────────── */
+.danger-zone {
+    border-color: #c00;
 }
-.training-notes {
-    display: none;
+.danger-zone h4 {
+    color: #c00;
+    border-bottom-color: #fcc;
 }
-#form-errors {
-    color: red;
-    display: none;
+.danger-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0.4rem 0;
 }
-.training-notes td {
-    white-space: pre-line;
+.danger-row label {
+    margin: 0;
+    font-weight: 500;
+    cursor: pointer;
+}
+.danger-row input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+.field-tip {
+    display: inline-block;
+    width: 1.1em; height: 1.1em;
+    line-height: 1.1em;
+    text-align: center;
+    border-radius: 50%;
+    background: #888;
+    color: #fff;
+    font-size: 0.72em;
+    font-weight: bold;
+    cursor: default;
+    vertical-align: middle;
+}
+
+/* ── Key-facts table in right column ──────────────────────────── */
+.vol-facts td:first-child {
+    color: #666;
+    white-space: nowrap;
+    padding-right: 0.6rem;
+    font-size: 0.9em;
 }
 .needs-training {
     color: red;
     font-weight: bold;
-    font-size: 110%;
 }
+
+/* ── Photo ─────────────────────────────────────────────────────── */
+#photo-wrap { margin-bottom: 0.5rem; }
+#photo-wrap img { border: 1px solid #ccc; border-radius: 3px; }
+#webcampreview { display: none; }
+canvas { display: none; }
+#enablecapturebutton { display: none; }
+
+/* ── Notes (full width) ────────────────────────────────────────── */
+#vol-notes { margin-top: 0; }
+#vol-notes textarea { width: 100%; max-width: 100%; min-height: 80px; }
+
+/* ── Roles ─────────────────────────────────────────────────────── */
+#roles ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    list-style: none;
+    padding: 0;
+    margin: 0.25rem 0 0.5rem;
+}
+#roles li {
+    margin: 2px 4px;
+}
+.standard_role { font-weight: bold; }
+.role-section-note {
+    font-size: 0.8em;
+    color: #888;
+    margin: 0 0 0.3rem;
+}
+
+/* ── Training record ───────────────────────────────────────────── */
+.training-notes { display: none; }
+.training-notes td { white-space: pre-line; }
+#form-errors { color: red; display: none; }
 </style>
 {% endblock %}
 
@@ -63,16 +129,16 @@ canvas {
 {{ block.super }}
 <script src="{{ STATIC_URL }}members/js/webcam.js"></script>
 <script src="{{ STATIC_URL }}members/js/form_volunteer.js"></script>
-<script >
+<script>
 $(document).ready(function() {
     setupPage();
+    $('[data-toggle="tooltip"]').tooltip();
 {% if volunteer.id %}
     setupTraining({
         csrf_token: '{{ csrf_token }}',
-        add_training_record_url: '{% url "add-volunteer-training-record" volunteer_id=volunteer.id%}',
+        add_training_record_url: '{% url "add-volunteer-training-record" volunteer_id=volunteer.id %}',
         delete_training_record_url: '{% url "delete-volunteer-training-record" training_record_id=9999 %}'
     });
-
 {% endif %}
 });
 </script>
@@ -85,140 +151,202 @@ $(document).ready(function() {
 {% csrf_token %}
 <p><input type="submit" value="Save changes"> <a href="{% url "view-volunteer-list" %}">Cancel</a></p>
 
-<div id="mem_form">
-<h4>Contact details</h4>
-<table>
-{{ mem_form.as_table }}
-</table>
-</div>
+<div id="vol-grid">
 
-{% if VENUE.show_user_management and user_form %}
-<div id="user_form">
-<h4>User account</h4>
-<table>
-{{ user_form.as_table }}
-</table>
-</div>
-{% endif %}
+  <!-- ── LEFT: contact details ────────────────────────────────── -->
+  <div id="vol-left">
+    <div class="vol-section">
+      <h4>Contact details</h4>
+      <table>{{ mem_form.as_table }}</table>
+    </div>
+  </div><!-- #vol-left -->
 
-<div id="vol_form">
-<h4>Volunteer facts</h4>
-<table>
-    <tr><td></td><td>
+  <!-- ── RIGHT: photo · facts · danger zone ───────────────────── -->
+  <div id="vol-right">
+
+    <div class="vol-section">
+      <h4>Profile photo</h4>
+      <div id="photo-wrap">
         <div id="webcampreview">
-            <i>Experimental - may not work correctly on all browsers</i>
-            <video id="video"></video>
-            <button id="capturebutton">Take photo</button>
+          <i>Experimental — may not work on all browsers</i>
+          <video id="video"></video>
+          <button id="capturebutton">Take photo</button>
         </div>
         {% if volunteer.portrait %}
-        <a href="{{ volunteer.portrait.url }}">
-            <img src="{{ volunteer.portrait|thumbnail_url:'portrait' }}" id="photo" alt="Photo of {{ volunteer.member.name }}" width="75"></a><br>
+          <a href="{{ volunteer.portrait.url }}">
+            <img src="{{ volunteer.portrait|thumbnail_url:'portrait' }}" id="photo" alt="Photo of {{ volunteer.member.name }}" width="75">
+          </a><br>
         {% else %}
-        <img src="{{ default_mugshot }}" id="photo" alt="No photo yet" width="75"><br>
+          <img src="{{ default_mugshot }}" id="photo" alt="No photo yet" width="75"><br>
         {% endif %}
         <button id="enablecapturebutton">Take photo using webcam</button>
         <b id="webcamerror"></b>
         <canvas id="canvas"></canvas>
         {{ vol_form.image_data }}
-    </td></tr>
-    <tr><th>{{ vol_form.portrait.label_tag }}</th>
-        <td> {{ vol_form.portrait.errors }}{{ vol_form.portrait }}</td></tr>
-    <tr><td>Inducted:</td>
-{% if volunteer.is_old %}
-        <td>Before {{ dawn_of_toolkit|date:"d/m/Y" }} (when the toolkit was rebooted)</td></tr>
-{% else %}
-        <td>{{ volunteer.created_at|date:"d/m/Y" }}</td></tr>
-{% endif %}
-    <tr><td>GDPR opt-in:</td>
-        <td>{{ volunteer.member.gdpr_opt_in|date:"d/m/Y" }}</td></tr>
-{% with volunteer.latest_general_training_record as general_training %}
-    {% if not general_training %}
-    <tr><td class="needs-training" colspan="2">No General Safety Training!</td></tr>
-    {% elif general_training.has_expired %}
-    <tr><td>Safety trained on:</td><td class="needs-training">{{ general_training.training_date|date:"d/m/Y" }} (out of date!)</td></tr>
-    {% else %}
-    <tr><td>Safety trained on:</td><td>{{ general_training.training_date|date:"d/m/Y" }}</td></tr>
+      </div>
+      <div>{{ vol_form.portrait.errors }}{{ vol_form.portrait }}</div>
+    </div>
+
+    <div class="vol-section">
+      <h4>Key dates</h4>
+      <table class="vol-facts">
+        <tr>
+          <td>Inducted:</td>
+          <td>
+            {% if volunteer.is_old %}
+              Before {{ dawn_of_toolkit|date:"d/m/Y" }}
+            {% else %}
+              {{ volunteer.created_at|date:"d/m/Y" }}
+            {% endif %}
+          </td>
+        </tr>
+        <tr>
+          <td>GDPR opt-in:</td>
+          <td>{{ volunteer.member.gdpr_opt_in|date:"d/m/Y" }}</td>
+        </tr>
+        {% with volunteer.latest_general_training_record as gt %}
+          {% if not gt %}
+            <tr><td colspan="2" class="needs-training">No General Safety Training!</td></tr>
+          {% elif gt.has_expired %}
+            <tr>
+              <td>Safety trained:</td>
+              <td class="needs-training">{{ gt.training_date|date:"d/m/Y" }} (out of date!)</td>
+            </tr>
+          {% else %}
+            <tr>
+              <td>Safety trained:</td>
+              <td>{{ gt.training_date|date:"d/m/Y" }}</td>
+            </tr>
+          {% endif %}
+        {% endwith %}
+        <tr>
+          <td>Last updated:</td>
+          <td>{{ volunteer.updated_at|date:"d/m/Y" }}</td>
+        </tr>
+      </table>
+    </div>
+
+    {% if VENUE.show_user_management and user_form %}
+    <div class="vol-section danger-zone">
+      <h4>Permissions</h4>
+      <div class="danger-row">
+        {{ user_form.is_active }}
+        <label for="{{ user_form.is_active.id_for_label }}">Active</label>
+        <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          title="Inactive accounts cannot log in. Use this instead of deleting the account.">ⓘ</span>
+      </div>
+      <div class="danger-row">
+        {{ user_form.programmer }}
+        <label for="{{ user_form.programmer.id_for_label }}">Programmer</label>
+        <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          title="Can create and edit events, showings, roles, and tags. Cannot access volunteer or member personal data.">ⓘ</span>
+      </div>
+      <div class="danger-row">
+        {{ user_form.is_superuser }}
+        <label for="{{ user_form.is_superuser.id_for_label }}">Panopticon access</label>
+        <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          title="Full access: CMS editing, all volunteer and member personal data (names, emails, addresses, notes), mailout sending. Assign with care.">ⓘ</span>
+      </div>
+      <hr style="margin:0.6rem 0 0.4rem;">
+      <div style="font-size:0.85em; color:#666;">
+        Username: <strong>{{ user_form.instance.username|default:"—" }}</strong>
+        &nbsp;<a href="#" onclick="this.closest('.danger-zone').querySelector('.username-row').style.display='block'; this.style.display='none'; return false;">change</a>
+        <div class="username-row" style="display:none; margin-top:0.3rem;">
+          {{ user_form.username.errors }}{{ user_form.username }}
+        </div>
+      </div>
+    </div>
     {% endif %}
-{% endwith %}
-    <tr><td>Updated:</td>
-        <td>{{ volunteer.updated_at|date:"d/m/Y" }}</td></tr>
-    <tr><th>{{ vol_form.notes.label_tag }}</th>
-        <td> {{ vol_form.notes.errors }}{{ vol_form.notes }}</td></tr>
-</table>
+
+  </div><!-- #vol-right -->
+
+</div><!-- #vol-grid -->
+
+<!-- ── Notes (full width) ──────────────────────────────────────── -->
+<div class="vol-section" id="vol-notes">
+  <h4>Notes</h4>
+  {{ vol_form.notes.errors }}{{ vol_form.notes }}
 </div>
-<div id="roles">
-    {{ vol_form.roles.errors }}
-    <ul>
-    {% for c in vol_form.roles.field.queryset %}
-    {% ifchanged %}</ul><h3>{{ c.standard|yesno:"Event roles,Other roles" }}</h3><ul>{% endifchanged %}
-    <li{% if c.standard %} class="standard_role"{% endif %}><label for="{{vol_form.roles.auto_id}}_{{ forloop.counter0 }}"><input id="{{vol_form.roles.auto_id}}_{{ forloop.counter0 }}" type="checkbox"  value={{c.id}} name="{{ vol_form.prefix }}-roles" {% if c.id in vol_form.roles.value %}checked {% endif %}/> {{ c }}</label></li>
-    {% endfor %}
-    </ul>
+
+<!-- ── Event & other roles (full width) ────────────────────────── -->
+<div class="vol-section" id="roles">
+  {{ vol_form.roles.errors }}
+  {% for c in vol_form.roles.field.queryset %}
+    {% ifchanged c.standard %}
+      {% if not forloop.first %}</ul>{% endif %}
+      <h4>{{ c.standard|yesno:"Event roles,Other roles" }}</h4>
+      {% if c.standard %}
+      <p class="role-section-note">Shown on the rota for each event. <em>Programmer</em> here is a scheduling label — diary edit access is set separately in the Permissions section above.</p>
+      {% endif %}
+      <ul>
+    {% endifchanged %}
+    <li{% if c.standard %} class="standard_role"{% endif %}>
+      <label for="{{ vol_form.roles.auto_id }}_{{ forloop.counter0 }}">
+        <input id="{{ vol_form.roles.auto_id }}_{{ forloop.counter0 }}"
+               type="checkbox" value="{{ c.id }}" name="{{ vol_form.prefix }}-roles"
+               {% if c.id in vol_form.roles.value %}checked{% endif %}> {{ c }}
+      </label>
+    </li>
+  {% endfor %}
+  </ul>
 </div>
+
 <p><input type="submit" value="Save changes"> <a href="{% url "view-volunteer-list" %}">Cancel</a></p>
 </form>
+
+<!-- ── Training record (outside main form) ─────────────────────── -->
 <a name="training-record"></a>
 {% if training_record_form %}
 <div id="training-record">
-    <h3>Training record</h3>
-    <form action="" method="POST" enctype="multipart/form-data">
-    <table class="table">
-        <tr>
-            <th>Role</th>
-            <th>Date of training</th>
-            <th>Trainer</th>
-            <th>Notes</th>
-            <th>Delete</th>
-        </tr>
+  <h3>Training record</h3>
+  <form action="" method="POST" enctype="multipart/form-data">
+  <table class="table">
+    <tr>
+      <th>Role</th>
+      <th>Date of training</th>
+      <th>Trainer</th>
+      <th>Notes</th>
+      <th>Delete</th>
+    </tr>
     {% for record in volunteer.training_records.all %}
-        <tr>
-            {% if record.training_type == record.ROLE_TRAINING %}
-            <td>{{ record.role }}</td>
-            {% elif record.training_type == record.GENERAL_TRAINING %}
-            <td>{{ record.GENERAL_TRAINING_DESC }}</td>
-            {% else %}
-            <td>????</td>
-            {% endif %}
-            <td>{{ record.training_date|date:"d/m/Y" }}</td>
-            <td>{{ record.trainer }}</td>
-            <td>{% if record.notes %}<a class="toggle-notes" href="#">(+)</a>{% endif %}</td>
-            <td>
-                <a class="delete-training" title="delete" href="{% url "delete-volunteer-training-record" training_record_id=record.id %}">[X]</a>
-            </td>
-        </tr>
-        <tr class="training-notes">
-            <th>Notes:</th>
-            <td colspan="4">
-                {{ record.notes }}
-            </td>
-        </tr>
+    <tr>
+      {% if record.training_type == record.ROLE_TRAINING %}
+        <td>{{ record.role }}</td>
+      {% elif record.training_type == record.GENERAL_TRAINING %}
+        <td>{{ record.GENERAL_TRAINING_DESC }}</td>
+      {% else %}
+        <td>????</td>
+      {% endif %}
+      <td>{{ record.training_date|date:"d/m/Y" }}</td>
+      <td>{{ record.trainer }}</td>
+      <td>{% if record.notes %}<a class="toggle-notes" href="#">(+)</a>{% endif %}</td>
+      <td><a class="delete-training" title="delete" href="{% url "delete-volunteer-training-record" training_record_id=record.id %}">[X]</a></td>
+    </tr>
+    <tr class="training-notes">
+      <th>Notes:</th>
+      <td colspan="4">{{ record.notes }}</td>
+    </tr>
     {% empty %}
-        <tr>
-            <td colspan="5">No training records for this volunteer</td>
-        </tr>
+    <tr><td colspan="5">No training records for this volunteer</td></tr>
     {% endfor %}
-        <tr id="new-record-row"><th colspan="5">New record</th></tr>
-        <tr id="form-errors">
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-        </tr>
-        <tr>
-            <td>{{ training_record_form.role }}</td>
-            <td>{{ training_record_form.training_date }}</td>
-            <td>{{ training_record_form.trainer }}</td>
-            <td><a class="toggle-notes" href="#">(+)</a></td>
-            <td></td>
-        </tr>
-        <tr class="training-notes">
-            <th>Notes:</th>
-            <td colspan="4" id="training-notes">{{ training_record_form.notes }}</td>
-        </tr>
-        <tr><td colspan="5"><input type="submit" value="Add training record"></td></tr>
-    </table>
-    </form>
+    <tr id="new-record-row"><th colspan="5">New record</th></tr>
+    <tr id="form-errors">
+      <td></td><td></td><td></td><td></td><td></td>
+    </tr>
+    <tr>
+      <td>{{ training_record_form.role }}</td>
+      <td>{{ training_record_form.training_date }}</td>
+      <td>{{ training_record_form.trainer }}</td>
+      <td><a class="toggle-notes" href="#">(+)</a></td>
+      <td></td>
+    </tr>
+    <tr class="training-notes">
+      <th>Notes:</th>
+      <td colspan="4" id="training-notes">{{ training_record_form.notes }}</td>
+    </tr>
+    <tr><td colspan="5"><input type="submit" value="Add training record"></td></tr>
+  </table>
+  </form>
 </div>
 {% endif %}
 {% endblock %}
