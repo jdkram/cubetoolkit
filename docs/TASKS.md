@@ -2030,7 +2030,7 @@ In the rota edit view (or the event edit view — TBD based on 9.18 unified edit
 
 #### 9.26.1 EventLink templates — pre-populate links from event template 🟢 XS (2–4h)
 
-**Motivation:** Some recurring event types always use the same resource links. For example, a Creative Writing group always uses the same WhatsApp group URL, and a weekly film series always links to the same Nextcloud folder. Currently a programmer must manually add these links each time they create a new event, even if a template already captures the event's roles, copy, and rota notes.
+**Motivation:** Some recurring event types always use the same resource links. For example, a Creative Writing group always uses the same WhatsApp group URL, and a weekly Monday meeting always links to the same Nextcloud for agendas / minutes. Currently a programmer must manually add these links each time they create a new event, even if a template already captures the event's roles, copy, and rota notes, and this'll get forgotten in daily practice.
 
 **Design:** Add an `EventTemplateLink` model that mirrors `EventLink` but belongs to an `EventTemplate` rather than an `Event`:
 
@@ -2393,6 +2393,26 @@ The data model (Event → multiple Showings/Bookings → single Room) is sound. 
 
 ---
 
+### 9.35.1 Toolkit homepage: informative dashboard vs. link directory 🟡 M (16–30h)
+
+**Context:** The `/toolkit/` homepage is currently a link directory — it lists all the tools in logical sections, but provides no live information. For coordinators who log in daily, a *dashboard* view would be more useful: upcoming events at a glance, rota vacancies, outstanding tasks, etc.
+
+**Problem:** These two mental models are in tension:
+- **Directory** — "Where do I find X?" — best for infrequent users or onboarding.
+- **Dashboard** — "What needs attention right now?" — best for regulars.
+
+**Options:**
+1. **Split landing page** — first-time or infrequent users land on the directory; regulars land on a configurable dashboard. Too complex.
+2. **Directory with status widgets** — keep the link directory but add a compact status row at the top (e.g. "3 events this week · 5 rota vacancies"). Low cost, good value.
+3. **Replace with dashboard** — show upcoming events, vacancies, and quick-action buttons. Bury the full link directory behind a "More…" link.
+4. **User-configurable** — allow each user to choose their preferred landing. Nice, but high cost.
+
+**Recommendation:** Option 2 as a first step. A single `<div class="alert">` at the top of `/toolkit/` showing: events in the next 7 days, open rota vacancies, and (for programmers) events missing copy. No new views — just add a compact query to `ToolkitIndexView.get_context_data()`.
+
+**Related:** 9.38 (last-login display), 9.36 (vacancies email tool)
+
+---
+
 ### 9.36 Vacancies page as email generation tool 🔵 S (6–12h)
 
 **Context:**
@@ -2732,6 +2752,84 @@ The three-tier model (Volunteer / Programmer / Panopticon) already existed. What
 
 **What to do with the answers:**
 Once ratified, update SPEC.md §2 to remove the "needs ratification" note, and document the agreed policy. If any decisions change, adjust the permission gates in `edit_views.py` and `toolkit_index.html` accordingly.
+
+---
+
+### 9.50 — Volunteer self-service profile edit from nav 🟢 XS (1–3h)
+
+**Problem:** On the live S&S site, volunteers can click their own name in the top nav bar to edit their personal details (name display, email, etc.). This feature existed on the `s+s` branch but was not ported. Currently logged-in volunteers have no quick route to their own profile — they either have to know the URL or ask a Panopticon user.
+
+**How s+s did it** (in `toolkit/index/templates/base_admin.html`):
+
+- Panopticon users: `<a href="{% url "edit-volunteer" user.volunteer.pk %}">{{ user.volunteer.member.name }}</a>` — links to the full volunteer edit form
+- Regular volunteers: `<a href="{% url "edit-member" user.volunteer.member.pk %}?k={{ user.volunteer.member.mailout_key }}">{{ user.volunteer.member.name }}</a>` — links to the member contact-details form (name, email, mailout opt-in), using the `mailout_key` for anonymous-style auth without requiring staff access to the member admin
+
+**Proposed approach for sns_2026_overhaul:**
+Since volunteers now have proper Django user accounts (`VENUE.show_user_management=True`), the `mailout_key` shortcut is less important — the logged-in user IS authenticated. Options:
+
+1. **Simple:** Link both tiers to `edit-volunteer/<pk>` (the full volunteer edit page, which already restricts fields by permission level).
+2. **Tighter:** Link regular volunteers to a new lightweight self-service page that only shows name + email + opt-in fields, omitting roles/training/permission fields that only Panopticon should edit.
+
+Option 1 is simplest and sufficient for now. The volunteer edit form already hides Panopticon-only fields (the `UserForm` section is gated on `show_user_management`).
+
+**Implementation (option 1):**
+
+In `base_admin.html`, before the Log out button, add:
+
+```html
+{% if user.volunteer.pk %}
+<li class="nav-item">
+  <a class="nav-link" href="{% url "edit-volunteer" user.volunteer.pk %}">
+    <span class="fa fa-user"></span> {{ user.volunteer.member.name }}
+  </a>
+</li>
+{% endif %}
+```
+
+- Guard with `{% if user.volunteer.pk %}` so accounts without a linked volunteer profile (e.g. a bare Django admin account) don't break.
+- No backend changes needed.
+
+**Edge cases:**
+
+- User with no linked volunteer: guard handles this (no link shown).
+- Panopticon editing their own profile: they already have access to `edit-volunteer`; no difference.
+- Gate on `VENUE.show_user_management`: the volunteer edit page already exists on both branches. The nav link is harmless even on the Cube instance.
+
+---
+
+### 9.51 — Working groups subscribe/unsubscribe page 🔴 XL
+
+**What exists on the live S&S site:**
+
+`https://www.starandshadow.org.uk/toolkit/working-groups/` serves a page with a short intro and a form with three fields:
+
+- **Full Name**
+- **Email**
+- **List** — a dropdown of working group mailing lists (e.g. Technical, Bar, Programming, Volunteer rota, etc.), with a "daily digest summary format" option
+- Submit buttons: **Subscribe** and **Unsubscribe**
+
+This feature is **not in Wagtail** — it lives under the `/toolkit/` URL space which Wagtail does not manage. It is likely a bespoke Django view + template, probably backed by Mailman or a similar mailing list manager, or possibly by the existing `toolkit.members` mailout infrastructure.
+
+**What we don't know yet (needs investigation with current S&S devs):**
+
+1. What mailing list backend does this talk to? (Mailman, Listmonk, direct SMTP to a list address, something else?)
+2. Where is the list of working groups configured — hardcoded in a template, in a Django model, or in the mailing list backend itself?
+3. Is there member/subscriber data in the existing system that needs migrating?
+4. Is the form authenticated (logged-in users only) or anonymous (anyone with the URL)?
+5. Does the current form do any deduplication against the `Member` table, or is it entirely separate?
+
+**Likely implementation path (once the above is answered):**
+
+1. Decide backend: re-use the existing `toolkit.members` mailout system (which already holds mailing lists), or integrate with an external list manager.
+2. Create a `WorkingGroup` model (name, description, list address or slug, display order, active flag).
+3. Create subscribe/unsubscribe view — probably under `/toolkit/working-groups/` — with a simple form. Anonymous access is fine (mirrors the live behaviour).
+4. Wire up to the chosen backend to actually manage subscriptions.
+5. Seed the working group list from the live site's current groups.
+6. If member data needs migrating from the old backend: write a one-off management command.
+
+**Why this is XL:** The biggest unknowns are the backend integration and data migration. The Django/template work itself is probably 🔵 S once those are settled; the coordination and migration work could be 🟠 L on its own.
+
+**Blocker:** Needs a conversation with the current S&S developers / sysadmin before implementation can be scoped properly.
 
 ---
 
