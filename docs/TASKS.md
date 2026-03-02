@@ -2595,4 +2595,49 @@ Using `TimeField` (not `DateTimeField`) avoids redundancy with `start` — both 
 
 ---
 
+### 9.47 — Rota role display order 🔵 S (design needed first)
+
+**Context:** Roles on the live rota and on the template edit page are currently sorted alphabetically by role name. In practice, programmers want operational roles to appear in a specific order — e.g. Keyholder first, then Projectionist, then Bar Staff, then ad-hoc roles at the bottom. There is no way to control this today.
+
+**Where the sort happens today:**
+
+- `rota_form_factory` (the rota edit form): `Role.objects.order_by("name")` — hardcoded alphabetical
+- `EventTemplateRole.Meta.ordering`: `["role__name"]` — alphabetical
+- `RotaEntry.Meta.ordering`: `["role", "rank"]` — role PK order (effectively creation order), then rank within that role
+- The rota view template iterates role groups in whatever order the queryset delivers them
+
+**Design options:**
+
+**Option A — Global `Role.sort_order` field (like `EventTag.sort_order`)**
+Add a `sort_order: IntegerField` to `Role`. Drag-and-drop reordering on the existing roles edit page (`/edit/roles/`). All uses of `Role.objects.order_by("name")` become `order_by("sort_order", "name")`. Simple and consistent across all templates and showings.
+
+- Pro: one place to maintain order; survives to live rota without any RotaEntry changes
+- Con: no per-template override — "Film" and "Gig" templates may want different role prominence
+
+**Option B — Per-template `EventTemplateRole.sort_order`**
+Add `sort_order` to `EventTemplateRole`. Drag-and-drop on the template detail page. When `reset_rota_to_default()` creates RotaEntry objects, it copies the sort_order onto a new `RotaEntry.sort_order` field so the live rota preserves the template's chosen order.
+
+- Pro: each template can have a custom role order
+- Con: requires a new field on `RotaEntry` too; adds complexity; order diverges between templates for the same role
+
+**Option C — Hybrid: global order as default, template can override**
+`Role.sort_order` (global default) + `EventTemplateRole.sort_order` (nullable override). If the template slot has a sort_order set, use it; otherwise fall back to `Role.sort_order`. Complex to maintain.
+
+**Recommended approach:** Option A first. Add `Role.sort_order` and drag-and-drop on the roles page. This fixes the rota display order globally and is consistent. If per-template ordering is needed later, Option B can be layered on top.
+
+**Design question for collective:** Is global ordering sufficient, or do different event types genuinely need different role orderings? (e.g. does "Keyholder" always come first regardless of event type?)
+
+**Implementation (Option A):**
+
+1. Add `sort_order: IntegerField(default=0)` to `Role` — migration
+2. Add drag-and-drop reordering to `form_edit_roles.html` (same pattern as `edit_event_tags.html` — jQuery UI sortable)
+3. Change `Role.Meta.ordering` from `["name"]` to `["sort_order", "name"]`
+4. Change `EventTemplateRole.Meta.ordering` from `["role__name"]` to `["role__sort_order", "role__name"]`
+5. Change `RotaEntry.Meta.ordering` from `["role", "rank"]` to `["role__sort_order", "role__name", "rank"]`
+6. `rota_form_factory`: remove explicit `order_by("name")` (Meta ordering takes over)
+
+Seed data: assign `sort_order` values to the 29 roles in `seed_dev_data` — operational/safety roles first (Keyholder, Projectionist, Sound), then guest-facing (Bar Staff, Box Office, Usher), then support/volunteer (Extra Hands, Trainee, etc).
+
+---
+
 *Completed tasks: [ARCHIVE.md](ARCHIVE.md)*

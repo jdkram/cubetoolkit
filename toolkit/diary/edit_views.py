@@ -524,6 +524,15 @@ def add_event(request):
                 content_type="text/plain",
             )
 
+        # Pre-select template if ?template=<pk> was passed (e.g. from template list page)
+        template_pk = request.GET.get("template")
+        initial_template = None
+        if template_pk:
+            try:
+                initial_template = EventTemplate.objects.get(pk=int(template_pk))
+            except (ValueError, EventTemplate.DoesNotExist):
+                pass
+
         # Create form, render template:
         form = diary_forms.NewEventForm(
             initial={
@@ -531,6 +540,7 @@ def add_event(request):
                 "duration": duration,
                 "room": room,
                 "booked_by": request.user.get_full_name() or request.user.username,
+                "event_template": initial_template,
             }
         )
         context = {"form": form}
@@ -877,36 +887,53 @@ def view_event_field(request, field, year=None, month=None, day=None):
 
 @permission_required("toolkit.write")
 def edit_event_templates(request):
-    # View for editing event templates.
-    # GET: Render multiple forms (using a formset)
-    # POST: Update formset
+    """List all event templates with links to per-template edit pages."""
+    templates = EventTemplate.objects.prefetch_related("role_slots__role", "tags").all()
+    return render(request, "edit_event_templates.html", {"templates": templates})
 
-    event_template_formset = modelformset_factory(
-        EventTemplate,
-        fields=("name", "roles", "tags", "pricing"),
-        can_delete=True,
-        widgets={
-            "roles": ChosenSelectMultiple(),
-            "tags": ChosenSelectMultiple(),
-        },
-    )
+
+@permission_required("toolkit.write")
+def edit_event_template_detail(request, template_id=None):
+    """Create or edit a single event template."""
+    if template_id is not None:
+        event_template = get_object_or_404(EventTemplate, pk=template_id)
+    else:
+        event_template = None
 
     if request.method == "POST":
-        formset = event_template_formset(request.POST)
-        if formset.is_valid():
-            logger.info("Event templates updated")
-            formset.save()
-            # Reset formset, so get another blank one at the
-            # end, deleted ones disappear, etc.
-            formset = event_template_formset()
+        if "delete" in request.POST and event_template is not None:
+            name = event_template.name
+            event_template.delete()
+            logger.info("Event template '%s' deleted", name)
             messages.add_message(
-                request, messages.SUCCESS, "Event templates updated"
+                request, messages.SUCCESS, f"Deleted template '{name}'"
             )
-    else:
-        formset = event_template_formset()
-    context = {"formset": formset}
+            return HttpResponseRedirect(reverse("edit_event_templates"))
 
-    return render(request, "edit_event_templates.html", context)
+        form = diary_forms.EventTemplateForm(request.POST, instance=event_template)
+        roles_formset = diary_forms.EventTemplateRoleFormSet(
+            request.POST, instance=event_template or EventTemplate()
+        )
+
+        if form.is_valid() and roles_formset.is_valid():
+            saved = form.save()
+            roles_formset.instance = saved
+            roles_formset.save()
+            logger.info("Event template '%s' saved", saved.name)
+            messages.add_message(
+                request, messages.SUCCESS, f"Saved template '{saved.name}'"
+            )
+            return HttpResponseRedirect(reverse("edit_event_templates"))
+    else:
+        form = diary_forms.EventTemplateForm(instance=event_template)
+        roles_formset = diary_forms.EventTemplateRoleFormSet(instance=event_template)
+
+    context = {
+        "form": form,
+        "roles_formset": roles_formset,
+        "event_template": event_template,
+    }
+    return render(request, "edit_event_template_detail.html", context)
 
 
 @permission_required("toolkit.write")

@@ -1,75 +1,77 @@
 {% extends "base_admin.html" %}
 
-{% block title %}
-Editing Event types
-{% endblock %}
-
-{% block script %}
-{{ block.super }}
-{{ formset.media }}
-{% endblock %}
+{% block title %}Event templates{% endblock %}
 
 {% block css %}
 {{ block.super }}
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/messages.css">
 <style type="text/css">
-  body {
-      background: lightgray;
-  }
-  .template_form {
-      border: thin dotted gray;
-      padding: 5px;
-      margin: 2%;
-      width: 400px;
-      display: inline-block;
-      background: white;
-  }
-  .template_form table {
-      border-collapse: collapse;
-   }
   .header {
-      background: white;
-      margin: 2% 2% 5px 2%;
-      padding: 5px 10px 5px 10px;
+      margin-bottom: 1rem;
   }
   .warn {
       color: red;
   }
-  .new_template {
-      background: pink;
+  table.template-list {
+      width: 100%;
+      border-collapse: collapse;
   }
-  select {
-      width: 330px;
+  table.template-list th,
+  table.template-list td {
+      padding: 6px 10px;
+      text-align: left;
+      border-bottom: 1px solid #dee2e6;
   }
-  .errorlist li {
-      color: red;
-      list-style: none url("{{ STATIC_URL }}img/message_error.png") inside;
+  table.template-list th {
+      background: #f8f9fa;
+  }
+  table.template-list td.roles,
+  table.template-list td.tags {
+      font-size: 0.85em;
+      color: #555;
   }
 </style>
 {% endblock %}
 
 {% block body %}
 <div class="header">
-<h1>Event templates</h1>
-<p>These templates are applied when an event is created: editing them will <b>not</b> affect existing events</p>
-<p>To add a new template, edit the blank template at the bottom of the page</p>
-<p class="warn">Changes cannot be automatically undone, please take care</p>
-{% include "messages.html" %}
+  <h1>Event templates</h1>
+  <p>Templates are applied when a new event is created — they pre-populate roles, tags, pricing, copy, terms, and rota notes.</p>
+  <p class="warn">Changes affect future events only; existing events are not modified.</p>
+  {% include "messages.html" %}
+  <a href="{% url 'add_event_template' %}" class="btn btn-primary btn-sm">+ Add new template</a>
 </div>
 
-<form method="post">
-{% csrf_token %}
-{{ formset.management_form }}
-{% for form in formset %}
-<div class="template_form {% if not form.id.value %}new_template{% endif %}">
-    <h2>{{ form.name.value|default_if_none:"New event template" }}</h2>
-<table>
-{{ form.as_table }}
+{% if templates %}
+<table class="template-list">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Roles</th>
+      <th>Tags</th>
+      <th>Pricing</th>
+      <th>Private</th>
+      <th>Outside hire</th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for tmpl in templates %}
+    <tr>
+      <td><a href="{% url 'edit_event_template_detail' tmpl.pk %}">{{ tmpl.name }}</a></td>
+      <td class="roles">{% for slot in tmpl.role_slots.all %}{{ slot.role.name }}{% if slot.count > 1 %} &times;{{ slot.count }}{% endif %}{% if not forloop.last %}, {% endif %}{% empty %}&mdash;{% endfor %}</td>
+      <td class="tags">{% for t in tmpl.tags.all %}{{ t.name }}{% if not forloop.last %}, {% endif %}{% empty %}&mdash;{% endfor %}</td>
+      <td>{{ tmpl.pricing|default:"&mdash;" }}</td>
+      <td>{% if tmpl.private %}Yes{% else %}No{% endif %}</td>
+      <td>{% if tmpl.outside_hire %}Yes{% else %}No{% endif %}</td>
+      <td><a href="{% url 'edit_event_template_detail' tmpl.pk %}">Edit</a></td>
+      <td><a href="{% url 'add-event' %}?template={{ tmpl.pk }}" class="btn btn-outline-primary btn-sm">+ New event</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
 </table>
-<input type="submit" value="Save all changes to all templates" />
-</div>
-{% endfor %}
-</form>
-
+{% else %}
+<p>No templates yet. <a href="{% url 'add_event_template' %}">Add the first one.</a></p>
+{% endif %}
 {% endblock %}
-
