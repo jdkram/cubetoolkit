@@ -91,7 +91,7 @@ setup_page(true);
         <div class="event_image">
             {% with media_item=event.media.all.0 event_slug=event.name|slugify %}
             {% if media_item %}<a href="{% url "single-event-view-with-slug" event_id=event.id event_slug=event_slug %}">
-                <img src="{{ media_item.media_file|thumbnail_url:'indexview' }}" alt="Picture for event {{ event.name }}"></a>
+                <img src="{{ media_item.media_file|thumbnail_url:'indexview' }}" alt="{% if media_item.alt_text %}{{ media_item.alt_text }}{% else %}Picture for event {{ event.name }}{% endif %}"></a>
             {% endif %}
             {% if event.tags.all %}
                 <span class="tags">
