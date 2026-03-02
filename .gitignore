@@ -50,3 +50,6 @@ sample_html_from_current_site/
 SPEC.pdf
 make_pdf.py
 Film*.txt
+
+# --- Local claude config ---
+.claude/
