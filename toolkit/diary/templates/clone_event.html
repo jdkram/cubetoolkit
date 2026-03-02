@@ -1,0 +1,65 @@
+{% extends "form_base.html" %}
+{% load crispy_forms_tags %}
+{% load static %}
+{% block title %}Clone event: {{ source_event.name }}{% endblock %}
+
+{% block script %}
+{{ block.super }}
+{{ form.media }}
+{% endblock %}
+
+{% block body %}
+<h1>Clone event as new event</h1>
+
+{% include "bs_messages.html" %}
+
+<p class="text-muted mb-3">
+  This will create a <strong>new event</strong> pre-loaded with the copy,
+  summary, terms, notes, pricing, rota structure, and tags from
+  <strong>{{ source_event.name }}</strong>.
+  The image is not copied &mdash; upload a fresh one for the new event.
+  The ticket link is not copied &mdash; you will need to add it once it&rsquo;s
+  set up.
+</p>
+
+<div class="card mb-3">
+  <div class="card-header">Content being copied from source</div>
+  <div class="card-body">
+    <dl class="row mb-0" style="font-size:0.9em;">
+      <dt class="col-sm-3">Name</dt>
+      <dd class="col-sm-9">{{ source_event.name }}</dd>
+
+      {% if source_event.copy_summary %}
+      <dt class="col-sm-3">Copy summary</dt>
+      <dd class="col-sm-9"><em>{{ source_event.copy_summary|truncatewords:30 }}</em></dd>
+      {% endif %}
+
+      {% if source_event.terms %}
+      <dt class="col-sm-3">Terms</dt>
+      <dd class="col-sm-9 text-muted">{{ source_event.terms|truncatewords:15 }}&hellip;</dd>
+      {% endif %}
+
+      {% if latest_showing %}
+      <dt class="col-sm-3">Rota cloned from</dt>
+      <dd class="col-sm-9">{{ latest_showing.start|date:"D j M Y, H:i" }}</dd>
+      {% else %}
+      <dt class="col-sm-3">Rota</dt>
+      <dd class="col-sm-9 text-muted">No showings on source event &mdash; rota will be reset to template defaults.</dd>
+      {% endif %}
+    </dl>
+  </div>
+</div>
+
+<form method="post">
+  {% csrf_token %}
+  {% crispy form %}
+  <div class="mt-3">
+    <button type="submit" class="btn btn-primary">Clone as new event</button>
+    <a href="{% url 'edit-event-details-view' source_event.pk %}"
+       class="btn btn-secondary ml-2">Cancel</a>
+  </div>
+</form>
+
+<p class="mt-4"><a href="{% url 'cancel-edit' %}">&larr; Back to diary</a></p>
+
+{% endblock %}

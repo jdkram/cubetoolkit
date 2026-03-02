@@ -19,6 +19,7 @@ from toolkit.diary.models import (
     DiaryIdea,
     EventTemplate,
     MediaItem,
+    RotaEntry,
 )
 
 import toolkit.diary.edit_prefs
@@ -64,6 +65,7 @@ class ViewSecurity(DiaryTestsMixin, TestCase):
         "members-mailout": {},
         "queue-members-mailout": {},
         "add-printed-programme": {},
+        "clone-event": {"event_id": "4"},
     }
 
     only_read_required = {
@@ -2212,3 +2214,129 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
     @patch("django.utils.timezone.now")
     def test_valid_query_multiroom_enabled(self, now_patch):
         self._common_test_valid_query(now_patch, True)
+
+
+class CloneEventTests(DiaryTestsMixin, TestCase):
+    """Tests for the clone_event view (POST /diary/edit/event/id/<pk>/clone/)."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="admin", password="T3stPassword!")
+        # e4 is a rich event with two showings, tags, terms, notes etc.
+        self.url = reverse("clone-event", kwargs={"event_id": self.e4.pk})
+
+    @patch("django.utils.timezone.now")
+    def test_get_returns_form(self, now_patch):
+        now_patch.return_value = self._fake_now
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "clone_event.html")
+        # Source event name pre-filled
+        self.assertContains(response, self.e4.name)
+
+    @override_settings(MULTIROOM_ENABLED=False)
+    @patch("django.utils.timezone.now")
+    def test_post_creates_new_event(self, now_patch):
+        now_patch.return_value = self._fake_now
+
+        response = self.client.post(self.url, data={
+            "event_name": "Community Kitchen (May)",
+            "start": "15/09/2013 19:00",
+            "booked_by": "Jane",
+        })
+        new_event = Event.objects.get(name="Community Kitchen (May)")
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": new_event.pk}),
+        )
+        # Scalar fields copied from source
+        self.assertEqual(new_event.copy_summary, self.e4.copy_summary)
+        self.assertEqual(new_event.copy, self.e4.copy)
+        self.assertEqual(new_event.terms, self.e4.terms)
+        self.assertEqual(new_event.notes, self.e4.notes)
+        self.assertEqual(new_event.film_information, self.e4.film_information)
+        self.assertEqual(new_event.pricing, self.e4.pricing)
+        self.assertEqual(new_event.pre_title, self.e4.pre_title)
+        self.assertEqual(new_event.post_title, self.e4.post_title)
+        self.assertEqual(new_event.outside_hire, self.e4.outside_hire)
+        self.assertEqual(new_event.private, self.e4.private)
+        # Compare duration via DB-fetched source to ensure both are time objects
+        self.assertEqual(new_event.duration, Event.objects.get(pk=self.e4.pk).duration)
+        self.assertEqual(new_event.template, self.e4.template)
+        # Ticket link NOT copied
+        self.assertEqual(new_event.ticket_link, "")
+        # One showing created, unconfirmed
+        showings = list(new_event.showings.all())
+        self.assertEqual(len(showings), 1)
+        self.assertEqual(showings[0].booked_by, "Jane")
+        self.assertFalse(showings[0].confirmed)
+
+    @override_settings(MULTIROOM_ENABLED=False)
+    @patch("django.utils.timezone.now")
+    def test_post_copies_tags(self, now_patch):
+        now_patch.return_value = self._fake_now
+
+        self.client.post(self.url, data={
+            "event_name": "Community Kitchen (June)",
+            "start": "15/09/2013 19:00",
+            "booked_by": "Jane",
+        })
+        new_event = Event.objects.get(name="Community Kitchen (June)")
+        source_tag_pks = set(self.e4.tags.values_list("pk", flat=True))
+        new_tag_pks = set(new_event.tags.values_list("pk", flat=True))
+        self.assertEqual(source_tag_pks, new_tag_pks)
+
+    @override_settings(MULTIROOM_ENABLED=False)
+    @patch("django.utils.timezone.now")
+    def test_post_clones_rota_from_latest_showing(self, now_patch):
+        """Rota is cloned from the source event's latest showing."""
+        now_patch.return_value = self._fake_now
+        # Give e4s3 (the earlier showing) a rota entry on Role 1.
+        role_1 = Role.objects.get(id=1)
+        RotaEntry(showing=self.e4s3, role=role_1, required=1).save()
+
+        self.client.post(self.url, data={
+            "event_name": "Community Kitchen (July)",
+            "start": "15/09/2013 19:00",
+            "booked_by": "Jane",
+        })
+        new_event = Event.objects.get(name="Community Kitchen (July)")
+        new_showing = new_event.showings.first()
+        # e4s4 is the latest showing; it has no rota entries, so the new
+        # showing should reset to template defaults (e4 has no template, so
+        # no roles expected).
+        self.assertEqual(new_showing.roles.count(), 0)
+
+    @override_settings(MULTIROOM_ENABLED=False)
+    @patch("django.utils.timezone.now")
+    def test_post_start_in_past_rejected(self, now_patch):
+        now_patch.return_value = self._fake_now
+
+        response = self.client.post(self.url, data={
+            "event_name": "Clone in the past",
+            "start": "01/01/2000 19:00",
+            "booked_by": "Jane",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Event.objects.filter(name="Clone in the past").exists())
+
+    @override_settings(MULTIROOM_ENABLED=False)
+    @patch("django.utils.timezone.now")
+    def test_post_missing_name_rejected(self, now_patch):
+        now_patch.return_value = self._fake_now
+
+        response = self.client.post(self.url, data={
+            "event_name": "",
+            "start": "15/09/2013 19:00",
+            "booked_by": "Jane",
+        })
+        self.assertEqual(response.status_code, 200)
+        # No new event created
+        self.assertEqual(Event.objects.filter(name="").count(), 0)
+
+    @patch("django.utils.timezone.now")
+    def test_get_404_for_unknown_event(self, now_patch):
+        now_patch.return_value = self._fake_now
+        url = reverse("clone-event", kwargs={"event_id": 99999})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)

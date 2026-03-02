@@ -415,6 +415,99 @@ def update_showing_status(request, showing_id):
 
 @permission_required("toolkit.write")
 @require_http_methods(["GET", "POST"])
+def clone_event(request, event_id):
+    """Clone an existing event as a brand-new event.
+
+    Copies all text/config fields (copy, copy_summary, terms, notes,
+    film_information, pricing, pre_title, post_title, outside_hire, private,
+    duration, template) and all tags to the new event.  The first showing's
+    rota is cloned from the source event's latest showing.  Media (images)
+    are not copied — the programmer uploads a fresh image for the new event.
+    """
+    source_event = get_object_or_404(Event, pk=event_id)
+    all_showings = list(source_event.showings.order_by("start"))
+    latest_showing = all_showings[-1] if all_showings else None
+
+    if request.method == "POST":
+        form = diary_forms.CloneEventForm(request.POST)
+        if form.is_valid():
+            # Build the new event *without* passing template as a kwarg so
+            # that Event.__init__ doesn't try to pull defaults from a
+            # potentially-None template — we're copying everything explicitly.
+            new_event = Event(
+                name=form.cleaned_data["event_name"],
+                duration=source_event.duration,
+                outside_hire=source_event.outside_hire,
+                private=source_event.private,
+                pre_title=source_event.pre_title,
+                post_title=source_event.post_title,
+                pricing=source_event.pricing,
+                film_information=source_event.film_information,
+                copy=source_event.copy,
+                copy_summary=source_event.copy_summary,
+                terms=source_event.terms,
+                notes=source_event.notes,
+                # Ticket link is date-specific — leave blank so programmer
+                # notices it needs updating.
+            )
+            # Set template separately to avoid __init__ auto-population
+            new_event.template = source_event.template
+            new_event.save()
+            # Copy tags from source event
+            for tag in source_event.tags.all():
+                new_event.tags.add(tag)
+
+            new_showing = Showing(
+                event=new_event,
+                start=form.cleaned_data["start"],
+                booked_by=form.cleaned_data["booked_by"],
+                confirmed=False,
+            )
+            if settings.MULTIROOM_ENABLED:
+                new_showing.room = form.cleaned_data["room"]
+            new_showing.save()
+            new_showing.clone_or_reset_rota(latest_showing)
+
+            messages.success(
+                request,
+                "Cloned '{}' as new event '{}' with showing on {}.".format(
+                    source_event.name,
+                    new_event.name,
+                    timezone.localtime(new_showing.start).strftime("%d %b %Y, %H:%M"),
+                ),
+            )
+            return HttpResponseRedirect(
+                reverse("edit-event-details-view", kwargs={"event_id": new_event.pk})
+            )
+    else:
+        # Pre-fill the form with sensible defaults from the source event
+        suggested_start = None
+        suggested_room = None
+        suggested_booked_by = ""
+        if latest_showing:
+            suggested_start = latest_showing.start + datetime.timedelta(weeks=1)
+            if settings.MULTIROOM_ENABLED:
+                suggested_room = latest_showing.room_id
+            suggested_booked_by = latest_showing.booked_by
+
+        form = diary_forms.CloneEventForm(
+            initial={
+                "event_name": source_event.name,
+                "start": suggested_start,
+                "room": suggested_room,
+                "booked_by": suggested_booked_by,
+            }
+        )
+
+    return render(request, "clone_event.html", {
+        "source_event": source_event,
+        "latest_showing": latest_showing,
+        "form": form,
+    })
+
+
+@permission_required("toolkit.write")
+@require_http_methods(["GET", "POST"])
 def add_event(request):
     # Called GET, with a "date" parameter of the form day-month-year:
     #     returns 'form_new_event_and_showing' with given date filled in.

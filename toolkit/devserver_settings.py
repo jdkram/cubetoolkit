@@ -37,15 +37,18 @@ TEMPLATES[0]["OPTIONS"]["debug"] = True
 
 ALLOWED_HOSTS = ("127.0.0.1", "localhost", "0.0.0.0")
 
-# Django toolbar things:
+# Django toolbar things (only if installed — not present in the Docker image):
 INTERNAL_IPS = ("127.0.0.1",)
-DEBUG_TOOLBAR_CONFIG = {
-    "INTERCEPT_REDIRECTS": False,
-}
-
-MIDDLEWARE.append("debug_toolbar.middleware.DebugToolbarMiddleware")
-INSTALLED_APPS = list(INSTALLED_APPS)
-INSTALLED_APPS.append("debug_toolbar")
+try:
+    import debug_toolbar  # noqa: F401
+    DEBUG_TOOLBAR_CONFIG = {
+        "INTERCEPT_REDIRECTS": False,
+    }
+    MIDDLEWARE.append("debug_toolbar.middleware.DebugToolbarMiddleware")
+    INSTALLED_APPS = list(INSTALLED_APPS)
+    INSTALLED_APPS.append("debug_toolbar")
+except ImportError:
+    pass
 
 CRISPY_FAIL_SILENTLY = False
 

@@ -1031,41 +1031,49 @@ reminders) but can mislead when notes contain date-specific volunteer messages
 **Recommended next step:** Option 2 — the inline warning is ten lines of
 template code and closes the most likely surprise for current users.
 
-#### 9.10.7 Port `add-showing` clone view from `s+s` branch 🔵 S (4–8h)
+#### 9.10.7 Clone event as new event 🔵 S (4–8h)
 
-**Context:** The `s+s` branch has a fully-featured "Clone booking" block on
-the showing edit page (`form_showing.html`). It lets the user pick a new date
-and immediately clones the showing (carrying the rota, rota notes, and booking
-details). On `master` this view was never ported; the showing edit page
-currently has no direct clone form — only a plain text link to the event
-details page where "Add a booking" is a rough approximation.
+**Context (revised 2026-03-02):** The original plan was to port the `s+s`
+"Clone booking" block from `form_showing.html`, which added a new *Showing*
+to the same *Event*. After reviewing real usage, the dominant use case turns
+out to be different: programmers clone an old event to reuse its **copy,
+copy_summary, terms, notes, rota_notes, and rota structure** when creating a
+new, distinct event — e.g. Community Kitchen next month, or a recurring film
+series. Templates (9.18.1) cover the rota and structure half, but an event's
+specific 25-word pitch (required by *The Crack* / *NARC* per 4.5) and
+distributor terms live on the past Event record, not in a template.
 
-**What the `s+s` branch has (audit via `git show s+s:...`):**
-
-- URL: `add-showing` — `POST /diary/edit/event/id/<pk>/add/` with query param
-  `?copy_from=<showing_id>`
-- View: reads the source showing, creates a new `Showing` with the cloned
-  start date (from `CloneShowingForm`), calls `clone_or_reset_rota(source)`
-- Template block: "Clone booking" section at the top of `form_showing.html`
-  with the event name, a date/time picker pre-filled with tomorrow's date,
-  and a Clone / Cancel action pair
-- `CloneShowingForm` in `forms.py` already exists on `master` (it was ported
-  as part of the `s+s` audit) but the URL and view were not
+The "Add a showing" section on the Event Hub already handles adding extra
+dates to the *same* event (same programme listing, same poster). Clone-as-new-
+event is the missing complement: create a whole new Event record pre-loaded
+with content from the source.
 
 **Scope:**
 
-1. Add `add-showing` URL and view to `diary/urls.py` and `edit_views.py`
-2. Pass `clone_showing_form` and `clone_showing_start` into the
-   `edit_showing` view context (already computed for `view_event_privatedetails`)
-3. Add the Clone booking block to `form_showing.html` above the Delete block,
-   using `datetime-local` + flatpickr (matching the Bug F fix, not the old
-   text input on `s+s`)
-4. Replace the current "Add another date" plain-text link with this block
+1. Add `CloneEventForm` to `diary/forms.py` — four fields: `event_name`
+   (pre-filled from source), `start` (DateTimeField + flatpickr, pre-filled
+   to source's latest showing start + 7 days), `room` (only if
+   `MULTIROOM_ENABLED`, pre-filled from source), `booked_by` (pre-filled from
+   source's latest showing).
+2. Add `clone_event` view (`GET`/`POST`) at
+   `GET /diary/edit/event/id/<pk>/clone/` — on `GET` renders a confirmation
+   form; on `POST` creates a new `Event` copying all scalar text/config
+   fields (`copy`, `copy_summary`, `terms`, `notes`, `film_information`,
+   `pricing`, `ticket_link`, `pre_title`, `post_title`, `outside_hire`,
+   `private`, `duration`, `template`), copies tags, creates one `Showing`,
+   and calls `new_showing.clone_or_reset_rota(source_latest_showing)`. Media
+   (images) is NOT copied — the programmer uploads a new image for the new
+   event.
+3. Add a "Clone as new event →" button to the Event Hub (below the showing
+   cards, above "Add a showing"), linking to the clone form.
+4. After successful POST, redirect to the new Event Hub.
 
-**Ordering:** Clone block → Delete block, both below the main edit form
-(matching the user-requested Edit → Clone → Delete priority order).
+**Fields intentionally NOT cloned:** media/images (venue-specific; requires
+new upload), `legacy_id`, `legacy_copy`, `ticket_link` (distributor link is
+date-specific — pre-fill blank so programmer notices it needs updating).
 
-**Related:** 9.10.2 (rota notes cloned), 9.10.6 (inline warning), 9.18.3 (button order)
+**Related:** 9.10.2 (rota notes cloned), 9.10.6 (inline warning on cloned
+rota notes), 9.21 (multi-date batch clone — builds on this)
 
 ### 9.11 Notification alternatives to email 🟡 M (20–40h consideration + implementation varies)
 
