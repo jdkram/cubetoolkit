@@ -5,32 +5,41 @@ Details for: {{ showing.event.name }}
 {% endblock %}
 {% block script %}
 {{ block.super }}
-{{ rota_form.media }}
 <script type="text/javascript">
 $(document).ready(function() {
         $('#delete_form').bind("submit", function() {
             return confirm("Delete this booking: are you sure?\nThis cannot be undone!\nMaybe you want to mark it as cancelled?");
         });
-        $('input.rota_count').spinner({ min: 0, max: {{ max_role_assignment_count }}});
+});
+</script>
+<script>
+"use strict";
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("input.rota_count").forEach(function (el) {
+        function highlight() {
+            el.classList.toggle("rota-active", parseInt(el.value, 10) > 0);
+        }
+        highlight();
+        el.addEventListener("input", highlight);
+        el.addEventListener("change", highlight);
+    });
 });
 </script>
 {% endblock %}
 {% block css %}
 {{ block.super }}
 <style>
-    @import url('{{ STATIC_URL }}css/lib/ui.spinner.css');
     .asteriskField { display: none; }
     span.sub {
         color: gray;
     }
     input.rota_count {
-        width: 40px;
+        width: 60px;
     }
-    select {
-        height: 120pt;
-        width: 70%
+    input.rota_count.rota-active {
+        background-color: #fffbcc;
     }
-    #rota span.helptext {
+#rota span.helptext {
         display: block;
         float: right;
         width: 70%;
@@ -89,16 +98,22 @@ $(document).ready(function() {
   <input class="btn btn-primary" type="submit" value="Update" />
   </p>
   <h3>Rota</h3>
+  <h4>Standard roles</h4>
   <ul class="rota">
-        {% for rota_entry in rota_form %}
-            {% if rota_entry.name != "other_roles" %}
-    <li>{{ rota_entry.as_field_group }}</li>
-            {% endif %}
-        {% endfor %}
+    {% for rota_entry in rota_form %}
+      {% if rota_entry.name|slice:":5" == "role_" %}
+        <li>{{ rota_entry.as_field_group }}</li>
+      {% endif %}
+    {% endfor %}
   </ul>
-  <h4>{{ rota_form.other_roles.label_tag }}</h4>
-
-  <p>{{ rota_form.other_roles }}</p>
+  <h4>Other roles</h4>
+  <ul class="rota">
+    {% for rota_entry in rota_form %}
+      {% if rota_entry.name|slice:":6" == "other_" %}
+        <li>{{ rota_entry.as_field_group }}</li>
+      {% endif %}
+    {% endfor %}
+  </ul>
 
   <h3>Rota notes</h3>
   <div class="form-group">
