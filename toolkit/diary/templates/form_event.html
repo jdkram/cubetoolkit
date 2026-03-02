@@ -241,7 +241,7 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
 <form action="{% url "edit-event-details" event_id=event.id %}" method="post" enctype="multipart/form-data">
     {% crispy event_form %}
 
-    {# Break-even calculator — purely advisory, nothing here is submitted #}
+    {# Break-even calculator — advisory only, not submitted. Inputs use form="be-scratchpad" to decouple from main form validation. #}
     <div class="card mb-3" id="be-card">
         <div class="card-header p-2" id="be-toggle" data-toggle="collapse" data-target="#be-collapse" aria-expanded="false" aria-controls="be-collapse">
             <span class="be-arrow">&#9658;</span>
@@ -255,55 +255,55 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
                         <div class="be-section-heading">Costs</div>
                         <div class="form-group row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-hire">Hire cost</label>
-                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-hire" value="0" min="0" step="1"></div></div>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-hire" value="0" min="0" step="1" form="be-scratchpad"></div></div>
                         </div>
                         <div class="form-group row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-technical">Technical costs</label>
-                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-technical" value="0" min="0" step="1"></div></div>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-technical" value="0" min="0" step="1" form="be-scratchpad"></div></div>
                         </div>
                         <div class="form-group row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-artist-mg">Artist fee / min. guarantee</label>
-                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-artist-mg" value="0" min="0" step="1"></div><small class="form-text text-muted">Flat fee for gigs; or MG for film licences</small></div>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-artist-mg" value="0" min="0" step="1" form="be-scratchpad"></div><small class="form-text text-muted">Flat fee for gigs; or MG for film licences</small></div>
                         </div>
                         <div class="form-group row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-artist-pct">Artist&rsquo;s gross %</label>
-                            <div class="col-sm-7"><div class="input-group input-group-sm"><input type="number" class="form-control" id="be-artist-pct" value="0" min="0" max="100" step="5"><div class="input-group-append"><span class="input-group-text">%</span></div></div><small class="form-text text-muted">If fee &amp; % both set: whichever is greater applies</small></div>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><input type="number" class="form-control" id="be-artist-pct" value="0" min="0" max="100" step="5" form="be-scratchpad"><div class="input-group-append"><span class="input-group-text">%</span></div></div><small class="form-text text-muted">If fee &amp; % both set: whichever is greater applies</small></div>
                         </div>
                         <div class="form-group row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-accommodation">Accommodation</label>
-                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-accommodation" value="0" min="0" step="1"></div></div>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-accommodation" value="0" min="0" step="1" form="be-scratchpad"></div></div>
                         </div>
                         <div class="form-group row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-travel">Travel</label>
-                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-travel" value="0" min="0" step="1"></div></div>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-travel" value="0" min="0" step="1" form="be-scratchpad"></div></div>
                         </div>
                         <div class="form-group row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-food">Volunteer food</label>
-                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-food" value="0" min="0" step="1"></div></div>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-food" value="0" min="0" step="1" form="be-scratchpad"></div></div>
                         </div>
                         <div class="form-group row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-other">Other</label>
-                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-other" value="0" min="0" step="1"></div></div>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-other" value="0" min="0" step="1" form="be-scratchpad"></div></div>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="be-section-heading">Room &amp; pricing</div>
                         <div class="form-group row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-capacity">Room capacity</label>
-                            <div class="col-sm-7"><div class="input-group input-group-sm"><input type="number" class="form-control" id="be-capacity" value="80" min="1" step="1"><div class="input-group-append"><span class="input-group-text">people</span></div></div></div>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><input type="number" class="form-control" id="be-capacity" value="80" min="1" step="1" form="be-scratchpad"><div class="input-group-append"><span class="input-group-text">people</span></div></div></div>
                         </div>
                         <div class="form-group row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-ticket-price">Ticket price</label>
-                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-ticket-price" value="5" min="0.01" step="0.50"></div><small class="form-text text-muted">For gigs, use the average expected ticket price</small></div>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-ticket-price" value="5" min="0" step="0.01" form="be-scratchpad"></div><small class="form-text text-muted">For gigs, use the average expected ticket price</small></div>
                         </div>
                         <div class="be-section-heading mt-2">Bar / caf&eacute; revenue</div>
                         <div class="form-group row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-bar-drinks">Avg. drinks per person</label>
-                            <div class="col-sm-7"><div class="input-group input-group-sm"><input type="number" class="form-control" id="be-bar-drinks" value="0" min="0" step="0.5"></div><small class="form-text text-muted">Leave 0 to ignore bar revenue</small></div>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><input type="number" class="form-control" id="be-bar-drinks" value="0" min="0" step="0.5" form="be-scratchpad"></div><small class="form-text text-muted">Leave 0 to ignore bar revenue</small></div>
                         </div>
                         <div class="form-group row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-bar-profit">Avg. profit per drink</label>
-                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-bar-profit" value="1.50" min="0" step="0.10"></div><small class="form-text text-muted">~50% margin typical &mdash; e.g. £3 drink &rarr; £1.50 profit</small></div>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-bar-profit" value="1.50" min="0" step="0.10" form="be-scratchpad"></div><small class="form-text text-muted">~50% margin typical &mdash; e.g. £3 drink &rarr; £1.50 profit</small></div>
                         </div>
                     </div>
                 </div>
@@ -328,6 +328,7 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
         <button type="submit" class="btn btn-primary">Update</button> <a href="{% url "edit-event-details-view" event_id=event.pk %}">Cancel</a>
     </p>
 </form>
+<form id="be-scratchpad" style="display:none"></form>
 </div>
 
 {% endblock %}
