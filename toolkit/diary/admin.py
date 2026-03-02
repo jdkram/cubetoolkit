@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from toolkit.diary.models import Event, MediaItem, Showing, Room, Role, EventTag
+from toolkit.diary.models import Event, EventLink, MediaItem, Showing, Room, Role, EventTag
 
 
 @admin.register(Room)
@@ -43,13 +43,20 @@ class ShowingInline(admin.TabularInline):
     readonly_fields = ("start",)
 
 
+class EventLinkInline(admin.TabularInline):
+    model = EventLink
+    extra = 1
+    max_num = 3
+    fields = ("label", "url", "order")
+
+
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
     list_display = ("name", "created_at", "private")
     list_filter = ("private", "tags")
     search_fields = ("name", "copy", "booked_by")
     readonly_fields = ("created_at", "updated_at", "legacy_id")
-    inlines = (ShowingInline,)
+    inlines = (ShowingInline, EventLinkInline)
 
 
 @admin.register(Showing)

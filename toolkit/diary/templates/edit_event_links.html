@@ -1,0 +1,145 @@
+{% extends "form_base.html" %}
+{% load static %}
+{% block title %}Event links: {{ event.name }}{% endblock %}
+
+{% block script %}
+{{ block.super }}
+<script>
+"use strict";
+(function () {
+    // ── Progressive reveal: only show one row initially; "Add another" shows
+    // subsequent rows up to the formset max_num (3).  Rows already populated
+    // from saved data are always visible.
+    //
+    // Each row is a <div class="link-row"> wrapping the two visible inputs
+    // and the DELETE checkbox.  The management form total/initial counts are
+    // updated by the formset itself; we just show/hide rows.
+
+    function rowIsEmpty(row) {
+        var inputs = row.querySelectorAll('input[type="text"], input[type="url"]');
+        for (var i = 0; i < inputs.length; i++) {
+            if (inputs[i].value.trim() !== "") { return false; }
+        }
+        return true;
+    }
+
+    function firstHiddenRow() {
+        var rows = document.querySelectorAll(".link-row");
+        for (var i = 0; i < rows.length; i++) {
+            if (rows[i].classList.contains("link-row--hidden")) { return rows[i]; }
+        }
+        return null;
+    }
+
+    function updateAddButton() {
+        var btn = document.getElementById("add-link-btn");
+        if (!btn) { return; }
+        btn.style.display = firstHiddenRow() ? "" : "none";
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        // Hide rows 2 and 3 if they are empty (row 1 is always visible)
+        var rows = document.querySelectorAll(".link-row");
+        for (var i = 1; i < rows.length; i++) {
+            if (rowIsEmpty(rows[i])) {
+                rows[i].classList.add("link-row--hidden");
+            }
+        }
+
+        updateAddButton();
+
+        var btn = document.getElementById("add-link-btn");
+        if (btn) {
+            btn.addEventListener("click", function () {
+                var row = firstHiddenRow();
+                if (row) {
+                    row.classList.remove("link-row--hidden");
+                    row.querySelector('input[type="text"], input[type="url"]').focus();
+                }
+                updateAddButton();
+            });
+        }
+    });
+})();
+</script>
+<style>
+    .link-row--hidden { display: none; }
+    .link-row { border: 1px solid #dee2e6; border-radius: 4px; padding: 0.75rem 1rem; margin-bottom: 0.75rem; background: #fff; }
+    .link-row--delete { background: #fff8f8; opacity: 0.6; }
+    .link-delete-label { font-size: 0.85em; color: #dc3545; }
+    .link-domain-hint { font-size: 0.8em; color: #6c757d; margin-top: 0.25rem; }
+    .allowed-domains { font-size: 0.82em; color: #6c757d; }
+    .allowed-domains code { background: #f1f3f5; padding: 0.1em 0.3em; border-radius: 3px; }
+</style>
+{% endblock %}
+
+{% block body %}
+<h1>Event links</h1>
+<p class="text-muted mb-1">
+  <strong>{{ event.name }}</strong>
+</p>
+
+{% include "bs_messages.html" %}
+
+<p class="mb-2">
+  Add up to <strong>3</strong> clickable resource links for this event. Links appear as chip buttons
+  on the rota view, visible only to logged-in volunteers — not on the public website.
+</p>
+<p class="allowed-domains mb-3">
+  Allowed: <code>*.riseup.net</code>, <code>*.nextcloud.com</code>, <code>*.nextcloud.org</code>,
+  <code>chat.whatsapp.com</code>, <code>linktr.ee</code>, any URL containing
+  <code>/nextcloud/</code> or <code>/index.php/s/</code> (self-hosted Nextcloud).
+  Additional domains can be added via <code>EVENTLINK_EXTRA_ALLOWED_DOMAINS</code> in settings.
+</p>
+
+{% if formset.non_form_errors %}
+<div class="alert alert-danger">{{ formset.non_form_errors }}</div>
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    {{ formset.management_form }}
+
+    {% for form in formset %}
+    <div class="link-row{% if form.instance.pk and form.cleaned_data.DELETE %} link-row--delete{% endif %}">
+        {% if form.non_field_errors %}
+        <div class="text-danger small mb-1">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <div class="form-row align-items-start">
+            <div class="form-group col-md-4 mb-1">
+                <label class="small font-weight-bold" for="{{ form.label.id_for_label }}">Link name</label>
+                {{ form.label }}
+                {% if form.label.errors %}<div class="text-danger small">{{ form.label.errors }}</div>{% endif %}
+            </div>
+            <div class="form-group col-md-7 mb-1">
+                <label class="small font-weight-bold" for="{{ form.url.id_for_label }}">URL</label>
+                {{ form.url }}
+                {% if form.url.errors %}<div class="text-danger small">{{ form.url.errors }}</div>{% endif %}
+                <div class="link-domain-hint">Use an approved domain (see list above)</div>
+            </div>
+            {% if form.instance.pk %}
+            <div class="form-group col-md-1 mb-1 pt-4">
+                <label class="link-delete-label" for="{{ form.DELETE.id_for_label }}">
+                    {{ form.DELETE }} Delete
+                </label>
+            </div>
+            {% endif %}
+        </div>
+        {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+    </div>
+    {% endfor %}
+
+    <button id="add-link-btn" type="button" class="btn btn-sm btn-outline-secondary mb-3">
+      + Add another link
+    </button>
+
+    <div class="mt-2">
+        <button type="submit" class="btn btn-primary btn-sm">Save links</button>
+        <a href="{% url 'edit-event-details-view' event.pk %}" class="btn btn-secondary btn-sm ml-1">Cancel</a>
+    </div>
+</form>
+
+<p class="mt-4 small text-muted">
+    <a href="{% url 'edit-event-details-view' event.pk %}">&larr; Back to event hub</a>
+</p>
+{% endblock %}

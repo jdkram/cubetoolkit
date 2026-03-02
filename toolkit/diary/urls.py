@@ -27,6 +27,7 @@ from toolkit.diary.edit_views import (
     view_terms_report_csv,
     update_showing_status,
     clone_event,
+    edit_event_links,
 )
 from toolkit.diary.public_views import (
     ArchiveIndex,
@@ -170,6 +171,11 @@ diary_urls = [
         r"^edit/event/id/(?P<event_id>\d+)/clone/$",
         clone_event,
         name="clone-event",
+    ),
+    re_path(
+        r"^edit/event/id/(?P<event_id>\d+)/links/$",
+        edit_event_links,
+        name="edit-event-links",
     ),
     # Edit an event
     re_path(

@@ -15,6 +15,7 @@ from django.urls import reverse
 from toolkit.diary.models import (
     Showing,
     Event,
+    EventLink,
     Role,
     DiaryIdea,
     EventTemplate,
@@ -66,6 +67,7 @@ class ViewSecurity(DiaryTestsMixin, TestCase):
         "queue-members-mailout": {},
         "add-printed-programme": {},
         "clone-event": {"event_id": "4"},
+        "edit-event-links": {"event_id": "1"},
     }
 
     only_read_required = {
@@ -2340,3 +2342,180 @@ class CloneEventTests(DiaryTestsMixin, TestCase):
         url = reverse("clone-event", kwargs={"event_id": 99999})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
+
+
+class EventLinkTests(DiaryTestsMixin, TestCase):
+    """Tests for the edit-event-links view and EventLink model."""
+
+    # Management-form POST helpers
+    _PREFIX = "links"  # derived from FK related_name="links" on EventLink
+
+    def _mgmt(self, total=3, initial=0):
+        """Return management form fields for EventLinkFormSet."""
+        return {
+            f"{self._PREFIX}-TOTAL_FORMS": str(total),
+            f"{self._PREFIX}-INITIAL_FORMS": str(initial),
+            f"{self._PREFIX}-MIN_NUM_FORMS": "0",
+            f"{self._PREFIX}-MAX_NUM_FORMS": "3",
+        }
+
+    def _form(self, idx, label="", url="", pk="", delete=False):
+        """Return field dict for a single inline row."""
+        d = {
+            f"{self._PREFIX}-{idx}-label": label,
+            f"{self._PREFIX}-{idx}-url": url,
+            f"{self._PREFIX}-{idx}-id": pk,
+        }
+        if delete:
+            d[f"{self._PREFIX}-{idx}-DELETE"] = "on"
+        return d
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="admin", password="T3stPassword!")
+        self.url = reverse("edit-event-links", kwargs={"event_id": self.e1.pk})
+
+    # ── GET ─────────────────────────────────────────────────────────────────
+
+    def test_get_returns_200_and_correct_template(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "edit_event_links.html")
+
+    def test_get_404_for_unknown_event(self):
+        url = reverse("edit-event-links", kwargs={"event_id": 99999})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_get_shows_existing_links(self):
+        EventLink.objects.create(
+            event=self.e1,
+            label="Meeting notes",
+            url="https://pad.riseup.net/p/e1-notes",
+            order=0,
+        )
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Meeting notes")
+        self.assertContains(response, "pad.riseup.net")
+
+    # ── POST — valid ─────────────────────────────────────────────────────────
+
+    def test_post_creates_link_with_approved_domain(self):
+        data = self._mgmt()
+        data.update(self._form(0, label="Event notes", url="https://pad.riseup.net/p/sns-test"))
+        data.update(self._form(1))
+        data.update(self._form(2))
+        response = self.client.post(self.url, data)
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk}),
+        )
+        links = list(self.e1.links.all())
+        self.assertEqual(len(links), 1)
+        self.assertEqual(links[0].label, "Event notes")
+        self.assertEqual(links[0].url, "https://pad.riseup.net/p/sns-test")
+
+    def test_post_nextcloud_subdomain_accepted(self):
+        data = self._mgmt()
+        data.update(self._form(0, label="Event folder",
+                               url="https://starandshadow.nextcloud.com/s/abc123"))
+        data.update(self._form(1))
+        data.update(self._form(2))
+        response = self.client.post(self.url, data)
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk}),
+        )
+        self.assertEqual(self.e1.links.count(), 1)
+
+    def test_post_whatsapp_accepted(self):
+        data = self._mgmt()
+        data.update(self._form(0, label="Crew chat",
+                               url="https://chat.whatsapp.com/ABC123xyzLink"))
+        data.update(self._form(1))
+        data.update(self._form(2))
+        response = self.client.post(self.url, data)
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk}),
+        )
+        self.assertEqual(self.e1.links.count(), 1)
+
+    def test_post_self_hosted_nextcloud_path_accepted(self):
+        """A URL containing /nextcloud/ in the path passes even for unknown domain."""
+        data = self._mgmt()
+        data.update(self._form(0, label="Notes",
+                               url="https://our.server.example.org/nextcloud/s/abc"))
+        data.update(self._form(1))
+        data.update(self._form(2))
+        response = self.client.post(self.url, data)
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk}),
+        )
+        self.assertEqual(self.e1.links.count(), 1)
+
+    def test_post_linktr_ee_accepted(self):
+        data = self._mgmt()
+        data.update(self._form(0, label="Core docs", url="https://linktr.ee/starandshadow"))
+        data.update(self._form(1))
+        data.update(self._form(2))
+        response = self.client.post(self.url, data)
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk}),
+        )
+        self.assertEqual(self.e1.links.count(), 1)
+
+    # ── POST — invalid ───────────────────────────────────────────────────────
+
+    def test_post_disallowed_domain_rejected(self):
+        data = self._mgmt()
+        data.update(self._form(0, label="Bad link", url="https://example.com/bad"))
+        data.update(self._form(1))
+        data.update(self._form(2))
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "edit_event_links.html")
+        self.assertEqual(self.e1.links.count(), 0)
+
+    def test_post_generic_whatsapp_domain_rejected(self):
+        """whatsapp.com (without chat. prefix) must be rejected."""
+        data = self._mgmt()
+        data.update(self._form(0, label="WhatsApp", url="https://whatsapp.com/dl/"))
+        data.update(self._form(1))
+        data.update(self._form(2))
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.e1.links.count(), 0)
+
+    def test_post_missing_label_rejected(self):
+        """A URL without a label must not be saved."""
+        data = self._mgmt()
+        data.update(self._form(0, label="", url="https://pad.riseup.net/p/sns-test"))
+        data.update(self._form(1))
+        data.update(self._form(2))
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.e1.links.count(), 0)
+
+    # ── delete ───────────────────────────────────────────────────────────────
+
+    def test_post_delete_removes_link(self):
+        link = EventLink.objects.create(
+            event=self.e1,
+            label="To delete",
+            url="https://pad.riseup.net/p/todelete",
+            order=0,
+        )
+        data = self._mgmt(total=3, initial=1)
+        data.update(self._form(0, label=link.label, url=link.url, pk=str(link.pk), delete=True))
+        data.update(self._form(1))
+        data.update(self._form(2))
+        response = self.client.post(self.url, data)
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk}),
+        )
+        self.assertFalse(EventLink.objects.filter(pk=link.pk).exists())

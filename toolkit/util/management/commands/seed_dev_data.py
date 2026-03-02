@@ -22,7 +22,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from PIL import Image, ImageDraw
 
-from toolkit.diary.models import Event, EventTag, EventTemplate, EventTemplateRole, MediaItem, Role, RotaEntry, Room, Showing
+from toolkit.diary.models import Event, EventLink, EventTag, EventTemplate, EventTemplateRole, MediaItem, Role, RotaEntry, Room, Showing
 from toolkit.index.models import IndexCategory, IndexLink
 from toolkit.members.models import Member, Volunteer
 
@@ -1702,6 +1702,7 @@ class Command(BaseCommand):
             "showings": 0,
             "rota_entries": 0,
             "images": 0,
+            "event_links": 0,
             "cms_pages": 0,
             "index_links": 0,
         }
@@ -1976,6 +1977,27 @@ class Command(BaseCommand):
                 if self._make_event_image(event, colour, event_data.get("image_url")):
                     counts["images"] += 1
 
+        # Event resource links — 50 % none · 30 % one · 15 % two · 5 % three
+        # Deterministic: slot = index % 20.  0-9 → no links, 10-15 → 1, 16-18 → 2, 19 → 3.
+        for _el_idx, _event_data in enumerate(EVENTS):
+            try:
+                _ev = Event.objects.get(name=_event_data["name"])
+            except Event.DoesNotExist:
+                continue
+            if _ev.links.exists():
+                continue  # idempotent: skip events that already have links
+            _slot = _el_idx % 20
+            _ev_links = []
+            if _slot >= 10:
+                _ev_links.append(("Event notes", f"https://pad.riseup.net/p/sns-ev-{_el_idx:03d}"))
+            if _slot >= 16:
+                _ev_links.append(("Event folder", f"https://starandshadow.nextcloud.com/s/sns{_el_idx:05d}"))
+            if _slot == 19:
+                _ev_links.append(("Crew chat", f"https://chat.whatsapp.com/SNS{_el_idx:010d}LinkSeed"))
+            for _order, (_label, _url) in enumerate(_ev_links):
+                EventLink.objects.create(event=_ev, label=_label, url=_url, order=_order)
+                counts["event_links"] += 1
+
         # CMS pages
         if WAGTAIL_AVAILABLE:
             counts["cms_pages"] += self._seed_cms_pages()
@@ -1998,6 +2020,7 @@ class Command(BaseCommand):
                 f"  Showings:        {counts['showings']} new\n"
                 f"  Rota entries:    {counts['rota_entries']} new\n"
                 f"  Images:          {counts['images']} new\n"
+                f"  Event links:     {counts['event_links']} new\n"
                 f"  CMS pages:       {counts['cms_pages']} new\n"
                 f"  Index links:     {counts['index_links']} new"
             )
