@@ -200,6 +200,8 @@ was trained for which role, when, by whom). In practice at Star and Shadow these
 
 ## 2. Who can access what — permission model
 
+> ⚠️ **Needs collective ratification.** The three-tier model and the specific gates below represent the developer's best judgement, implemented 2026-03-02. The specific questions (who can edit templates? who can edit tags? who approves Programmer access?) have not yet been formally agreed by the Star and Shadow collective. See TASKS.md §9.49 for the questions to put to the collective before deploying this to production. Until ratified, treat this section as a proposal, not settled policy.
+
 The system has three permission tiers:
 
 | Tier | Django permissions | Distinguishing check | What it allows |
