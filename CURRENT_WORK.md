@@ -78,7 +78,7 @@ None — all clear.
 | 9.25 | Tap to sign up on rota (mobile) | 🔵 S | Self-service slot claim for logged-in volunteers; see TASKS.md 9.25 |
 | 9.26 | Event resource links (generalised rota links) | 🔵 S | `EventLink` model; named link chips on rota view; domain whitelist; see TASKS.md 9.26 |
 | 9.28 | Volunteer role tier labelling + GDPR danger indicators | 🟢 XS | Rename `is_superuser` → "Panopticon access"; add Programmer field; ⚠ warning on sensitive roles; see TASKS.md 9.28 |
-| **Bug K** | Rota `&amp;` display glitch + security audit of loaddata decode | 🟢 XS | Investigate save/re-render path; audit `$('<div>').html(value).text()` pattern in `edit_rota.js`; see TASKS.md Bug K |
+| ~~**Bug K**~~ | ~~Rota `&amp;` display glitch + security audit of loaddata decode~~ | ✅ 2026-03-02 | Fixed in `edit_rota.js`: use jeditable's `data` option (value-transform callback), not `loaddata` (which is POST params for `loadurl` AJAX — never fired here). Regex decode of Django's 6 escape sequences. Server returns unescaped plain text — do NOT call `escape()` there, browser re-encodes on innerHTML read. See TASKS.md Bug K for full jeditable encoding archaeology. |
 | **Bug L** | Wheelchair strikethrough too subtle | 🟢 XS | CSS/template only; consider bolder indicator, badge, or tooltip; see TASKS.md Bug L |
 | 9.16 | Alt text fields for event images | 🔵 S | `MediaItem.alt_text` field; admin + form; templates; `ALT_TEXT_GUIDANCE_URL` setting + tooltip; see TASKS.md 9.16 |
 | 9.29 | Role management — "other role" limit + role-change behaviour | 🟡 M | Design needed first (design questions in TASKS.md 9.29) |
