@@ -262,21 +262,25 @@ class EditShowing(DiaryTestsMixin, TestCase):
         # Rota notes should now appear in the form textarea:
         self.assertContains(response, showing.rota_notes)
 
-        # Rota edit:
+        # Rota edit — number inputs with native up/down arrows:
         self.assertContains(
             response,
-            '<input class="rota_count" id="id_role_1" name="role_1" '
-            'type="text" value="0" required />',
+            '<input class="rota_count" id="id_role_1" max="8" min="0" '
+            'name="role_1" type="number" value="0" />',
+            html=True,
+        )
+        # Non-standard roles use the same number spinner UI:
+        self.assertContains(
+            response,
+            '<input class="rota_count" id="id_other_2" max="8" min="0" '
+            'name="other_2" type="number" value="1" />',
             html=True,
         )
         self.assertContains(
             response,
-            '<option value="2" selected="selected">'
-            "Role 2 (nonstandard)</option>",
+            '<input class="rota_count" id="id_other_3" max="8" min="0" '
+            'name="other_3" type="number" value="0" />',
             html=True,
-        )
-        self.assertContains(
-            response, '<option value="3">Role 3</option>', html=True
         )
 
     def _test_edit_showing_common(self, now_patch, multiroom_enabled):
@@ -293,7 +297,7 @@ class EditShowing(DiaryTestsMixin, TestCase):
                 "cancelled": "on",
                 "discounted": "on",
                 "role_1": "3",
-                "other_roles": "3",
+                "other_3": "1",
                 # data should be ignored if multiroom_enabled == False, but not
                 # cause an error
                 "room": "2",
