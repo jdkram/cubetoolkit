@@ -379,6 +379,52 @@ class CloneShowingForm(forms.Form):
     booked_by = forms.CharField(min_length=1, max_length=128, required=True)
 
 
+class CloneEventForm(forms.Form):
+    """Minimal details needed to clone an existing event as a new event.
+
+    The new event inherits all text/config fields (copy, terms, rota, etc.)
+    from the source.  The programmer only needs to confirm the name, first
+    showing date, and who booked it.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not settings.MULTIROOM_ENABLED:
+            del self.fields["room"]
+
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        self.helper.form_class = "form-horizontal"
+        self.helper.label_class = "col-sm-3"
+        self.helper.field_class = "col-sm-9"
+
+    event_name = forms.CharField(
+        min_length=1,
+        max_length=256,
+        required=True,
+        label="New event name",
+        help_text="Pre-filled from source — edit to give the new event a different title.",
+    )
+    start = forms.DateTimeField(
+        required=True,
+        validators=[validate_in_future],
+        widget=JQueryDateTimePicker(),
+        label="First showing date/time",
+        help_text="Pre-filled to one week after the source's latest showing.",
+    )
+    room = forms.ModelChoiceField(
+        queryset=toolkit.diary.models.Room.objects.all(),
+        required=True,
+        label="Room",
+    )
+    booked_by = forms.CharField(
+        min_length=1,
+        max_length=128,
+        required=True,
+        label="Booked by",
+    )
+
+
 class NewEventForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

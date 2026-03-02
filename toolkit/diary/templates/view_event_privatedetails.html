@@ -381,6 +381,13 @@ function hideAddShowingForm() {
 </details>
 {% endif %}
 
+<div class="mt-3 mb-1">
+  <a href="{% url 'clone-event' event.pk %}" class="btn btn-outline-secondary btn-sm"
+     data-toggle="tooltip" title="Create a new event pre-loaded with this event&rsquo;s copy, summary, terms, rota, and tags. The image and ticket link are not copied.">
+    Clone as new event &rarr;
+  </a>
+</div>
+
 {% if not all_showings_in_past %}
 <div class="add-showing-section">
   <button id="add-showing-toggle" type="button" class="btn btn-outline-info btn-sm"
