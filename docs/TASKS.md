@@ -24,15 +24,24 @@ The "volunteer only" banners in the grid view are currently not filling their ce
 
 On MariaDB, `wagtailcore_page.translation_key` was `varchar(32)` but Wagtail 6 generates 36-character UUIDs. Creating CMS pages throws `DataError`. Fix: widen column to `varchar(36)` via migration. See CURRENT_WORK.md Done section for resolution details.
 
-**Bug K** — Rota `&amp;` display glitch + security audit of loaddata decode pattern 🟢 XS
+**Bug K** — Rota `&amp;` display glitch ✅ fixed 2026-03-02
 
-When saving a rota entry containing `&` (e.g. in rota notes or a role name), some views show the literal text `&amp;` instead of `&`. Root cause is likely the save path: the jeditable editor POSTs the decoded `&` correctly, but either the save response or the subsequent re-render is double-encoding it. Investigate whether the fix occurs on the server response path (the edit endpoint's JSON response) or in the template re-render.
+**Root cause:** jeditable's `loaddata` option is NOT a value-transform callback. It provides extra POST parameters for a `loadurl` AJAX request. We don't use `loadurl`, so any function assigned to `loaddata` is silently ignored. The correct option is `data`: when set to a function, jeditable calls it with `$(element).html()` (raw innerHTML, Django-escaped) and uses the return value to populate the editor.
 
-**Security audit:** The Bug C fix added `$('<div>').html(value).text()` to the `loaddata` callback in `edit_rota.js` to decode HTML entities. This pattern is safe as long as Django's auto-escaping is active on the rota entry template (which it is — `{{ rota_entry.name }}` without `|safe`). However, the pattern is fragile: if any template ever marks rota content as safe incorrectly, an attacker who can save HTML into a rota slot could trigger a stored XSS. Consider replacing with the safer `textarea` decode pattern:
+**Fix in `edit_rota.js`:** use `data: function(value) { ... }` with a regex decode of Django's 6 escape sequences (order matters — `&amp;` first):
 ```js
-function htmlDecode(s) { var t = document.createElement('textarea'); t.innerHTML = s; return t.value; }
+data: function(value) {
+    return value
+        .replace(/&amp;/g,  '&')
+        .replace(/&lt;/g,   '<')
+        .replace(/&gt;/g,   '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#x27;/g, "'")
+        .replace(/&#39;/g,  "'");
+}
 ```
-This avoids creating actual DOM elements that could fire events. Low priority given current templates are safe, but worth patching.
+
+**Server response must stay unescaped plain text** (`return HttpResponse(showing.rota_notes, ...)`). After save jeditable calls `$(self).html(result)`; the browser's innerHTML getter re-encodes `&` → `&amp;`, so the next `data` call sees `&amp;` and decodes correctly. If you add `escape()` to the response, jeditable's `.html()` double-encodes it (`&amp;` → `&amp;amp;`) and a spiral begins.
 
 **Bug M** — Calendar edit view: simultaneous events in the same timeslot overwrite each other 🟠 L
 
