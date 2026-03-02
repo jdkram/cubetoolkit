@@ -1,0 +1,67 @@
+import os
+
+from toolkit.settings_ss import *
+
+# --- Core production overrides ---
+
+DEBUG = False
+
+# Set via environment variable. Generate with:
+#   python3 -c "import secrets; print(secrets.token_urlsafe(50))"
+SECRET_KEY = os.environ["SECRET_KEY"]
+
+ALLOWED_HOSTS = [os.environ.get("ALLOWED_HOST", "pi.jdkram.co.uk")]
+
+# Required for Django 4+ when behind a reverse proxy with HTTPS.
+# Form submissions (login, event edits, rota) will 403 without this.
+CSRF_TRUSTED_ORIGINS = [
+    f"https://{os.environ.get('ALLOWED_HOST', 'pi.jdkram.co.uk')}"
+]
+
+# Subpath deployment: Django will prepend this to all reversed URLs
+# so that {% url %} tags and redirects include the /sns_toolkit prefix.
+FORCE_SCRIPT_NAME = "/sns_toolkit"
+
+# Tell Django that the real protocol comes from nginx's X-Forwarded-Proto header.
+# Without this, request.is_secure() returns False and some redirects break.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Static files are served from /sns_toolkit/static/
+# collectstatic runs at Docker build time; the result is served by nginx.
+STATIC_URL = "/sns_toolkit/static/"
+
+# --- Database ---
+# Same MariaDB config as dev — credentials come from environment variables.
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": os.environ.get("DB_NAME", "toolkit"),
+        "USER": os.environ.get("DB_USER", "toolkit"),
+        "PASSWORD": os.environ["DB_PASSWORD"],
+        "HOST": os.environ.get("DB_HOST", "mariadb"),
+        "PORT": os.environ.get("DB_PORT", "3306"),
+        "CONN_MAX_AGE": 60,
+        "OPTIONS": {
+            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+        },
+    }
+}
+
+# --- Email ---
+# Set EMAIL_BACKEND to smtp.EmailBackend and configure these if you want
+# mailouts to actually send. Console backend is safe for now.
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
+# EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+# EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+
+# --- Logging ---
+del LOGGING["handlers"]["file"]
+LOGGING["loggers"]["toolkit"]["handlers"] = ["console"]
+LOGGING["root"] = {
+    "handlers": ["console"],
+    "level": "WARNING",
+}
