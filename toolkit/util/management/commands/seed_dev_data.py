@@ -1832,6 +1832,33 @@ class Command(BaseCommand):
         for u in seed_users[1:3]:
             programmers_group.user_set.add(u)
 
+        # Create Member+Volunteer records for the configure_toolkit_users demo
+        # accounts so the nav-bar "edit your profile" link (9.50) works in dev.
+        _DEMO_ACCOUNTS = [
+            ("admin",       "Admin (Panopticon)"),
+            ("programmer",  "Demo Programmer"),
+            ("programmer2", "Demo Programmer 2"),
+            ("volunteer",   "Demo Volunteer"),
+            ("volunteer2",  "Demo Volunteer 2"),
+            ("volunteer3",  "Demo Volunteer 3"),
+            ("volunteer4",  "Demo Volunteer 4"),
+            ("volunteer5",  "Demo Volunteer 5"),
+        ]
+        for _username, _display_name in _DEMO_ACCOUNTS:
+            try:
+                _demo_user = User.objects.get(username=_username)
+            except User.DoesNotExist:
+                continue
+            if Volunteer.objects.filter(user=_demo_user).exists():
+                continue
+            _demo_member, _ = Member.objects.get_or_create(
+                email=f"{_username}@localhost",
+                defaults={"name": _display_name},
+            )
+            if not Volunteer.objects.filter(member=_demo_member).exists():
+                Volunteer.objects.create(user=_demo_user, member=_demo_member)
+                counts["volunteers"] += 1
+
         # Rooms - create/update all 9 S&S spaces.
         # update_or_create ensures is_primary is set correctly on re-runs.
         rooms_dict = {}
