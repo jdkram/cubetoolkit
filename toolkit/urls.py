@@ -5,6 +5,8 @@ import django.views.static
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 
+from toolkit.index.views import ToolkitIndexView
+
 from wagtail.admin import urls as wagtailadmin_urls
 from wagtail.documents import urls as wagtaildocs_urls
 from wagtail import urls as wagtail_urls
@@ -14,8 +16,6 @@ import toolkit.toolkit_auth.urls
 import toolkit.index.urls
 import toolkit.diary.urls
 import toolkit.mailer.urls
-
-from toolkit.index.models import IndexLink
 
 urlpatterns = [
     re_path(r"^programme/", include(toolkit.diary.urls.programme_urls)),
@@ -41,11 +41,7 @@ urlpatterns = [
     # (eg diary index) don't.
     re_path(
         r"^toolkit/$",
-        login_required(
-            generic.list.ListView.as_view(
-                model=IndexLink, template_name="toolkit_index.html"
-            )
-        ),
+        login_required(ToolkitIndexView.as_view()),
         name="toolkit-index",
     ),
     # Static content, only used when running in the development server

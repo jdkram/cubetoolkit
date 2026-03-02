@@ -14,19 +14,6 @@
     .index-edit a {
         color: #a3a3a3;
     }
-    #logout-form {
-      display: inline;
-    }
-    #logout-form button {
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 0;
-      color: #007bff;
-    }
-    #logout-form button:hover {
-        text-decoration: underline;
-    }
     .access-tier {
         font-size: 0.85em;
         color: #666;
@@ -35,85 +22,187 @@
     .access-tier strong {
         color: #333;
     }
+    .card-links {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .card-links li {
+        padding: 0.2rem 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .card-links li:last-child {
+        border-bottom: none;
+    }
 </style>
 {% endblock %}
 
 {% block body %}
 <h1>{{ VENUE.longname }} Toolkit</h1>
 
-<h2>Programming</h2>
-<ul>
-    <li><a href="{% url "default-view" %}">Diary for the public</a></li>
-    <li><a href="{% url "archive-view-index" %}">Public diary archive</a></li>
-    {% if perms.toolkit.write %}
-        <li><a href="{% url "default-edit" %}">Edit the diary</a></li>
-        <li><a href="{% url "diary-edit-calendar" %}">Edit the diary from a calendar</a></li>
-        <li><a href="{% url "view_event_field" field="copy" %}">Copy report</a></li>
-        <li><a href="{% url "view_event_field" field="copy_summary" %}">Copy summary report</a></li>
-        <li><a href="{% url "view_event_field" field="terms" %}">Terms report</a></li>
-        <li><a href="{% url "edit-printed-programmes" %}">Upload printed programme PDFs</a></li>
-    {% endif %}
-</ul>
-<h2>Rota</h2>
-<ul>
-    <li><a href="{% url "rota-edit" %}">Edit the rota</a></li>
-    <li><a href="{% url "view-rota-vacancies" %}">List vacancies in the next 30 days</a> (for easy emailing)</li>
-</ul>
+<div class="row">
 
-{% if perms.toolkit.write %}
-    <h2>Meta-programming</h2>
-    <ul>
-        <li><a href="{% url "edit_event_tags" %}">Edit available event tags</a></li>
-        <li><a href="{% url "edit_event_templates" %}">Edit available event templates</a></li>
-        {% if user.is_superuser %}
-        <li><a href="{% url "edit_roles" %}">Edit available volunteer/event roles</a> <small>(Panopticon only)</small></li>
-        {% endif %}
-    </ul>
-{% endif %}
+  {# Rota — all users #}
+  <div class="col-md-6 mb-4 d-flex">
+    <div class="card w-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Rota</strong>
+        {% if perms.toolkit.write %}<span class="badge badge-secondary">All users</span>{% endif %}
+      </div>
+      <div class="card-body">
+        <ul class="card-links">
+          <li><a href="{% url "rota-edit" %}">Edit the rota</a></li>
+          <li><a href="{% url "view-rota-vacancies" %}">List vacancies in the next 30 days</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
 
+  {% if perms.toolkit.write %}
+  {# Programming — Programmer+ #}
+  <div class="col-md-6 mb-4 d-flex">
+    <div class="card w-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Programming</strong>
+        <span class="badge badge-primary">Programmer+</span>
+      </div>
+      <div class="card-body">
+        <ul class="card-links">
+          <li><a href="{% url "default-view" %}">Diary for the public</a></li>
+          <li><a href="{% url "archive-view-index" %}">Public diary archive</a></li>
+          <li><a href="{% url "default-edit" %}">Edit the diary</a></li>
+          <li><a href="{% url "diary-edit-calendar" %}">Edit the diary (calendar view)</a></li>
+          <li><a href="{% url "view_event_field" field="copy" %}">Copy report</a></li>
+          <li><a href="{% url "view_event_field" field="copy_summary" %}">Copy summary report</a></li>
+          <li><a href="{% url "view_event_field" field="terms" %}">Terms report</a></li>
+          <li><a href="{% url "edit-printed-programmes" %}">Upload printed programme PDFs</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  {# Meta-programming — Programmer+ #}
+  <div class="col-md-6 mb-4 d-flex">
+    <div class="card w-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Meta-programming</strong>
+        <span class="badge badge-primary">Programmer+</span>
+      </div>
+      <div class="card-body">
+        <ul class="card-links">
+          <li><a href="{% url "edit_event_tags" %}">Edit available event tags</a></li>
+          <li><a href="{% url "edit_event_templates" %}">Edit available event templates</a></li>
+          {% if user.is_superuser %}
+          <li><a href="{% url "edit_roles" %}">Edit volunteer/event roles</a> <small class="text-muted">(Panopticon only)</small></li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if user.is_superuser %}
+  {# Members — Panopticon only #}
+  <div class="col-md-6 mb-4 d-flex">
+    <div class="card w-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Members</strong>
+        <span class="badge badge-dark">Panopticon only</span>
+      </div>
+      <div class="card-body">
+        <ul class="card-links">
+          <li><a href="{% url "add-member" %}">Add member</a></li>
+          <li><a href="{% url "search-members" %}">Search members</a></li>
+          <li><a href="{% url "member-statistics" %}">Member statistics</a></li>
+          <li><a href="{% url "member-duplicates" %}">Member duplicates</a></li>
+          {% if MEMBERSHIP_EXPIRY_ENABLED %}<li><a href="{% url "member-expired" %}">Expired members</a></li>{% endif %}
+          <li><a href="{% url "member-homepages" %}">Member homepages</a></li>
+          <li><a href="{% url "members-mailout" %}">Send mailout</a></li>
+          <li><a href="{% url "mailer:jobs-list" %}">Mailout job status</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  {# Volunteers — Panopticon only #}
+  <div class="col-md-6 mb-4 d-flex">
+    <div class="card w-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Volunteers</strong>
+        <span class="badge badge-dark">Panopticon only</span>
+      </div>
+      <div class="card-body">
+        <ul class="card-links">
+          <li><a href="{% url "view-volunteer-summary" %}">Volunteers summary</a></li>
+          <li><a href="{% url "view-volunteer-list" %}">Volunteers profiles</a></li>
+          <li><a href="{% url "add-volunteer" %}">Add new volunteer</a></li>
+          <li><a href="{% url "retire-select-volunteer" %}">Retire volunteer</a></li>
+          <li><a href="{% url "unretire-select-volunteer" %}">Unretire volunteer</a></li>
+          <li><a href="{% url "view-volunteer-export" %}">Export volunteers as CSV</a></li>
+          <li><a href="{% url "view-volunteer-role-report" %}">Volunteer role report</a></li>
+          <li><a href="{% url "view-volunteer-training-report" %}">Volunteer training report</a></li>
+          <li><a href="{% url "add-volunteer-training-group-record" %}">Add training records</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  {# Admin — Panopticon only #}
+  <div class="col-md-6 mb-4 d-flex">
+    <div class="card w-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Admin</strong>
+        <span class="badge badge-dark">Panopticon only</span>
+      </div>
+      <div class="card-body">
+        <ul class="card-links">
+          <li><a href="{% url "wagtailadmin_home" %}">Content management (Wagtail)</a></li>
+          {% if VENUE.show_user_management %}
+          <li><a href="/toolkit/admin/">Administration backend</a></li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>{# end .row #}
+
+{# Superuser-managed link groups — no heading, categories self-label #}
+{% if object_list or user.is_superuser %}
+<hr class="mt-2 mb-3">
 {% if user.is_superuser %}
-    <h2>Volunteers</h2>
-    <ul>
-        <li><a href="{% url "view-volunteer-summary" %}">Volunteers summary</a></li>
-        <li><a href="{% url "view-volunteer-list" %}">Volunteers profiles</a></li>
-        <li><a href="{% url "view-volunteer-role-report" %}">Volunteer role report</a></li>
-        <li><a href="{% url "view-volunteer-export" %}">Export volunteers as CSV</a></li>
-        <li><a href="{% url "add-volunteer-training-group-record" %}">Add volunteer training records</a></li>
-        <li><a href="{% url "view-volunteer-training-report" %}">Volunteer training report</a></li>
-    </ul>
-
-    <h2>Members</h2>
-    <ul>
-        <li><a href="{% url "add-member" %}">Members database</a></li>
-        <li><a href="{% url "member-homepages" %}">Members homepages</a></li>
-        <li><a href="{% url "members-mailout" %}">Send a members mailout</a></li>
-        <li><a href="{% url "mailer:jobs-list" %}">Mailout job status</a></li>
-        <li><a href="{% url "member-statistics" %}">Members statistics</a></li>
-        <li><a href="{% url "member-duplicates" %}">Members duplicates</a></li>
-        {% if MEMBERSHIP_EXPIRY_ENABLED %}<li><a href="{% url "member-expired" %}">Expired memberships</a></li>{% endif %}
-    </ul>
-    <h2>Website</h2>
-    <ul>
-        <li><a href="{% url "wagtailadmin_home" %}">Content management</a></li>
-    </ul>
+<div class="text-right mb-2">
+  <a href="{% url "create-index-link" %}" class="btn btn-sm btn-outline-secondary">+ Add link</a>
+  <a href="{% url "create-index-category" %}" class="btn btn-sm btn-outline-secondary">+ Add group</a>
+</div>
 {% endif %}
-
+{% endif %}
+{% if object_list %}
 <ul>
 {% for link in object_list %}
 {% ifchanged link.category %}
 </ul>
-<h2>{{ link.category.name }}
-    <span class="index-edit">[<a href="{% url "update-index-category" pk=link.category.pk %}">e</a>]</span></h2>
+<h3>{{ link.category.name }}
+  {% if user.is_superuser %}<span class="index-edit">[<a href="{% url "update-index-category" pk=link.category.pk %}">e</a>]</span>{% endif %}
+</h3>
 <ul>
 {% endifchanged %}
-<li><a href="{{ link.link }}">{% firstof link.text link.link %}</a> <span class="index-edit">
-[<a href="{% url "update-index-link" pk=link.pk %}">e</a>]
-[<a href="{% url "delete-index-link" pk=link.pk %}">x</a>]
-</span>{% if link.description %}<br><small style="white-space:pre-wrap; color:#555;">{{ link.description }}</small>{% endif %}</li>
+<li><a href="{{ link.link }}">{% firstof link.text link.link %}</a>
+  {% if user.is_superuser %}<span class="index-edit">
+    [<a href="{% url "update-index-link" pk=link.pk %}">e</a>]
+    [<a href="{% url "delete-index-link" pk=link.pk %}">x</a>]
+  </span>{% endif %}
+  {% if link.description %}<br><small style="white-space:pre-wrap; color:#555;">{{ link.description }}</small>{% endif %}
+</li>
 {% endfor %}
 </ul>
+{% elif user.is_superuser %}
+<p class="text-muted"><small>No link groups yet.</small></p>
+{% endif %}
+
 <hr>
-<p>You logged in as {{ user }} at {{ user.last_login }}</p>
+<p class="text-muted mb-1"><small>Logged in as <strong>{{ user }}</strong> since {{ user.last_login }}</small></p>
 <p class="access-tier">
   Access level:
   {% if user.is_superuser %}
@@ -123,18 +212,9 @@
   {% else %}
     <strong>Volunteer</strong> — can edit the rota
   {% endif %}
+  {% if VENUE.show_user_management %}
+  &middot; <a href="{% url "password_change" %}">Change password</a>
+  {% endif %}
 </p>
-{% if user.is_superuser %}
-    <a href="{% url "create-index-link" %}">Add link</a> &#xb7;
-    <a href="{% url "create-index-category" %}">Add link group</a> &#xb7;
-{% endif %}
-{% if VENUE.show_user_management %}
-    <a href="{% url "password_change" %}">Change password</a> &#xb7;
-{% endif %}
-<form id="logout-form" method="post" action="{% url 'logout' %}">
-  {% csrf_token %}
-  <button type="submit">Log out</button>
-</form>
-<p>
 
 {% endblock %}
