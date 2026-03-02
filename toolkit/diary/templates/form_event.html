@@ -19,6 +19,14 @@ Event Details for {{ event.name }}
     #word-counter.wc-close     { color: #856404; background: #fff3cd; }
     #word-counter.wc-perfect   { color: #155724; background: #d4edda; font-weight: bold; }
     #word-counter.wc-over      { color: #721c24; background: #f8d7da; }
+
+    #be-toggle { cursor: pointer; user-select: none; }
+    #be-toggle:hover { background: #e9ecef; }
+    .be-arrow { display: inline-block; transition: transform .15s; margin-right: 5px; font-size: 0.8em; }
+    #be-inputs .form-group { margin-bottom: 0.5rem; }
+    #be-inputs label { font-weight: normal; }
+    #be-inputs .be-section-heading { font-weight: bold; margin-top: 0.75rem; margin-bottom: 0.25rem; color: #495057; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.03em; }
+    #be-inputs input[type=number] { max-width: 120px; }
 </style>
 {% endblock %}
 
@@ -80,6 +88,82 @@ $(document).ready(function() {
     update_character_count();
     update_word_count();
 });
+
+// Break-even calculator
+(function () {
+    'use strict';
+
+    var FC_STANDARD = 500;
+    var FC_MUSIC = 750;
+
+    var COST_IDS = ['be-hire', 'be-technical', 'be-artist-fee', 'be-accommodation', 'be-travel', 'be-food', 'be-other'];
+
+    function num(id) { return parseFloat(document.getElementById(id).value) || 0; }
+    function fmt(n) { return '\u00a3' + n.toFixed(2); }
+
+    function calculate() {
+        var totalCosts = COST_IDS.reduce(function (s, id) { return s + num(id); }, 0);
+        var capacity = Math.max(1, Math.round(num('be-capacity')));
+        var ticketPrice = num('be-ticket-price');
+        var artistShare = Math.min(100, Math.max(0, num('be-artist-share')));
+        var venuePerTicket = ticketPrice * (1 - artistShare / 100);
+
+        var output = document.getElementById('be-output');
+        output.style.display = 'block';
+
+        if (venuePerTicket <= 0) {
+            output.innerHTML = '<div class="alert alert-warning mb-0">Enter a ticket price to see results.</div>';
+            return;
+        }
+
+        var breakEven = Math.ceil(totalCosts / venuePerTicket);
+        var breakEvenPct = (breakEven / capacity * 100).toFixed(1);
+        var impossible = breakEven > capacity;
+        var html = '';
+
+        // Summary banner
+        html += '<div class="alert ' + (impossible ? 'alert-danger' : 'alert-success') + ' mb-2">';
+        html += '<strong>Break-even: ' + breakEven + ' tickets (' + breakEvenPct + '% of ' + capacity + ' capacity)</strong>';
+        if (impossible) { html += ' &mdash; costs cannot be covered even at a full room.'; }
+        html += '</div>';
+
+        // Finance Collective warning
+        if (totalCosts >= FC_MUSIC) {
+            html += '<div class="alert alert-warning mb-2"><strong>Finance Collective required</strong> &mdash; total costs (' + fmt(totalCosts) + ') exceed the \u00a3' + FC_MUSIC + ' music threshold.</div>';
+        } else if (totalCosts >= FC_STANDARD) {
+            html += '<div class="alert alert-warning mb-2"><strong>Finance Collective required</strong> &mdash; total costs (' + fmt(totalCosts) + ') exceed the \u00a3' + FC_STANDARD + ' standard threshold.</div>';
+        }
+
+        // Fill scenarios table
+        html += '<table class="table table-sm table-bordered mb-0"><thead class="thead-light"><tr>';
+        html += '<th>Fill level</th><th>Tickets sold</th><th>Venue revenue</th><th>Profit / loss</th></tr></thead><tbody>';
+        [0.25, 0.50, 0.75, 1.0].forEach(function (pct) {
+            var tickets = Math.round(capacity * pct);
+            var revenue = tickets * venuePerTicket;
+            var profit = revenue - totalCosts;
+            html += '<tr class="' + (profit >= 0 ? '' : 'table-danger') + '">';
+            html += '<td>' + (pct * 100) + '%</td>';
+            html += '<td>' + tickets + '</td>';
+            html += '<td>' + fmt(revenue) + '</td>';
+            html += '<td>' + (profit >= 0 ? '+' : '') + fmt(profit) + '</td>';
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+
+        output.innerHTML = html;
+    }
+
+    $(document).ready(function () {
+        var $collapse = $('#be-collapse');
+        var $arrow = $('.be-arrow');
+
+        $collapse.on('show.bs.collapse', function () { $arrow.css('transform', 'rotate(90deg)'); });
+        $collapse.on('hide.bs.collapse', function () { $arrow.css('transform', 'rotate(0deg)'); });
+
+        $('#be-inputs input').on('input', calculate);
+        $collapse.on('shown.bs.collapse', calculate);
+    });
+}());
 </script>
 {% endblock %}
 
@@ -99,6 +183,75 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
 <div id="forms">
 <form action="{% url "edit-event-details" event_id=event.id %}" method="post" enctype="multipart/form-data">
     {% crispy event_form %}
+
+    {# Break-even calculator — purely advisory, nothing here is submitted #}
+    <div class="card mb-3" id="be-card">
+        <div class="card-header p-2" id="be-toggle" data-toggle="collapse" data-target="#be-collapse" aria-expanded="false" aria-controls="be-collapse">
+            <span class="be-arrow">&#9658;</span>
+            <strong>Break-even calculator</strong>
+            <small class="text-muted ml-2">optional &mdash; not saved</small>
+        </div>
+        <div id="be-collapse" class="collapse">
+            <div class="card-body" id="be-inputs">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="be-section-heading">Costs</div>
+                        <div class="form-group row">
+                            <label class="col-sm-5 col-form-label col-form-label-sm" for="be-hire">Hire cost</label>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-hire" value="0" min="0" step="1"></div></div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-sm-5 col-form-label col-form-label-sm" for="be-technical">Technical costs</label>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-technical" value="0" min="0" step="1"></div></div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-sm-5 col-form-label col-form-label-sm" for="be-artist-fee">Artist / performer fee</label>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-artist-fee" value="0" min="0" step="1"></div></div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-sm-5 col-form-label col-form-label-sm" for="be-accommodation">Accommodation</label>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-accommodation" value="0" min="0" step="1"></div></div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-sm-5 col-form-label col-form-label-sm" for="be-travel">Travel</label>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-travel" value="0" min="0" step="1"></div></div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-sm-5 col-form-label col-form-label-sm" for="be-food">Volunteer food</label>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-food" value="0" min="0" step="1"></div></div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-sm-5 col-form-label col-form-label-sm" for="be-other">Other</label>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-other" value="0" min="0" step="1"></div></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="be-section-heading">Room &amp; pricing</div>
+                        <div class="form-group row">
+                            <label class="col-sm-5 col-form-label col-form-label-sm" for="be-capacity">Room capacity</label>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><input type="number" class="form-control" id="be-capacity" value="80" min="1" step="1"><div class="input-group-append"><span class="input-group-text">people</span></div></div></div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-sm-5 col-form-label col-form-label-sm" for="be-ticket-price">Ticket price</label>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-ticket-price" value="5" min="0.01" step="0.50"></div></div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-sm-5 col-form-label col-form-label-sm" for="be-artist-share">Artist&rsquo;s door share</label>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><input type="number" class="form-control" id="be-artist-share" value="0" min="0" max="100" step="5" placeholder="0"><div class="input-group-append"><span class="input-group-text">%</span></div></div><small class="form-text text-muted">e.g. 70 if artist takes 70% of door</small></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="be-output" class="mt-3" style="display:none"></div>
+
+                <p class="text-muted small mt-2 mb-0">
+                    Opening the doors at S&amp;S costs roughly &pound;200 before any additional costs &mdash; make sure this is factored in above.
+                    Finance Collective sign-off required if total costs exceed &pound;500 (standard) or &pound;750 (music).
+                </p>
+            </div>
+        </div>
+    </div>
+
     {% crispy media_form %}
     <p class="help-block">
         <small>&#x26A0;&#xFE0F; Please make sure you have the right to use any image you upload.

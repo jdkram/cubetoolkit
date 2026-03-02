@@ -46,7 +46,7 @@ None — all clear.
 
 | ID | Bug | Size |
 | -- | --- | ---- |
-| **E** | Volunteer login dropdown inaccessible on touch | 🔵 S |
+| ~~**E**~~ | ~~Volunteer login dropdown inaccessible on touch~~ | ✅ 2026-03-02 — sidebar scrollbar fix resolved this |
 | **M** | Calendar edit view: simultaneous events overwrite each other on busy days | 🟠 L |
 | ~~**N**~~ | ~~Nav "Rota" link pointed at public `/diary/rota/` instead of edit `/diary/edit/rota/`~~ | ✅ 2026-03-02 |
 
@@ -56,7 +56,7 @@ None — all clear.
 
 | # | Feature | Size | Notes |
 |----|---------|------|-------|
-| 9.9 | Break-even calculator for programmers | 🟢 XS | Pure JS; no database changes |
+| ~~9.9~~ | ~~Break-even calculator for programmers~~ | ✅ 2026-03-02 | Collapsible panel in event edit form beneath terms; pure JS; Finance Collective threshold warnings; fill-level table |
 | ~~9.10.2~~ | ~~Clone rota notes with event clone~~ | ✅ 2026-02-28 | `clone_rota_from_showing` now copies `rota_notes`; test added |
 | 9.10.6 | Inline warning when rota notes carry to cloned showing | 🟢 XS | Template banner in clone form; see TASKS.md 9.10.6 option 2 |
 | 9.10.7 | Port `add-showing` clone view from `s+s` | 🔵 S | Proper clone-booking block with date picker; replaces placeholder link; see TASKS.md 9.10.7 |
