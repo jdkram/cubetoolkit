@@ -200,19 +200,21 @@ was trained for which role, when, by whom). In practice at Star and Shadow these
 
 ## 2. Who can access what — permission model
 
-The system has three permission levels:
+The system has three permission tiers:
 
-| Role | Django permission | What it allows |
-|---|---|---|
-| **Volunteer** | `toolkit.read` | View internal pages: rota, diary, volunteer list, reports. Cannot create or edit events, access member data, or use the CMS. |
-| **Programmer** | `toolkit.read` + `toolkit.programmer` | Everything a volunteer can do, plus: create and edit events and showings, manage tags and roles, manage event templates, write rota entries. Cannot access sensitive volunteer/member data or the CMS. |
-| **Panopticon** | `toolkit.read` + `toolkit.write` | Full access: everything a programmer can do, plus: website edits via the Wagtail CMS, access to sensitive volunteer and member data (names, emails, addresses, notes), adding and retiring volunteers, sending mailouts. Intended for a small group of trusted coordinators. |
+| Tier | Django permissions | Distinguishing check | What it allows |
+| --- | --- | --- | --- |
+| **Volunteer** | `diary.change_rotaentry` | — | Edit the rota; view rota vacancies. Cannot create/edit events, see member data, or use the CMS. |
+| **Programmer** | `toolkit.write` + `toolkit.read` + `diary.change_rotaentry` | `perms.toolkit.write` | Everything a volunteer can do, plus: create and edit events and showings, manage tags and event templates, write rota entries, see diary copy/terms reports. Cannot manage roles, access volunteer/member data, or use the CMS. |
+| **Panopticon** | same as Programmer + `is_superuser = True` | `user.is_superuser` | Full access: everything a programmer can do, plus: edit available roles (guarded by `is_superuser` because role deletion cascades silently to all rota assignments), website edits via Wagtail CMS, access to sensitive volunteer and member data (names, emails, addresses, notes), adding and retiring volunteers, sending mailouts. Intended for a small group of trusted coordinators. |
 
 Authentication is via Django's built-in session-based auth (username + password). There is no public registration.
 
 The `CUBE_IP_ADDRESSES` setting defines a list of IP addresses that bypass the login requirement for the "add new member" page (intended for use at the venue's front desk). This should be replaced with a proper role-based check — see [8. Current limitations](#8-current-limitations-and-known-gaps).
 
-Volunteers with the `Programmer` role in the rota system are automatically added to the `Programmers` Django group, which grants the `toolkit.programmer` permission. Panopticon permissions are assigned manually by an admin.
+Volunteers with the `Programmer` BooleanField set on their profile are automatically added to the `Programmers` Django group, which grants `toolkit.write` + `toolkit.read`. Panopticon (`is_superuser`) is assigned manually by an existing superuser.
+
+**Why role deletion requires Panopticon:** Deleting a `Role` object cascades (via `on_delete=CASCADE`) to every `RotaEntry` for that role across all past and future showings, and to every `EventTemplateRole` slot. There is no confirmation step and no undo at the database level. The `edit_roles` view is therefore gated on `is_superuser`, not just `toolkit.write`. Roles marked `read_only=True` are additionally protected at the model layer.
 
 ---
 

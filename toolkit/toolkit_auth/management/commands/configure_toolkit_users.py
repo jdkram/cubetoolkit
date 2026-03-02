@@ -71,6 +71,14 @@ def _configure_users():
         codename="change_rotaentry", content_type=diary_content_type
     )
 
+    # Create the "Programmers" group (toolkit.write + toolkit.read + rota edit).
+    # Programmers can create/edit events, manage templates and tags, but cannot
+    # delete roles or access volunteer/member/CMS admin sections.
+    programmers_group, _ = auth_models.Group.objects.get_or_create(name="Programmers")
+    programmers_group.permissions.set(
+        [write_permission, read_permission, edit_rota_permission]
+    )
+
     # Configure "admin" user with the read and write permissions:
     _create_or_update_user(
         "admin",
@@ -80,6 +88,16 @@ def _configure_users():
         is_superuser=True,
         is_staff=True,
     )
+
+    # Programmer-tier demo user:
+    _create_or_update_user(
+        "programmer",
+        "toolkit_programmer@localhost",
+        [write_permission, read_permission, edit_rota_permission],
+    )
+    # Ensure programmer user is in the Programmers group:
+    programmer_user = auth_models.User.objects.get(username="programmer")
+    programmer_user.groups.set([programmers_group])
 
     # Read only (and write to the rota) user:
     _create_or_update_user(
