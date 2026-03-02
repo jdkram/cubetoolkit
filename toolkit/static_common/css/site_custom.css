@@ -121,6 +121,36 @@ a {
     padding-top: 30px;
 }
 
+/* Volunteer section divider in the sidebar nav — horizontal rule only */
+.nav-vol-divider {
+    margin: 0.6em 0 0;
+    padding: 0;
+    border-top: 1px solid #aaa;
+    list-style: none;
+}
+
+/* Sign-out button in the sidebar nav: match <a> link appearance exactly */
+#site-nav ul li form {
+    margin: 0;
+    padding: 0;
+}
+#site-nav ul li form button {
+    display: block;
+    font-size: 0.7857em;
+    font-weight: 400;
+    line-height: 1.4;
+    padding: 3.5px 0 14px;
+    background: none;
+    border: none;
+    margin: 0;
+    cursor: pointer;
+    color: inherit;
+    font-family: inherit;
+}
+#site-nav ul li form button:hover {
+    text-decoration: underline;
+}
+
 /* Volunteer session info rendered in fragment_navmenu.html — needs to be
    available on all public views, not just the programme page. */
 .volunteer-signed-in {

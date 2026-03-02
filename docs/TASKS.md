@@ -2548,4 +2548,42 @@ Using `TimeField` (not `DateTimeField`) avoids redundancy with `start` — both 
 
 ---
 
+### 9.45 — Password management in the volunteer profile 🔵 S
+
+**Context:** Panopticon users currently have to leave the volunteer profile and navigate to `/toolkit/admin/auth/user/<id>/password/` to set or reset a volunteer's password. The Django admin password form is a jarring context switch and isn't accessible to non-superusers.
+
+**Proposed behaviour:**
+
+- On the volunteer edit page, add a "Set password" section (or a button that expands one) inside the Permissions card, visible only when `VENUE.show_user_management and user_form`.
+- If the volunteer has a usable password already, show a "Change password" link/button.
+- If the account has no usable password (`has_usable_password() == False` — i.e. created with `set_unusable_password()`), show a "Create password" prompt.
+- The form takes two fields: New password + Confirm password. On POST, calls `user.set_password(new_password)` + `user.save()`.
+- Alternatively, a "Send password reset email" button (calls `PasswordResetForm.save()`) might be simpler and avoids Panopticon ever seeing the plaintext — worth considering as the primary flow, with the manual-set form as a fallback.
+
+**Scope:**
+
+- New `SetPasswordForm` or reuse Django's `SetPasswordForm` / `AdminPasswordChangeForm`
+- New view or inline POST handler in `edit_volunteer` that processes the password change separately from the main volunteer form
+- Template section in `form_volunteer.html` under the Permissions card
+- Permission gate: `is_superuser` (Panopticon only) or also Programmer? Likely Panopticon only.
+- CSRF protected; POST-only
+- Success/error feedback inline (not a redirect to a different page)
+
+**Design question:** Should the primary flow be "send password reset email" (less friction, no plaintext exposure) with manual set as a secondary option, or should Panopticon always be able to set directly?
+
+---
+
+### 9.46 — Login page styling 🟢 XS
+
+**Context:** The login page (`/toolkit/login/`) extends `base.html` rather than the S+S `base_public.html`, so it renders with no site branding, nav, fonts, or layout — a jarring blank-page experience for volunteers coming from the public site.
+
+**Fix:**
+
+- Change [toolkit/toolkit_auth/templates/login.html](toolkit/toolkit_auth/templates/login.html) to `{% extends "base_public.html" %}` and drop the `login.css` import (or keep it for form-specific sizing).
+- Check the password reset flow (`password_reset`, `password_reset_done`, `password_reset_confirm`, `password_reset_complete`) — these likely have the same problem and should be swept at the same time.
+- The login form itself is minimal (`{{ form.as_p }}` + submit); add a small centred card layout so the form doesn't float raw in a wide content area.
+- Title text: change "Login required" to something friendlier, e.g. "Volunteer sign in".
+
+---
+
 *Completed tasks: [ARCHIVE.md](ARCHIVE.md)*
