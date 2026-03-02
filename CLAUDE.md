@@ -107,11 +107,17 @@ docker compose exec toolkit /venv/bin/python3 manage.py seed_dev_data
 
 Omit `--password` for production — it will prompt interactively for each new account and skip any that already exist.
 
-**To run tests:**
+**To run tests — ALWAYS inside the container, never locally.**
+
+> ⚠️ **Do not attempt to run tests outside the container.** The project dependencies (including the `fixtures` test library, `mysqlclient`, and several C extensions) are only installed inside the Docker image. There is no local venv, and `tox` is not installed on the host. Every attempt to run tests locally will fail. Do not try to create a venv, install deps, or invoke `tox` or `python manage.py` directly on the host. The one and only way to run tests is:
+
 ```bash
 docker compose exec toolkit /venv/bin/python3 manage.py test --settings=toolkit.test_settings
-# Or locally:
-tox
+```
+
+To run a specific test module or class:
+```bash
+docker compose exec toolkit /venv/bin/python3 manage.py test toolkit.diary.tests.test_edit_views --settings=toolkit.test_settings
 ```
 
 ---

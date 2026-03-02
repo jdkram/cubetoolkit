@@ -142,20 +142,29 @@
         display: block;
     }
 
-    .rota-nextcloud-link a {
-        color: #6c757d;
-        text-decoration: none;
-        border-bottom: 1px dashed #ccc;
+    .event-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35em;
+        margin: 0.3em 0 0.1em 3em;
     }
 
-    .rota-nextcloud-link a:hover {
+    .event-links .link-chip {
+        display: inline-block;
+        padding: 0.15em 0.55em;
+        font-size: 0.82em;
+        border: 1px solid #b3cfe8;
+        border-radius: 3px;
+        background: #eef5fb;
         color: #0056b3;
-        border-bottom-color: #0056b3;
+        text-decoration: none;
+        white-space: nowrap;
     }
 
-    .rota-nextcloud-link .nc-placeholder {
-        color: #bbb;
-        font-style: italic;
+    .event-links .link-chip:hover {
+        background: #d0e8f8;
+        border-color: #0056b3;
+        text-decoration: none;
     }
 
     /* ── Role badges ─────────────────────────────────────────────────── */
@@ -569,10 +578,17 @@ edit_rota(
             {% endfor %}
             </ul>
 
-            <!-- Nextcloud link (prototype: would come from showing.event.nextcloud_url) -->
-            <div class="rota-nextcloud-link">
-                <span class="nc-placeholder">☁ <a href="#" title="Nextcloud folder for this event — field not yet on Event model (prototype)">Event files</a></span>
+            {# Resource links: clickable chips for shared folders, crew chat, etc. #}
+            {% with event_links=showing.event.links.all %}
+            {% if event_links %}
+            <div class="event-links">
+              {% for link in event_links %}
+              <a class="link-chip" href="{{ link.url }}" target="_blank" rel="noopener noreferrer"
+                 title="{{ link.url }}">{{ link.label }}</a>
+              {% endfor %}
             </div>
+            {% endif %}
+            {% endwith %}
 
             <p class="{% if showing.in_past %}past_{% endif %}showing_rota_notes"><span id="showing_rota_notes_{{ showing.pk }}">{{ showing.rota_notes }}</span></p>
         </div>
