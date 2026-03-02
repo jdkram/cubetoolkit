@@ -45,9 +45,10 @@ None — all clear.
 ### 3. Open bugs
 
 | ID | Bug | Size |
-|----|-----|------|
+| -- | --- | ---- |
 | **E** | Volunteer login dropdown inaccessible on touch | 🔵 S |
 | **M** | Calendar edit view: simultaneous events overwrite each other on busy days | 🟠 L |
+| ~~**N**~~ | ~~Nav "Rota" link pointed at public `/diary/rota/` instead of edit `/diary/edit/rota/`~~ | ✅ 2026-03-02 |
 
 ---
 
@@ -86,7 +87,7 @@ None — all clear.
 | 9.32 | Rota past-date navigation | 🟢 XS | Design decision needed (read-only past vs blocked); see TASKS.md 9.32 |
 | 9.33 | S&S spaces: seed data (9 rooms) + diary column-per-room view | 🟡 M | Seed data 🟢 XS quick win; column view is 🟡 M; see TASKS.md 9.33 |
 | 9.34 | "Showing" terminology review | 🟢 XS | Design discussion with collective; "Session" or "Date" candidate; see TASKS.md 9.34 |
-| 9.35 | 1-click top nav access to Diary + Rota edit | 🟢 XS | Add direct nav links for logged-in users; see TASKS.md 9.35 |
+| ~~9.35~~ | ~~1-click top nav access to Diary + Rota edit~~ | ✅ 2026-03-02 | Diary + Rota promoted to top-level nav items; Toolkit dropdown kept for home + sign out |
 | 9.36 | Vacancies page as email generation tool | 🔵 S | Filtered view → pre-filled email draft → urgency flag; see TASKS.md 9.36 |
 | 9.37 | Public programme tag filtering + keyword search | 🔵 S | Collapsible filter panel; client-side JS; URL persistence; see TASKS.md 9.37 |
 | 9.38 | Toolkit page: last login display + diary/edit pre/post title hide | 🟢 XS | Two independent template tweaks; see TASKS.md 9.38 |
@@ -95,6 +96,8 @@ None — all clear.
 | 9.41 | Clickable legend room filter (calendar) | 🔵 S | Multi-select checkboxes in key sidebar; client-side `eventRender` filter; `sessionStorage` persistence; see TASKS.md 9.41 |
 | 9.42 | Tests: diary edit list view | 🟢 XS | `rooms` no None sentinel; month heading in thead; empty-day blank time cell; see TASKS.md 9.42 |
 | 9.43 | Room management UI | 🔵 S | Create/edit/delete rooms from toolkit UI (not just Django admin); name, colour picker, is_primary; see TASKS.md 9.43 |
+| 9.45 | Password management in volunteer profile | 🔵 S | "Set/change password" + "send reset email" inline in Permissions card; removes Django admin detour; see TASKS.md 9.45 |
+| 9.46 | Login page styling | 🟢 XS | Extends `base.html` not `base_public.html`; sweep login + password reset templates; friendly title; see TASKS.md 9.46 |
 
 ### 4. Medium and large Phase 2 features
 
