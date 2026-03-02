@@ -262,9 +262,24 @@ class Event(models.Model):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Set field from template (if specified):
-        if "template" in kwargs and not self.pricing:
-            self.pricing = kwargs["template"].pricing
+        # Pre-populate scalar fields from template on construction.
+        # Only fills blank/null fields so explicit kwargs always win.
+        if "template" in kwargs:
+            tmpl = kwargs["template"]
+            for field in (
+                "pricing",
+                "copy",
+                "copy_summary",
+                "terms",
+                "film_information",
+            ):
+                if not getattr(self, field):
+                    setattr(self, field, getattr(tmpl, field) or "")
+            # Booleans: only override if still at their default (False)
+            if not self.private:
+                self.private = tmpl.private
+            if not self.outside_hire:
+                self.outside_hire = tmpl.outside_hire
 
     def __str__(self):
         return f"{self.name} ({self.id})"
@@ -578,15 +593,21 @@ class Showing(models.Model):
     def reset_rota_to_default(self):
         """Clear any existing rota entries. If the associated event has an
         event type defined then apply the default set of rota entries for that
-        type"""
+        type, and copy any default rota_notes from the template."""
 
         # Delete all existing rota entries (if any)
         self.rotaentry_set.all().delete()
 
         if self.event.template is not None:
-            # Add a rota entry for each role in the event type:
-            for role in self.event.template.roles.all():
-                RotaEntry(role=role, showing=self).save()
+            tmpl = self.event.template
+            # Add rota entries for each role slot in the template, respecting count:
+            for slot in tmpl.role_slots.select_related("role").all():
+                for rank in range(1, slot.count + 1):
+                    RotaEntry(role=slot.role, showing=self, rank=rank).save()
+            # Pre-populate rota notes from the template (only if blank)
+            if not self.rota_notes and tmpl.rota_notes:
+                self.rota_notes = tmpl.rota_notes
+                self.save(update_fields=["rota_notes"])
 
     def clone_rota_from_showing(self, source_showing):
         assert self.pk is not None
@@ -672,8 +693,8 @@ class EventTemplate(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # Default roles for this event
-    roles = models.ManyToManyField(Role, db_table="EventTemplates_Roles")
+    # Default roles for this event (with per-role slot counts)
+    roles = models.ManyToManyField(Role, through="EventTemplateRole")
     # Default tags for this event
     tags = models.ManyToManyField(
         EventTag, db_table="EventTemplate_Tags", blank=True
@@ -681,12 +702,44 @@ class EventTemplate(models.Model):
     # Default pricing for this event
     pricing = models.CharField(max_length=256, null=False, blank=True)
 
+    # Default copy fields — applied to new events on creation
+    copy = models.TextField(max_length=8192, null=True, blank=True)
+    copy_summary = models.TextField(max_length=4096, null=True, blank=True)
+    terms = models.TextField(max_length=4096, null=True, blank=True)
+    film_information = models.CharField(max_length=256, null=False, blank=True)
+    private = models.BooleanField(default=False)
+    outside_hire = models.BooleanField(default=False)
+
+    # Default rota notes — applied to the first showing on creation
+    rota_notes = models.TextField(max_length=4096, null=False, blank=True)
+
     class Meta:
         db_table = "EventTemplates"
         ordering = ["name"]
 
     def __str__(self):
         return self.name
+
+
+class EventTemplateRole(models.Model):
+    """Through model for EventTemplate.roles, adding a per-role slot count."""
+
+    template = models.ForeignKey(
+        EventTemplate, on_delete=models.CASCADE, related_name="role_slots"
+    )
+    role = models.ForeignKey(Role, on_delete=models.CASCADE)
+    count = models.PositiveSmallIntegerField(
+        default=1,
+        help_text="Number of slots to create for this role when a new event is made from this template.",
+    )
+
+    class Meta:
+        db_table = "EventTemplateRoles"
+        unique_together = [("template", "role")]
+        ordering = ["role__name"]
+
+    def __str__(self):
+        return f"{self.template.name} — {self.role.name} ×{self.count}"
 
 
 class RotaEntry(models.Model):

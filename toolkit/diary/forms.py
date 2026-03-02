@@ -2,6 +2,7 @@ import datetime
 import calendar
 
 from django import forms
+from django.forms import inlineformset_factory
 import django.db.models
 from django.conf import settings
 from crispy_forms.helper import FormHelper
@@ -27,6 +28,63 @@ class RoleForm(forms.ModelForm):
             "standard",
             "description",
         )
+
+
+class EventTemplateForm(forms.ModelForm):
+    class Meta:
+        model = toolkit.diary.models.EventTemplate
+        # roles is handled by a separate inline formset (EventTemplateRoleFormSet)
+        fields = (
+            "name",
+            "tags",
+            "pricing",
+            "film_information",
+            "copy_summary",
+            "copy",
+            "terms",
+            "rota_notes",
+            "private",
+            "outside_hire",
+        )
+        widgets = {
+            "tags": ChosenSelectMultiple(),
+            "copy": forms.Textarea(attrs={"wrap": "soft", "rows": 10}),
+            "copy_summary": forms.Textarea(attrs={"wrap": "soft", "rows": 4}),
+            "terms": forms.Textarea(attrs={"wrap": "soft", "rows": 6}),
+            "rota_notes": forms.Textarea(attrs={"wrap": "soft", "rows": 4}),
+            "pricing": forms.TextInput(
+                attrs={
+                    "placeholder": (
+                        "e.g. '\u00A30 Full / \u00A30 Concession'"
+                    ),
+                }
+            ),
+            "film_information": forms.TextInput(
+                attrs={
+                    "placeholder": "e.g. Dir: [director], 1990, USA, 120 mins, Cert: 15",
+                }
+            ),
+        }
+
+
+class EventTemplateRoleForm(forms.ModelForm):
+    class Meta:
+        model = toolkit.diary.models.EventTemplateRole
+        fields = ("role", "count")
+        widgets = {
+            "count": forms.NumberInput(attrs={"min": 1, "max": 20, "style": "width:4em"}),
+        }
+
+
+# Inline formset: one EventTemplateRole row per role slot on the template.
+# extra=1 always appends one blank row for adding a new role.
+EventTemplateRoleFormSet = inlineformset_factory(
+    toolkit.diary.models.EventTemplate,
+    toolkit.diary.models.EventTemplateRole,
+    form=EventTemplateRoleForm,
+    extra=1,
+    can_delete=True,
+)
 
 
 class DiaryIdeaForm(forms.ModelForm):
@@ -278,43 +336,30 @@ def rota_form_factory(showing):
 
     for role in roles:
         _role_ids.append(role.pk)
-        if role.standard:
-            # For each "standard" role, add an Integer field;
-            members[f"role_{role.pk}"] = forms.IntegerField(
-                min_value=0,
-                max_value=settings.MAX_COUNT_PER_ROLE,
-                required=True,
-                label=role.name,
-                initial=rota_entry_count_by_role.get(role.pk, 0),
-                widget=forms.TextInput(attrs={"class": "rota_count"}),
-            )
-
-    # Add a MultipleChoiceField for all roles that aren't "standard"
-    members["other_roles"] = forms.MultipleChoiceField(
-        choices=((role.pk, role.name) for role in roles if not role.standard),
-        # Don't have to have anything selected:
-        required=False,
-        # List of IDs which should be selected:
-        initial=[entry.pk for entry in rota_entries if not entry.standard],
-        # Fancy widget
-        widget=ChosenSelectMultiple(width="100%"),
-    )
+        # All roles get an IntegerField spinner.
+        # Standard roles are prefixed "role_"; non-standard "other_" so the
+        # template can render them in two visual groups with the same spinner UI.
+        prefix = "role_" if role.standard else "other_"
+        members[f"{prefix}{role.pk}"] = forms.IntegerField(
+            min_value=0,
+            max_value=settings.MAX_COUNT_PER_ROLE,
+            required=False,  # Missing field treated as 0 — you don't need to explicitly zero every role
+            label=role.name,
+            initial=rota_entry_count_by_role.get(role.pk, 0),
+            widget=forms.NumberInput(attrs={"class": "rota_count"}),
+        )
 
     def get_rota(self):
-        # Build a dict mapping role_id: number from submitted cleaned
-        # data
-
-        # Create empty results dict
+        # Build a dict mapping role_id: number from submitted cleaned data.
+        # None (missing/blank field) counts as 0.
         result = dict.fromkeys(self._role_ids, 0)
         for field, value in self.cleaned_data.items():
-            if field == "other_roles":
-                result.update(
-                    (int(key, 10), 1)
-                    for key in self.cleaned_data.get("other_roles", ())
-                )
+            if value is None:
+                continue
             if field.startswith("role_"):
-                role_id = int(field.split("role_")[1], 10)
-                result[role_id] = value
+                result[int(field[5:])] = value
+            elif field.startswith("other_"):
+                result[int(field[6:])] = value
         return result
 
     members["_role_ids"] = _role_ids

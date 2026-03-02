@@ -15,6 +15,7 @@ from toolkit.diary.edit_views import (
     delete_showing,
     add_event,
     edit_event_templates,
+    edit_event_template_detail,
     edit_event_tags,
     edit_roles,
     view_event_field,
@@ -202,11 +203,21 @@ diary_urls = [
     ),
     # Add a new event + showing
     re_path(r"^edit/event/add$", add_event, name="add-event"),
-    # Edit event types
+    # Edit event types (list + per-template detail/create)
     re_path(
-        r"^edit/eventtemplates/",
+        r"^edit/eventtemplates/$",
         edit_event_templates,
         name="edit_event_templates",
+    ),
+    re_path(
+        r"^edit/eventtemplates/add$",
+        edit_event_template_detail,
+        name="add_event_template",
+    ),
+    re_path(
+        r"^edit/eventtemplates/(?P<template_id>\d+)/$",
+        edit_event_template_detail,
+        name="edit_event_template_detail",
     ),
     re_path(r"^edit/eventtags/", edit_event_tags, name="edit_event_tags"),
     # Edit event roles

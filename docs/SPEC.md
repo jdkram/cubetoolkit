@@ -873,7 +873,7 @@ are pre-processed to fix wrapping/links.
 - `notes` — programmer's internal notes (not public)
 - `pricing` — free text (e.g. "£5/£3 concs")
 - `ticket_link` — URL to external ticketing (TicketSource)
-- `template` — an optional `EventTemplate` that seeds default roles, tags, pricing
+- `template` — an optional `EventTemplate` that seeds default roles, tags, pricing, copy, terms, and more (see EventTemplate below)
 - Events **cannot be deleted** (enforced at model level). They can be cancelled
 at the `Showing` level.
 
@@ -956,7 +956,11 @@ PENDING ──► SENDING ──► SENT
 - `recipient_filter` can restrict sends to a subset of members
 
 #### EventTemplate
-A reusable blueprint for recurring event types. When a new event is created from a template, it inherits default roles (for the rota) and default tags. The programmer can then override these.
+A reusable blueprint for recurring event types. When a new event is created from a template, it pre-populates the new `Event` with default values for roles, tags, pricing, copy, copy_summary, terms, film_information, private, and outside_hire. The first `Showing` also receives the template's default rota_notes. The programmer can override all of these after creation.
+
+Fields: `name`, `roles` (M2M via `EventTemplateRole`), `tags` (M2M), `pricing`, `copy`, `copy_summary`, `terms`, `film_information`, `private`, `outside_hire`, `rota_notes`.
+
+`EventTemplateRole` (through model): `template`, `role`, `count` (default 1). Allows "3 × Bar Staff" — `reset_rota_to_default()` creates `count` `RotaEntry` objects per slot.
 
 #### EventTag
 Category labels for events — e.g. "film", "music", "workshop", "meeting".
