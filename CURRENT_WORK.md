@@ -59,7 +59,7 @@ None — all clear.
 | ~~9.9~~ | ~~Break-even calculator for programmers~~ | ✅ 2026-03-02 | Collapsible panel in event edit form beneath terms; pure JS; Finance Collective threshold warnings; fill-level table |
 | ~~9.10.2~~ | ~~Clone rota notes with event clone~~ | ✅ 2026-02-28 | `clone_rota_from_showing` now copies `rota_notes`; test added |
 | 9.10.6 | Inline warning when rota notes carry to cloned showing | 🟢 XS | Template banner in clone form; see TASKS.md 9.10.6 option 2 |
-| 9.10.7 | Port `add-showing` clone view from `s+s` | 🔵 S | Proper clone-booking block with date picker; replaces placeholder link; see TASKS.md 9.10.7 |
+| ~~9.10.7~~ | ~~Clone event as new event~~ | ✅ 2026-03-02 | "Clone as new event" button on Event Hub; copies all text/config fields (copy, terms, notes, pricing, etc.) + tags + rota from source event; new Showing created unconfirmed; ticket link intentionally left blank; 7 new tests; `devserver_settings` now silently skips `debug_toolbar` when not installed (fixes Docker test runner); `dev.txt` updated to `fixtures>=4` |
 | 9.12 | "Dormant" volunteer status | 🟢 XS | Add `status` field (active/dormant/retired) |
 | 9.3↳ | Collapse rota notes by default | 🟢 XS | Show summary, expand button |
 | 9.17↳ | `Role.accessibility_notes` field | 🟢 XS | Info-only field for role accessibility |
@@ -74,7 +74,7 @@ None — all clear.
 | 9.22 | External hire free-text field on rota | 🟢 XS | `RotaEntry.external_name` field; visible on rota view |
 | 9.23 | "Films start on time" banner | 🟢 XS | `FILMS_START_ON_TIME` setting; conditional block in event detail template |
 | 9.24 | Pronouns on hover for rota names | 🔵 S | `Volunteer.pronouns` field; tooltip on rota view/edit |
-| 9.21 | Recurring events / clone-to-dates | 🟡 M | Multi-date clone UI; one Showing per date; see TASKS.md 9.21 |
+| 9.21 | Recurring events / clone-to-dates | 🟡 M | Multi-date batch clone UI; builds on 9.10.7; one Showing per date; see TASKS.md 9.21 |
 | 9.25 | Tap to sign up on rota (mobile) | 🔵 S | Self-service slot claim for logged-in volunteers; see TASKS.md 9.25 |
 | 9.26 | Event resource links (generalised rota links) | 🔵 S | `EventLink` model; named link chips on rota view; domain whitelist; see TASKS.md 9.26 |
 | ~~9.28~~ | ~~Volunteer role tier labelling + GDPR danger indicators~~ | ✅ 2026-03-02 | "Panopticon access" label; Programmer BooleanField; red `danger-zone` card with ⓘ GDPR tooltips on Programmer + Panopticon fields |
