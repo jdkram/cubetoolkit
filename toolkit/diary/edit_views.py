@@ -20,7 +20,7 @@ import django.template
 import django.db
 from django.db.models import Q
 import django.utils.timezone as timezone
-from django.contrib.auth.decorators import permission_required
+from django.contrib.auth.decorators import permission_required, user_passes_test
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.views.decorators.http import require_POST, require_http_methods
 from django.utils.html import escape
@@ -959,7 +959,7 @@ def edit_event_tags(request):
     return render(request, "edit_event_tags.html", context)
 
 
-@permission_required("toolkit.write")
+@user_passes_test(lambda u: u.is_superuser)
 def edit_roles(request):
     # This is pretty slow,but it's not a commonly used bit of the UI...
     # (To be precise, save involves >120 queries. This is because I've been

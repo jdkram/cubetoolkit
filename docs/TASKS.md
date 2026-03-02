@@ -2638,6 +2638,35 @@ Add `sort_order` to `EventTemplateRole`. Drag-and-drop on the template detail pa
 
 Seed data: assign `sort_order` values to the 29 roles in `seed_dev_data` — operational/safety roles first (Keyholder, Projectionist, Sound), then guest-facing (Bar Staff, Box Office, Usher), then support/volunteer (Extra Hands, Trainee, etc).
 
+### 9.48 — Template export/import 🔵 S (4–8h)
+
+**Context:** Event templates can now contain rich configuration — rota role slots with counts, pricing, copy, terms, tags, rota notes. A well-configured template represents significant setup work. Currently there is no way to back templates up, share them, or restore them after accidental deletion.
+
+**Goal:** Allow a Panopticon user to export a template as a human-readable text blob (copy-paste, no file download required), and import one by pasting the same format — instantly recreating the template.
+
+**Format options:**
+
+- **JSON** — machine-precise, supports all field types cleanly, but not friendly to hand-edit
+- **YAML** — more readable, still structured; requires a PyYAML dependency
+- **Custom key: value** — maximally readable but more parser work and fragile
+
+**Recommended format:** JSON (no new dependency; can be prettified for readability; easy round-trip).
+
+**Export fields:** `name`, `pricing`, `film_information`, `copy_summary`, `copy`, `terms`, `rota_notes`, `private`, `outside_hire`, `tags` (by name, not PK), `role_slots` (role name + count).
+
+**Import behaviour:**
+
+- Roles and tags are matched by name. If a named role or tag doesn't exist in the target system, skip with a warning rather than failing hard.
+- If a template with the same name already exists, offer to overwrite or create a copy.
+- Import UI: a textarea on the template list page (Panopticon only).
+
+**Implementation sketch:**
+
+1. `export_template(template)` → JSON string (view or model method)
+2. "Export" button on `edit_event_template_detail.html` → renders JSON in a read-only textarea for copy-paste
+3. "Import template" form on `edit_event_templates.html` (Panopticon only) → POST JSON string
+4. `import_template(json_str, request)` → creates/updates `EventTemplate` + `EventTemplateRole` rows
+
 ---
 
 *Completed tasks: [ARCHIVE.md](ARCHIVE.md)*
