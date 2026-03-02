@@ -1,27 +1,28 @@
-{% extends "base.html" %}
+{% extends "base_public.html" %}
 {% block css %}
+{{ block.super }}
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/login.css">
 {% endblock %}
+{% block script-page-setup %}{% endblock %}
 {% block title %}
-Login required
+Volunteer sign in
 {% endblock %}
 
 {% block body %}
-
-<h1>Login required</h1>
-{{ form.name_of_field.errors }}
-{% if message %} <p id="message">{{ message }}</p>{% endif %}
-<form class="login-form"  action="{% url 'login' %}" method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <input type="submit" value="Continue" />
-    <input type="hidden" name="next" value="{{ next }}" />
-</form>
-
-{% if VENUE.show_user_management %}
-    <p>Have you only gone and forgotten your password?
-    <a href="{% url "password_reset" %}">Reset password</a></p>
-{% endif %}
-
+<div class="login-card" style="max-width: 400px; margin: 40px auto; padding: 32px 24px; background: #fff; border-radius: 8px; box-shadow: 0 2px 16px rgba(0,0,0,0.08); text-align: center;">
+  <h2 style="margin-bottom: 24px;">Volunteer sign in</h2>
+  {{ form.name_of_field.errors }}
+  {% if message %} <p id="message">{{ message }}</p>{% endif %}
+  <form class="login-form"  action="{% url 'login' %}" method="post" style="margin-bottom: 16px;">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <input type="submit" value="Continue" style="margin-top: 12px;" />
+      <input type="hidden" name="next" value="{{ next }}" />
+  </form>
+  {% if VENUE.show_user_management %}
+      <p style="margin-top: 12px; font-size: 0.95em;">Forgot your password?
+      <a href="{% url "password_reset" %}">Reset password</a></p>
+  {% endif %}
+</div>
 {% endblock %}
 
