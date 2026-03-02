@@ -448,10 +448,12 @@ class DiaryTestsMixin(fixtures.TestWithFixtures):
 
 class ToolkitUsersFixture(fixtures.Fixture):
     def _setUp(self):
-        # Read/write user:
+        # Read/write superuser (Panopticon tier — is_superuser required for edit_roles):
         user_rw = auth_models.User.objects.create_user(
             "admin", "toolkit_admin@localhost", "T3stPassword!"
         )
+        user_rw.is_superuser = True
+        user_rw.save()
         # read only user:
         user_r = auth_models.User.objects.create_user(
             "read_only", "toolkit_admin@localhost", "T3stPassword!1"

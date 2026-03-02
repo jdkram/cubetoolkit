@@ -27,6 +27,14 @@
     #logout-form button:hover {
         text-decoration: underline;
     }
+    .access-tier {
+        font-size: 0.85em;
+        color: #666;
+        margin-top: 0.5rem;
+    }
+    .access-tier strong {
+        color: #333;
+    }
 </style>
 {% endblock %}
 
@@ -37,7 +45,7 @@
 <ul>
     <li><a href="{% url "default-view" %}">Diary for the public</a></li>
     <li><a href="{% url "archive-view-index" %}">Public diary archive</a></li>
-    {% if user.is_superuser %}
+    {% if perms.toolkit.write %}
         <li><a href="{% url "default-edit" %}">Edit the diary</a></li>
         <li><a href="{% url "diary-edit-calendar" %}">Edit the diary from a calendar</a></li>
         <li><a href="{% url "view_event_field" field="copy" %}">Copy report</a></li>
@@ -52,15 +60,18 @@
     <li><a href="{% url "view-rota-vacancies" %}">List vacancies in the next 30 days</a> (for easy emailing)</li>
 </ul>
 
-{% if user.is_superuser %}
-
+{% if perms.toolkit.write %}
     <h2>Meta-programming</h2>
     <ul>
         <li><a href="{% url "edit_event_tags" %}">Edit available event tags</a></li>
         <li><a href="{% url "edit_event_templates" %}">Edit available event templates</a></li>
-        <li><a href="{% url "edit_roles" %}">Edit available volunteer/event roles</a></li>
-   </ul>
+        {% if user.is_superuser %}
+        <li><a href="{% url "edit_roles" %}">Edit available volunteer/event roles</a> <small>(Panopticon only)</small></li>
+        {% endif %}
+    </ul>
+{% endif %}
 
+{% if user.is_superuser %}
     <h2>Volunteers</h2>
     <ul>
         <li><a href="{% url "view-volunteer-summary" %}">Volunteers summary</a></li>
@@ -85,7 +96,6 @@
     <ul>
         <li><a href="{% url "wagtailadmin_home" %}">Content management</a></li>
     </ul>
-
 {% endif %}
 
 <ul>
@@ -104,6 +114,16 @@
 </ul>
 <hr>
 <p>You logged in as {{ user }} at {{ user.last_login }}</p>
+<p class="access-tier">
+  Access level:
+  {% if user.is_superuser %}
+    <strong>Panopticon</strong> — full admin access
+  {% elif perms.toolkit.write %}
+    <strong>Programmer</strong> — can edit events, templates and tags; cannot manage members, volunteers or roles
+  {% else %}
+    <strong>Volunteer</strong> — can edit the rota
+  {% endif %}
+</p>
 {% if user.is_superuser %}
     <a href="{% url "create-index-link" %}">Add link</a> &#xb7;
     <a href="{% url "create-index-category" %}">Add link group</a> &#xb7;

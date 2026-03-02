@@ -37,7 +37,7 @@
 <div class="header">
   <h1>Event templates</h1>
   <p>Templates are applied when a new event is created — they pre-populate roles, tags, pricing, copy, terms, and rota notes.</p>
-  <p class="warn">Changes affect future events only; existing events are not modified.</p>
+  <p class="warn">Templates are shared across all programmers. Changes here affect new events only — existing events are never modified — but a well-configured template can represent significant setup work. Edit with care, and check with colleagues before making large changes.</p>
   {% include "messages.html" %}
   <a href="{% url 'add_event_template' %}" class="btn btn-primary btn-sm">+ Add new template</a>
 </div>

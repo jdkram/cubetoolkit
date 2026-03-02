@@ -57,9 +57,22 @@ Editing Event roles
 {% block body %}
 <div class="header">
 <h1>Roles</h1>
-<p class="warn">Deleting roles cannot be undone, please take care</p>
-<p>(Events marked as "Standard Event Roles" will be shown at the top of the role selection list for events.)</p>
-<p>Add new roles at the end of the list</p>
+<div class="alert alert-danger" style="max-width:700px">
+  <strong>Panopticon-only page.</strong>
+  <ul style="margin-bottom:0">
+    <li><strong>Deleting a role is permanent and cascades silently.</strong>
+      It will immediately and irreversibly remove that role from every rota assignment
+      across all past and future showings, and from every event template.
+      There is no confirmation step and no undo.</li>
+    <li>Roles marked <em>read-only</em> (e.g. Projectionist) are protected and cannot be deleted here.</li>
+    <li><strong>Renaming a role is safe.</strong>
+      The name is stored once and referenced everywhere relationally,
+      so a rename takes effect immediately on all showings, templates, and volunteer profiles
+      — no manual updates needed.</li>
+  </ul>
+</div>
+<p>Events marked as "Standard Event Roles" are shown at the top of the role selection list.</p>
+<p>Add new roles at the end of the list.</p>
 {% include "messages.html" %}
 </div>
 

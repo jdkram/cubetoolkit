@@ -99,6 +99,7 @@
 
   <h1>{% if event_template %}{{ event_template.name }}{% else %}New event template{% endif %}</h1>
   <p>These defaults are applied when a new event is created from this template. Editing them does <strong>not</strong> affect existing events.</p>
+  <p class="warn">This template is shared — changes take effect immediately for anyone creating a new event. A carefully set-up template with rota, copy, and terms can represent a lot of work; edit with care.</p>
 
   {% include "messages.html" %}
 
