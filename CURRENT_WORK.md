@@ -77,10 +77,10 @@ None — all clear.
 | 9.21 | Recurring events / clone-to-dates | 🟡 M | Multi-date clone UI; one Showing per date; see TASKS.md 9.21 |
 | 9.25 | Tap to sign up on rota (mobile) | 🔵 S | Self-service slot claim for logged-in volunteers; see TASKS.md 9.25 |
 | 9.26 | Event resource links (generalised rota links) | 🔵 S | `EventLink` model; named link chips on rota view; domain whitelist; see TASKS.md 9.26 |
-| 9.28 | Volunteer role tier labelling + GDPR danger indicators | 🟢 XS | Rename `is_superuser` → "Panopticon access"; add Programmer field; ⚠ warning on sensitive roles; see TASKS.md 9.28 |
+| ~~9.28~~ | ~~Volunteer role tier labelling + GDPR danger indicators~~ | ✅ 2026-03-02 | "Panopticon access" label; Programmer BooleanField; red `danger-zone` card with ⓘ GDPR tooltips on Programmer + Panopticon fields |
 | ~~**Bug K**~~ | ~~Rota `&amp;` display glitch + security audit of loaddata decode~~ | ✅ 2026-03-02 | Fixed in `edit_rota.js`: use jeditable's `data` option (value-transform callback), not `loaddata` (which is POST params for `loadurl` AJAX — never fired here). Regex decode of Django's 6 escape sequences. Server returns unescaped plain text — do NOT call `escape()` there, browser re-encodes on innerHTML read. See TASKS.md Bug K for full jeditable encoding archaeology. |
 | **Bug L** | Wheelchair strikethrough too subtle | 🟢 XS | CSS/template only; consider bolder indicator, badge, or tooltip; see TASKS.md Bug L |
-| 9.16 | Alt text fields for event images | 🔵 S | `MediaItem.alt_text` field; admin + form; templates; `ALT_TEXT_GUIDANCE_URL` setting + tooltip; see TASKS.md 9.16 |
+| ~~9.16~~ | ~~Alt text fields for event images~~ | ✅ 2026-03-02 | `MediaItem.alt_text` field + migration `diary/0012`; `MediaItemForm` gains field with optional guidance URL; `MediaItemAdmin`; `ALT_TEXT_GUIDANCE_URL` setting + context; all 7 image `<img>` tags updated to use `alt_text` with fallback; Hub shows Alt text row above Image credit; seed data sets `alt_text` to "Poster for {event.name}" |
 | 9.29 | Role management — "other role" limit + role-change behaviour | 🟡 M | Design needed first (design questions in TASKS.md 9.29) |
 | 9.30 | Outside hire enhancements — tooltip, hire name, external crew field | 🔵 S | `Event.hire_name` + `Event.external_crew_notes`; reveal on checkbox; rota surface; see TASKS.md 9.30 |
 | 9.31 | Beginner-friendly rota slot highlighting | 🟢 XS | Filter in filterline; auto-tag roles containing "extra hands"; see TASKS.md 9.31 |
@@ -149,7 +149,7 @@ Completed items stay here. When the Done section gets unwieldy, old rows can be 
 | ~~9.33 — Calendar key overhaul~~ | 2026-03-01 | `Room.is_primary` field + migration; vivid red/blue/yellow primary rooms, pastel secondary rooms; `_is_light_colour()` auto-applies black `textColor` (Café yellow); CSS filter approach dropped — colours stored directly; historic colour removed, red nowIndicator line replaces it; collapsible sticky sidebar key on both views; list view restructured to per-month `<table>` blocks (`<h2>` outside table fixes colspan vertical-line breaks), IDEAS removed, room header gets full-width colour stripe via `border-bottom`, empty-day rows use full column structure; 380 tests pass |
 | ~~9.1 Volunteer programme view~~ | 2026-02 | Logged-in volunteers see internal events inline with public programme |
 | ~~9.8 Image copyright reminder~~ | 2026-02 | `IMAGE_COPYRIGHT_GUIDANCE_URL` setting; reminder shown on upload |
-| ~~9.16 Live word counter for `copy_summary`~~ | 2026-02 | Vanilla JS; 25-word target with colour coding |
+| ~~Live word counter for `copy_summary`~~ | 2026-02 | Vanilla JS; 25-word target with colour coding |
 | ~~8.13 `IndexLink.description` field~~ | 2026-02 | `TextField` added; migration `0003` |
 | ~~8.14 Volunteer table sort (in-place JS)~~ | 2026-02 | Click headers to sort without page reload |
 | ~~8.15 jQuery UI 1.11 → 1.13.3~~ | 2026-02 | Drop-in update |

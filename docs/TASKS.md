@@ -1578,7 +1578,7 @@ embed it in the toolkit, the right integration is:
 - Each `Distributor` record can optionally carry a `guide_url` field linking
   to the specific section of the guide relevant to that distributor
 
-The *Film and Television Programming Guide* (January 2025) has been shared and is documented in full as section 3.5 of this spec. The 25-word summary requirement, TicketSource setup process (including the specific pricing tiers and seating plan selection), and distributor list are all captured there. See section 9.16 for the proposed live word counter feature for the `copy_summary` field.
+The *Film and Television Programming Guide* (January 2025) has been shared and is documented in full as section 3.5 of this spec. The 25-word summary requirement, TicketSource setup process (including the specific pricing tiers and seating plan selection), and distributor list are all captured there. A live word counter for the `copy_summary` field is already implemented (Vanilla JS, 25-word target with colour feedback).
 
 #### Periodic screening report
 
@@ -1654,7 +1654,7 @@ erDiagram
 | Screening report CSV export | 🔵 S | 4–6h |
 | **Total** | **🟡 M** | **~23–40h** |
 
-### 9.16 Alt text fields for images 🔵 S (8–16h)
+### 9.16 Alt text fields for images — ✅ Done 2026-03-02
 
 **Goal:** Add structured alt text (alternative text) fields to all images across the toolkit, ensuring that screen reader users and people with images disabled can understand visual content.
 
@@ -1932,7 +1932,7 @@ The description field was added to the model and included in the form, but the e
 
 **Gap 5: word counter JS initialisation not verified** 🟢 XS (30min)
 
-Relates to: 9.16 live word counter for `copy_summary`
+Relates to: the live word counter for `copy_summary` (implemented 2026-02)
 
 Backend validation (minimum word count) is tested in `test_edit_views.py` via `@override_settings(PROGRAMME_EVENT_TERMS_MIN_WORDS=5)`. The JS-side counter is not testable, but we could verify the template at least includes the counter script block.
 
@@ -2170,7 +2170,7 @@ The context variable `show_archive_images` is passed to the `view_event.html` te
 
 ---
 
-### 9.28 Volunteer role tier labelling and GDPR danger indicators 🟢 XS (2–4h)
+### 9.28 Volunteer role tier labelling and GDPR danger indicators — ✅ Done 2026-03-02
 
 **Problem:**
 
