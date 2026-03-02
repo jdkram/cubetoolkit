@@ -96,27 +96,78 @@ $(document).ready(function() {
     var FC_STANDARD = 500;
     var FC_MUSIC = 750;
 
-    var COST_IDS = ['be-hire', 'be-technical', 'be-artist-fee', 'be-accommodation', 'be-travel', 'be-food', 'be-other'];
+    // Fixed costs (excluding artist deal, which is handled separately)
+    var COST_IDS = ['be-hire', 'be-technical', 'be-accommodation', 'be-travel', 'be-food', 'be-other'];
 
     function num(id) { return parseFloat(document.getElementById(id).value) || 0; }
     function fmt(n) { return '\u00a3' + n.toFixed(2); }
 
     function calculate() {
-        var totalCosts = COST_IDS.reduce(function (s, id) { return s + num(id); }, 0);
-        var capacity = Math.max(1, Math.round(num('be-capacity')));
+        var otherCosts  = COST_IDS.reduce(function (s, id) { return s + num(id); }, 0);
+        var capacity    = Math.max(1, Math.round(num('be-capacity')));
         var ticketPrice = num('be-ticket-price');
-        var artistShare = Math.min(100, Math.max(0, num('be-artist-share')));
-        var venuePerTicket = ticketPrice * (1 - artistShare / 100);
+        var artistMG    = num('be-artist-mg');
+        var artistPct   = Math.min(100, Math.max(0, num('be-artist-pct')));
+        var barDrinks   = Math.max(0, num('be-bar-drinks'));   // avg drinks per person
+        var barProfit   = Math.max(0, num('be-bar-profit'));   // avg profit per drink
+        var barPerHead  = barDrinks * barProfit;               // bar revenue per attendee
 
         var output = document.getElementById('be-output');
         output.style.display = 'block';
 
-        if (venuePerTicket <= 0) {
+        if (ticketPrice <= 0) {
             output.innerHTML = '<div class="alert alert-warning mb-0">Enter a ticket price to see results.</div>';
             return;
         }
 
-        var breakEven = Math.ceil(totalCosts / venuePerTicket);
+        // Artist payment for N tickets sold
+        function artistCost(tickets) {
+            var gross = tickets * ticketPrice;
+            if (artistPct === 0) return artistMG;
+            if (artistMG === 0) return gross * artistPct / 100;
+            return Math.max(artistMG, gross * artistPct / 100);
+        }
+
+        // Venue income for N tickets (box office share + bar)
+        function venueIncome(tickets) {
+            return tickets * ticketPrice - artistCost(tickets) + tickets * barPerHead;
+        }
+
+        // Profit for N tickets
+        function vProfit(tickets) { return venueIncome(tickets) - otherCosts; }
+
+        // --- Analytical break-even ---
+        var breakEven;
+        var effMGPerTicket  = ticketPrice + barPerHead;  // effective per-ticket when MG applies
+        var effPctPerTicket = ticketPrice * (1 - artistPct / 100) + barPerHead; // when % applies
+
+        if (artistPct === 0) {
+            // Flat fee / MG only
+            var costsMG = otherCosts + artistMG;
+            breakEven = costsMG <= 0 ? 0 : Math.ceil(costsMG / effMGPerTicket);
+        } else if (artistMG === 0) {
+            // Pure % deal
+            if (effPctPerTicket <= 0) {
+                output.innerHTML = '<div class="alert alert-danger mb-0">Artist % leaves the venue with nothing per ticket sold.</div>';
+                return;
+            }
+            breakEven = otherCosts <= 0 ? 0 : Math.ceil(otherCosts / effPctPerTicket);
+        } else {
+            // Whichever-greater: max(MG, N × price × pct%)
+            if (effPctPerTicket <= 0) {
+                output.innerHTML = '<div class="alert alert-danger mb-0">Artist % leaves the venue with nothing per ticket sold.</div>';
+                return;
+            }
+            var nCrossover = artistMG / (ticketPrice * artistPct / 100);
+            var nIfPct = otherCosts / effPctPerTicket;
+            if (nIfPct >= nCrossover) {
+                breakEven = Math.ceil(nIfPct);  // % deal active at break-even
+            } else {
+                var costsMG = otherCosts + artistMG;
+                breakEven = costsMG <= 0 ? 0 : Math.ceil(costsMG / effMGPerTicket);
+            }
+        }
+
         var breakEvenPct = (breakEven / capacity * 100).toFixed(1);
         var impossible = breakEven > capacity;
         var html = '';
@@ -127,24 +178,30 @@ $(document).ready(function() {
         if (impossible) { html += ' &mdash; costs cannot be covered even at a full room.'; }
         html += '</div>';
 
-        // Finance Collective warning
-        if (totalCosts >= FC_MUSIC) {
-            html += '<div class="alert alert-warning mb-2"><strong>Finance Collective required</strong> &mdash; total costs (' + fmt(totalCosts) + ') exceed the \u00a3' + FC_MUSIC + ' music threshold.</div>';
-        } else if (totalCosts >= FC_STANDARD) {
-            html += '<div class="alert alert-warning mb-2"><strong>Finance Collective required</strong> &mdash; total costs (' + fmt(totalCosts) + ') exceed the \u00a3' + FC_STANDARD + ' standard threshold.</div>';
+        // Finance Collective warning (on gross costs, not net of bar)
+        var grossCosts = otherCosts + artistMG;
+        if (grossCosts >= FC_MUSIC) {
+            html += '<div class="alert alert-warning mb-2"><strong>Finance Collective required</strong> &mdash; costs (' + fmt(grossCosts) + ') exceed the \u00a3' + FC_MUSIC + ' music threshold.</div>';
+        } else if (grossCosts >= FC_STANDARD) {
+            html += '<div class="alert alert-warning mb-2"><strong>Finance Collective required</strong> &mdash; costs (' + fmt(grossCosts) + ') exceed the \u00a3' + FC_STANDARD + ' standard threshold.</div>';
         }
 
         // Fill scenarios table
+        var showBar = barPerHead > 0;
         html += '<table class="table table-sm table-bordered mb-0"><thead class="thead-light"><tr>';
-        html += '<th>Fill level</th><th>Tickets sold</th><th>Venue revenue</th><th>Profit / loss</th></tr></thead><tbody>';
-        [0.25, 0.50, 0.75, 1.0].forEach(function (pct) {
-            var tickets = Math.round(capacity * pct);
-            var revenue = tickets * venuePerTicket;
-            var profit = revenue - totalCosts;
+        html += '<th>Fill</th><th>Tickets</th><th>Box office</th>';
+        if (showBar) { html += '<th>Bar revenue</th>'; }
+        html += '<th>Profit / loss</th></tr></thead><tbody>';
+        [0.25, 0.50, 0.75, 1.0].forEach(function (fillPct) {
+            var tickets   = Math.round(capacity * fillPct);
+            var boxOffice = tickets * ticketPrice - artistCost(tickets);
+            var bar       = tickets * barPerHead;
+            var profit    = vProfit(tickets);
             html += '<tr class="' + (profit >= 0 ? '' : 'table-danger') + '">';
-            html += '<td>' + (pct * 100) + '%</td>';
+            html += '<td>' + (fillPct * 100) + '%</td>';
             html += '<td>' + tickets + '</td>';
-            html += '<td>' + fmt(revenue) + '</td>';
+            html += '<td>' + fmt(boxOffice) + '</td>';
+            if (showBar) { html += '<td>' + fmt(bar) + '</td>'; }
             html += '<td>' + (profit >= 0 ? '+' : '') + fmt(profit) + '</td>';
             html += '</tr>';
         });
@@ -205,8 +262,12 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
                             <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-technical" value="0" min="0" step="1"></div></div>
                         </div>
                         <div class="form-group row">
-                            <label class="col-sm-5 col-form-label col-form-label-sm" for="be-artist-fee">Artist / performer fee</label>
-                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-artist-fee" value="0" min="0" step="1"></div></div>
+                            <label class="col-sm-5 col-form-label col-form-label-sm" for="be-artist-mg">Artist fee / min. guarantee</label>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-artist-mg" value="0" min="0" step="1"></div><small class="form-text text-muted">Flat fee for gigs; or MG for film licences</small></div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-sm-5 col-form-label col-form-label-sm" for="be-artist-pct">Artist&rsquo;s gross %</label>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><input type="number" class="form-control" id="be-artist-pct" value="0" min="0" max="100" step="5"><div class="input-group-append"><span class="input-group-text">%</span></div></div><small class="form-text text-muted">If fee &amp; % both set: whichever is greater applies</small></div>
                         </div>
                         <div class="form-group row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-accommodation">Accommodation</label>
@@ -233,11 +294,16 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
                         </div>
                         <div class="form-group row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-ticket-price">Ticket price</label>
-                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-ticket-price" value="5" min="0.01" step="0.50"></div></div>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-ticket-price" value="5" min="0.01" step="0.50"></div><small class="form-text text-muted">For gigs, use the average expected ticket price</small></div>
+                        </div>
+                        <div class="be-section-heading mt-2">Bar / caf&eacute; revenue</div>
+                        <div class="form-group row">
+                            <label class="col-sm-5 col-form-label col-form-label-sm" for="be-bar-drinks">Avg. drinks per person</label>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><input type="number" class="form-control" id="be-bar-drinks" value="0" min="0" step="0.5"></div><small class="form-text text-muted">Leave 0 to ignore bar revenue</small></div>
                         </div>
                         <div class="form-group row">
-                            <label class="col-sm-5 col-form-label col-form-label-sm" for="be-artist-share">Artist&rsquo;s door share</label>
-                            <div class="col-sm-7"><div class="input-group input-group-sm"><input type="number" class="form-control" id="be-artist-share" value="0" min="0" max="100" step="5" placeholder="0"><div class="input-group-append"><span class="input-group-text">%</span></div></div><small class="form-text text-muted">e.g. 70 if artist takes 70% of door</small></div>
+                            <label class="col-sm-5 col-form-label col-form-label-sm" for="be-bar-profit">Avg. profit per drink</label>
+                            <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-bar-profit" value="1.50" min="0" step="0.10"></div><small class="form-text text-muted">~50% margin typical &mdash; e.g. £3 drink &rarr; £1.50 profit</small></div>
                         </div>
                     </div>
                 </div>
