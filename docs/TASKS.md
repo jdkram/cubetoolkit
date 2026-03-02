@@ -2667,6 +2667,41 @@ Seed data: assign `sort_order` values to the 29 roles in `seed_dev_data` — ope
 3. "Import template" form on `edit_event_templates.html` (Panopticon only) → POST JSON string
 4. `import_template(json_str, request)` → creates/updates `EventTemplate` + `EventTemplateRole` rows
 
+### 9.49 — Permission model: collective ratification needed ⚠️
+
+**Status:** Implemented (2026-03-02) but the underlying decisions are developer judgement calls, not collectively agreed policy. This needs explicit ratification before the system is used in production by real programmers.
+
+**What was implemented and why:**
+
+The three-tier model (Volunteer / Programmer / Panopticon) already existed. What changed:
+
+- **Programmers can now access event templates and tags** (previously Panopticon-only). Rationale: programmers set up events, so they should be able to manage the templates that power them.
+- **Role editing is now Panopticon-only** (previously shared with anyone who had `toolkit.write`). Rationale: deleting a role silently cascades and destroys rota history across all events — too destructive to leave ungated.
+- **Volunteersare shown the "Rota" section only** (no diary editing, no meta-programming). The existing `change_rotaentry` permission gate is unchanged.
+
+**Questions for the collective — please discuss and confirm or reject each:**
+
+1. **Should Programmers be able to edit event templates?**
+   Current answer: yes. Alternative: Panopticon-only, or require a separate approval step before a template change takes effect.
+
+2. **Should Programmers be able to edit event tags?**
+   Current answer: yes (same gate as templates: `toolkit.write`). Tags affect how events are categorised and filtered publicly — is that something any programmer should change freely?
+
+3. **Should role editing remain Panopticon-only?**
+   Current answer: yes. Rationale: deletion is irreversible and cascades silently. If the collective believes programmers should be able to add new roles (but not delete), that would require a code change to split add vs. delete gating.
+
+4. **Should Programmers be able to see copy/terms reports?**
+   Current answer: yes. These are editorial views useful for checking copy quality before print. No personal data is exposed.
+
+5. **Is the "Panopticon" label appropriate?**
+   This is internal jargon. The toolkit now surfaces it to users on the index page ("Access level: Panopticon"). Does the collective want a different label for the superuser tier — e.g. "Coordinator" or "Admin"?
+
+6. **Who decides who gets Programmer access?**
+   Currently: any Panopticon user can grant it (via the volunteer profile form). Is this right, or should it require a collective decision?
+
+**What to do with the answers:**
+Once ratified, update SPEC.md §2 to remove the "needs ratification" note, and document the agreed policy. If any decisions change, adjust the permission gates in `edit_views.py` and `toolkit_index.html` accordingly.
+
 ---
 
 *Completed tasks: [ARCHIVE.md](ARCHIVE.md)*
