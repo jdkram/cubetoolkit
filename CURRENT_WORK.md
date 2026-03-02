@@ -48,6 +48,9 @@ None — all clear.
 | -- | --- | ---- |
 | ~~**E**~~ | ~~Volunteer login dropdown inaccessible on touch~~ | ✅ 2026-03-02 — sidebar scrollbar fix resolved this |
 | **M** | Calendar edit view: simultaneous events overwrite each other on busy days | 🟠 L |
+| **O** | Volunteer rota: event-name links bounce to login (should go to public programme) | 🟢 XS |
+| **P** | EventTags page: pre-Bootstrap styling + confusing Promoted/drag UX | 🔵 S |
+| **Q** | Roles page: pre-Bootstrap styling | 🔵 S |
 | ~~**N**~~ | ~~Nav "Rota" link pointed at public `/diary/rota/` instead of edit `/diary/edit/rota/`~~ | ✅ 2026-03-02 |
 
 ---
@@ -99,7 +102,7 @@ None — all clear.
 | 9.37 | Public programme tag filtering + keyword search | 🔵 S | Collapsible filter panel; client-side JS; URL persistence; see TASKS.md 9.37 |
 | 9.38 | Toolkit page: last login display + diary/edit pre/post title hide | 🟢 XS | Two independent template tweaks; see TASKS.md 9.38 |
 | 9.39 | Quick create event for keyholders | 🔵 S | Minimal form; auto-apply template; `private=True` default; see TASKS.md 9.39 |
-| 9.40 | Setup time + final closing time on showings | 🟢 XS | `Showing.setup_time` + `closing_time` TimeFields; rota display; see TASKS.md 9.40 |
+| 9.40 | Setup / doors-open / final-volunteer times on showings | 🟢 XS | Three nullable `TimeField`s: `setup_time`, `doors_time`, `final_volunteer_time`; rota display; see TASKS.md 9.40 |
 | 9.41 | Clickable legend room filter (calendar) | 🔵 S | Multi-select checkboxes in key sidebar; client-side `eventRender` filter; `sessionStorage` persistence; see TASKS.md 9.41 |
 | 9.42 | Tests: diary edit list view | 🟢 XS | `rooms` no None sentinel; month heading in thead; empty-day blank time cell; see TASKS.md 9.42 |
 | 9.43 | Room management UI | 🔵 S | Create/edit/delete rooms from toolkit UI (not just Django admin); name, colour picker, is_primary; see TASKS.md 9.43 |
