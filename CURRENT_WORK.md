@@ -22,7 +22,7 @@ None — all clear.
 |---------|--------|-------|
 | ✅ `Volunteer.user` OneToOneField | Done 2026-02 | Each volunteer linked to Django `User` |
 | ✅ Django admin integration | Done 2026-02 | Enabled in `INSTALLED_APPS` + `settings_ss.py` |
-| ⚠️ Programmer permission group | Partial | `Programmers` group created by `seed_dev_data`; dedicated `create_programmer_permission` command missing |
+| ✅ Programmer permission group | Done 2026-03-01 | `UserForm` gains a `programmer` BooleanField that syncs `Programmers` group membership on save. "Programmer" rota role removed from `ROLES` and event templates — it was a separate thing that caused confusion. |
 | ✅ Rota role count limit increase (8 → 30) | Done 2026-02 | `MAX_COUNT_PER_ROLE` overridden in settings_ss.py; all enforcement points auto-parameterized |
 | ✅ `SHOW_ARCHIVE_IMAGES` / `IMAGES_START_DATE` | Done 2026-02-28 | Hide event images before configurable date; see TASKS.md 9.27 for rationale |
 | ✅ `Showing.rota_notes` field size | Done 2026-02-28 | Extended to 4096; migration `diary/0010` |
@@ -36,15 +36,11 @@ None — all clear.
 
 ### 2. Template comparison & alignment
 
-❌ **Not started** — Compare S+S templates between `master` and `s+s` branches:
-- `star_and_shadow_templates/view_event.html`
-- `star_and_shadow_templates/view_showing_index.html`
+✅ **Done 2026-03-01** — All three S+S templates are ahead of `s+s` branch; nothing missing:
 
-```bash
-git diff s+s origin/master -- star_and_shadow_templates/
-```
-
-**Size:** 🟢 XS–🔵 S (depends on diff size)
+- `base_public.html` — IE8 cruft removed, Font Awesome updated, jQuery local, logo CSS fix, DEV watermark
+- `view_event.html` — `site_custom.css` added, alt text bug fixed (`showing.event.name` → `event.name`)
+- `view_showing_index.html` — `site_custom.css` added, RSS link removed, volunteer notice banner, `showing-internal` class, lock-icon badges on private events, `event_detail_url` routes volunteers to rota
 
 ### 3. Open bugs
 

@@ -66,9 +66,37 @@ class MemberFormWithoutNotes(forms.ModelForm):
 class UserForm(forms.ModelForm):
     prefix = "user"
 
+    programmer = forms.BooleanField(
+        required=False,
+        label="Programmer status",
+        help_text="Grants permission to create and edit events and showings.",
+    )
+
     class Meta:
         model = User
         fields = ("username", "is_active", "is_superuser")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["is_superuser"].label = "Panopticon access"
+        if self.instance and self.instance.pk:
+            self.fields["programmer"].initial = self.instance.groups.filter(
+                name="Programmers"
+            ).exists()
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        # Django admin requires is_staff; mirror is_superuser
+        user.is_staff = user.is_superuser
+        user.save()
+        from django.contrib.auth.models import Group
+
+        programmers = Group.objects.get_or_create(name="Programmers")[0]
+        if self.cleaned_data.get("programmer"):
+            user.groups.add(programmers)
+        else:
+            user.groups.remove(programmers)
+        return user
 
 
 class VolunteerForm(forms.ModelForm):
