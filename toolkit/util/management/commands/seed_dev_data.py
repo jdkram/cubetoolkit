@@ -22,7 +22,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from PIL import Image, ImageDraw
 
-from toolkit.diary.models import Event, EventTag, EventTemplate, MediaItem, Role, RotaEntry, Room, Showing
+from toolkit.diary.models import Event, EventTag, EventTemplate, EventTemplateRole, MediaItem, Role, RotaEntry, Room, Showing
 from toolkit.index.models import IndexCategory, IndexLink
 from toolkit.members.models import Member, Volunteer
 
@@ -1515,8 +1515,11 @@ EVENT_TEMPLATES = [
     {
         "name": "Outside Hire",
         "pricing": "",
+        "outside_hire": True,
+        "private": True,
         "roles": ["Keyholder"],
         "tags": ["outside-hire"],
+        "rota_notes": "Contact the hire organiser before the event to confirm arrival time. Keyholder opens at hire start time and closes after all guests have left.",
     },
     {
         "name": "Training",
@@ -1724,13 +1727,26 @@ class Command(BaseCommand):
         for tmpl_data in EVENT_TEMPLATES:
             tmpl, created = EventTemplate.objects.get_or_create(
                 name=tmpl_data["name"],
-                defaults={"pricing": tmpl_data.get("pricing", "")},
+                defaults={
+                    "pricing": tmpl_data.get("pricing", ""),
+                    "film_information": tmpl_data.get("film_information", ""),
+                    "copy": tmpl_data.get("copy", ""),
+                    "copy_summary": tmpl_data.get("copy_summary", ""),
+                    "terms": tmpl_data.get("terms", ""),
+                    "rota_notes": tmpl_data.get("rota_notes", ""),
+                    "private": tmpl_data.get("private", False),
+                    "outside_hire": tmpl_data.get("outside_hire", False),
+                },
             )
             if created:
                 counts["event_templates"] += 1
                 for role_name in tmpl_data.get("roles", []):
                     try:
-                        tmpl.roles.add(Role.objects.get(name=role_name))
+                        EventTemplateRole.objects.create(
+                            template=tmpl,
+                            role=Role.objects.get(name=role_name),
+                            count=1,
+                        )
                     except Role.DoesNotExist:
                         pass
                 for tag_name in tmpl_data.get("tags", []):
