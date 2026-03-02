@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-03-01 (session 4)
+**Last updated:** 2026-03-02
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
 
@@ -97,7 +97,7 @@ None — all clear.
 | 9.42 | Tests: diary edit list view | 🟢 XS | `rooms` no None sentinel; month heading in thead; empty-day blank time cell; see TASKS.md 9.42 |
 | 9.43 | Room management UI | 🔵 S | Create/edit/delete rooms from toolkit UI (not just Django admin); name, colour picker, is_primary; see TASKS.md 9.43 |
 | 9.45 | Password management in volunteer profile | 🔵 S | "Set/change password" + "send reset email" inline in Permissions card; removes Django admin detour; see TASKS.md 9.45 |
-| 9.46 | Login page styling | 🟢 XS | Extends `base.html` not `base_public.html`; sweep login + password reset templates; friendly title; see TASKS.md 9.46 |
+| ~~9.46~~ | ~~Login page styling~~ | ✅ 2026-03-02 | Extends `base_public.html`; login, logout + password reset templates styled with centered card layout; friendly titles; `site_custom.css` moved into `base_public.html` so all descendants get nav styling; see TASKS.md 9.46 |
 
 ### 4. Medium and large Phase 2 features
 
