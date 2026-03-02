@@ -82,12 +82,33 @@ function edit_rota(jQuery, rota_edit_base_url, edit_rota_notes_url_prefix, vol_e
                         submitdata: {
                             csrfmiddlewaretoken: CSRF_TOKEN
                         },
-                        // Decode HTML entities before putting text into the
-                        // textarea. Without this, Django's auto-escaping (e.g.
-                        // ' → &#x27;) ends up as literal text in the editor and
-                        // gets double-encoded on the next save.
-                        loaddata: function(value) {
-                            return $('<div>').html(value).text();
+                        // Decode HTML entities before populating the textarea.
+                        // jeditable populates the editor from $(element).html()
+                        // (raw innerHTML), which contains Django's auto-escaped
+                        // entities (& → &amp;, < → &lt; etc.). Without this,
+                        // those entities appear as literal text in the editor
+                        // and get double-encoded on the next save.
+                        //
+                        // IMPORTANT: use the 'data' option, NOT 'loaddata'.
+                        // 'loaddata' as a function only runs when 'loadurl' is
+                        // set (it provides extra POST params for the AJAX load).
+                        // 'data' as a function is the value-transform callback.
+                        //
+                        // IMPORTANT: the server response must be returned as
+                        // unescaped plain text. After save, jeditable calls
+                        // $(self).html(result) — the browser's innerHTML setter
+                        // re-encodes & to &amp;, so the next 'data' call sees
+                        // &amp; and decodes it correctly. If the server returns
+                        // escape(value) instead, jeditable's .html() call
+                        // double-encodes it (&amp; → &amp;amp;).
+                        data: function(value) {
+                            return value
+                                .replace(/&amp;/g,  '&')
+                                .replace(/&lt;/g,   '<')
+                                .replace(/&gt;/g,   '>')
+                                .replace(/&quot;/g, '"')
+                                .replace(/&#x27;/g, "'")
+                                .replace(/&#39;/g,  "'");
                         }
                     }
                 );
