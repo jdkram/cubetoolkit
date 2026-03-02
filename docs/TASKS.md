@@ -60,6 +60,35 @@ Root cause: FullCalendar's column-based layout is not triggered when all events 
 
 The strikethrough symbol on the wheelchair icon (indicating a role is not wheelchair-accessible) is easy to miss — the line is thin and low-contrast. Users may sign up for a role they cannot perform without realising it has accessibility notes. Consider alternatives: a solid badge label ("not accessible"), a distinct colour overlay on the icon, a tooltip with explicit text, or a bolder visual indicator. The fix should be purely CSS/template — no data model change needed.
 
+**Bug O** — Volunteer rota: event-name links redirect to login 🟢 XS
+
+In `edit_rota.html` the showing title links to `edit-event-details-view` (the Event Hub). That view requires `toolkit.write` permission (Programmer tier or above). When a basic volunteer clicks it they are bounced to the login page because they're not in the Programmers group.
+
+**Fix:** add a permission conditional in the template:
+
+- `{% if perms.toolkit.write or user.is_superuser %}` → link to `edit-event-details-view`
+- else → link to `single-showing-view` (the public programme page for that showing)
+
+The "↗" public link that already exists alongside the title stays unchanged.
+
+**Bug P** — Event Tags page: pre-Bootstrap styling and confusing UX 🔵 S
+
+`/diary/edit/eventtags/` uses old inline CSS that predates Bootstrap (grey body, dotted border, 400px fixed width). It doesn't match the visual language of the rest of the toolkit.
+
+The interaction model is also unintuitive: users must first tick "Promoted" on a tag and then separately use drag handles to set order. Non-promoted tags show drag handles that do nothing. The mental model of "promoted = in menu" vs "sort order" is not explained in the UI.
+
+**Fix approach:**
+
+- Port styles to Bootstrap 4 card/table layout (consistent with the rest of the toolkit)
+- Clarify the UI: non-promoted tags should either hide their handle or show a disabled state
+- Consider explanatory text or labels making the "in menu" meaning clearer
+
+**Bug Q** — Roles page: pre-Bootstrap styling 🔵 S
+
+`/diary/edit/roles/` has the same vintage of inline CSS as Bug P (grey body, dotted border, 400px form box, raw `<table>` without Bootstrap classes). It also doesn't match the rest of the toolkit's design language.
+
+**Fix:** Port to Bootstrap 4 card + table layout. No UX redesign needed — the table structure (name, standard, description, delete) is clear; just needs Bootstrap table classes and a card wrapper.
+
 ---
 
 ## 8. Current limitations and known gaps
@@ -2499,27 +2528,30 @@ Scope: CSS/template only. No model changes. Check whether `form_event.html` or `
 
 ---
 
-### 9.40 Setup time and final closing time on showings 🟢 XS (2–4h)
+### 9.40 Setup time, doors-open time, and final-volunteer time on showings 🟢 XS (2–4h)
 
-**Goal:** Help keyholders and setup volunteers know exactly when to arrive, and help keyholders plan their departure.
+**Goal:** Surface the three time anchors volunteers actually need: when to arrive for setup, when doors open to the public, and when the last person can leave. These are critical for fresh volunteers who sometimes arrive at the public start time having missed all the setup.
 
-**Problem:** A showing has a single `start` time (the public programme time) and an optional end time. But many events require:
-- A **setup start** time (when setup crew should arrive — often 1–2h before doors)
-- A **final closing** time (when the last keyholder can leave — often 30–60 min after the event ends)
+**Problem:** A showing has a single `start` time (the public programme start) and an optional end time. But many events also require:
 
-Currently these are buried in the rota notes as free text, and setup volunteers often don't know when to show up.
+- A **setup start** time — when setup crew should arrive, often 1–2h before doors
+- A **doors open** time — when the public is let in, which may differ from the programme start
+- A **final volunteer** time — when the last keyholder/volunteer can expect to leave, often 30–60 min after the event ends
+
+Currently these are buried in rota notes as free text, which means volunteers who are new or busy often miss them entirely.
 
 **Proposed data model additions:**
 
 ```
 Showing:
-  + setup_time:    TimeField (nullable) — when setup crew should arrive
-  + closing_time:  TimeField (nullable) — expected final close / keyholder departure
+  + setup_time:          TimeField (nullable) — when setup crew should arrive
+  + doors_time:          TimeField (nullable) — when the public is let in
+  + final_volunteer_time: TimeField (nullable) — expected close / keyholder departure
 ```
 
-Using `TimeField` (not `DateTimeField`) avoids redundancy with `start` — both are assumed to be on the same calendar date as the showing.
+The existing `start` field continues to be the public programme start time. All new fields use `TimeField` (not `DateTimeField`) — same calendar date as the showing is assumed.
 
-**Display:** Show setup time and closing time in the rota view and rota edit view, near the showing title / time block. Only display if set. Example: *"Setup from 5:30pm · Doors 7pm · Close ~10:30pm"*.
+**Display:** Show the three times in the rota view and rota edit view, near the showing title/time block. Only display if set. Example: *"Setup 5:30pm · Doors 7pm · Finish ~10:30pm"*.
 
 **Related:** 9.10.5 (role timing notes), 9.39 (keyholder open sessions)
 
