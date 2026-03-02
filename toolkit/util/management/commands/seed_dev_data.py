@@ -1993,7 +1993,7 @@ class Command(BaseCommand):
             if _slot >= 16:
                 _ev_links.append(("Event folder", f"https://starandshadow.nextcloud.com/s/sns{_el_idx:05d}"))
             if _slot == 19:
-                _ev_links.append(("Crew chat", f"https://chat.whatsapp.com/SNS{_el_idx:010d}LinkSeed"))
+                _ev_links.append(("WhatsApp Group", f"https://chat.whatsapp.com/SNS{_el_idx:010d}LinkSeed"))
             for _order, (_label, _url) in enumerate(_ev_links):
                 EventLink.objects.create(event=_ev, label=_label, url=_url, order=_order)
                 counts["event_links"] += 1

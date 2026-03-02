@@ -34,7 +34,6 @@ def validate_event_link_url(url):
     try:
         parsed = urlparse(url)
         host = parsed.netloc.lower().split(":")[0]  # strip optional port
-        path = parsed.path.lower()
     except Exception:
         raise ValidationError("Enter a valid URL.")
 
@@ -45,14 +44,9 @@ def validate_event_link_url(url):
         if host == domain or host.endswith("." + domain):
             return
 
-    # Self-hosted Nextcloud: match on path heuristic regardless of domain
-    if "/nextcloud/" in path or "/index.php/s/" in path:
-        return
-
     allowed_str = ", ".join(all_domains)
     raise ValidationError(
         f"Event links must use an approved domain ({allowed_str}). "
-        "For a self-hosted Nextcloud the URL path must contain /nextcloud/ "
-        "or /index.php/s/. Ask a Panopticon member to add a new domain to "
-        "EVENTLINK_EXTRA_ALLOWED_DOMAINS if you need another service."
+        "Ask a Panopticon member to add a new domain to "
+        "EVENTLINK_EXTRA_ALLOWED_DOMAINS in settings if you need another service."
     )
