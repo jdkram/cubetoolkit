@@ -62,30 +62,33 @@ Visit [http://localhost:8000](http://localhost:8000)
 
 You'll see the diary (event list), which is public. The internal toolkit is at [http://localhost:8000/toolkit/](http://localhost:8000/toolkit/) and requires a login.
 
-### 3. Create an admin user and seed sample data
+### 3. Create demo user accounts and seed sample data
 
 Run these two commands in a separate terminal:
 
 ```bash
-# Create the default dev admin account (username: admin, password: admin)
-docker compose exec toolkit /venv/bin/python3 manage.py shell -c "
-from django.contrib.auth.models import User
-User.objects.create_superuser(username='admin', password='admin', email='admin@example.test')
-"
+# Create demo accounts at each permission tier
+docker compose exec toolkit /venv/bin/python3 manage.py configure_toolkit_users --password DevPassword1!
 
 # Populate the database with sample events, volunteers, and roles
 docker compose exec toolkit /venv/bin/python3 manage.py seed_dev_data
 ```
 
-> **Default dev credentials:** `admin` / `admin`
-> These are intentionally weak — they are only for local development. Change them before exposing the app to a network.
+`configure_toolkit_users --password` creates all demo accounts non-interactively. Log in at [http://localhost:8000/auth/login](http://localhost:8000/auth/login) with any of these:
 
-Log in at [http://localhost:8000/auth/login](http://localhost:8000/auth/login).
+| Username | Permission tier | What they can do |
+| --- | --- | --- |
+| `admin` | **Panopticon** (superuser) | Everything — edit events, manage roles, volunteers, members, Wagtail CMS |
+| `programmer`, `programmer2` | **Programmer** | Edit events, manage templates and tags; cannot manage roles, volunteers, or members |
+| `volunteer` … `volunteer5` | **Volunteer** | Edit the rota only |
 
-To choose your own password instead, use `createsuperuser` — but note it requires an interactive terminal (`-it` flags):
+> **Password for all dev accounts:** `DevPassword1!`
+> These are intentionally the same password — for local development only. Never use `--password` in production.
+
+For production setup (interactive password prompts per account):
 
 ```bash
-docker compose exec -it toolkit /venv/bin/python3 manage.py createsuperuser
+docker compose exec toolkit /venv/bin/python3 manage.py configure_toolkit_users
 ```
 
 ### 4. Stop the services
@@ -310,6 +313,24 @@ The full routing is in [toolkit/urls.py](toolkit/urls.py).
 
 ---
 
+## Permission Tiers
+
+The toolkit has three access levels. When testing locally, use the corresponding demo account:
+
+| Tier | Demo username | Django representation | What they see |
+| --- | --- | --- | --- |
+| **Volunteer** | `volunteer` … `volunteer5` | `diary.change_rotaentry` permission | Rota editing only. Cannot create/edit events or see member data. |
+| **Programmer** | `programmer`, `programmer2` | `toolkit.write` + `toolkit.read` + `change_rotaentry`; member of `Programmers` group | Full diary editing: create/edit events and showings, manage templates and tags, see copy/terms reports. Cannot manage roles, volunteers, or members. |
+| **Panopticon** | `admin` | `is_superuser = True` + all of the above | Everything: Programmer access plus role management, volunteer/member data, Wagtail CMS. |
+
+**Key gate:** The "Edit roles" page (`/diary/edit/roles/`) requires `is_superuser`. Role deletion cascades silently to all rota assignments — it's too destructive for the Programmer tier.
+
+The Programmer tier is granted by ticking the `Programmer` checkbox on a volunteer's profile (Panopticon only). This automatically adds the user to the `Programmers` Django group.
+
+See [SPEC.md §2](SPEC.md#2-who-can-access-what--permission-model) for the full picture, and [TASKS.md §9.49](TASKS.md#949--permission-model-collective-ratification-needed-️) for the governance questions still awaiting collective ratification.
+
+---
+
 ## Settings
 
 Settings are layered. `settings_common.py` defines everything, and environment-specific files import it and override what they need.
@@ -427,10 +448,7 @@ docker compose down --volumes
 docker compose up --build
 
 # Once running, recreate users and seed data (see step 3 above for details)
-docker compose exec toolkit /venv/bin/python3 manage.py shell -c "
-from django.contrib.auth.models import User
-User.objects.create_superuser(username='admin', password='admin', email='admin@example.test')
-"
+docker compose exec toolkit /venv/bin/python3 manage.py configure_toolkit_users --password DevPassword1!
 docker compose exec toolkit /venv/bin/python3 manage.py seed_dev_data
 ```
 
