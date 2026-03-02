@@ -10,6 +10,9 @@ def diary_settings(request):
         "IMAGE_COPYRIGHT_GUIDANCE_URL": getattr(
             settings, "IMAGE_COPYRIGHT_GUIDANCE_URL", None
         ),
+        "ALT_TEXT_GUIDANCE_URL": getattr(
+            settings, "ALT_TEXT_GUIDANCE_URL", None
+        ),
     }
 
 

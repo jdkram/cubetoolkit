@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from toolkit.diary.models import Event, Showing, Room, Role, EventTag
+from toolkit.diary.models import Event, MediaItem, Showing, Room, Role, EventTag
 
 
 @admin.register(Room)
@@ -22,6 +22,18 @@ class EventTagAdmin(admin.ModelAdmin):
     list_display = ("name", "slug")
     search_fields = ("name", "slug")
     prepopulated_fields = {"slug": ("name",)}
+
+
+@admin.register(MediaItem)
+class MediaItemAdmin(admin.ModelAdmin):
+    list_display = ("pk", "media_file", "credit", "alt_text_short")
+    search_fields = ("credit", "alt_text", "caption")
+    readonly_fields = ("mimetype",)
+    fields = ("media_file", "credit", "alt_text", "mimetype")
+
+    @admin.display(description="Alt text")
+    def alt_text_short(self, obj):
+        return obj.alt_text[:60] + "…" if len(obj.alt_text) > 60 else obj.alt_text or "—"
 
 
 class ShowingInline(admin.TabularInline):

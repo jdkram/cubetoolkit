@@ -98,6 +98,16 @@ class MediaItem(models.Model):
         default="Internet scavenged",
         verbose_name="Image credit",
     )
+    alt_text = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        verbose_name="Alt text",
+        help_text=(
+            "Describe the image for screen readers and when images fail to load. "
+            "E.g. \"People sitting in an outdoor cinema under a night sky.\""
+        ),
+    )
     caption = models.CharField(max_length=256, blank=True)
 
     class Meta:

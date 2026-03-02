@@ -80,7 +80,7 @@ setup_page(true);
               {% url "single-event-view-with-slug" event_id=event.id event_slug=event_slug as event_detail_url %}
             {% endif %}
             {% if media_item %}<a href="{{ event_detail_url }}">
-                <img src="{{ media_item.media_file|thumbnail_url:'indexview' }}" alt="Picture for event {{ event.name }}"></a>
+                <img src="{{ media_item.media_file|thumbnail_url:'indexview' }}" alt="{% if media_item.alt_text %}{{ media_item.alt_text }}{% else %}Picture for event {{ event.name }}{% endif %}"></a>
             {% endif %}
             {% if event.tags.all %}
                 <span class="tags">
