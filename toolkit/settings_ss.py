@@ -94,3 +94,6 @@ TEMPLATES[0]["DIRS"] = (
 # See docs/LIVESITE_FIXES.md § "Rota role count limitation" for context
 MAX_COUNT_PER_ROLE = 30
 
+# Self-hosted Nextcloud instance for S&S
+EVENTLINK_EXTRA_ALLOWED_DOMAINS = ["nextcloud.xtreamlab.net"]
+
