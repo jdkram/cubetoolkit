@@ -324,10 +324,7 @@ def edit_volunteer(request, volunteer_id, create_new=False):
             vol_form.save()
 
             if user_form is not None:
-                saved_user = user_form.save(commit=False)
-                # Django admin requires is_staff; mirror is_superuser for simplicity
-                saved_user.is_staff = saved_user.is_superuser
-                saved_user.save()
+                user_form.save()
 
             logger.info(
                 f"Saving changes to volunteer '{volunteer.member.name}' (id: {str(volunteer.pk)})"

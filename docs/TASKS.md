@@ -2523,4 +2523,29 @@ Using `TimeField` (not `DateTimeField`) avoids redundancy with `start` — both 
 
 ---
 
+### 9.44 — Role-based rota notifications 🟠 L
+
+**Context:** Volunteers are assigned roles (Projectionist, Bar Staff, Keyholder, etc.) on their profile, but those assignments currently serve only as a display label on the rota — no automated communication flows from them. At S&S roles are barely used; this feature would give them meaningful operational value.
+
+**Concept:** Let volunteers opt in to email notifications when an event with a matching role vacancy appears on the rota. For example, a Projectionist could receive an email when a showing is added that needs a projectionist filled.
+
+**Possible scope:**
+
+- Per-volunteer notification preferences: a `notify_for_roles` M2M or a `RoleNotificationPreference` model linking volunteer → roles they want to hear about
+- A signal or post-save hook on `EventShowing`: when a showing is confirmed (or first published), check whether any of its rota roles have opted-in volunteers and queue notification emails
+- Digest option: rather than one email per showing, batch nightly/weekly into "here are upcoming openings you could fill"
+- Self-service preferences page so volunteers can manage their own subscriptions without admin involvement
+- Unsubscribe link in every notification email
+
+**Design questions to resolve before implementation:**
+
+- Should notifications fire on `confirmed=True` only, or also on unconfirmed (pencilled) showings?
+- Is there a sign-up/claim flow, or just a nudge to contact the programmer?
+- S&S has shadow/training tiers (e.g. Projectionist Shadowing vs Projectionist) — should both tiers notify the same pool, or separately?
+- Interaction with the existing mailout system: reuse the mailer daemon infrastructure, or send synchronously via Django's email backend?
+
+**Why it matters:** Reduces programmer overhead for filling shift roles; gives volunteers agency over their availability; makes the role assignment data operationally useful rather than decorative.
+
+---
+
 *Completed tasks: [ARCHIVE.md](ARCHIVE.md)*

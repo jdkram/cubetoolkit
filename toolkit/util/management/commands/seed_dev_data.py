@@ -40,7 +40,7 @@ except ImportError:
 
 ROLES = [
     {"name": "Keyholder", "standard": True},
-    {"name": "Programmer", "standard": True},
+    {"name": "Programmer", "standard": True},  # rota scheduling label; diary edit permission is separate (Permissions section)
     {"name": "Projectionist - DCP", "standard": True},
     {"name": "Projectionist - MP4", "standard": False},
     {"name": "Projectionist - Video/DVD", "standard": False},
@@ -68,6 +68,19 @@ ROLES = [
     {"name": "Extra Hands (no training needed)", "standard": False},
     {"name": "Line Cleaner", "standard": False},
     {"name": "Tech (Shadowing)", "standard": False},
+    # Community / creative roles — not operational, but real S&S volunteer contributions
+    {"name": "Artist", "standard": False},
+    {"name": "Biscuit Procurement Officer", "standard": False},
+    {"name": "Cable Whisperer", "standard": False},
+    {"name": "Cat Herder", "standard": False},
+    {"name": "Chaos Coordinator", "standard": False},
+    {"name": "Fixer", "standard": False},
+    {"name": "Glitter Technician", "standard": False},
+    {"name": "Plate Spinner", "standard": False},
+    {"name": "Poster Wrangler", "standard": False},
+    {"name": "Snack Lass", "standard": False},
+    {"name": "Unofficial Historian", "standard": False},
+    {"name": "Zine Distro", "standard": False},
 ]
 
 ROOMS = [
@@ -1651,6 +1664,7 @@ class Command(BaseCommand):
             Event.objects.all().delete()
             EventTemplate.objects.all().delete()
             Room.objects.all().delete()  # wipe all, including any stray rooms not in ROOMS
+            Role.objects.all().delete()  # wipe all, including stale roles removed from ROLES
             EventTag.objects.filter(read_only=False).delete()
             # Delete seed-generated media items (and their files)
             for mi in MediaItem.objects.filter(credit="seed_dev_data"):
