@@ -100,8 +100,10 @@ function hideAddShowingForm() {
 <div class="d-flex align-items-center mb-2">
   <h3 class="mb-0 mr-3">Event details</h3>
   {% if not all_showings_in_past %}
-  <a href="{% url "edit-event-details" event.pk %}" class="btn btn-sm btn-outline-secondary">Edit event →</a>
+  <a href="{% url "edit-event-details" event.pk %}" class="btn btn-sm btn-outline-secondary mr-2">Edit event →</a>
   {% endif %}
+  <a href="{% url 'clone-event' event.pk %}" class="btn btn-sm btn-outline-secondary"
+     data-toggle="tooltip" title="Create a new event pre-loaded with this event&rsquo;s copy, summary, terms, rota, and tags. The image and ticket link are not copied.">Clone as new event →</a>
 </div>
 
 <dl class="row event-details-dl">
@@ -402,12 +404,6 @@ function hideAddShowingForm() {
 </details>
 {% endif %}
 
-<div class="mt-3 mb-1">
-  <a href="{% url 'clone-event' event.pk %}" class="btn btn-outline-secondary btn-sm"
-     data-toggle="tooltip" title="Create a new event pre-loaded with this event&rsquo;s copy, summary, terms, rota, and tags. The image and ticket link are not copied.">
-    Clone as new event &rarr;
-  </a>
-</div>
 
 {% if not all_showings_in_past %}
 <div class="add-showing-section">
