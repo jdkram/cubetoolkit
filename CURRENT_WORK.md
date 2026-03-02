@@ -92,7 +92,9 @@ None — all clear.
 | 9.32 | Rota past-date navigation | 🟢 XS | Design decision needed (read-only past vs blocked); see TASKS.md 9.32 |
 | 9.33 | S&S spaces: seed data (9 rooms) + diary column-per-room view | 🟡 M | Seed data 🟢 XS quick win; column view is 🟡 M; see TASKS.md 9.33 |
 | 9.34 | "Showing" terminology review | 🟢 XS | Design discussion with collective; "Session" or "Date" candidate; see TASKS.md 9.34 |
-| ~~9.35~~ | ~~1-click top nav access to Diary + Rota edit~~ | ✅ 2026-03-02 | Diary + Rota promoted to top-level nav items; Toolkit dropdown kept for home + sign out |
+| ~~9.35~~ | ~~1-click top nav access to Diary + Rota edit~~ | ✅ 2026-03-02 | Diary + Rota + Calendar promoted to top-level nav items; nav order Diary → Calendar → Rota → Website → Meta-programming → Members → Volunteers; index page redesigned as two-column Bootstrap card grid with tier badges (All users / Programmer+ / Panopticon only); "Meta" renamed "Meta-programming"; custom links kept as bottom section; logout removed from body |
+| 9.35.1 | Toolkit homepage: informative dashboard vs. link directory | 🟡 M | See TASKS.md 9.35.1; Option 2 (status widgets above directory) recommended as first step |
+| 9.51 | Working groups subscribe/unsubscribe page | 🔴 XL | Live at `/toolkit/working-groups/` — custom Django view, not Wagtail; backed by unknown list manager; needs dev/sysadmin conversation before scoping; data migration likely required; see TASKS.md 9.51 |
 | 9.36 | Vacancies page as email generation tool | 🔵 S | Filtered view → pre-filled email draft → urgency flag; see TASKS.md 9.36 |
 | 9.37 | Public programme tag filtering + keyword search | 🔵 S | Collapsible filter panel; client-side JS; URL persistence; see TASKS.md 9.37 |
 | 9.38 | Toolkit page: last login display + diary/edit pre/post title hide | 🟢 XS | Two independent template tweaks; see TASKS.md 9.38 |
@@ -102,6 +104,7 @@ None — all clear.
 | 9.42 | Tests: diary edit list view | 🟢 XS | `rooms` no None sentinel; month heading in thead; empty-day blank time cell; see TASKS.md 9.42 |
 | 9.43 | Room management UI | 🔵 S | Create/edit/delete rooms from toolkit UI (not just Django admin); name, colour picker, is_primary; see TASKS.md 9.43 |
 | 9.45 | Password management in volunteer profile | 🔵 S | "Set/change password" + "send reset email" inline in Permissions card; removes Django admin detour; see TASKS.md 9.45 |
+| ~~9.50~~ | ~~Volunteer self-service profile edit from nav~~ | ✅ 2026-03-02 | Own name in top nav links to `edit-volunteer/<pk>`; guarded by `user.volunteer.pk`; `seed_dev_data` now creates Member+Volunteer for all demo accounts so link appears in dev |
 | ~~9.46~~ | ~~Login page styling~~ | ✅ 2026-03-02 | Extends `base_public.html`; login, logout + password reset templates styled with centered card layout; friendly titles; `site_custom.css` moved into `base_public.html` so all descendants get nav styling; see TASKS.md 9.46 |
 
 ### 4. Medium and large Phase 2 features
