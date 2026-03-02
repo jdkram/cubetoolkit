@@ -12,6 +12,17 @@ The current branch is **`master`** (Django 5.2 LTS, Wagtail 6.3, Python 3, no Ce
 
 ---
 
+## Django template comments — single line only
+
+**Never write multi-line `{# ... #}` comments in Django templates.** Django's template engine does not strip them reliably when they span multiple lines, and the raw comment text leaks into the rendered HTML.
+
+- ✅ `{# Short single-line comment #}` — safe
+- ❌ `{# Multi-line\n   comment #}` — leaks into HTML output
+
+If a comment needs more than one line, use multiple single-line `{# ... #}` tags, or put the explanation in a Python/view-layer code comment instead.
+
+---
+
 ## Standing rule: keep docs/ in sync with the code
 
 **After every code change, update the relevant docs.**
