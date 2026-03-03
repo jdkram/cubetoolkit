@@ -306,37 +306,33 @@ edit_rota(
     }
 
     // ── Role badges ────────────────────────────────────────────────────────
-    // Injected after page load so role names can stay database-driven.
+    // Badges are driven by data attributes emitted from Role model fields.
+    // To add a new badge type: add a field to the Role model + migration,
+    // emit a data-* attribute on the <li> in this template, and add an
+    // entry to ROLE_BADGES below.
     var ROLE_BADGES = [
         {
-            test: function(name) { return name === "Keyholder"; },
-            html: '<span class="role-badge" title="Keyholder — must be a trained venue keyholder">🔑</span>'
-        },
-        {
-            test: function(name) {
-                return name === "Usher - Fire Trained"
-                    || name === "Box Office - Admission Tickets"
-                    || name.indexOf("Extra hands") !== -1;
-            },
+            attr: "beginner",
             html: '<span class="role-badge role-badge--beginner" title="Beginner-friendly — a great first role for new volunteers">🌱</span>'
         },
         {
-            // Matches "Bar Shadow", "Bar Staff - Shift 1", etc.
-            test: function(name) { return name.indexOf("Bar") === 0; },
-            html: '<span class="role-badge role-badge--inaccessible" title="Behind the bar — may not be suitable for wheelchair users due to space constraints in the bar area">♿</span>'
+            attr: "no-wheelchair",
+            html: '<span class="role-badge role-badge--inaccessible" title="Not wheelchair-accessible — please check before signing up">♿✗</span>'
+        },
+        {
+            attr: "keyholder",
+            html: '<span class="role-badge" title="Keyholder slot — must be filled by a trained venue keyholder">🔑</span>'
         }
     ];
 
     function injectRoleBadges() {
         $(".rota-showing li[data-role-name]").each(function() {
-            var li   = $(this);
-            var name = li.data("role-name");
+            var li = $(this);
             $.each(ROLE_BADGES, function(i, badge) {
-                if (badge.test(name)) {
+                if (li.data(badge.attr) === 1) {
                     // Append inside .rota_role so the icon stays with the
                     // role label and never pushes the volunteer name column
                     li.find(".rota_role").append(" " + badge.html);
-                    return false;  // only one badge per role
                 }
             });
         });
@@ -553,9 +549,15 @@ edit_rota(
             <h3 class="showing_title{% if showing.in_past %} past_showing{% endif %}">
                 <span class="showing-header-row">
                     <span class="showing-date">{{ showing.start|date:"D j H:i" }}</span>
+                    {% if perms.toolkit.write or user.is_superuser %}
                     <a class="showing-event-name"
                        href="{% noprefix_url 'edit-event-details-view' showing.event.pk %}"
                        title="Edit event">{{ showing.event.name }}</a>
+                    {% else %}
+                    <a class="showing-event-name"
+                       href="{% noprefix_url 'single-showing-view' showing.pk %}"
+                       title="View event">{{ showing.event.name }}</a>
+                    {% endif %}
                     <span class="event-tag-badges">{% for tag in tag_slugs %}<span class="badge event-tag" data-tag-slug="{{ tag.slug }}">{{ tag.name }}</span>{% endfor %}</span>
                     <a class="showing-public-link"
                        href="{% noprefix_url 'single-showing-view' showing.pk %}"
@@ -565,7 +567,10 @@ edit_rota(
 
             <ul class="rota">
             {% for rota_entry in showing.rotaentry_set.all %}
-                <li data-role-name="{{ rota_entry.role.name }}">
+                <li data-role-name="{{ rota_entry.role.name }}"
+                    data-beginner="{{ rota_entry.role.beginner_friendly|yesno:'1,0' }}"
+                    data-no-wheelchair="{{ rota_entry.role.not_wheelchair_accessible|yesno:'1,0' }}"
+                    data-keyholder="{{ rota_entry.role.keyholder_only|yesno:'1,0' }}">
                 {% if rota_entry.role.description %}<span class="rota-info" title="{{ rota_entry.role.description }}">ℹ</span>{% endif %}
                 <span class="rota_role">{{ rota_entry.role.name }}-{{ rota_entry.rank }}</span>
                 &nbsp;

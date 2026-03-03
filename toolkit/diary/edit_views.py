@@ -1094,6 +1094,9 @@ def edit_roles(request):
             "name",
             "standard",
             "description",
+            "beginner_friendly",
+            "not_wheelchair_accessible",
+            "keyholder_only",
         ),
         can_delete=True,
     )

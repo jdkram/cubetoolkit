@@ -48,9 +48,9 @@ None — all clear.
 | -- | --- | ---- |
 | ~~**E**~~ | ~~Volunteer login dropdown inaccessible on touch~~ | ✅ 2026-03-02 — sidebar scrollbar fix resolved this |
 | **M** | Calendar edit view: simultaneous events overwrite each other on busy days | 🟠 L |
-| **O** | Volunteer rota: event-name links bounce to login (should go to public programme) | 🟢 XS |
-| **P** | EventTags page: pre-Bootstrap styling + confusing Promoted/drag UX | 🔵 S |
-| **Q** | Roles page: pre-Bootstrap styling | 🔵 S |
+| ~~**O**~~ | ~~Volunteer rota: event-name links bounce to login (should go to public programme)~~ | ✅ 2026-03-03 — template conditional: programmers/superusers → edit hub, volunteers → public showing view |
+| ~~**P**~~ | ~~EventTags page: pre-Bootstrap styling + confusing Promoted/drag UX~~ | ✅ 2026-03-03 — Bootstrap 4 card layout; drag handle hidden on non-promoted tags; footer help text explains In menu / drag model |
+| ~~**Q**~~ | ~~Roles page: pre-Bootstrap styling~~ | ✅ 2026-03-03 — Bootstrap 4 card + table layout; read-only badge; yellow new-row highlight |
 | ~~**N**~~ | ~~Nav "Rota" link pointed at public `/diary/rota/` instead of edit `/diary/edit/rota/`~~ | ✅ 2026-03-02 |
 
 ---
@@ -65,7 +65,7 @@ None — all clear.
 | ~~9.10.7~~ | ~~Clone event as new event~~ | ✅ 2026-03-02 | "Clone as new event" button on Event Hub; copies all text/config fields (copy, terms, notes, pricing, etc.) + tags + rota from source event; new Showing created unconfirmed; ticket link intentionally left blank; 7 new tests; `devserver_settings` now silently skips `debug_toolbar` when not installed (fixes Docker test runner); `dev.txt` updated to `fixtures>=4` |
 | 9.12 | "Dormant" volunteer status | 🟢 XS | Add `status` field (active/dormant/retired) |
 | 9.3↳ | Collapse rota notes by default | 🟢 XS | Show summary, expand button |
-| 9.17↳ | `Role.accessibility_notes` field | 🟢 XS | Info-only field for role accessibility |
+| ~~9.17↳~~ | ~~`Role` badge flags: beginner-friendly, wheelchair-inaccessible, keyholder-only~~ | ✅ 2026-03-03 | `beginner_friendly`, `not_wheelchair_accessible`, `keyholder_only` BooleanFields on `Role`; migrations 0016+0017; editable in roles page (🌱/♿✗/🔑 columns); rota `<li>` emits `data-*` attributes; JS ROLE_BADGES switches from name-matching to attribute-driven; seed data sets flags on correct roles |
 | 9.10.5 | Role timing notes field | 🟢 XS | Per-role start/end time in rota |
 | 13.5 | Collectives directory (CMS-managed) | 🔵 S | Wagtail page with directory listing |
 | 9.20.1 | Test: datetime-local POST format end-to-end | 🟢 XS | POST with T-separator; unit-test `value_from_datadict` guard; see TASKS.md 9.20 Gap 1 |
