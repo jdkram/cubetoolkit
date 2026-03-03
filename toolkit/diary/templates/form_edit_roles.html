@@ -1,109 +1,139 @@
 {% extends "base_admin.html" %}
 
-{% block title %}
-Editing Event roles
-{% endblock %}
+{% block title %}Editing Event Roles{% endblock %}
 
 {% block css %}
 {{ block.super }}
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/messages.css">
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}diary/css/edit_form.css">
 <style type="text/css">
-  body {
-      background: lightgray;
-  }
-  form#roles {
-      border: thin dotted gray;
-      padding: 5px;
-      margin: 2%;
-      width: 400px;
-      display: inline-block;
-      background: white;
-  }
-  .header {
-      background: white;
-      margin: 2% 2% 5px 2%;
-      padding: 5px 10px 5px 10px;
-  }
-  .warn {
-      color: red;
-  }
-  .new_role input {
-      background: yellow;
-  }
-  select {
-      width: 330px;
-  }
-  tr.form_errors {
-      color: red;
-      border-top: thin solid black;
-  }
-  tr.form_errors + tr {
-      color: red;
-      background-color: red;
-  }
-  .form_errors td {
-      border-top: thin solid black;
+  .new-role-row td {
+    background-color: #fff9c4;
   }
   textarea {
-      width: 300px;
-      height: 60px;
-      font-family: monospace;
-      font-size: 12px;
+    width: 100%;
+    height: 2.5rem;
+    min-height: 2.5rem;
+    font-family: monospace;
+    font-size: 12px;
+    resize: vertical;
+  }
+  .card-header .card-header-title {
+    white-space: nowrap;
+    margin-right: 0.75rem;
   }
 </style>
 {% endblock %}
 
-{% block body %}
-<div class="header">
-<h1>Roles</h1>
-<div class="alert alert-danger" style="max-width:700px">
-  <strong>Panopticon-only page.</strong>
-  <ul style="margin-bottom:0">
-    <li><strong>Deleting a role is permanent and cascades silently.</strong>
-      It will immediately and irreversibly remove that role from every rota assignment
-      across all past and future showings, and from every event template.
-      There is no confirmation step and no undo.</li>
-    <li>Roles marked <em>read-only</em> (e.g. Projectionist) are protected and cannot be deleted here.</li>
-    <li><strong>Renaming a role is safe.</strong>
-      The name is stored once and referenced everywhere relationally,
-      so a rename takes effect immediately on all showings, templates, and volunteer profiles
-      — no manual updates needed.</li>
-  </ul>
-</div>
-<p>Events marked as "Standard Event Roles" are shown at the top of the role selection list.</p>
-<p>Add new roles at the end of the list.</p>
-{% include "messages.html" %}
-</div>
-
-<form id="roles" method="post">
-{{ formset.management_form }}
-{% csrf_token %}
-<input type="submit" value="Save changes" />
-<table>
-    <tr><th>Role name</th><th>Standard event role</th><th>Description</th><th>Delete</th></tr>
-{% for form in formset %}
-{% if form.errors %}
-<tr class="form_errors"><td>Error: {{ form.name.errors.as_text }}</td><td>{{ form.standard.errors.as_text }}</td><td>{{ form.description.errors.as_text }}</td><td>{{ form.DELETE.errors.as_text }}</tr></tr>
-{% endif %}
-<tr{% if not form.id.value %} class="new_role"{% endif %}>
-{% if form.instance.read_only %}
-    <td>{{ form.name.as_hidden }}{{ form.name.value }}</td>
-    {# Model on the back end enforces the read_only flag, so no integrity/security worries about the hidden field... #}
-    <td>{{ form.standard }}</td>
-    <td>{{ form.description }}</td>
-    <td>{{ form.id }}</td>
-{% else %}
-    <td>{{ form.name }}</td>
-    <td>{{ form.standard }}</td>
-    <td>{{ form.description }}</td>
-    <td>{{ form.DELETE }}{{ form.id }}</td>
-{% endif %}
-</tr>
-{% endfor %}
-</table>
-<input type="submit" value="Save changes to all roles" />
-</form>
-
+{% block script %}
+{{ block.super }}
+<script type="text/javascript">
+"use strict";
+document.addEventListener("DOMContentLoaded", function() {
+    document.getElementById("roles").addEventListener("submit", function(e) {
+        var toDelete = [];
+        document.querySelectorAll("#roles input[name$='-DELETE']:checked").forEach(function(checkbox) {
+            var prefix = checkbox.name.replace("-DELETE", "");
+            var nameInput = document.querySelector("#roles input[name='" + prefix + "-name']");
+            if (nameInput) {
+                toDelete.push(nameInput.value || nameInput.defaultValue);
+            }
+        });
+        if (toDelete.length === 0) return;
+        var msg = "Permanently delete " + toDelete.length + " role" + (toDelete.length > 1 ? "s" : "") + "?\n\n"
+                + toDelete.map(function(n) { return "  \u2022 " + n; }).join("\n")
+                + "\n\nThis will remove the role from every rota assignment and event template. There is no undo.";
+        if (!confirm(msg)) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
 {% endblock %}
 
+{% block body %}
+<div class="container-fluid mt-3">
+
+  <div class="alert alert-danger">
+    <strong>Panopticon-only page.</strong>
+    <ul class="mb-0">
+      <li><strong>Deleting a role is permanent.</strong>
+        It will immediately and irreversibly remove that role from every rota assignment
+        across all past and future showings, and from every event template.
+        You will be asked to confirm before the deletion takes effect, but there is no undo after that.</li>
+      <li>Roles marked <em>read-only</em> are protected and cannot be deleted here.</li>
+      <li><strong>Renaming a role is safe.</strong>
+        The name is stored once and referenced everywhere relationally,
+        so a rename takes effect immediately across all showings, templates, and volunteer profiles.</li>
+    </ul>
+  </div>
+
+  {% include "messages.html" %}
+
+  <div class="card">
+    <div class="card-header d-flex flex-wrap align-items-center" style="gap:0.5rem">
+      <h4 class="mb-0 card-header-title">Roles</h4>
+      <small class="text-muted">Standard event roles appear at the top of the role selection list. New rows are highlighted yellow.</small>
+    </div>
+    <div class="card-body p-0">
+      <form id="roles" method="post">
+        {{ formset.management_form }}
+        {% csrf_token %}
+        <table class="table table-sm table-bordered mb-0">
+          <thead class="thead-light">
+            <tr>
+              <th>Role name</th>
+              <th class="text-center" style="width:90px">Standard</th>
+              <th>Description</th>
+              <th class="text-center" style="width:50px" title="🌱 Beginner-friendly — show green leaf badge on rota">🌱</th>
+              <th class="text-center" style="width:50px" title="♿✗ Not wheelchair-accessible — show strikethrough wheelchair badge on rota">♿✗</th>
+              <th class="text-center" style="width:50px" title="🔑 Keyholder slot — show key badge on rota">🔑</th>
+              <th class="text-center" style="width:60px">Delete</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for form in formset %}
+            {% if form.errors %}
+            <tr class="table-danger">
+              <td colspan="7">
+                <strong>Error:</strong>
+                {{ form.name.errors.as_text }}
+                {{ form.standard.errors.as_text }}
+                {{ form.description.errors.as_text }}
+                {{ form.DELETE.errors.as_text }}
+              </td>
+            </tr>
+            {% endif %}
+            <tr{% if not form.id.value %} class="new-role-row"{% endif %}>
+              {% if form.instance.read_only %}
+                <td>{{ form.name.as_hidden }}{{ form.name.value }} <span class="badge badge-secondary">read-only</span></td>
+                {# Model on the back end enforces the read_only flag, so no integrity/security worries about the hidden field #}
+                <td class="text-center">{{ form.standard }}</td>
+                <td>{{ form.description }}</td>
+                <td class="text-center">{{ form.beginner_friendly }}</td>
+                <td class="text-center">{{ form.not_wheelchair_accessible }}</td>
+                <td class="text-center">{{ form.keyholder_only }}</td>
+                <td>{{ form.id }}</td>
+              {% else %}
+                <td>{{ form.name }}</td>
+                <td class="text-center">{{ form.standard }}</td>
+                <td>{{ form.description }}</td>
+                <td class="text-center">{{ form.beginner_friendly }}</td>
+                <td class="text-center">{{ form.not_wheelchair_accessible }}</td>
+                <td class="text-center">{{ form.keyholder_only }}</td>
+                <td class="text-center">{{ form.DELETE }}{{ form.id }}</td>
+              {% endif %}
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        <div class="card-footer d-flex justify-content-between align-items-center">
+          <small class="text-muted">New roles are added at the bottom of the list. 🌱 = beginner-friendly &nbsp;·&nbsp; ♿✗ = not wheelchair-accessible &nbsp;·&nbsp; 🔑 = keyholder slot.</small>
+          <button type="submit" class="btn btn-primary">Save changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -45,6 +45,24 @@ class Role(models.Model):
         "accessibility notes, links to guides, training requirements, etc.",
     )
 
+    beginner_friendly = models.BooleanField(
+        default=False,
+        help_text="Show the 🌱 beginner-friendly badge on the rota — "
+        "a great first role for new volunteers.",
+    )
+
+    not_wheelchair_accessible = models.BooleanField(
+        default=False,
+        help_text="Show the ♿ inaccessible badge on the rota — "
+        "role may not be suitable for wheelchair users.",
+    )
+
+    keyholder_only = models.BooleanField(
+        default=False,
+        help_text="Show the 🔑 keyholder badge on the rota — "
+        "slot must be filled by a trained venue keyholder.",
+    )
+
     class Meta:
         db_table = "Roles"
         ordering = ["name"]

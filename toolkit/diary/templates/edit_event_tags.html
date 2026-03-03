@@ -1,87 +1,67 @@
 {% extends "base_admin.html" %}
 
-{% block title %}
-Editing Event Tags
-{% endblock %}
+{% block title %}Editing Event Tags{% endblock %}
 
 {% block css %}
 {{ block.super }}
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/messages.css">
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}diary/css/edit_form.css">
 <style type="text/css">
-  body {
-      background: lightgray;
-  }
-  form#tags {
-      border: thin dotted gray;
-      padding: 5px;
-      margin: 2%;
-      width: 400px;
-      background: white;
-  }
-  .header {
-      background: white;
-      margin: 2% 2% 5px 2%;
-      padding: 5px 10px 5px 10px;
-  }
-  .warn {
-      color: red;
-  }
-  select {
-      width: 330px;
-  }
   #sortable {
-      list-style-type: none;
-      padding-left: 0;
+    list-style-type: none;
+    padding-left: 0;
+    margin-bottom: 0;
   }
 
   #sortable li {
-      margin: 0 5px 5px 5px;
-      padding: 3px;
-      width: 90%;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    border-bottom: 1px solid #dee2e6;
+  }
+
+  #sortable li:last-child {
+    border-bottom: none;
   }
 
   #sortable li.promoted {
-      background: #f9f9f9;
-      border: thin solid black;
+    background-color: #f0f7ff;
   }
 
-  span.drag-handle {
-    width: 10px;
-    height: 20px;
-    display: inline-block;
-    overflow: hidden;
-    line-height: 5px;
-    padding: 3px 4px;
-    vertical-align: middle;
-    margin-top: -.7em;
-    margin-right: .3em;
-    font-size: 12px;
-    font-family: sans-serif;
-    letter-spacing: 2px;
-    color: #cccccc;
-    text-shadow: 1px 0 1px black;
+  #sortable li.new_tag {
+    background-color: #fff9c4;
   }
 
-  .promoted span.drag-handle {
-    content: '....';
+  .drag-handle {
     cursor: move;
-  }
-  .promoted span.drag-handle::after {
-    content: '.. .. .. ..';
-  }
-
-  span.tag-name {
-      font-weight: bold;
-  }
-  span.tag-options {
-      display: inline-block;
-      float: right;
-  }
-  span.tag-delete {
-      color: red;
+    color: #adb5bd;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    user-select: none;
   }
 
+  .drag-handle-placeholder {
+    width: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  .tag-name {
+    font-weight: 600;
+    flex: 1;
+  }
+
+  .tag-options {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  .tag-options label {
+    margin-bottom: 0;
+    font-weight: normal;
+  }
 </style>
 {% endblock %}
 
@@ -94,7 +74,8 @@ Editing Event Tags
 
 $(document).ready(function() {
     $("#sortable").sortable({
-        "items": "li.promoted",
+        "items": "li:not(.new_tag)",
+        "handle": ".drag-handle",
         "update": updateOrdering
     });
     $("#sortable").disableSelection();
@@ -154,49 +135,79 @@ function updateOrdering() {
 {% endblock %}
 
 {% block body %}
-<div class="header">
-<h1>Event Tags</h1>
-<p class="warn">Deleting tags cannot be undone, please take care</p>
-<p>Add new tags at the end of the list. Drag and drop "in menu" tags to set the
-order they appear in the site navigation menu.</p>
-{% include "messages.html" %}
-</div>
-<form id="tags" method="post">
-{{ formset.management_form }}
-{% csrf_token %}
-<input type="submit" value="Save all changes" />
+<div class="container-fluid mt-3">
 
-<ul id="sortable">
+  <div class="alert alert-warning">
+    <strong>Warning:</strong> Deleting tags cannot be undone, please take care.
+  </div>
 
-{% for form in formset %}
-    <li class="{% if form.instance.promoted and form.id.value %}promoted{% endif %}{% if not form.id.value %} new_tag{% endif %}">
-        {% if form.id.value %}<span class="drag-handle"></span>{% endif %}
-        {% if form.errors %}
-            <span class="form_errors">
-                Error: {{ form.name.errors.as_text }} | {{ form.standard.errors.as_text }} | {{ form.DELETE.errors.as_text }}
-            </span>
-            {{ form.errors }}
-        {% endif %}
-        {% if not form.id.value %}New Tag:<br>{% endif %}
-        {% if form.id.value %}
-            <span class="tag-name">{{ form.name.as_hidden }}{{ form.name.value }}</span>
-        {% else %}
-            {{ form.name }}
-        {% endif %}
-        {# Model on the back end enforces the read_only flag, so no integrity/security worries about the hidden field... #}
-        <span class="tag-options">
-            {% if form.instance.read_only or not form.id.value%}
-                {{ form.id }}
+  {% include "messages.html" %}
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h4 class="mb-0">Event Tags</h4>
+      <small class="text-muted">
+        <strong>Programme nav</strong> tags appear as filter links under "Programme" in the public website navigation. Non-nav tags are saved but not shown there.
+      </small>
+    </div>
+    <div class="card-body p-0">
+      <form id="tags" method="post">
+        {{ formset.management_form }}
+        {% csrf_token %}
+
+        <ul id="sortable">
+
+        {% for form in formset %}
+          <li class="{% if form.instance.promoted and form.id.value %}promoted{% endif %}{% if not form.id.value %} new_tag{% endif %}">
+
+            {% if form.id.value %}
+              <span class="drag-handle" title="Drag to reorder">&#9776;</span>
             {% else %}
-                <span class="tag-delete">{{ form.DELETE.as_field_group }} {{ form.id }}</span>
+              <span class="drag-handle-placeholder"></span>
             {% endif %}
-            {{ form.promoted.as_field_group }}
-        </span>
-        {{ form.sort_order.as_hidden }}
-    </li>
-{% endfor %}
-</ul>
-<input type="submit" value="Save all changes" />
-</form>
 
+            {% if form.errors %}
+              <span class="text-danger">
+                Error: {{ form.name.errors.as_text }} | {{ form.standard.errors.as_text }} | {{ form.DELETE.errors.as_text }}
+              </span>
+            {% endif %}
+
+            <span class="tag-name">
+              {% if not form.id.value %}
+                <label class="text-muted mb-0">New tag:</label>
+                {{ form.name }}
+              {% else %}
+                {{ form.name.as_hidden }}{{ form.name.value }}
+              {% endif %}
+            </span>
+
+            <span class="tag-options">
+              {% if form.id.value %}
+                <label title="Show this tag as a filter link under 'Programme' in the public website navigation">
+                  {{ form.promoted }} Programme nav
+                </label>
+              {% endif %}
+
+              {% if form.instance.read_only or not form.id.value %}
+                {{ form.id }}
+              {% else %}
+                <span class="text-danger">{{ form.DELETE.as_field_group }} {{ form.id }}</span>
+              {% endif %}
+            </span>
+
+            {{ form.sort_order.as_hidden }}
+          </li>
+        {% endfor %}
+
+        </ul>
+
+        <div class="card-footer d-flex justify-content-between align-items-center">
+          <small class="text-muted">Tick <strong>Programme nav</strong> to show a tag as a filter link under "Programme" in the public website nav. Drag any row to set its order.</small>
+          <button type="submit" class="btn btn-primary">Save all changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
 {% endblock %}
