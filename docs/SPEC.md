@@ -14,6 +14,11 @@
 
 ## Table of Contents
 
+- [Principles and values](#principles-and-values)
+  - [On the use of AI tools in development](#on-the-use-of-ai-tools-in-development)
+  - [Relationship with the Cube Microplex](#relationship-with-the-cube-microplex)
+  - [The value of volunteer time already invested](#the-value-of-volunteer-time-already-invested)
+
 1. [What the system does](#1-what-the-system-does)
 2. [Who can access what — permission model](#2-who-can-access-what--permission-model)
 3. [Business rules and invariants](#3-business-rules-and-invariants)
@@ -33,7 +38,7 @@
 
 ## Principles and values
 
-**Note:** This specification describes the system as it exists and the values that guide its development. While it reflects the Star and Shadow's ethos (or at least my version of them), specific technical implementations of these values are working proposals until ratified by the collective.
+This specification describes the system as it exists and the values that guide its development. It reflects the Star and Shadow's ethos as I understand them; specific technical implementations are working proposals until ratified by the collective.
 
 > Star & Shadow Cinema is a completely volunteer-run DIY venue based in Newcastle upon Tyne in the North East of England.
 >
@@ -47,11 +52,9 @@
 
 **Consensus and collective decision-making.** The toolkit facilitates coordination; it does not impose process. For example, the programming pipeline (9.2) supports how Monday meetings actually work rather than enforcing a rigid approval hierarchy.
 
-However, the toolkit must sometimes enforce collectively agreed safeguards. A space open to anyone is vulnerable. Where a restriction exists (e.g., finance thresholds), it enforces a collective decision. Where no such decision exists, the system nudges rather than blocks.
+However, processes that the collective *has* agreed to sometimes need to be encoded in the system to have any teeth at all. A space genuinely open to anyone is also open to bad actors, and S&S does a good job of self-governing -- but a collectively agreed safeguard that exists only as a social norm is vulnerable to whoever is least willing to honour it.
 
-At the same time, processes that the collective *has* agreed to sometimes need to be encoded in the system to have any teeth at all. A space that is genuinely open to anyone is also, by the same token, open to bad actors. For the most part S&S does a good job of self-governing — but a collectively agreed safeguard that exists only as a social norm, with no technical enforcement, is vulnerable to whoever is least willing to honour it. The toolkit is sometimes the only hard mechanism standing between a collectively agreed process and someone circumventing it.
-
-My proposed design principle is therefore not "never enforce anything" but **"only enforce what the collective has agreed to enforce."** Where a restriction exists in the system, it should ideally be possible to point to the collective decision behind it. Where no such decision exists, the system should nudge rather than block.
+My proposed design principle is therefore not "never enforce anything" but **"only enforce what the collective has agreed to enforce."** Where a restriction exists (e.g. finance thresholds), it should be possible to point to the collective decision behind it. Where no such decision exists, the system should nudge rather than block.
 
 **Honest disorganisation.** The system must be tolerant of incomplete data, half-finished entries, and tasks left undone. Strict validation that blocks progress will be worked around or ignored. Soft warnings beat hard blocks. Lots of us are volunteering in our spare time and just want to get things done, it's important to respect that.
 
@@ -65,17 +68,11 @@ There are 1,500 registered volunteers and typically around 100 active at any one
 
 For many volunteers, the Star and Shadow is one of the only spaces where they feel able to be their full selves, separated from the disempowering systems and hierarchies of daily life. The toolkit exists in service of that space. Any feature that affects how people encounter each other — notifications, social signals, automated messages, visibility of who has or hasn't done something — should be designed with the community's social fabric in mind, and introduced with care.
 
-My proposed design implications:
-- Notifications and automated reminders should be opt-in and unobtrusive, not the default mode of operation
-- Avoid features that create pressure, social comparison, or visibility of absence (e.g. "X hasn't signed up yet") without the community having explicitly asked for them
-- The rota is a social space as much as an operational one — changes to it affect how people encounter each other
-- When in doubt, do less and leave room for human judgement
-
 **Social capital and intentional friction.** Star and Shadow runs on a social economy where time is currency and relationships are the medium of exchange. Even couching it in terms normally used to describe capital systems feels a bit gross. Some friction is intentional, or if not intentional, has started accidentally fulfilling a useful role. For example, requiring a new programmer to personally approach keyholders is a form of community vetting. Automating this away entirely removes a useful social check.
 
 **Volunteer maintainability above all.** A system that disempowers us from taking ownership of it and making our own changes has failed. Prefer simple, well-documented code over sophisticated abstractions. The ideal is a codebase that an enthusiastic volunteer with some Python experience can confidently read, run, and modify.
 
-The same applies to collectives. Groups self-assemble around a shared interest and develop their own internal cultures. The fact that their membership is not always visible to the outside world is sometimes by design. The toolkit should not force collectives into the open without a collective decision to do so.
+The same principle applies at the collective level. Groups self-assemble around a shared interest and develop their own internal cultures. The fact that their membership is not always visible to the outside world is sometimes by design. The toolkit should not force collectives into the open without a collective decision to do so.
 
 ### On the use of AI tools in development
 
@@ -89,7 +86,7 @@ That said, I've been meaning to get into web development for ~15 years and never
 
 **Pragmatism.** Professional software development is expensive. Skilled developers who could build this system commercially are rare in a volunteer pool, and those who do volunteer are giving time that is genuinely costly to them. In my case, the realistic alternative to AI-assisted development is often not "I do it without AI" — it is "it doesn't get done." If AI assistance is what makes a feature possible at all, that is worth weighing honestly against the ethical concerns.
 
-This is not an argument to dismiss those concerns; it is my reasoning for why I have chosen to use AI assistance for this work. I recognise that others in the collective may weigh these considerations differently. I have tried to be transparent about this throughout, and any code or documentation I contribute using AI tools is disclosed in commit messages. If the collective decides it does not want AI-assisted contributions, I will respect that decision  but I wanted to document my reasoning openly.
+This is not an argument to dismiss those concerns; it is my reasoning for why I have chosen to use AI assistance for this work. I recognise that others in the collective may weigh these considerations differently. I have tried to be transparent about this throughout, and any code or documentation I contribute using AI tools is disclosed in commit messages. If the collective decides it does not want AI-assisted contributions, I will respect that decision, but I wanted to document my reasoning openly.
 
 For clarity: the toolkit itself does not and should not depend on AI or machine-learning capabilities to function. Any AI-assisted tooling sits in the development process, not in the running system.
 
@@ -124,7 +121,7 @@ At a UK freelance developer rate of **£400/day (~£50/hour)**, and estimating c
 
 This is not an abstract number. It represents many evenings and weekends from developers who gave their time because they believed in what the Cube and S&S are doing. When volunteers contribute code or documentation, they are continuing a tradition of genuine generosity that deserves to be named.
 
-For the same reason, the cost estimates throughout section 13 are given in commercial freelance rates, not as a budget — but as an honest acknowledgement of what volunteers are giving when they contribute technical work. A volunteer who implements the break-even calculator (estimated 2–4h) is donating £100–£200 of skilled labour, not just "a few hours on a weekend".
+For the same reason, the effort estimates throughout TASKS.md are given in commercial freelance rates, not as a budget - but as an honest acknowledgement of what volunteers are giving when they contribute technical work. A volunteer who implements the break-even calculator (estimated 2–4h) is donating £100–£200 of skilled labour, not just "a few hours on a weekend".
 
 ---
 
@@ -430,28 +427,7 @@ Ticket sales close 1 hour before the showing start. Print the TicketSource sales
 
 ## 5. Should we just use Squarespace?
 
-When the news surfaced that the site was running on a deprecated, unsupported version of Django, a natural response from volunteers without deep technical context was: "why not just use Squarespace?" or "why not use WordPress?" These questions deserve a straight answer.
-
-### 5.1 What an off-the-shelf platform does well
-
-A hosted website builder like Squarespace, WordPress.com, or Ghost does some things very well:
-
-- **Easy public-facing website management** — drag-and-drop editing, no
-server management, automatic updates
-- **Event listings** — Squarespace and similar platforms have event listing
-features; WordPress has plugins like The Events Calendar
-- **Email campaigns** — Squarespace has Mailchimp integration; many platforms
-have built-in mailing tools
-- **Secure hosting** — managed TLS, backups, and software updates handled
-by the platform provider
-- **Low technical barrier for content editors** — non-technical volunteers
-can update the website without developer involvement
-
-For a simple "here is what's on this week" website with a contact form and some About pages, an off-the-shelf platform is entirely sufficient.
-
-### 5.2 What the toolkit does that a website platform cannot
-
-The Star and Shadow's digital infrastructure requirement goes far beyond a public-facing website. The toolkit manages:
+When the site's Django 2.2 vulnerability surfaced, a natural response was "why not just use Squarespace?" A hosted platform handles public-facing websites well, but the toolkit is primarily a rota, volunteer database, and programming workflow tool — none of which Squarespace provides.
 
 | Function | Off-the-shelf platform | Toolkit |
 |---|---|---|
@@ -468,51 +444,17 @@ The Star and Shadow's digital infrastructure requirement goes far beyond a publi
 | Room booking and clash detection | ❌ | ✅ (proposed) |
 | Volunteer induction workflow | ❌ | ✅ (proposed) |
 
-The website is one component of what the toolkit does — and not the most important one. The rota, the volunteer database, and the programming workflow are the heart of the system. These cannot be replaced by Squarespace. They cannot even be replaced by Squarespace plus Mailchimp plus Airtable — those tools are generic and don't model the S&S data relationships (event → showing → rota entry → volunteer → training record).
+Everything is connected in a single record: an event has a public listing, an internal rota, volunteer assignments, and an archive entry. A platform move would still require the toolkit for rota and volunteers, plus duplicating every event entry. The answer to "our software is outdated" is "update it" — which is exactly what this project does.
 
-### 5.3 What you'd still need if you moved the website to Squarespace
+### 5.5 Working groups and collectives
 
-If the public-facing website moved to Squarespace, you would still need to maintain a separate system for:
+The Star and Shadow operates through a network of informal working groups and collectives (Bar Collective, Programming Collective, Technical Collective, Community Kitchen, and others). These are not modelled in the toolkit. Key facts for developers:
 
-- Volunteer database and training records
-- Rota management and sign-ups
-- Internal event management (creation, roles, confirmation)
-- Transactional email (volunteer welcome/retirement notices)
+- Groups communicate primarily through **Simplelists** mailing lists. Creating or administering a list requires knowing someone with Simplelists admin access. People can sign up for _some_ of the email lists via a semi-public form linked to from the toolkit home page, but not all lists are exposed there. Some, like Operations, require you to be added by an admin.
+- There is no central directory of collectives anywhere in the system. Some prefer not to be publicly findable; a few (e.g. Community Kitchen) have a page on the public site via Wagtail.
+- **Keyholders** are an informal group of long-standing trusted volunteers. Every programmer needs a keyholder for their event, but there is no in-system list — new programmers must ask around. This friction is partly intentional: personally approaching a keyholder is a lightweight form of community vetting.
 
-You'd also need to **duplicate effort** on every event: create it in the toolkit for the rota, then separately create or copy it to Squarespace for the public website. This is the friction that the toolkit explicitly exists to remove.
-
-### 5.4 The real argument for keeping the toolkit
-
-The toolkit is valuable precisely because everything is connected. An event in the system has a public listing, an internal rota, a volunteer assignment, a financial history, and an archive entry — all from a single record. None of the generic platforms can reproduce this integration without a substantial custom integration layer, which would cost more to build than maintaining the existing system.
-
-The technical debt that prompted the Squarespace conversation — Django 2.2 running in production — is a real problem but it has a real solution: migration to the modern `master` branch (which is exactly what this project is doing). The answer to "our software is outdated" is "update the software," not "replace it with a tool that can only do 30% of what it does."
-
-### 5.5 The collectives directory
-
-**Current state** (see also 8.12):
-
-The Star and Shadow operates through a network of informal working groups and collectives. These are not modelled in the toolkit. A volunteer wanting to find and join a collective has no in-system path to do so — they must ask around in person or via the general mailing list.
-
-A volunteer support consultation surfaced an appetite for making collectives more visible and accessible, particularly for newer volunteers who don't yet know the landscape.
-
-**What could fit in the toolkit:**
-
-A lightweight directory of opt-in collectives — where the collective chooses to be listed and controls what is displayed. This is explicitly not a full membership management system; it is a notice board.
-
-Each directory entry might contain:
-- Collective name and a one-paragraph description ("what we do, who can get
-involved, what commitment looks like")
-- A contact point (email address or mailing list)
-- Whether the collective is currently looking for new members
-- Link to a NextCloud folder or relevant wiki page (if the collective opts in)
-
-Collectives that prefer to remain private or informal are not listed. No collective is required to participate. The purpose is to lower the barrier for a volunteer who genuinely wants to get involved with a specific group but doesn't know where to start.
-
-**Appropriate scope.** Keeping this simple is essential. The SPEC's principles warn against overengineering — and the collective's own culture places real value in self-assembly and organic group formation. A feature that tries to manage collective membership, governance, or mailing lists within the toolkit is too much. A static directory that collectives update themselves (via the Wagtail CMS, or a simple admin form) is appropriate and low-maintenance.
-
-A **"join request" button** per collective — which sends an email to the contact point — is the maximum functionality that makes sense here. The actual joining remains a human process.
-
-**Size estimate:** 🔵 S — 4–16h for a simple CMS-managed directory; 🟡 M (16–40h) if a join-request mechanism and toolkit-integrated display are added.
+See TASKS.md §8.12 for the proposed collectives directory feature.
 
 ---
 
@@ -569,75 +511,17 @@ Prioritise integrations that pay off without requiring collective coordination f
 - Collaborative document editing (with the right apps installed)
 - Already has buy-in from the collective — people know how to use it
 
-### 7.3 Quick wins — light touch points with no API needed
+### 7.3 Integration approach: link, not embed
 
-These cost almost nothing to implement and survive NextCloud changes or migrations:
+The toolkit does not embed or sync with NextCloud or the wiki. The design pattern throughout is: store URLs to external resources as optional fields on models, use settings variables for venue-specific guide locations, and display these as live links in the UI. See TASKS.md §9.26 (`EventLink`), §9.15 (`Distributor.guide_url`), and §9.2 (`PROGRAMMING_ETIQUETTE_URL`) for the proposed implementations.
 
-#### Standardised document naming convention
+**Current state of adjacent tools:**
 
-Define a naming scheme for event-related documents and surface it in the toolkit wherever relevant. Example:
+- **NextCloud**: actively used — stores meeting minutes, event materials, posters, policy documents, and the Film Programming Guide.
+- **Wiki**: rarely used; no clear owner. Recommended path: retire it and migrate relevant pages (etiquette guide, induction checklist, how-tos) to NextCloud or the Wagtail CMS. Do not embed wiki content in the toolkit.
+- **SSO**: not implemented. NextCloud supports OIDC/LDAP but an identity provider adds significant overhead and a hard dependency. Worth revisiting once three or more systems share the same accounts.
 
-```text
-YYYY-MM-DD_EventSlug_poster.pdf YYYY-MM-DD_EventSlug_tech-rider.pdf YYYY-MM-DD_MondayMeeting_minutes.md
-```
-
-The toolkit can display a suggested filename on the event detail page (derived from the event's date and slug). A volunteer uploading a poster to NextCloud sees the suggested name and doesn't have to think about it. No API call needed.
-
-#### Event NextCloud folder URL field
-
-Add an optional `documents_url` field to `Event` (a plain URL). Programmers paste in a link to the event's NextCloud folder when they create one. The event detail page in the internal toolkit shows a "📁 Event documents" link.
-
-This is seven lines of code and gives every event a direct link to its files.
-
-#### Meeting minutes links in the programming queue
-
-When a proposed event is discussed at a Monday meeting, the toolkit can show a suggested NextCloud URL for that meeting's minutes file (based on the date). Again, just a URL template — no API.
-
-### 7.4 Medium effort — integration that's worth it if NextCloud has an API
-
-NextCloud exposes a WebDAV API and an OCS API. These are stable, widely documented, and used by many integrations. If the collective is willing to maintain an API token:
-
-#### Auto-create an event folder
-
-When a showing is confirmed, the toolkit could POST to NextCloud's WebDAV API to create a folder at a standard path (e.g. `/Events/2026/03/VolunteerHangout/`). This removes the manual step of "remember to create a folder in NextCloud".
-
-**Risk:** if NextCloud's URL, credentials, or folder structure changes, the toolkit breaks. Mitigate with a clear error message and graceful fallback (log the error, don't block the confirm action).
-
-#### Volunteer document access
-
-If volunteers eventually have accounts in the toolkit, the toolkit could grant them access to a NextCloud shared folder on activation (using NextCloud's share API). This replaces the current manual step of adding people to shared folders.
-
-### 7.5 What to do with the wiki
-
-The wiki is rarely used because it has no clear owner and no pull mechanism — no reason for anyone to look at it regularly. Options:
-
-#### Option A — Retire it, move content to NextCloud or the toolkit's CMS
-
-The most pragmatic choice. Copy any still-relevant pages (the programming etiquette guide, induction checklist, how-tos) to NextCloud or to the toolkit's CMS. Then stop maintaining the wiki. This reduces the number of places a volunteer has to look for information.
-
-#### Option B — Give it a specific job
-
-If the wiki is kept, give it a clear, narrow purpose that no other tool serves — for example, "this is where the programming etiquette guide and role-specific how-tos live". Resist adding anything else. Link to it from the toolkit at the relevant point (e.g. a link to the etiquette guide from the "add event" screen).
-
-**Do not** try to sync or embed wiki content inside the toolkit. That creates a fragile dependency on a system that's already underused.
-
-### 7.6 Single sign-on: probably not worth it yet
-
-NextCloud supports OIDC and LDAP for SSO. In theory, volunteers could log in to the toolkit and NextCloud with the same credentials. In practice:
-
-- Setting up an identity provider is significant infrastructure work
-- The volunteer population is not large enough for password fatigue to be a
-real problem
-- It creates a dependency: if the identity provider goes down, both systems are
-inaccessible
-- A future rewrite should design the auth system to be SSO-compatible (standard
-OAuth2/OIDC flows) without committing to it from day one
-
-SSO becomes worth considering once there are three or more integrated systems all needing the same user accounts.
-
-### 7.7 Resilience summary
-
-The safest integration strategy, in order of increasing fragility:
+Integration fragility, from most to least resilient:
 
 | Approach | Resilience | Effort |
 | --- | --- | --- |
@@ -646,8 +530,6 @@ The safest integration strategy, in order of increasing fragility:
 | Outbound webhooks from the toolkit | High — NextCloud is optional receiver | Low |
 | NextCloud WebDAV calls from toolkit | Medium — breaks if NextCloud changes | Medium |
 | SSO / identity federation | Low — both systems depend on identity provider | High |
-
-A rewrite should start with naming conventions and URL fields, and only add API calls once there is a volunteer willing to maintain them.
 
 ### 7.8 Email infrastructure (Star and Shadow)
 

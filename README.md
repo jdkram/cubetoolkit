@@ -5,7 +5,7 @@ Django application powering [Cube Microplex](https://www.cubecinema.com/) (Brist
 and [Star and Shadow Cinema](https://www.starandshadow.org.uk/) (Newcastle).
 Handles event scheduling, volunteer rotas, member database, and a CMS.
 
-**This repo is a fork of <https://github.com/BenMotz/cubetoolkit/> - I originally wanted to develop in a private repo due to abject shame about experimenting with AI tools, so couldn't use GitHub's native fork features. If this development goes beyond me just noodling about I'll restore that link properly**.
+Forked from [BenMotz/cubetoolkit](https://github.com/BenMotz/cubetoolkit/). (I broke the proper GitHub fork when developing in a private repo, I'll restore that if it looks like the S&S plan on doing anything with this experiment of mine).
 
 Quick start
 -----------
