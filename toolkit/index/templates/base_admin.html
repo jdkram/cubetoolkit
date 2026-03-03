@@ -10,6 +10,19 @@
 body {
   padding: 5rem 1.4rem;
 }
+@media (max-width: 576px) {
+  body {
+    padding: 3.5rem 0.5rem;
+  }
+}
+/* On mobile the collapsible nav must carry the navbar's background colour.
+ * The inline style on <nav> doesn't propagate to the .navbar-collapse child,
+ * so without this the expanded menu shows the white page background. */
+@media (max-width: 767px) {
+  .navbar .navbar-collapse {
+    background-color: inherit;
+  }
+}
 #base-admin-logout-form {
   display: inline;
 }
@@ -36,7 +49,7 @@ body {
       <nav class="navbar navbar-expand-md navbar-dark fixed-top" style="background-color: #0a588f;">
     {% endif %}
       <a class="navbar-brand" href="{% url "toolkit-index" %}">
-        <img alt="{{ VENUE.name }}" src="{{ STATIC_URL }}/{{ VENUE.internal_header_img }}" height="40px">
+        <img alt="{{ VENUE.name }}" src="{{ STATIC_URL }}/{{ VENUE.internal_header_img }}" height="40px" style="max-width: 120px; width: auto;">
       </a>
       <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarsExampleDefault" aria-controls="navbarsExampleDefault" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>

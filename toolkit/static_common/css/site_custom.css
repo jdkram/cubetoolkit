@@ -88,16 +88,28 @@ a {
 /* --- Nav --- */
 
 /* Bug I fix: sidebar must be a proper scroll container.
- * The layout CSS sets #sidebar to position:absolute with min-height:100%
- * and #site-nav to position:absolute inside it. Because absolutely-positioned
- * children don't contribute to a parent's scroll height, overflow-y:auto on
- * #sidebar never triggered. Fix: pin the sidebar to the viewport with
- * position:fixed and a bounded height, then return #site-nav to normal flow
- * so its height is included in the sidebar's scroll height. */
+ * Bug R fix: on mobile the sidebar should be off-screen until the hamburger
+ * is tapped. position:fixed with left:-240px hides it; the .sidebar-open
+ * class (toggled by site-common.js) slides it in. On desktop (>=1000px)
+ * the sidebar is always visible so left:0 and transition:none. */
 #sidebar {
     position: fixed;
+    left: -240px;
+    z-index: 200;
     height: 100vh;
     overflow-y: auto;
+    transition: left 0.3s ease;
+}
+
+#sidebar.sidebar-open {
+    left: 0;
+}
+
+@media screen and (min-width: 1000px) {
+    #sidebar {
+        left: 0;
+        transition: none;
+    }
 }
 
 #site-nav {

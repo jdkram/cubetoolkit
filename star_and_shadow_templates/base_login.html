@@ -1,0 +1,45 @@
+{# ai-written #}
+{# Minimal base for all authentication pages (login, logout, password reset). #}
+{# No navigation — just the site logo and a centred content area. #}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{% block title %}{% endblock %} — {{ VENUE.name }}</title>
+<link rel="shortcut icon" href="{{ VENUE.favicon }}">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:200,300,400,500,600,700,900" rel="stylesheet">
+<link rel="stylesheet" href="{{ STATIC_URL }}css/site_custom.css">
+<link rel="stylesheet" href="{{ STATIC_URL }}css/login.css">
+{% block css %}{% endblock %}
+<style>
+.auth-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 2.5rem 1rem 3rem;
+}
+.auth-logo {
+    margin-bottom: 2rem;
+}
+.auth-logo img {
+    display: block;
+    max-height: 160px;
+    width: auto;
+    max-width: 200px;
+}
+</style>
+</head>
+<body>
+<div class="auth-page">
+    <div class="auth-logo">
+        <a href="{% url "default-view" %}">
+            <img src="{{ STATIC_URL }}{{ VENUE.nav_menu_img }}" alt="{{ VENUE.name }}">
+        </a>
+    </div>
+    {% block body %}{% endblock %}
+</div>
+</body>
+</html>
