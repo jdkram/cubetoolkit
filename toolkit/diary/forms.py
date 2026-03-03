@@ -27,6 +27,9 @@ class RoleForm(forms.ModelForm):
             "name",
             "standard",
             "description",
+            "beginner_friendly",
+            "not_wheelchair_accessible",
+            "keyholder_only",
         )
 
 

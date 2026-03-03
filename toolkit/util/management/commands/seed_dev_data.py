@@ -39,21 +39,21 @@ except ImportError:
 # ---------------------------------------------------------------------------
 
 ROLES = [
-    {"name": "Keyholder", "standard": True},
+    {"name": "Keyholder", "standard": True, "keyholder_only": True},
     {"name": "Programmer", "standard": True},  # rota scheduling label; diary edit permission is separate (Permissions section)
     {"name": "Projectionist - DCP", "standard": True},
     {"name": "Projectionist - MP4", "standard": False},
     {"name": "Projectionist - Video/DVD", "standard": False},
-    {"name": "Projectionist (trained shadowing)", "standard": False},
-    {"name": "Bar Staff - Shift 1", "standard": True},
-    {"name": "Bar Staff - Shift 2", "standard": False},
-    {"name": "Bar Shadow", "standard": False},
-    {"name": "Box Office - Admission Tickets", "standard": True},
-    {"name": "Box Office - Greeter", "standard": False},
+    {"name": "Projectionist (trained shadowing)", "standard": False, "beginner_friendly": True},
+    {"name": "Bar Staff - Shift 1", "standard": True, "not_wheelchair_accessible": True},
+    {"name": "Bar Staff - Shift 2", "standard": False, "not_wheelchair_accessible": True},
+    {"name": "Bar Shadow", "standard": False, "not_wheelchair_accessible": True, "beginner_friendly": True},
+    {"name": "Box Office - Admission Tickets", "standard": True, "beginner_friendly": True},
+    {"name": "Box Office - Greeter", "standard": False, "beginner_friendly": True},
     {"name": "Box Office - Memberships and Merch", "standard": False},
-    {"name": "Usher - Fire Trained", "standard": True},
+    {"name": "Usher - Fire Trained", "standard": True, "beginner_friendly": True},
     {"name": "Facilitator", "standard": True},
-    {"name": "Facilitator Shadow", "standard": False},
+    {"name": "Facilitator Shadow", "standard": False, "beginner_friendly": True},
     {"name": "Minute taker", "standard": False},
     {"name": "Inductor - 1 (trained)", "standard": False},
     {"name": "Inductor - 2 (shadowing)", "standard": False},
@@ -63,11 +63,11 @@ ROLES = [
     {"name": "Sound Technician level 2", "standard": False},
     {"name": "Cafe (Level 1)", "standard": False},
     {"name": "Cafe (Level 2)", "standard": False},
-    {"name": "Cafe Shadowing", "standard": False},
-    {"name": "Cleaner", "standard": False},
-    {"name": "Extra Hands (no training needed)", "standard": False},
+    {"name": "Cafe Shadowing", "standard": False, "beginner_friendly": True},
+    {"name": "Cleaner", "standard": False, "beginner_friendly": True},
+    {"name": "Extra Hands (no training needed)", "standard": False, "beginner_friendly": True},
     {"name": "Line Cleaner", "standard": False},
-    {"name": "Tech (Shadowing)", "standard": False},
+    {"name": "Tech (Shadowing)", "standard": False, "beginner_friendly": True},
     # Community / creative roles — not operational, but real S&S volunteer contributions
     {"name": "Artist", "standard": False},
     {"name": "Biscuit Procurement Officer", "standard": False},
@@ -1709,12 +1709,17 @@ class Command(BaseCommand):
 
         # Roles
         for role_data in ROLES:
-            _, created = Role.objects.get_or_create(
+            role, created = Role.objects.get_or_create(
                 name=role_data["name"],
                 defaults={"standard": role_data["standard"]},
             )
             if created:
                 counts["roles"] += 1
+            # Apply badge flags on every run so they stay in sync with seed data
+            role.beginner_friendly = role_data.get("beginner_friendly", False)
+            role.not_wheelchair_accessible = role_data.get("not_wheelchair_accessible", False)
+            role.keyholder_only = role_data.get("keyholder_only", False)
+            role.save(update_fields=["beginner_friendly", "not_wheelchair_accessible", "keyholder_only"])
 
         # Tags
         for tag_name in TAGS:
