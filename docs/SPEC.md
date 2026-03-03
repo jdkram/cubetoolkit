@@ -6,15 +6,34 @@
 
 **Scope:** This file describes the system **as built**. Design rationale and specifications for proposed (unbuilt) features live in [TASKS.md](TASKS.md). Task status and roadmap live in [CURRENT_WORK.md](../CURRENT_WORK.md).
 
-**Context:** The Star and Shadow Cinema (Newcastle upon Tyne) is a volunteer-run organisation with an anarchist ethos. The system described here manages events, volunteers, and communications. This specification represents my (Jonny's) understanding of how the organisation works and what values should guide technical development. Where I describe principles or organisational practices, these are my observations and interpretations — not formal collective decisions unless explicitly stated otherwise.
+**Context:** The Star and Shadow Cinema (Newcastle upon Tyne) is a volunteer-run organisation with an anarchist ethos. The system described here manages events, volunteers, and communications. This specification represents the author's understanding of the system and the values that should guide its development, offered for collective review and consensus.
 
 **On AI assistance:** I have used AI tools extensively in writing this document and in developing code for the toolkit. My reasoning for this choice, and some thoughts on the tensions it creates, are discussed in the principles section below.
 
 ---
 
+## Table of Contents
+
+1. [What the system does](#1-what-the-system-does)
+2. [Who can access what — permission model](#2-who-can-access-what--permission-model)
+3. [Business rules and invariants](#3-business-rules-and-invariants)
+4. [Key workflows](#4-key-workflows)
+5. [Should we just use Squarespace?](#5-should-we-just-use-squarespace)
+6. [External integrations](#6-external-integrations)
+7. [Integration with adjacent infrastructure](#7-integration-with-adjacent-infrastructure)
+8. [Data model](#8-data-model)
+9. [URL / endpoint map](#9-url--endpoint-map)
+10. [Technology notes for a rewrite](#10-technology-notes-for-a-rewrite)
+11. [Development strategy: rewrite or continue?](#11-development-strategy-rewrite-or-continue)
+12. [Migrating to a new system](#12-migrating-to-a-new-system)
+
+*Proposed features and design rationale: docs/TASKS.md · Status and roadmap: CURRENT_WORK.md*
+
+---
+
 ## Principles and values
 
-**Note:** This section represents my (Jonny Kram's) understanding of Star and Shadow's values and how they should inform technical development. These are my interpretations, informed by participation in the collective, but should not be read as collectively agreed positions unless I explicitly cite a collective decision.
+**Note:** This specification describes the system as it exists and the values that guide its development. While it reflects the Star and Shadow's ethos (or at least my version of them), specific technical implementations of these values are working proposals until ratified by the collective.
 
 > Star & Shadow Cinema is a completely volunteer-run DIY venue based in Newcastle upon Tyne in the North East of England.
 >
@@ -24,25 +43,25 @@
 >
 > Our programming is completely open. Anyone willing to volunteer can put on a film screening, gig, meeting, talk or party, as long as they are willing to help run the place and get involved.
 
-From the above statements (which are from the public-facing website), I draw the following implications for how the toolkit should be designed and maintained.
+**No bosses or managers.** The system must not reproduce hierarchy in its UX. Avoid features that amplify one voice over another or require gatekeepers for routine actions. Coordination roles (Panopticon, Programmer) represent responsibilities, not authority. Spontaneous hierarchies do emerge, typically due to knowledge differentials, but everyone has a right to claim this space as their own.
 
-**No bosses or managers.** My view is that the system should not reproduce hierarchy in its UX. Features that make one person's voice louder than another's — or that require a gatekeeper to approve routine actions — should be avoided or made optional. Where coordination roles exist (Panopticon, Programmer), I believe they should be understood as responsibilities, not authority.
+**Consensus and collective decision-making.** The toolkit facilitates coordination; it does not impose process. For example, the programming pipeline (9.2) supports how Monday meetings actually work rather than enforcing a rigid approval hierarchy.
 
-**Consensus and collective decision-making.** I believe the toolkit should facilitate coordination, not impose process. The programming pipeline (9.2), for example, should support how Monday meetings actually work — not enforce a rigid approval hierarchy that the collective hasn't agreed to.
+However, the toolkit must sometimes enforce collectively agreed safeguards. A space open to anyone is vulnerable. Where a restriction exists (e.g., finance thresholds), it enforces a collective decision. Where no such decision exists, the system nudges rather than blocks.
 
 At the same time, processes that the collective *has* agreed to sometimes need to be encoded in the system to have any teeth at all. A space that is genuinely open to anyone is also, by the same token, open to bad actors. For the most part S&S does a good job of self-governing — but a collectively agreed safeguard that exists only as a social norm, with no technical enforcement, is vulnerable to whoever is least willing to honour it. The toolkit is sometimes the only hard mechanism standing between a collectively agreed process and someone circumventing it.
 
 My proposed design principle is therefore not "never enforce anything" but **"only enforce what the collective has agreed to enforce."** Where a restriction exists in the system, it should ideally be possible to point to the collective decision behind it. Where no such decision exists, the system should nudge rather than block.
 
-**Honest disorganisation.** Based on how I've observed the organisation work, the system must be tolerant of incomplete data, half-finished entries, and tasks left undone. Strict validation that blocks progress will be worked around or ignored. Soft warnings beat hard blocks.
+**Honest disorganisation.** The system must be tolerant of incomplete data, half-finished entries, and tasks left undone. Strict validation that blocks progress will be worked around or ignored. Soft warnings beat hard blocks. Lots of us are volunteering in our spare time and just want to get things done, it's important to respect that.
 
-**Anyone can get involved.** Low barrier to entry is not just a UX nicety — it's a core stated value of the organisation. My design goal is that the rota, the programme, and the volunteer onboarding process should all be accessible to someone who has never used the system before and has no technical background.
+**Anyone can get involved.** Low barrier to entry is a core value. The rota, the programme, and the volunteer onboarding process must be accessible to someone with no technical background who has never used the system before.
 
-**The toolkit as community space.** My understanding is that the toolkit is not just a management tool — it is a shared space that the community contributes to and inhabits. In some ways it is a direct descendant of the paper sign-up sheet that preceded it: a place where people show up, put their name down, and find out what's happening. I believe that lineage matters. The lo-fi, low-demand quality of the current system is not a limitation to be overcome — from what I've observed, for some members it is actively valued, as a counterpoint to the polished apps and notification-heavy platforms that dominate the rest of their lives and demand their attention on someone else's terms.
+**The toolkit as community space.** The toolkit is not just a management tool - it is a shared space that the community contributes to and inhabits. In some ways it is a direct descendant of the paper sign-up sheet that preceded it: a place where people show up, put their name down, and find out what's happening. This lineage matters. The lo-fi, low-demand quality of the current system is not a limitation to be overcome - from what I've observed, for some members it is actively valued, as a counterpoint to the polished apps and notification-heavy platforms that dominate the rest of their lives and demand their attention on someone else's terms.
 
 People spend significant time on the rota not because the system nudges them to, but because they care. That voluntary engagement is precious and should not be undermined by features that make the toolkit feel like a productivity system or a managed service.
 
-There are 1,500 registered volunteers and typically around 100 active at any one time. Disagreements happen. Tensions arise. The fact that the place functions as well as it does — without bosses, without HR, and with formal dispute resolution mechanisms that have real limits on how quickly and strictly they can be applied — is an ongoing collective achievement. The toolkit should support the human processes that make this possible, not try to automate over them.
+There are 1,500 registered volunteers and typically around 100 active at any one time. Disagreements happen. Tensions arise. The fact that the place functions as well as it does - without bosses, without HR, and with formal dispute resolution mechanisms that have real limits on how quickly and strictly they can be applied - is an ongoing collective achievement. The toolkit should support the human processes that make this possible, not try to automate over them.
 
 For many volunteers, the Star and Shadow is one of the only spaces where they feel able to be their full selves, separated from the disempowering systems and hierarchies of daily life. The toolkit exists in service of that space. Any feature that affects how people encounter each other — notifications, social signals, automated messages, visibility of who has or hasn't done something — should be designed with the community's social fabric in mind, and introduced with care.
 
@@ -52,29 +71,25 @@ My proposed design implications:
 - The rota is a social space as much as an operational one — changes to it affect how people encounter each other
 - When in doubt, do less and leave room for human judgement
 
-**Social capital and intentional friction.** From my observation, the Star and Shadow runs on something that looks from the outside like disorganisation but is, on closer inspection, a maintained social economy. Time is the primary currency. Relationships are the medium of exchange. The mutual obligation to help people who have helped you — sometimes described informally as "backscratching" — is a real governance mechanism, not a failure of formal process.
+**Social capital and intentional friction.** Star and Shadow runs on a social economy where time is currency and relationships are the medium of exchange. Even couching it in terms normally used to describe capital systems feels a bit gross. Some friction is intentional, or if not intentional, has started accidentally fulfilling a useful role. For example, requiring a new programmer to personally approach keyholders is a form of community vetting. Automating this away entirely removes a useful social check.
 
-Some of the friction in the current system is not a bug. The fact that a new programmer must personally approach keyholders, and earn their willingness to vouch for a showing, is a form of community vetting that the current system performs accidentally (see 8.12). Any feature that lowers this friction should be designed with care: the friction may be doing useful work.
+**Volunteer maintainability above all.** A system that disempowers us from taking ownership of it and making our own changes has failed. Prefer simple, well-documented code over sophisticated abstractions. The ideal is a codebase that an enthusiastic volunteer with some Python experience can confidently read, run, and modify.
 
 The same applies to collectives. Groups self-assemble around a shared interest and develop their own internal cultures. The fact that their membership is not always visible to the outside world is sometimes by design. The toolkit should not force collectives into the open without a collective decision to do so.
-
-**Volunteer maintainability above all.** My strong belief is that a system that requires an external developer to make routine changes has failed. Prefer simple, well-documented code over sophisticated abstractions. Prefer boring technology over clever technology. The ideal is a codebase that an enthusiastic volunteer with some Python experience can confidently read, run, and modify.
 
 ### On the use of AI tools in development
 
 **This section represents my (Jonny Kram's) personal position on using AI tools for this project. I have not sought collective agreement on this, and I'm aware that some members may disagree with my approach.**
 
-I recognize that some members of the community may have ethical objections to the use of AI tools in developing or maintaining the toolkit. These objections are legitimate and worth taking seriously — they may relate to the environmental cost of AI inference, concerns about training data and intellectual property, the displacement of paid technical labour, or the concentration of AI capability in large corporations whose values may not align with the collective's.
+I recognise that some members of the community may have ethical objections to the use of AI tools in developing or maintaining the toolkit. I have many of these ethical objections myself. These objections are worth taking seriously - they may relate to the environmental cost of AI inference, concerns about training data and intellectual property, the displacement of paid technical labour, or the concentration of AI capability in large corporations whose values may not align with the Star & Shadow's.
 
-That said, I've been meaning to get into web development for ~15 years and never managed it, and wouldn't have been able to do much of the work in this project without AI assistance - or I would have, it just would have taken an order of magnitude more work and effort, resources that I don't have to spare when so much of my energy has to go into maintaining and trying to improve my health.
+That said, I've been meaning to get into web development for ~15 years and never managed it, and wouldn't have been able to do much of the work in this project without AI assistance. It would have taken an order of magnitude more work and effort, resources that I don't have to spare while managing my health.
 
-**Accessibility.** My view is that the principle that anyone willing to volunteer should be able to get involved extends to the codebase itself. AI coding tools meaningfully lower the barrier to contributing for people who have enthusiasm and ideas but lack formal software training, or who work in adjacent fields and would find the learning curve too steep to donate their time otherwise. A volunteer who can describe what they want in plain language and iterate on the result with AI assistance can make real contributions that would otherwise be impossible for them. In my view, rejecting AI tools uncritically can reproduce the same gatekeeping the collective tries to dismantle elsewhere.
+**Accessibility.** My view is that the principle that "anyone willing to volunteer should be able to get involved" extends to the codebase itself. AI coding tools meaningfully lower the barrier to contributing for people who have enthusiasm and ideas but lack formal software training, or who work in adjacent fields and would find the learning curve too steep to donate their time otherwise. A volunteer who can describe what they want in plain language and iterate on the result with AI assistance can make real contributions that would otherwise be impossible for them. In my view, rejecting AI tools uncritically can reproduce the same gatekeeping the collective tries to dismantle elsewhere. Making the codebase easily deployable and tinkerable - with Docker containers, seed data, and good documentation - is a fantastic way to lower the barrier to entry, and AI assistance is a powerful tool for achieving that.
 
-**Pragmatism.** Professional software development is expensive. Skilled developers who could build this system commercially are rare in a volunteer pool, and those who do volunteer are giving time that is genuinely costly to them. In my case, the realistic alternative to AI-assisted development is often not "I do it without AI" — it is "it doesn't get done." If AI assistance is what makes a feature possible at all, I believe that is worth weighing honestly against the ethical concerns.
+**Pragmatism.** Professional software development is expensive. Skilled developers who could build this system commercially are rare in a volunteer pool, and those who do volunteer are giving time that is genuinely costly to them. In my case, the realistic alternative to AI-assisted development is often not "I do it without AI" — it is "it doesn't get done." If AI assistance is what makes a feature possible at all, that is worth weighing honestly against the ethical concerns.
 
-This is not an argument to dismiss those concerns — it is my reasoning for why I have chosen to use AI assistance for this work. I recognize that others in the collective may weigh these considerations differently.
-
-This document was produced with AI assistance. I have tried to be transparent about this throughout. Any code or documentation I contribute using AI tools is disclosed in commit messages. If the collective decides it does not want AI-assisted contributions, I will respect that decision — but I wanted to document my reasoning openly.
+This is not an argument to dismiss those concerns; it is my reasoning for why I have chosen to use AI assistance for this work. I recognise that others in the collective may weigh these considerations differently. I have tried to be transparent about this throughout, and any code or documentation I contribute using AI tools is disclosed in commit messages. If the collective decides it does not want AI-assisted contributions, I will respect that decision  but I wanted to document my reasoning openly.
 
 For clarity: the toolkit itself does not and should not depend on AI or machine-learning capabilities to function. Any AI-assisted tooling sits in the development process, not in the running system.
 
@@ -110,25 +125,6 @@ At a UK freelance developer rate of **£400/day (~£50/hour)**, and estimating c
 This is not an abstract number. It represents many evenings and weekends from developers who gave their time because they believed in what the Cube and S&S are doing. When volunteers contribute code or documentation, they are continuing a tradition of genuine generosity that deserves to be named.
 
 For the same reason, the cost estimates throughout section 13 are given in commercial freelance rates, not as a budget — but as an honest acknowledgement of what volunteers are giving when they contribute technical work. A volunteer who implements the break-even calculator (estimated 2–4h) is donating £100–£200 of skilled labour, not just "a few hours on a weekend".
-
----
-
-## Table of Contents
-
-1. [What the system does](#1-what-the-system-does)
-2. [Who can access what — permission model](#2-who-can-access-what--permission-model)
-3. [Business rules and invariants](#3-business-rules-and-invariants)
-4. [Key workflows](#4-key-workflows)
-5. [Should we just use Squarespace?](#5-should-we-just-use-squarespace)
-6. [External integrations](#6-external-integrations)
-7. [Integration with adjacent infrastructure](#7-integration-with-adjacent-infrastructure)
-8. [Data model](#8-data-model)
-9. [URL / endpoint map](#9-url--endpoint-map)
-10. [Technology notes for a rewrite](#10-technology-notes-for-a-rewrite)
-11. [Development strategy: rewrite or continue?](#11-development-strategy-rewrite-or-continue)
-12. [Migrating to a new system](#12-migrating-to-a-new-system)
-
-*Proposed features and design rationale: [docs/TASKS.md](TASKS.md) · Status and roadmap: [CURRENT_WORK.md](../CURRENT_WORK.md)*
 
 ---
 
@@ -187,7 +183,7 @@ was trained for which role, when, by whom). In practice at Star and Shadow these
 - Cancel a pending or in-progress job
 - Members have a unique unsubscribe token for one-click unsubscribe links in emails
 
-**Note (Star and Shadow):** at S&S the toolkit mailout system is **not currently deployed or used** — neither for general communications nor for any other purpose. All volunteer and member communications go through Simplelists mailing lists, managed outside the toolkit. The toolkit's email code (the `mailerd` daemon, the job queue, the compose view) is present in the codebase and functional, but the `DJANGO_SETTINGS_MODULE` for the S&S instance does not configure an outbound SMTP server for bulk sends, and the mailout UI is not linked from the internal dashboard. The only email the S&S instance sends is transactional (account creation, password reset). See section 4.3 for the workflow diagram — it describes how the system *can* work, not how S&S uses it today. If S&S were to adopt the toolkit mailout system, a review of the Simplelists migration implications (section 9.6) would be needed first.
+**Note (Star and Shadow):** at S&S the toolkit mailout system is **not currently deployed or used**, I think? At least according to the code I have access to. I don't really understand what the live S&S code does for emails. All volunteer and member communications go through Simplelists mailing lists, managed outside the toolkit. The toolkit's email code (the `mailerd` daemon, the job queue, the compose view) is present in the codebase and functional, but the `DJANGO_SETTINGS_MODULE` for the S&S instance does not configure an outbound SMTP server for bulk sends, and the mailout UI is not linked from the internal dashboard. The only email the S&S instance sends is transactional (account creation, password reset). See section 4.3 for the workflow diagram — it describes how the system *can* work, not how S&S uses it today. If S&S were to adopt the toolkit mailout system, a review of the Simplelists migration implications (section 9.6) would be needed first.
 
 ### 1.6 CMS content pages (internal)
 
@@ -1392,4 +1388,3 @@ The safest migration strategy is a cutover period where both systems are live:
 Avoid a "big bang" cutover where data is migrated and the site goes live at the same moment — too much can go wrong at once.
 
 ---
-
