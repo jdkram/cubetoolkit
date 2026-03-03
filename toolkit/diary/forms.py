@@ -12,6 +12,7 @@ from toolkit.diary.form_widgets import (
     HtmlTextarea,
     JQueryDateTimePicker,
     ChosenSelectMultiple,
+    TagPillSelect,
 )
 
 import toolkit.diary.models
@@ -50,7 +51,7 @@ class EventTemplateForm(forms.ModelForm):
             "outside_hire",
         )
         widgets = {
-            "tags": ChosenSelectMultiple(),
+            "tags": TagPillSelect(),
             "copy": forms.Textarea(attrs={"wrap": "soft", "rows": 10}),
             "copy_summary": forms.Textarea(attrs={"wrap": "soft", "rows": 4}),
             "terms": forms.Textarea(attrs={"wrap": "soft", "rows": 6}),
@@ -157,7 +158,7 @@ class EventForm(forms.ModelForm):
                     ),
                 }
             ),
-            "tags": ChosenSelectMultiple(width="70%"),
+            "tags": TagPillSelect(),
         }
         order = ("tags",)
         fields = (
