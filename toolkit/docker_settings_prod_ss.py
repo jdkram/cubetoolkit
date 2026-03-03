@@ -10,25 +10,40 @@ DEBUG = False
 #   python3 -c "import secrets; print(secrets.token_urlsafe(50))"
 SECRET_KEY = os.environ["SECRET_KEY"]
 
-ALLOWED_HOSTS = [os.environ.get("ALLOWED_HOST", "pi.jdkram.co.uk")]
+ALLOWED_HOSTS = [os.environ["ALLOWED_HOST"]]
 
 # Required for Django 4+ when behind a reverse proxy with HTTPS.
 # Form submissions (login, event edits, rota) will 403 without this.
 CSRF_TRUSTED_ORIGINS = [
-    f"https://{os.environ.get('ALLOWED_HOST', 'pi.jdkram.co.uk')}"
+    f"https://{os.environ['ALLOWED_HOST']}"
 ]
 
-# Subpath deployment: Django will prepend this to all reversed URLs
-# so that {% url %} tags and redirects include the /sns_toolkit prefix.
-FORCE_SCRIPT_NAME = "/sns_toolkit"
+# The whole domain is dedicated to this app, so no subpath prefix is needed.
+# FORCE_SCRIPT_NAME is only needed when serving at a subpath alongside other
+# apps on the same domain.
 
 # Tell Django that the real protocol comes from nginx's X-Forwarded-Proto header.
 # Without this, request.is_secure() returns False and some redirects break.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-# Static files are served from /sns_toolkit/static/
-# collectstatic runs at Docker build time; the result is served by nginx.
-STATIC_URL = "/sns_toolkit/static/"
+# FORCE_SCRIPT_NAME already prepends /sns_toolkit to all URLs, so STATIC_URL
+# must NOT include that prefix — doing so causes double-prefixing like
+# /sns_toolkit/sns_toolkit/static/. Whitenoise sees PATH_INFO after WSGI
+# strips SCRIPT_NAME, so it correctly serves requests at /static/*.
+STATIC_URL = "/static/"
+
+# Insert whitenoise after SecurityMiddleware so it serves static files.
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "wagtail.contrib.redirects.middleware.RedirectMiddleware",
+]
 
 # --- Database ---
 # Same MariaDB config as dev — credentials come from environment variables.
