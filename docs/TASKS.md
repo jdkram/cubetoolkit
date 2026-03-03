@@ -91,6 +91,94 @@ The interaction model is also unintuitive: users must first tick "Promoted" on a
 
 ---
 
+**Bug R** — Mobile: public-site sidebar always visible, not gated by hamburger 🟢 XS
+
+**Root cause:** The Bug I fix (2026-02-26) applied `position: fixed; height: 100vh; overflow-y: auto` to `#sidebar` in `site_custom.css` with no media query. On desktop (≥ 1000px) this is correct: the sidebar is always visible. On mobile (< 1000px) it means the sidebar sits in the fixed stacking layer at `left: 0`, visible across the whole viewport regardless of whether the hamburger has been pressed. The S+S `background-color: #e3cae3` applied to both sidebar and grid means the sidebar's nav links show through any gap in the masonry tile layout.
+
+**Symptom:** On the homepage and other public pages, scrolling through content reveals the sidebar nav (Programme, Support Us, etc.) as a persistent layer in the top-left of the screen. It should only appear when the hamburger button is tapped.
+
+**Fix:**
+
+1. In `site_custom.css`: add `left: -240px; z-index: 200; transition: left 0.3s ease;` to the `#sidebar` rule (no media query — applies at all widths). This moves the sidebar off-screen by default.
+2. Wrap the existing `position: fixed; height: 100vh; overflow-y: auto` rule in `@media screen and (min-width: 1000px)` only — at desktop widths, sidebar should always be visible.
+3. In `site-common.js`: update the hamburger click handler to toggle a `.sidebar-open` class on `#sidebar` (sets `left: 0`) in addition to the existing `.open-sidebar` toggle on `.grid`. Also update the swipe-to-close handler to remove `.sidebar-open` from `#sidebar`.
+4. Add CSS: `#sidebar.sidebar-open { left: 0; }`.
+
+---
+
+**Bug S** — Login page: nav bar overlaps form on mobile; style inconsistent with admin 🟢 XS
+
+**Two sub-issues:**
+
+1. **Nav overlap on mobile:** `login.html` extends `base_public.html`, so the login card sits inside `.grid` below the `.navigation-wrap` (hamburger bar, ~50px). The `#mobile-menu-btn` is `position: absolute; z-index: 100` within that bar. On narrow phones the login card's top margin (40px) is close to or below the button, risking overlap.
+
+2. **Style inconsistency:** The public site uses the sidebar/hamburger nav from `base_public.html`. After login, volunteers land on toolkit pages that use the Bootstrap top navbar from `base_admin.html`. The login page sits at this junction, extending the public template, so its navigation context feels inconsistent with what comes after.
+
+**Fix options:**
+
+- Option A (minimal): Keep `base_public.html` extension; add `padding-top: 60px` to the `.grid` content area on mobile so the login card always clears the hamburger button.
+- Option B (clean): Create a lightweight base template (e.g. `base_login.html`) with just the site logo centred, no navigation at all. This makes the login page clearly neutral — not the public site, not the admin.
+
+Recommended: Option B for clear UX. Option A as a quick fix while the decision is made.
+
+---
+
+**Bug T** — Admin toolkit: mobile navbar overflow and layout issues 🔵 S
+
+Three sub-issues:
+
+**T1: Navbar brand image pushes toggler off-screen.** `base_admin.html` renders `<img height="40px">` with no `max-width`. If `VENUE.internal_header_img` is a wide landscape image, it overflows the navbar on narrow screens, pushing the Bootstrap collapse toggler off the right edge.
+
+Fix: Add `max-width: 120px; width: auto; height: auto;` to the navbar brand `<img>`.
+
+**T2: Body padding too large on mobile.** `base_admin.html` sets `body { padding: 5rem 1.4rem; }` globally. `5rem` top padding is meant to clear the fixed navbar (~56px ≈ 3.5rem), but 5rem overcompensates and wastes vertical space. `1.4rem` horizontal padding on a 375px viewport leaves ~330px usable width for content.
+
+Fix: Add `@media (max-width: 576px) { body { padding: 3.5rem 0.5rem; } }` in the `base_admin.html` `<style>` block.
+
+**T3: Rota controls bar overflows on narrow screens.** `edit_rota.html`'s `.rota-controls` bar contains two date inputs (each `width: 8em`) plus labels and three quick-select buttons. Although the controls use `flex-wrap`, the minimum combined width of date fields + labels (~320px) is already close to the usable content width after padding. On a 375px phone the controls are very cramped and may force a horizontal scroll.
+
+Fix: Add a mobile media query in the `edit_rota.html` `<style>` block:
+
+```css
+@media screen and (max-width: 576px) {
+    .rota-daterange input[type="text"] { width: 6em; }
+    .rota-daterange label { display: none; }  /* "from" / "to" implied */
+}
+```
+
+---
+
+**Bug U** — Rota: excessive left indentation wastes horizontal space on mobile 🟢 XS
+
+`ul.rota` inherits `padding: 0 0 0 40px` from the normalize reset in `static_pages.css` (line 202). Combined with `base_admin.html`'s `body { padding: 5rem 1.4rem }`, rota list items carry ~40px of blank left margin on mobile — roughly 12% of a 375px viewport.
+
+`.showing_rota_notes` and `.event-links` both have `margin-left: 3em` (≈ 48px at typical font size), adding further waste.
+
+**Fix:** Add to the `edit_rota.html` inline `<style>` block:
+
+```css
+@media screen and (max-width: 640px) {
+    ul.rota { padding-left: 0; }
+    .showing_rota_notes,
+    .past_showing_rota_notes { margin-left: 0.5em; }
+    .event-links { margin-left: 0.5em; }
+}
+```
+
+---
+
+**Bug V** — Tags/Roles admin: content overflows horizontally on narrow screens 🟢 XS
+
+**V1: Tags page** (`edit_event_tags.html`): `#sortable li` is a flex row. The `.tag-options` child has `flex-shrink: 0`, preventing it from shrinking. On viewports under ~480px the combined content (drag handle + tag name + "Programme nav" label + checkbox + "Delete:" label + checkbox) overflows the card container. The `.card-body` has no `overflow-x: auto`, so it clips.
+
+Fix: Add `overflow-x: auto` to `.card-body` in that template, or make `.tag-options` `flex-wrap: wrap` so it drops under the tag name on narrow screens.
+
+**V2: Roles page** (`form_edit_roles.html`): The roles table has 7 columns; several have fixed widths (`width: 90px`, `width: 50px` × 4, `width: 60px`), totalling ~310px fixed before the name and description columns. On a 375px phone this table overflows by 100px+.
+
+Fix: Wrap the `<table>` in `<div style="overflow-x: auto;">` inside the `card-body` div. This gives horizontal scrolling without restructuring the table.
+
+---
+
 ## 8. Current limitations and known gaps
 
 These are real limitations in the current system that a rewrite should address.
