@@ -1,49 +1,50 @@
 from django import forms
 
 
+class TagPillSelect(forms.CheckboxSelectMultiple):
+    """
+    Renders a ManyToMany tag field as a row of Bootstrap pill-badge toggles.
+
+    Each tag is a hidden checkbox wrapped in a <label>.  CSS drives the
+    checked/unchecked visual state via `input:checked + span` — no JS needed.
+
+    The `pill_select = True` class attribute is checked by the project-level
+    override of crispy-bootstrap4's checkboxselectmultiple.html template to
+    switch to pill rendering (crispy normally ignores widget.template_name).
+    """
+
+    template_name = "widgets/tagpillselect.html"
+    pill_select = True
+
+
 class ChosenSelectMultiple(forms.SelectMultiple):
     """
-    SelectMultiple widget using the "Chosen" jquery plugin:
-    http://harvesthq.github.io/chosen/
+    SelectMultiple widget. Formerly used the deprecated 'Chosen' jQuery plugin;
+    now renders as a standard HTML <select multiple>.
     """
 
-    template_name = "widgets/chosenselectmultiple.html"
-
-    class Media:
-        # Define media (CSS & JS) used by this control. To include this
-        # automatically the template containing the form must have the
-        # {{ form.media }} tag
-        js = ("js/lib/chosen.jquery.js",)
-        css = {
-            "all": ("css/lib/chosen.min.css",),
-        }
-
     def __init__(self, *args, **kwargs):
-        self.width = kwargs.pop("width", None)
+        kwargs.pop("width", None)  # width was a Chosen option; no longer used
         super().__init__(*args, **kwargs)
-
-    def get_context(self, name, value, attrs):
-        context = super().get_context(name, value, attrs)
-        context["widget"].update(
-            {
-                "width": self.width,
-            }
-        )
-        return context
 
 
 class HtmlTextarea(forms.Textarea):
-    """TextArea widget overloaded to provide a wysiwyg HTML editor, using the
-    'CKEditor' editor
-    """
+    """TextArea widget providing a WYSIWYG HTML editor via Quill 2."""
 
     template_name = "widgets/htmltextarea.html"
 
     class Media:
-        # Define media (CSS & JS) used by this control. To include this
-        # automatically the template containing the form must have the
-        # {{ form.media }} tag
-        js = ("js/lib/ckeditor/ckeditor.js",)
+        css = {
+            "all": ("css/lib/quill.snow.css",),
+        }
+        js = ("js/lib/quill/quill.js",)
+
+    def build_attrs(self, base_attrs, extra_attrs=None):
+        # Remove `required` — the textarea is CSS-hidden by Quill; let
+        # server-side validation handle the required check instead.
+        attrs = super().build_attrs(base_attrs, extra_attrs)
+        attrs.pop("required", None)
+        return attrs
 
     def __init__(self, *args, **kwargs):
         self.enable_tables = kwargs.pop("enable_tables", False)

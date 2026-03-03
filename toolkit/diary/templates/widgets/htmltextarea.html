@@ -1,11 +1,74 @@
-<div class='ckeditor_django_wrapper'>
-<textarea name="{{ widget.name }}"{% include "django/forms/widgets/attrs.html" %}>{% if widget.value %}{{ widget.value }}{% endif %}</textarea>
+<div class="quill_django_wrapper" style="margin-bottom: 1rem;">
+<div id="{{ widget.attrs.id }}_editor"{% if widget.height %} style="min-height: {{ widget.height }}"{% endif %}></div>
+<textarea name="{{ widget.name }}"{% include "django/forms/widgets/attrs.html" %}
+  style="display:none; width:100%; font-family:monospace; font-size:0.875rem; resize:vertical;{% if widget.height %} min-height: {{ widget.height }};{% endif %}">{% if widget.value %}{{ widget.value }}{% endif %}</textarea>
+<button type="button" id="{{ widget.attrs.id }}_htmltoggle"
+  class="btn btn-sm btn-outline-secondary mt-1"
+  title="Edit raw HTML source">&#x3C;/&#x3E; Edit HTML</button>
 </div>
-<script type='text/javascript'>
-CKEDITOR.replace('{{ widget.attrs.id }}',{
-{% if widget.height %}height:'{{ widget.height }}',{% endif %}
-{% if not widget.enable_iframes %}disallowedContent: 'iframe',{% endif %}
-removePlugins: '{{ widget.enable_tables|yesno:",table" }},{{ widget.enable_iframes|yesno:",youtube" }}',
-extraAllowedContent: 'img[src,alt];{{ widget.enable_tables|yesno:"td[colspan];hr," }};{{ widget.enable_iframes|yesno:"iframe[*]," }}'
-});
+<script>
+(function() {
+    var textarea  = document.getElementById('{{ widget.attrs.id }}');
+    var editorEl  = document.getElementById('{{ widget.attrs.id }}_editor');
+    var toggleBtn = document.getElementById('{{ widget.attrs.id }}_htmltoggle');
+    var sourceMode = false;
+
+    var toolbar = [
+        ['bold', 'italic', 'underline', 'strike'],
+        ['blockquote'],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        [{ header: [1, 2, 3, 4, 5, 6, false] }],
+        ['link'{% if widget.enable_iframes %}, 'video'{% endif %}],
+        ['clean']
+    ];
+    var quill = new Quill(editorEl, {
+        theme: 'snow',
+        modules: { toolbar: toolbar }
+    });
+    if (textarea.value) {
+        quill.clipboard.dangerouslyPasteHTML(textarea.value);
+    }
+
+    function getQuillHTML() {
+        var html = quill.getSemanticHTML ? quill.getSemanticHTML() : quill.root.innerHTML;
+        if (html === '<p></p>' || html === '<p><br></p>') return '';
+        // Quill 2 converts regular spaces to &nbsp; / U+00A0 to prevent browser
+        // collapsing. Strip them back to plain spaces before storing.
+        html = html.replace(/&nbsp;/g, ' ').replace(/\u00a0/g, ' ');
+        return html;
+    }
+
+    toggleBtn.addEventListener('click', function() {
+        sourceMode = !sourceMode;
+        if (sourceMode) {
+            // Flush Quill → textarea, then show textarea / hide editor.
+            // Decode entities that don't need encoding in HTML text content
+            // (&#39; apostrophes, &quot; quotes) so source is human-readable.
+            // &amp;, &lt;, &gt; are kept — they're semantically required.
+            var html = getQuillHTML();
+            html = html.replace(/&#39;/g, "'").replace(/&quot;/g, '"');
+            textarea.value = html;
+            editorEl.parentNode.querySelector('.ql-toolbar').style.display = 'none';
+            editorEl.style.display = 'none';
+            textarea.style.display = 'block';
+            toggleBtn.textContent = '\u2713 Back to editor';
+            toggleBtn.classList.replace('btn-outline-secondary', 'btn-warning');
+        } else {
+            // Flush textarea → Quill, then show editor / hide textarea
+            quill.clipboard.dangerouslyPasteHTML(textarea.value || '');
+            textarea.style.display = 'none';
+            editorEl.parentNode.querySelector('.ql-toolbar').style.display = '';
+            editorEl.style.display = '';
+            toggleBtn.innerHTML = '&#x3C;/&#x3E; Edit HTML';
+            toggleBtn.classList.replace('btn-warning', 'btn-outline-secondary');
+        }
+    });
+
+    var form = textarea.closest('form');
+    if (form) {
+        form.addEventListener('submit', function() {
+            textarea.value = sourceMode ? textarea.value : getQuillHTML();
+        });
+    }
+})();
 </script>

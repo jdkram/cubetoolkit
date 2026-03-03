@@ -168,7 +168,7 @@ notes dominate the view.
 
 ### 8.7 No programming pipeline / approval process
 Events go straight from "created" to "confirmed" without any formal approval
-step. There's no concept of a meeting where proposed events are reviewed.
+step. Proposed events are reviewed in Monday meetings (often added on to meetings that are primarily about other things), but there's no standard process for them hitting the system first. Sometimes people pencil in dates they want to reserve on the toolkit but generally this planning stuff happens privately. It might be beneficial to have a clear queue of things people want to do (the "ideas for March" etc. sections are a hint that this was once at least tried out), streamlining Monday meetings, where the meeting can take a look at the queue of proposals, clearly review the core info (e.g. terms, dates, rooms required), check it against core programming guide criteria, and then make a decision: accept / deny / suggest changes with conditional approval / suggest changes and bring back to another Monday meeting.
 
 ### 8.8 Training records are too rigid to model real role requirements
 The current training record system tries to fit all role qualifications into a
@@ -206,14 +206,16 @@ hygiene cert) can block sign-up. Soft signals (sound/tech comfort flag) can
 inform but not block. Keyholder status is a property of the volunteer record,
 not a training record at all.
 
+It's worth noting a real world pain point caused by this: Community Kitchen log their food hygiene level 2 certificates, which were agreed by policy to need refreshing every 2 years. Jonny wrote a spreadsheet for logging these, but this was never widely adopted in a way that would have been much easier if a culture of recording training was baked in from the start, and the toolkit had a frictionless ready-baked solution, as opposed to the (rather snazzy, if I do say so myself) google sheet that highlights when people are close to needing refreshers.
+
 ### 8.9 Training records expire silently
 There's no notification or dashboard view highlighting volunteers whose
 training has lapsed or is about to lapse. (This is a secondary issue given
-8.8 — solve the friction problem first.)
+8.8 — solve the friction problem first.) See 8.8 example at the end of Community Kitchen certs.
 
 ### 8.10 No view of volunteer workload
 There's no way to see how many hours or shifts any given volunteer has
-committed to, or to spot volunteers who are over-stretched or disengaged.
+committed to, or to spot volunteers who are over-stretched or disengaged. Or invite dormant volunteers to re-induct (or want to be removed from the system, helping with good GDPR compatible processes?).
 
 ### 8.11 Room booking model is too simple for multi-room events
 A `Showing` has a single optional `room` field. This works for a simple
@@ -255,6 +257,7 @@ with significant autonomy. These are not captured anywhere in the toolkit.
 - There is no central directory of which collectives exist, what they do, or
   who is in them. This is sometimes intentional: groups may prefer not to
   be publicly findable.
+- There is one collective listed in the info pages via Wagtail, accessible from the public site: Community Kitchen. A solution could have a "public copy" blurb about the collectives which would massively help prospective volunteers get a sense of how the cinema works, and if they'd like to join. Collectives that people might not assume operate out of a cinema - Community Kitchen, print room, library - might all benefit from being more visible, and we might get new folks approaching us for inductions because they're interested in those aspects.
 - A volunteer wanting to contact, say, the Tech Collective has no
   in-system way of discovering who is in it or how to reach them. They must
   ask around in person or via the general mailing list.
@@ -297,7 +300,7 @@ critically so. Audited February 2026.
 
 | Library | Version in use | Issue |
 | --- | --- | --- |
-| CKEditor | 4.7.3 | **EOL December 2023.** Multiple XSS CVEs will not be patched. Used via `toolkit/diary/templates/widgets/htmltextarea.html`. Migrate to a maintained editor (Draftail if on Wagtail pages; TipTap or Quill otherwise). Effort: 🟡 M. |
+| CKEditor | 4.7.3 | ✅ resolved. Replaced with Quill 2.0.3 (vendored). `HtmlTextarea` widget re-pointed to `js/lib/quill/quill.js` + `css/lib/quill.snow.css`; `htmltextarea.html` rewritten. Old `static_common/js/lib/ckeditor/` directory deleted. |
 | jQuery (public site) | 2.1.3 via Google CDN | ✅ resolved. Replaced CDN reference with locally vendored `jquery.min.js` (3.5.1) in both `templates/base_public.html` and `star_and_shadow_templates/base_public.html`. No external dependency, no EOL version. |
 | Google Fonts (all templates) | HTTP URL | ✅ resolved. Fixed `http://` → `https://` in `base_admin.html` (live request) and removed dead IE8 conditional comment blocks containing `http://` from all three base templates. |
 
@@ -307,7 +310,7 @@ critically so. Audited February 2026.
 | --- | --- | --- |
 | jQuery UI | 1.11.0 (2014) | ✅ Resolved. Updated to 1.13.3 (current LTS, drop-in). Long-term: replace datepicker with native `<input type="date">`. |
 | Bootstrap | 4.6.2 | No longer maintained. BS5 breaks `data-toggle` → `data-bs-toggle`, `mr-auto` → `ms-auto`, `sr-only` → `visually-hidden`. Migration is entangled with django-crispy-forms (see below). Effort: 🟠 L. |
-| Chosen | 1.1.0 | GitHub-archived (no releases since 2019). Known accessibility defects. Replace with Select2 or native multi-select. Effort: 🔵 S. |
+| Chosen | 1.1.0 | ✅ resolved. `ChosenSelectMultiple` now extends plain `SelectMultiple` with no custom Media or template. `volunteer_training_report.html` updated to use native `.change()` instead of `.chosen()`. All Chosen static files and `chosenselectmultiple.html` template deleted. |
 
 #### 🟡 Medium — Outdated pins or frozen libraries
 
@@ -327,18 +330,20 @@ critically so. Audited February 2026.
   and `base_admin.html` load six redundant Google Fonts requests that no browser
   will ever make. ✅ Removed (no longer present in templates).
 - `wysihtml5.css` — WYSIHTML5 has been unmaintained since ~2014; verify it is not
-  referenced anywhere and delete it.
+  referenced anywhere and delete it. ✅ Deleted 2026-03-03 (confirmed unreferenced).
 
 #### Recommended order of attack
 
-1. HTTP → HTTPS on admin Google Fonts (5 minutes, zero risk)
-2. jQuery 2.1.3 → 3.7+ on public site (update CDN reference to local vendored file)
-3. Unpin `html2text` and `mysqlclient`; test; commit
-4. CKEditor 4 → maintained editor (security-critical)
-5. jQuery UI 1.11 → 1.13 (drop-in)
-6. Delete Respond.js and IE8 conditional comment blocks
-7. Bootstrap 4 → 5 + `crispy-forms` 2.x + Chosen → Select2 (batch together)
-8. FullCalendar 3 → 6 (large; do when calendar editing needs attention)
+1. ✅ HTTP → HTTPS on admin Google Fonts
+2. ✅ jQuery 2.1.3 → 3.7+ on public site (local vendor)
+3. ✅ Unpin `html2text` and `mysqlclient`
+4. ✅ CKEditor 4 → Quill 2 (security-critical)
+5. ✅ jQuery UI 1.11 → 1.13
+6. ✅ Delete Respond.js and IE8 conditional comment blocks
+7. ✅ Delete `wysihtml5.css`
+8. ✅ Chosen → native `<select multiple>`
+9. Bootstrap 4 → 5 + `crispy-forms` 2.x (batch together) — Effort: 🟠 L
+10. FullCalendar 3 → 6 (large; do when calendar editing needs attention) — Effort: 🔴 XL
 
 ---
 

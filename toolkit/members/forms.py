@@ -186,7 +186,7 @@ class GroupTrainingForm(forms.Form):
         queryset=Member.objects.filter(volunteer__active=True).order_by(
             "name"
         ),
-        widget=ChosenSelectMultiple(width="100%"),
+        widget=ChosenSelectMultiple(attrs={"size": "8"}),
         required=True,
     )
     notes = forms.CharField(

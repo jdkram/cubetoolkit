@@ -41,7 +41,6 @@ from toolkit.diary.models import (
 import toolkit.diary.forms as diary_forms
 import toolkit.diary.edit_prefs as edit_prefs
 from toolkit.util.image import adjust_colour
-from toolkit.diary.form_widgets import ChosenSelectMultiple
 
 # Shared utility method:
 from toolkit.diary.daterange import get_date_range

@@ -148,7 +148,7 @@ class MailoutTests(DiaryTestsMixin, TestCase):
         )
         # Urgh
         self.expected_mailout_event_html = """
-            <textarea name="body_html" id="id_body_html" rows="10" cols="40">
+            <textarea name="body_html" id="id_body_html" rows="10" cols="40" style="display:none; width:100%; font-family:monospace; font-size:0.875rem; resize:vertical; min-height: 120ex;">
             <p><a href="https://www.cubecinema.com/programme/">
             Cube Cinema Programme</a></p><table><tr>
             <td colspan="3">
