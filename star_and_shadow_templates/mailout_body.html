@@ -78,7 +78,7 @@
  alt="{% if mi.alt_text %}{{ mi.alt_text }}{% else %}Picture for event '{{ showing.event.name }}'{% endif %}">
  {% endif %}{% endwith %}
 
-{{ showing.event.copy|safe }}
+{{ showing.event.copy_html }}
 
 {% endifchanged %}
 {% endfor %}

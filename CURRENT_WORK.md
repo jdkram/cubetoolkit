@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-03-02
+**Last updated:** 2026-03-03
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
 
@@ -165,6 +165,10 @@ Completed items stay here. When the Done section gets unwieldy, old rows can be 
 | ~~8.14 Volunteer table sort (in-place JS)~~ | 2026-02 | Click headers to sort without page reload |
 | ~~8.15 jQuery UI 1.11 → 1.13.3~~ | 2026-02 | Drop-in update |
 | ~~8.15 Remove Respond.js and IE8 blocks~~ | 2026-02 | Deleted polyfill and conditional comment blocks |
+| ~~8.15 CKEditor 4 → Quill 2~~ | 2026-03-03 | Quill 2.0.3 vendored; `HtmlTextarea` widget + `htmltextarea.html` rewritten; HTML source toggle added; `&nbsp;` entity stripping on submit; CKEditor directory deleted (1.5 MB removed) |
+| ~~8.15 Chosen → native `<select multiple>`~~ | 2026-03-03 | `ChosenSelectMultiple` stripped to plain `SelectMultiple`; Chosen static files + template deleted; `volunteer_training_report.html` updated; dead import in `edit_views.py` removed; `TagPillSelect` widget added — Bootstrap pill-badge toggles for tag fields, pure CSS (no JS), `input:checked + span` drives visual state |
+| ~~8.15 wysihtml5.css deleted~~ | 2026-03-03 | Confirmed unreferenced; file removed |
+| ~~`Event.copy` XSS sanitization~~ | 2026-03-03 | `nh3` added to `requirements/base.txt`; `copy_html` property sanitizes via allowlist before `mark_safe`; strips `<script>`, event-handler attrs, `javascript:` hrefs; `star_and_shadow_templates/mailout_body.html` updated from `copy\|safe` to `copy_html` |
 | ~~8.15 jQuery 2.1.3 → 3.5.1 (public site)~~ | 2026-02 | Replaced CDN with local vendor |
 | ~~8.15 HTTP → HTTPS Google Fonts~~ | 2026-02 | Fixed in `base_admin.html` |
 | ~~Docker dev environment (S&S settings)~~ | 2026-02 | |

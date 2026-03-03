@@ -5,6 +5,7 @@ import datetime
 
 from django.db import models
 import django.utils.timezone
+import nh3
 from django.utils.safestring import mark_safe
 from django.db.models.query import QuerySet
 from django.utils.text import slugify
@@ -351,15 +352,35 @@ class Event(models.Model):
     def all_showings_confirmed(self) -> bool:
         return all(s.confirmed for s in self.showings.all())
 
+    # Tags and attributes permitted in stored HTML copy.
+    # Script tags, event-handler attributes (onclick etc.) and javascript:
+    # hrefs are stripped by nh3 regardless of this allowlist.
+    _COPY_ALLOWED_TAGS = {
+        "a", "abbr", "b", "blockquote", "br", "cite", "code",
+        "em", "h1", "h2", "h3", "h4", "h5", "h6", "hr",
+        "i", "img", "li", "ol", "p", "s", "strike", "strong",
+        "sub", "sup", "table", "tbody", "td", "th", "thead", "tr", "u", "ul",
+    }
+    _COPY_ALLOWED_ATTRS = {
+        "a":   {"href", "title", "target"},
+        "img": {"src", "alt", "width", "height", "border"},
+        "td":  {"colspan", "rowspan"},
+        "th":  {"colspan", "rowspan"},
+    }
+
     @property
     def copy_html(self):
         """If self.legacy_copy == True, then try to mangle self.copy into
-        sane HTML fragment. Otherwise return self.copy
+        sane HTML fragment. Otherwise return self.copy.
         (Legacy cube copy has line breaks around the 70-80 character mark, and
-        no hyperlinks)"""
+        no hyperlinks)
+
+        In both cases the result is sanitized with nh3 to strip script tags,
+        event-handler attributes, and javascript: hrefs before being marked
+        safe for template rendering."""
 
         if not self.legacy_copy:
-            return mark_safe(self.copy)
+            result = self.copy or ""
         else:
             # remove all whitespace from start and end of line:
             result = self.copy.strip()
@@ -381,7 +402,11 @@ class Event(models.Model):
                 r'\1<a href="http://\2">\2</a>', result
             )
 
-            return mark_safe(result)
+        return mark_safe(nh3.clean(
+            result,
+            tags=self._COPY_ALLOWED_TAGS,
+            attributes=self._COPY_ALLOWED_ATTRS,
+        ))
 
     # This RE needs to be compiled so that the flags can be specified, as the
     # flags option to re.sub() wasn't added until python 2.7
