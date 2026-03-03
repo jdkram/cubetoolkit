@@ -191,7 +191,15 @@ class EventModelNonLegacyCopy(TestCase):
         self.assertEqual(reloaded.copy, self.sample_copy)
 
     def test_html_copy(self):
-        self.assertEqual(self.event.copy_html, self.sample_copy)
+        # nh3 sanitization normalises attribute quotes, adds rel="noopener
+        # noreferrer" to links, and decodes unnecessary HTML entities.
+        expected = (
+            "<p>Simple &amp; tidy HTML/unicode \u00a9\u014dpy\n</p>\n"
+            '<p>With a <a href="http://example.com/foo/" rel="noopener noreferrer">link!</a></p>'
+            '<p>And another! <a href="https://example.com/bar/" rel="noopener noreferrer">link!</a>'
+            " and some equivalent things; \u00a3 \u00a3 \u00a3<br></p>"
+        )
+        self.assertEqual(self.event.copy_html, expected)
 
 
 class EventModelLegacyCopy(TestCase):
@@ -214,13 +222,16 @@ class EventModelLegacyCopy(TestCase):
         self.assertEqual(reloaded.copy, self.sample_copy)
 
     def test_html_copy(self):
+        # nh3 sanitization: adds rel="noopener noreferrer" to links, decodes
+        # unnecessary HTML entities (&pound; -> £), and strips unknown tags
+        # (<this>, <troublemaker>) while keeping their text content.
         expected = (
             "Simple &amp; tidy legacy \u00a9\u014dpy <br><br>"
             "With an unardorned link: "
-            '<a href="http://example.com/foo/">http://example.com/foo/</a>'
-            ' <a href="https://example.com/foo/">https://example.com/foo/</a>'
-            " and some equivalent things; &pound; &#163; \u00a3..."
-            " and <this> \"'<troublemaker>'\""
+            '<a href="http://example.com/foo/" rel="noopener noreferrer">http://example.com/foo/</a>'
+            ' <a href="https://example.com/foo/" rel="noopener noreferrer">https://example.com/foo/</a>'
+            " and some equivalent things; \u00a3 \u00a3 \u00a3..."
+            " and  \"''\""
         )
         self.assertEqual(self.event.copy_html, expected)
 
