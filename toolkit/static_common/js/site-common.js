@@ -26,12 +26,14 @@ function setup_page(index_page) {
         $("#mobile-menu-btn").click(function() {
             var toggle_el = $(this).data("toggle");
             $(toggle_el).toggleClass("open-sidebar");
+            $("#sidebar").toggleClass("sidebar-open");
             $(".black_overlay").toggleClass("active-search-bg");
         });
 
         $(".black_overlay").swipe({
             swipe: function(event, direction, distance, duration, fingerCount, fingerData) {
                 $(".grid").removeClass("open-sidebar");
+                $("#sidebar").removeClass("sidebar-open");
                 $(".black_overlay").removeClass("active-search-bg");
             },
             threshold: 0

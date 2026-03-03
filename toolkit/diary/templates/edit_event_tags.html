@@ -150,7 +150,7 @@ function updateOrdering() {
         <strong>Programme nav</strong> tags appear as filter links under "Programme" in the public website navigation. Non-nav tags are saved but not shown there.
       </small>
     </div>
-    <div class="card-body p-0">
+    <div class="card-body p-0" style="overflow-x: auto;">
       <form id="tags" method="post">
         {{ formset.management_form }}
         {% csrf_token %}

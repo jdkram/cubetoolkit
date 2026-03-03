@@ -48,6 +48,11 @@ None — all clear.
 | -- | --- | ---- |
 | ~~**E**~~ | ~~Volunteer login dropdown inaccessible on touch~~ | ✅ 2026-03-02 — sidebar scrollbar fix resolved this |
 | **M** | Calendar edit view: simultaneous events overwrite each other on busy days | 🟠 L |
+| ~~**R**~~ | ~~Mobile: public-site sidebar always visible through content (not gated by hamburger)~~ | ✅ 2026-03-03 — `site_custom.css`: sidebar starts at `left: -240px; z-index:200` on mobile; desktop-only `@media (1000px+)` block keeps it always visible; `site-common.js` now also toggles `.sidebar-open` on `#sidebar` |
+| ~~**S**~~ | ~~Login page: nav bar overlaps form on mobile; style inconsistent with post-login admin nav~~ | ✅ 2026-03-03 — `star_and_shadow_templates/base_login.html` created: minimal logo-only base (no nav); login, logout, all four password-reset templates now extend it instead of `base_public.html` |
+| ~~**T**~~ | ~~Admin toolkit: navbar toggler off-screen on mobile; body padding too large; rota controls overflow~~ | ✅ 2026-03-03 — `base_admin.html`: brand img `max-width:120px`; `padding: 3.5rem 0.5rem` on ≤576px; `.navbar-collapse { background-color: inherit }` on ≤767px; rota controls: date inputs `6em` on ≤640px |
+| ~~**U**~~ | ~~Rota: excessive left indentation on `ul.rota` and `.showing_rota_notes`~~ | ✅ 2026-03-03 — `edit_rota.html`: `@media (max-width: 640px)` removes `ul.rota` padding; reduces `.showing_rota_notes`/`.event-links` margin to `0.5em` |
+| ~~**V**~~ | ~~Tags/Roles admin: flex/table content overflows horizontally on narrow screens~~ | ✅ 2026-03-03 — `edit_event_tags.html`: `overflow-x: auto` on card-body; `form_edit_roles.html`: table wrapped in `<div style="overflow-x: auto">` |
 | ~~**O**~~ | ~~Volunteer rota: event-name links bounce to login (should go to public programme)~~ | ✅ 2026-03-03 — template conditional: programmers/superusers → edit hub, volunteers → public showing view |
 | ~~**P**~~ | ~~EventTags page: pre-Bootstrap styling + confusing Promoted/drag UX~~ | ✅ 2026-03-03 — Bootstrap 4 card layout; drag handle hidden on non-promoted tags; footer help text explains In menu / drag model |
 | ~~**Q**~~ | ~~Roles page: pre-Bootstrap styling~~ | ✅ 2026-03-03 — Bootstrap 4 card + table layout; read-only badge; yellow new-row highlight |
