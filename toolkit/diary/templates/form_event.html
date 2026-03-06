@@ -8,6 +8,14 @@ Event Details for {{ event.name }}
 <style>
     .asteriskField { display: none; }
     #remaining_chars { font-weight: bold; }
+    .field-tip {
+        cursor: help;
+        color: #6c757d;
+        font-size: 0.8em;
+        margin-left: 0.2em;
+        vertical-align: middle;
+        font-weight: normal;
+    }
     #word-counter {
         font-size: 0.85em;
         margin-top: 0.25rem;
@@ -221,6 +229,41 @@ $(document).ready(function() {
         $collapse.on('shown.bs.collapse', calculate);
     });
 }());
+
+$(document).ready(function () {
+    var FIELD_TIPS = {
+        'id_pre_title':        'Optional text shown above/before the main title in public listings, e.g. \u201cCube Microplex presents\u201d.',
+        'id_name':             'The main event title shown in the public programme and all listings.',
+        'id_post_title':       'Optional text shown below/after the main title in public listings, e.g. \u201cwith support from A Band\u201d.',
+        'id_tags':             'Categories for this event. Affects which sections of the programme it appears in, and may exempt it from requiring terms.',
+        'id_duration':         'Running time of the event. Shown in public listings if set.',
+        'id_pricing':          'Pricing text shown to the public, e.g. \u201c\u00a35 Full / \u00a33 Concession\u201d. Leave blank if the event is free.',
+        'id_ticket_link':      'URL for online ticket booking. Appears as a booking button in the public programme.',
+        'id_film_information': 'Screening details shown in public listings, e.g. \u201cDir: Jane Smith, 1990, USA, 95 mins, Cert: 15\u201d.',
+        'id_outside_hire':     'Tick if this event is run by an external organisation hiring the venue, not programmed by us. Affects internal reporting.',
+        'id_private':          'When ticked, this event is hidden from the public website entirely \u2014 it won\u2019t appear in any listing or be accessible via URL, even if showings are confirmed.',
+        'id_notes':            'Internal notes \u2014 never shown to the public. Use for booking contacts, reminders, or anything you need to track.',
+        'id_terms':            'Booking or screening terms for this event. Must be filled in (minimum word count) before any showing can be confirmed, unless the event type exempts it.',
+        'id_copy':             'The main event description shown in the public programme. Can be formatted with HTML (bold, links, etc.).',
+        'id_copy_summary':     'Short plain-text description (ideally \u226425 words). Used in the print programme and brief online listings \u2014 separate from the full description above.',
+        'id_media_file':       'The event poster or promotional image shown in the public programme.',
+        'id_alt_text':         'Alternative text for screen readers and when images fail to load. Leave blank if no image is uploaded.',
+        'id_credit':           'Public attribution for the image \u2014 shown alongside the image on the event page, e.g. \u201cPhoto: Jane Smith\u201d.',
+    };
+
+    $.each(FIELD_TIPS, function (fieldId, tipText) {
+        var $label = $('label[for="' + fieldId + '"]');
+        if ($label.length) {
+            $label.append(
+                $('<span>').addClass('field-tip')
+                    .attr({'data-toggle': 'tooltip', 'data-placement': 'right', 'title': tipText})
+                    .text('\u24d8')
+            );
+        }
+    });
+
+    $('[data-toggle="tooltip"]').tooltip();
+});
 </script>
 {% endblock %}
 

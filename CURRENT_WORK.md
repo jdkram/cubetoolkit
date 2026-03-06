@@ -135,6 +135,7 @@ Completed items stay here. When the Done section gets unwieldy, old rows can be 
 
 | Item | Completed | Notes |
 |------|-----------|-------|
+| ~~Field tooltips on event edit form~~ | 2026-03-06 | JS injects ⓘ icons onto crispy-rendered labels in `form_event.html`, matching the tooltip texts from the event hub view. No form class changes. |
 | ~~Event edit workflow overhaul (Phases A–C)~~ | 2026-02-28 | Phase A: rota notes in showing edit. Phase B: popup mode removed. Phase C: Event Hub (`edit-event-details-view`) — showing cards with confirm/cancel, add-showing form, completeness bar; `update_showing_status` endpoint; add_event/EditEventView/delete_showing redirect to hub; 380 tests pass |
 | ~~Event Hub: surface all fields + tooltips~~ | 2026-02-28 | All event fields now always visible (with "—" fallback); `outside_hire`/`private` split into separate Yes/No rows; Bootstrap 4 tooltip ⓘ on every field label + action badges; Private/Confirm/Unconfirm tooltips explain consequences |
 | ~~Rota event links → Event Hub~~ | 2026-02-28 | `edit_rota.html`: `edit-event-details` → `edit-event-details-view` so rota event-name links open the hub, not the bare edit form |
