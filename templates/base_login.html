@@ -1,0 +1,45 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{% block title %}{% endblock %} — {{ VENUE.name }}</title>
+<link rel="shortcut icon" href="{{ VENUE.favicon }}">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css?family=Roboto+Mono:400,300,500" rel="stylesheet">
+<link rel="stylesheet" href="{{ STATIC_URL }}css/login.css">
+{% block css %}{% endblock %}
+<style>
+body {
+    font-family: 'Roboto Mono', monospace;
+    margin: 0;
+    padding: 0;
+}
+.auth-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 2.5rem 1rem 3rem;
+}
+.auth-logo {
+    margin-bottom: 2rem;
+}
+.auth-logo img {
+    display: block;
+    max-height: 80px;
+    width: auto;
+}
+</style>
+</head>
+<body>
+<div class="auth-page">
+    <div class="auth-logo">
+        <a href="/">
+            <img src="{{ STATIC_URL }}{{ VENUE.internal_header_img }}" alt="{{ VENUE.name }}">
+        </a>
+    </div>
+    {% block body %}{% endblock %}
+</div>
+</body>
+</html>
