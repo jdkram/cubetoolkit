@@ -117,12 +117,12 @@
     }
 
     .event-tag-badges .badge {
-        font-size: 0.55em;
+        font-size: 0.45em;
         font-weight: normal;
         background: transparent;
         color: #bbb;
         border: 1px solid #eee;
-        padding: 0.1em 0.45em;
+        padding: 0.08em 0.35em;
         cursor: pointer;
         transition: background 0.1s, color 0.1s;
         vertical-align: middle;
@@ -145,26 +145,13 @@
     .event-links {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.35em;
-        margin: 0.3em 0 0.1em 3em;
-    }
-
-    .event-links .link-chip {
-        display: inline-block;
-        padding: 0.15em 0.55em;
+        gap: 0 0.75em;
+        margin: 0.25em 0 0.1em 3em;
         font-size: 0.82em;
-        border: 1px solid #b3cfe8;
-        border-radius: 3px;
-        background: #eef5fb;
-        color: #0056b3;
-        text-decoration: none;
-        white-space: nowrap;
     }
 
-    .event-links .link-chip:hover {
-        background: #d0e8f8;
-        border-color: #0056b3;
-        text-decoration: none;
+    .event-links a {
+        color: #0056b3;
     }
 
     /* ── Role badges ─────────────────────────────────────────────────── */
@@ -177,6 +164,8 @@
 
     .role-badge--inaccessible {
         text-decoration: line-through;
+        text-decoration-thickness: 2px;
+        text-decoration-color: #c00;
         opacity: 0.7;
     }
 
@@ -324,7 +313,7 @@ edit_rota(
         },
         {
             attr: "no-wheelchair",
-            html: '<span class="role-badge role-badge--inaccessible" title="Not wheelchair-accessible — please check before signing up">♿✗</span>'
+            html: '<span class="role-badge role-badge--inaccessible" title="Not wheelchair-accessible — please check before signing up">♿</span>'
         },
         {
             attr: "keyholder",
@@ -595,7 +584,7 @@ edit_rota(
             {% if event_links %}
             <div class="event-links">
               {% for link in event_links %}
-              <a class="link-chip" href="{{ link.url }}" target="_blank" rel="noopener noreferrer"
+              {% if not forloop.first %}<span aria-hidden="true" style="color:#bbb">&middot;</span>{% endif %}<a href="{{ link.url }}" target="_blank" rel="noopener noreferrer"
                  title="{{ link.url }}">{{ link.label }}</a>
               {% endfor %}
             </div>
