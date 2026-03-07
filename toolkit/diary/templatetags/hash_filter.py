@@ -14,3 +14,12 @@ def lookup(dictionary, key):
         return dictionary[key]
     else:
         return ""
+
+
+@register.filter(name="showing_for_room")
+def showing_for_room(showings, room):
+    """Return the first showing in the list whose room matches, or None."""
+    for showing in showings:
+        if showing.room == room:
+            return showing
+    return None

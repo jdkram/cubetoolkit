@@ -49,6 +49,39 @@ Editing {{ event_list_name }}
       border-left: 1px solid #ddd;
   }
 
+  /* Day-level row banding */
+  tr.day-even {
+      background-color: #f5f5f5;
+  }
+  tr.day-odd {
+      background-color: #fff;
+  }
+  /* Thin separator between days */
+  tr.first-in-day td {
+      border-top: 1px solid #ccc;
+  }
+  /* Bold separator before each Monday (start of week) */
+  tr.week-start td {
+      border-top: 3px solid #666;
+  }
+
+  /* Empty room cells: subtle "+" link, obvious on hover */
+  .empty-slot {
+      text-align: center;
+  }
+  .empty-slot a {
+      color: #ccc;
+      text-decoration: none;
+      font-size: 0.85em;
+      display: block;
+  }
+  .empty-slot a:hover,
+  .empty-slot a:focus {
+      color: #0056b3;
+      text-decoration: none;
+      background: #f0f8ff;
+  }
+
   /* Full-width colour stripe at bottom of room header cells */
   table.table thead th.room-col {
       border-bottom-width: 6px !important;
@@ -64,48 +97,35 @@ Editing {{ event_list_name }}
       white-space: nowrap;
   }
 
-  /* ── List view layout: table left, key sidebar right ─────────── */
-  #list-flex {
-      display: flex;
-      flex-direction: row;
-      flex-wrap: wrap;
-      align-items: flex-start;
-      gap: 1rem;
-  }
-  #list-main {
-      flex: 1 1 0;
-      min-width: 0;
-  }
-  #list-sidebar {
-      flex: 0 0 185px;
-      position: sticky;
-      top: 0.5rem;
-      align-self: flex-start;
-      background: white;
-      border: 1px solid #ccc;
+  /* ── Controls bar ─────────────────────────────────────────────── */
+  .diary-controls {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
       border-radius: 4px;
-      padding: 0.4rem 0.6rem;
-      font-size: 0.82em;
-      max-height: calc(100vh - 1.5rem);
-      overflow-y: auto;
+      padding: 0.75em 1em;
+      margin-bottom: 1.5em;
   }
-  #list-sidebar summary {
+  .diary-controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75em;
+      margin-bottom: 0.5em;
+  }
+  .diary-key {
+      font-size: 0.85em;
+      border-top: 1px solid #dee2e6;
+      margin-top: 0.5em;
+      padding-top: 0.5em;
+  }
+  .diary-key summary {
       cursor: pointer;
-      padding: 0.1rem 0;
-      margin-bottom: 0.3rem;
+      font-weight: bold;
+      margin-bottom: 0.2em;
   }
-  #list-sidebar p {
-      margin: 0.3rem 0;
-  }
-  @media (max-width: 800px) {
-      #list-flex {
-          flex-direction: column;
-      }
-      #list-sidebar {
-          width: 100%;
-          position: static;
-          max-height: none;
-      }
+  .diary-key p {
+      margin: 0.2em 0 0 0;
+      line-height: 1.8;
   }
 </style>
 {% endblock %}
@@ -140,8 +160,6 @@ function dateRangeSelected(dateText, inst) {
 let filter_timer = null;
 const DEBOUNCE_TIMEOUT = 150; // milliseconds
 function filter_events() {
-    // use a timer to 'debounce' input (i.e. wait 150ms to see if the user has
-    // stopped typing)
     if(filter_timer !== null) {
         window.clearTimeout(filter_timer);
     }
@@ -157,22 +175,17 @@ function filter_events() {
             $(".hidden_date").show();
         }
 
-        const event_rows = $('tr');
-
-        event_rows.each(function(index, el) {
-            const jq_el = $(el);
-            const header_row = jq_el.hasClass("row_month") || jq_el.hasClass("row_year");
-            if(!header_row) {
-                let name_cell = jq_el.children(':nth-child(3)');
-                let booker_cell = jq_el.children(':nth-child(4)');
-                if(name_cell.text().toLowerCase().indexOf(filter_text) !== -1 ||
-                   booker_cell.text().toLowerCase().indexOf(filter_text) !== -1) {
-                    // NB: if filter text is "" then this will always match, and
-                    //     everything will be shown
-                    jq_el.show();
-                } else {
-                    jq_el.hide();
-                }
+        $('table.table tbody tr').each(function() {
+            const jq_el = $(this);
+            if (filter_text === "") {
+                jq_el.show();
+                return;
+            }
+            const search_text = (jq_el.attr('data-filter-text') || '').toLowerCase();
+            if (search_text.indexOf(filter_text) !== -1) {
+                jq_el.show();
+            } else {
+                jq_el.hide();
             }
         });
     }, DEBOUNCE_TIMEOUT);
@@ -182,26 +195,38 @@ function filter_events() {
 
 {% block body %}
 
-<p><a name="top"></a></p>
-
-<div id="list-flex">
-
-<div id="list-main">
-<div class="programme">
-<p align='center'>See: <a href="{% url "day-edit" year=start.year day=start.day month=start.month %}?daysahead=183">6 months</a> |
-<a href="{% url "day-edit" year=start.year day=start.day month=start.month %}?daysahead=365">1 year</a> |
-<a href="{% url "day-edit" year=start.year day=start.day month=start.month %}?daysahead=730">2 years</a> |
-<label>until: <input type="text" name="lookahead_to" value="{{ end|date:'j-m-Y'}}" id="id_lookahead_to"></label><br>
-<label>Filter events: <input type="text" placeholder="by title/booker column" id="id_input_filter" autofocus></label></p>
+<div class="diary-controls">
+  <div class="diary-controls-row">
+    <span>View:</span>
+    <a href="{% url "day-edit" year=start.year day=start.day month=start.month %}?daysahead=183">6 months</a>
+    <a href="{% url "day-edit" year=start.year day=start.day month=start.month %}?daysahead=365">1 year</a>
+    <a href="{% url "day-edit" year=start.year day=start.day month=start.month %}?daysahead=730">2 years</a>
+    <label>until: <input type="text" name="lookahead_to" value="{{ end|date:'j-m-Y'}}" id="id_lookahead_to"></label>
+  </div>
+  <div class="diary-controls-row">
+    <label>Filter: <input type="text" placeholder="event title or booker" id="id_input_filter" autofocus></label>
+    <a href="{% url "add-event" %}">+ New event</a>
+  </div>
+  <details class="diary-key">
+    <summary>Key</summary>
+    <p>
+      <span class="unconfirmed">unconfirmed — wavy underline, lower case</span><br>
+      <span class="confirmed">Confirmed — upper case</span><br>
+      <span class="private">Private — italic</span><br>
+      <span class="external">Outside hire — bold</span><br>
+      <span class="discounted">Discounted — magenta + *</span><br>
+      <span class="cancelled">Cancelled — red</span><br>
+      <span class="daytime" style="padding:0 2px;">Daytime (before 6pm) — yellow bg</span>
+    </p>
+  </details>
+</div>
 
 {% include "messages.html" %}
 
-<p><a href="{% url "add-event" %}">New event</a></p>
-
-{% for day, showings in dates.items %}
+{% for day, time_groups in dates.items %}
   {% ifchanged day|date:"Y-m" %}
     {% if not forloop.first %}</tbody></table>{% endif %}
-    <table class="table table-striped">
+    <table class="table">
     <thead><tr>
       <th class="month-heading" colspan="2">{{ day|date:"F Y" }}</th>
       {% if multiroom_enabled %}
@@ -216,89 +241,85 @@ function filter_events() {
     <tbody>
   {% endifchanged %}
 
-  {% for showing in showings %}
-    <tr>
+  {% with forloop.counter|divisibleby:2 as day_even %}{% with day|date:"N" as day_dow %}
+  {% for time_slot, slot_showings in time_groups.items %}
+    {% with time_slot|localtime as slot_local %}
+    {% if multiroom_enabled %}
+    <tr class="{{ forloop.first|yesno:"first-in-day ," }}{% if forloop.first and day_dow == "1" %}week-start {% endif %}{{ day_even|yesno:"day-even,day-odd" }}" data-filter-text="{% for s in slot_showings %}{{ s.event.name }} {{ s.booked_by }} {% endfor %}">
       <td>
         <a{% if not forloop.first %} class="hidden_date"{% endif %}
            href="{% url "add-event" %}?date={{day|date:"j-m-Y"}}">{{ day|date:"D\&\n\b\s\p;j"|safe }}</a>
       </td>
-      {% with showing.start|localtime as start_localtime %}
-      <td>
-        <a href="{% url "edit-event-details-view" event_id=showing.event.pk %}" {% if start_localtime.hour <= 17 %}class="daytime"{% endif %}>{{ showing.start|date:"H:i" }}</a>
-      </td>
-      {% if multiroom_enabled %}
-        {% for room in rooms %}
-          {% if showing.room == room %}
-          <td class="room-col">
-            <a href="{% url "edit-event-details-view" event_id=showing.event.pk %}"
-               class="{{ showing.cancelled|yesno:"cancelled," }}
-                      {{ showing.discounted|yesno:"discounted," }}
-                      {{ showing.event.private|yesno:"private," }}
-                      {{ showing.event.outside_hire|yesno:"external," }}
-                      {{ showing.confirmed|yesno:"confirmed,unconfirmed" }}
-                      {% if start_localtime.hour <= 17 %}daytime{% endif %}">
-              {{ showing.event.name }}
-              {{ showing.discounted|yesno:"*," }}
-              {{ showing.cancelled|yesno:"(CANCELLED)," }}
-            </a>
-            {{ showing.sold_out|yesno:"(marked SOLD OUT)," }}
-          </td>
-          {% else %}
-            <td class="room-col">&nbsp;</td>
-          {% endif %}
-        {% endfor %}
-      {% else %}
-        <td>
+      <td {% if slot_local.hour <= 17 %}class="daytime"{% endif %}>{{ slot_local|date:"H:i" }}</td>
+      {% for room in rooms %}
+        {% with slot_showings|showing_for_room:room as showing %}
+        {% if showing %}
+        <td class="room-col">
           <a href="{% url "edit-event-details-view" event_id=showing.event.pk %}"
              class="{{ showing.cancelled|yesno:"cancelled," }}
                     {{ showing.discounted|yesno:"discounted," }}
                     {{ showing.event.private|yesno:"private," }}
                     {{ showing.event.outside_hire|yesno:"external," }}
                     {{ showing.confirmed|yesno:"confirmed,unconfirmed" }}
-                    {% if start_localtime.hour <= 17 %}daytime{% endif %}">
+                    {% if slot_local.hour <= 17 %}daytime{% endif %}">
             {{ showing.event.name }}
             {{ showing.discounted|yesno:"*," }}
             {{ showing.cancelled|yesno:"(CANCELLED)," }}
           </a>
           {{ showing.sold_out|yesno:"(marked SOLD OUT)," }}
         </td>
-      {% endif %}
-      <td class="room-col">{{ showing.booked_by }}{% if not showing.confirmed %} <span class="pencilled-at" title="Pencilled in on {{ showing.created_at|date:"d-m-y" }}">(&#x270f;&#xfe0f;{{ showing.created_at|date:"d-m-y" }})</span>{% endif %}</td>
-      {% endwith %}
+        {% else %}
+          <td class="room-col empty-slot"><a href="{% url "add-event" %}?date={{ day|date:"j-m-Y" }}&time={{ slot_local|date:"G:i" }}&room={{ room.id }}">+</a></td>
+        {% endif %}
+        {% endwith %}
+      {% endfor %}
+      <td class="room-col">{% for s in slot_showings %}{{ s.booked_by }}{% if not s.confirmed %} <span class="pencilled-at" title="Pencilled in on {{ s.created_at|date:"d-m-y" }}">(&#x270f;&#xfe0f;{{ s.created_at|date:"d-m-y" }})</span>{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
     </tr>
+    {% else %}
+    {% for showing in slot_showings %}
+    {% with showing.start|localtime as start_localtime %}
+    <tr class="{{ forloop.parentloop.first|yesno:"first-in-day ," }}{% if forloop.parentloop.first and day_dow == "1" %}week-start {% endif %}{{ day_even|yesno:"day-even,day-odd" }}" data-filter-text="{{ showing.event.name }} {{ showing.booked_by }}">
+      <td>
+        <a{% if not forloop.parentloop.first or not forloop.first %} class="hidden_date"{% endif %}
+           href="{% url "add-event" %}?date={{day|date:"j-m-Y"}}">{{ day|date:"D\&\n\b\s\p;j"|safe }}</a>
+      </td>
+      <td>
+        <a href="{% url "edit-event-details-view" event_id=showing.event.pk %}" {% if start_localtime.hour <= 17 %}class="daytime"{% endif %}>{{ showing.start|date:"H:i" }}</a>
+      </td>
+      <td>
+        <a href="{% url "edit-event-details-view" event_id=showing.event.pk %}"
+           class="{{ showing.cancelled|yesno:"cancelled," }}
+                  {{ showing.discounted|yesno:"discounted," }}
+                  {{ showing.event.private|yesno:"private," }}
+                  {{ showing.event.outside_hire|yesno:"external," }}
+                  {{ showing.confirmed|yesno:"confirmed,unconfirmed" }}
+                  {% if start_localtime.hour <= 17 %}daytime{% endif %}">
+          {{ showing.event.name }}
+          {{ showing.discounted|yesno:"*," }}
+          {{ showing.cancelled|yesno:"(CANCELLED)," }}
+        </a>
+        {{ showing.sold_out|yesno:"(marked SOLD OUT)," }}
+      </td>
+      <td class="room-col">{{ showing.booked_by }}{% if not showing.confirmed %} <span class="pencilled-at" title="Pencilled in on {{ showing.created_at|date:"d-m-y" }}">(&#x270f;&#xfe0f;{{ showing.created_at|date:"d-m-y" }})</span>{% endif %}</td>
+    </tr>
+    {% endwith %}
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
   {% empty %}
-    <tr>
+    <tr class="first-in-day {% if day_dow == "1" %}week-start {% endif %}{{ day_even|yesno:"day-even,day-odd" }}">
       <td><a href="{% url "add-event" %}?date={{day|date:"j-m-Y"}}">{{ day|date:"D j"}}</a></td>
       <td></td>
       {% if multiroom_enabled %}
-        {% for room in rooms %}<td class="room-col"></td>{% endfor %}
+        {% for room in rooms %}<td class="room-col empty-slot"><a href="{% url "add-event" %}?date={{ day|date:"j-m-Y" }}&room={{ room.id }}">+</a></td>{% endfor %}
       {% else %}
         <td></td>
       {% endif %}
       <td class="room-col"></td>
     </tr>
   {% endfor %}
+  {% endwith %}{% endwith %}
 {% endfor %}
 {% if dates %}</tbody></table>{% endif %}
-
-</div>
-</div><!-- #list-main -->
-
-<div id="list-sidebar">
-  <details open id="list-key">
-    <summary><b>Key</b></summary>
-    <p>
-      <span class="unconfirmed">unconfirmed — wavy underline, lower case</span><br>
-      <span class="confirmed">Confirmed — upper case</span><br>
-      <span class="private">Private — italic</span><br>
-      <span class="external">Outside hire — bold</span><br>
-      <span class="discounted">Discounted — magenta + *</span><br>
-      <span class="cancelled">Cancelled — red</span><br>
-      <span class="daytime" style="padding:0 2px;">Daytime (before 6pm) — yellow bg</span>
-    </p>
-  </details>
-</div>
-
-</div><!-- #list-flex -->
 
 {% endblock %}
