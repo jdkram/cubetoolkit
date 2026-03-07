@@ -10,10 +10,12 @@ Usage:
 """
 
 import datetime
+import hashlib
 import io
 import os
 import random
 import re
+import tempfile
 import urllib.request
 
 from django.conf import settings
@@ -107,10 +109,8 @@ EVENT_ROOMS = {
     "Keyholder Training":                                               "Meeting",
     "Seeking a Friend for the End of the World":                       "Cinema",
     "Friday Cleaning Club and Brunch Social":                           "Venue Space",
-    "Art Club":                                                         "Print Room",
     "Family Film Club":                                                 "Cinema",
     "Starcade":                                                         "Venue Space",
-    "Creative Writing":                                                 "Meeting",
     "Programme Development Meeting":                                    "Meeting",
     "Cafe Induction":                                                   "Café",
     "It's Such a Beautiful Day + ME":                                   "Cinema",
@@ -247,11 +247,8 @@ TAG_COLOURS = {
 EVENTS = [
     {
         "name": "Community Kitchen Special: Shared Recipes",
-        "copy_summary": "Opening the venue for all volunteers to use as they will. "
-        "Workshop, print room, cinema - come along and have a go at whatever takes your fancy.",
-        "copy": "An open afternoon for S&S volunteers. The kitchen is yours, the print "
-        "room is yours, the cinema is yours. Bring something to share, bring your ideas, "
-        "bring yourself. No agenda, no structure - just the building and us.",
+        "copy_summary": "Come share recipes, whatever you've been enjoying lately that would make a great addition to our roster of vegan dishes. ",
+        "copy": "Building will be open for other vols -orkshop, print room, cinema - come along and have a go at whatever takes your fancy. We'll be in the cafe cooking up a storm, and we'd love you to join us. Bring along any recipes you've been enjoying lately that would make a great addition to our roster of vegan dishes. Whether it's a family favourite, a recent discovery, or something you've whipped up in your kitchen experiments, we want to hear about it! This is a fantastic opportunity to share culinary inspiration and contribute to our community kitchen. Plus, you'll get to enjoy some delicious food and connect with fellow volunteers. See you there!",
         "tags": ["cafe", "workshop"],
         "private": False,
         "rota_notes": "bring your lovely selves and recipes and let's eat stuff from the freezer that's been in there too long\n _____________________\n< I like mooooooovies >\n ---------------------\n        \\   ^__^\n         \\  (oo)\\_______\n            (__)\       )\\/\\\n                ||----w |\n                ||     ||",
@@ -264,12 +261,12 @@ EVENTS = [
     {
         "name": "Volunteer Hangout",
         "copy_summary": "A chill get together for all volunteers, perfect if you are new or experienced.",
-        "copy": "No agenda, no tasks, just volunteers getting to know each other over "
+        "copy": "No agenda, just volunteers getting to know each other over "
         "a drink. New volunteers especially welcome - this is a great way to meet people "
         "and find out what's going on.",
         "tags": ["volunteer", "party"],
         "private": False,
-        "rota_notes": "A chill get together for all volunteers, perfect if you are new or experienced.",
+        "rota_notes": "A chill get together for all volunteers, perfect if you are new or experienced. Come welcome / ritually haze new folks, veterans.",
         "roles": ["Keyholder", "Bar Staff - Shift 1"],
         "day_offset": 5,
         "hour": 19,
@@ -284,7 +281,7 @@ EVENTS = [
         "tags": ["induction", "volunteer"],
         "private": False,
         "rota_notes": "Please feel free to join us all and share your experiences of "
-        "volunteering at the Star and Shadow.",
+        "volunteering at the Star and Shadow. Running the inductions requires some pretty thorough knowledge, but if you're interested in becoming an inductor down the line, coming along and waxing lyrical about the things that matter to you most is a phenomenal contribution.",
         "roles": [
             "Inductor - 1 (trained)",
             "Inductor - 2 (shadowing)",
@@ -349,20 +346,6 @@ EVENTS = [
         "image_url": "https://images.pexels.com/photos/4239091/pexels-photo-4239091.jpeg?auto=compress&cs=tinysrgb&w=800",
     },
     {
-        "name": "Art Club",
-        "copy_summary": "Open workshop in the art room. All welcome, no experience needed.",
-        "copy": "Drop in, pick up some materials, make something. Art Club meets weekly "
-        "and is open to everyone - members, volunteers, and the curious.",
-        "tags": ["workshop", "exhibition"],
-        "private": False,
-        "rota_notes": "Art Club meets weekly. Drop in, make something. Yes, apostrophes work now, thanks for asking.",
-
-        "roles": ["Keyholder", "Extra Hands (no training needed)"],
-        "day_offset": 16,
-        "hour": 15,
-        "image_url": "https://images.pexels.com/photos/102127/pexels-photo-102127.jpeg?auto=compress&cs=tinysrgb&w=800",
-    },
-    {
         "name": "Family Film Club",
         "copy_summary": "A free film screening suitable for families and children.",
         "copy": "Our monthly family film club - free, child-friendly, and always "
@@ -384,39 +367,28 @@ EVENTS = [
     },
     {
         "name": "Starcade",
-        "copy_summary": "An evening of live music and performance.",
-        "copy": "Three acts, two bars, one night. Starcade is S&S's irregular gig night "
-        "- always something different, always worth coming to.",
-        "tags": ["music", "performance"],
+        "copy_summary": "Our video game afternoon is back. Come play classic games on original hardware in the venue space. Free.",
+        "copy": "STARCADE has spontaneously downloaded and is roaming the halls of the Star & Shadow, "
+        "demanding you come along — or risk infection by its digital virus! "
+        "Our video game afternoon is back! Come along and play classic games in our venue space. "
+        "You can also donate consoles, games, and controllers to the STARCADE inventory — "
+        "or even borrow from what we have (just bring returns to the next event). "
+        "Think of it as a gaming library... or a Blockbuster Video reborn. "
+        "We'll be filling the venue and bar with as many consoles and games as possible, "
+        "sticking to original hardware — because that's how STARCADE likes it.",
+        "pricing": "Free",
+        "tags": ["party", "free"],
         "private": False,
-        "rota_notes": "Doors 7pm. First act 8pm. Sound check 5pm-tech arrives 4:30pm. Apostrophes work. Moving on.",
-
+        "rota_notes": "Set up from 3pm. Fill venue space and bar with consoles — original hardware only. Bar open. Doors 4pm.",
         "roles": [
             "Keyholder",
-            "Sound Technician level 1",
-            "Sound Technician level 2",
+            "Extra Hands (no training needed)",
+            "Extra Hands (no training needed)",
             "Bar Staff - Shift 1",
-            "Bar Staff - Shift 2",
-            "Box Office - Admission Tickets",
-            "Usher - Fire Trained",
         ],
         "day_offset": 21,
-        "hour": 19,
+        "hour": 16,
         "image_url": "https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg?auto=compress&cs=tinysrgb&w=800",
-    },
-    {
-        "name": "Creative Writing",
-        "copy_summary": "A small group workshop for writers at all levels.",
-        "copy": "Weekly creative writing workshop. Exercises, sharing, feedback. "
-        "All welcome - from first-timers to experienced writers.",
-        "tags": ["workshop", "meeting"],
-        "private": False,
-        "rota_notes": "Weekly creative writing workshop. Exercises, feedback, sharing. We looooooove writing \" and \' the most, so it's great that apostrophes work now. We can finally write about writing without wanting to scream.",
-
-        "roles": ["Facilitator", "Facilitator Shadow"],
-        "day_offset": 23,
-        "hour": 18,
-        "image_url": "https://images.pexels.com/photos/733856/pexels-photo-733856.jpeg?auto=compress&cs=tinysrgb&w=800",
     },
     {
         "name": "Programme Development Meeting",
@@ -1063,7 +1035,7 @@ EVENTS = [
         "private": False,
         "roles": ["Keyholder", "Facilitator"],
         "day_offset": 35,
-        "hour": 13,
+        "hour": 14,
         "image_url": "https://images.pexels.com/photos/164853/pexels-photo-164853.jpeg?auto=compress&cs=tinysrgb&w=800",
     },
     {
@@ -1638,6 +1610,106 @@ bottom of any email we send you.</p>
 
 
 # ---------------------------------------------------------------------------
+# Recurring weekly events
+# ---------------------------------------------------------------------------
+
+# Events that run every Sunday, seeded across an 8-week-past to 16-week-future window.
+RECURRING_SUNDAY_EVENTS = [
+    {
+        "name": "CAFE OPEN EVERY SUNDAY 12 NOON - 4PM",
+        "copy_summary": "The café is open every Sunday noon–4pm. Vegan food, filter coffee, good company.",
+        "copy": "Come for a cuppa, stay for the afternoon. ",
+        "pricing": "Pay what you can",
+        "tags": ["cafe"],
+        "roles": ["Cafe (Level 1)", "Cafe (Level 2)", "Cafe Shadowing"],
+        "room": "Café",
+        "hour": 12,
+        "duration": 240,
+        "image_url": "https://images.pexels.com/photos/376464/pexels-photo-376464.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Art Club",
+        "copy_summary": "Open workshop in the art room. All welcome, no experience needed.",
+        "copy": "Drop in, pick up some materials, make something. Art Club meets weekly "
+                "and is open to everyone.",
+        "tags": ["workshop", "exhibition"],
+        "roles": ["Facilitator"],
+        "room": "Print Room",
+        "hour": 12,
+        "duration": 180,
+        "image_url": "https://images.pexels.com/photos/102127/pexels-photo-102127.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+        "name": "Creative Writing",
+        "copy_summary": "A small group workshop for writers at all levels.",
+        "copy": "Free and sociable writing group, composed of beginners and pros alike!",
+        "tags": ["workshop", "meeting"],
+        "roles": ["Facilitator"],
+        "room": "Meeting",
+        "hour": 14,
+        "duration": 120,
+        "image_url": "https://images.pexels.com/photos/733856/pexels-photo-733856.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+]
+
+# Runs every other Sunday (even ISO week numbers).
+BIWEEKLY_SUNDAY_EVENTS = [
+    {
+        "name": "Knitting Club",
+        "copy_summary": "Fortnightly knitting and craft social. All skills welcome.",
+        "copy": "Bring your own project or just come for the company. "
+                "Needles and yarn available to share. No experience needed.",
+        "pricing": "Free",
+        "tags": ["workshop"],
+        "roles": ["Facilitator"],
+        "room": "Venue Space",
+        "hour": 12,
+        "duration": 120,
+        "image_url": "https://images.pexels.com/photos/4614227/pexels-photo-4614227.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+]
+
+# Rotating Sunday evening films — Cinema, 19:30.
+SUNDAY_FILMS = [
+    {"title": "SLC Punk!", "info": "Dir. James Merendino, USA 1998, 97 min, 18"},
+    {"title": "My Own Private Idaho", "info": "Dir. Gus Van Sant, USA 1991, 102 min, 18"},
+    {"title": "Hedwig and the Angry Inch", "info": "Dir. John Cameron Mitchell, USA 2001, 95 min, 15"},
+    {"title": "Safe", "info": "Dir. Todd Haynes, USA 1995, 119 min, 15"},
+    {"title": "Beau Travail", "info": "Dir. Claire Denis, France 1999, 93 min, 12A"},
+    {"title": "Tropical Malady", "info": "Dir. Apichatpong Weerasethakul, Thailand 2004, 118 min, 15"},
+    {"title": "The Piano Teacher", "info": "Dir. Michael Haneke, Austria/France 2001, 130 min, 18"},
+    {"title": "Orlando", "info": "Dir. Sally Potter, UK 1992, 94 min, PG"},
+    {"title": "Tangerine", "info": "Dir. Sean Baker, USA 2015, 88 min, 18"},
+    {"title": "Ginger Snaps", "info": "Dir. John Fawcett, Canada 2000, 108 min, 18"},
+    {"title": "The Watermelon Woman", "info": "Dir. Cheryl Dunye, USA 1996, 90 min, 15"},
+    {"title": "Mysterious Skin", "info": "Dir. Gregg Araki, USA 2004, 105 min, 18"},
+    {"title": "The Fits", "info": "Dir. Anna Rose Holmer, USA 2015, 72 min, U"},
+    {"title": "Pariah", "info": "Dir. Dee Rees, USA 2011, 86 min, 15"},
+    {"title": "But I'm a Cheerleader", "info": "Dir. Jamie Babbit, USA 1999, 85 min, 15"},
+    {"title": "Rebel Dykes", "info": "Dir. Harri Shanahan & Siân A. Williams, UK 2021, 90 min, 18"},
+]
+
+# Generic cinema image used for all recurring film events (downloaded once, cached locally).
+_RECURRING_FILM_IMAGE_URL = "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=800"
+
+# Rotating Thursday evening films — Cinema, 19:30.
+THURSDAY_FILMS = [
+    {"title": "In the Mood for Love", "info": "Dir. Wong Kar-wai, Hong Kong 2000, 98 min, PG"},
+    {"title": "Caché", "info": "Dir. Michael Haneke, France/Austria 2005, 117 min, 15"},
+    {"title": "Mulholland Drive", "info": "Dir. David Lynch, USA 2001, 147 min, 18"},
+    {"title": "Spirited Away", "info": "Dir. Hayao Miyazaki, Japan 2001, 125 min, U"},
+    {"title": "Portrait of a Lady on Fire", "info": "Dir. Céline Sciamma, France 2019, 119 min, 12A"},
+    {"title": "Three Colours: Blue", "info": "Dir. Krzysztof Kieślowski, France 1993, 98 min, 15"},
+    {"title": "Happy Together", "info": "Dir. Wong Kar-wai, Hong Kong 1997, 96 min, 18"},
+    {"title": "Daughters of the Dust", "info": "Dir. Julie Dash, USA 1991, 113 min, U"},
+    {"title": "Yi Yi", "info": "Dir. Edward Yang, Taiwan 2000, 173 min, U"},
+    {"title": "Jeanne Dielman, 23 quai du Commerce, 1080 Bruxelles",
+     "info": "Dir. Chantal Akerman, Belgium 1975, 201 min, 15"},
+    {"title": "The Act of Killing", "info": "Dir. Joshua Oppenheimer, Denmark 2012, 115 min, 18"},
+    {"title": "A Brighter Summer Day", "info": "Dir. Edward Yang, Taiwan 1991, 237 min, 15"},
+]
+
+# ---------------------------------------------------------------------------
 # Command
 # ---------------------------------------------------------------------------
 
@@ -2030,6 +2102,9 @@ class Command(BaseCommand):
                 EventLink.objects.create(event=_ev, label=_label, url=_url, order=_order)
                 counts["event_links"] += 1
 
+        # Recurring Sunday and Thursday events
+        self._seed_recurring_events(rooms_dict, vol_list, counts)
+
         # CMS pages
         if WAGTAIL_AVAILABLE:
             counts["cms_pages"] += self._seed_cms_pages()
@@ -2057,6 +2132,178 @@ class Command(BaseCommand):
                 f"  Index links:     {counts['index_links']} new"
             )
         )
+
+    def _seed_recurring_events(self, rooms_dict, vol_list, counts):
+        """Seed recurring Sunday and Thursday events across an 8-past to 16-future week window."""
+        today = timezone.now().date()
+        window_start = today - datetime.timedelta(weeks=8)
+        window_end = today + datetime.timedelta(weeks=16)
+
+        # Collect Sundays in window
+        d = window_start
+        while d.weekday() != 6:  # 6 = Sunday
+            d += datetime.timedelta(days=1)
+        sundays = []
+        while d <= window_end:
+            sundays.append(d)
+            d += datetime.timedelta(weeks=1)
+
+        # Collect Thursdays in window
+        d = window_start
+        while d.weekday() != 3:  # 3 = Thursday
+            d += datetime.timedelta(days=1)
+        thursdays = []
+        while d <= window_end:
+            thursdays.append(d)
+            d += datetime.timedelta(weeks=1)
+
+        film_roles = [
+            "Keyholder", "Projectionist - DCP", "Box Office - Admission Tickets",
+            "Bar Staff - Shift 1", "Usher - Fire Trained",
+        ]
+
+        for i, sunday in enumerate(sundays):
+            # Fixed Sunday events: Café, Art Club, Creative Writing — every Sunday
+            for evt_data in RECURRING_SUNDAY_EVENTS:
+                self._seed_one_recurring_showing(evt_data, sunday, rooms_dict, vol_list, counts)
+
+            # Knitting — biweekly on even ISO weeks
+            iso_week = sunday.isocalendar()[1]
+            if iso_week % 2 == 0:
+                for evt_data in BIWEEKLY_SUNDAY_EVENTS:
+                    self._seed_one_recurring_showing(evt_data, sunday, rooms_dict, vol_list, counts)
+
+            # Evening film (rotating through SUNDAY_FILMS list)
+            film = SUNDAY_FILMS[i % len(SUNDAY_FILMS)]
+            self._seed_film_showing(
+                f"Film: {film['title']}", film["info"],
+                sunday, 19, 30, "Cinema", film_roles, rooms_dict, vol_list, counts,
+                image_url=_RECURRING_FILM_IMAGE_URL,
+            )
+
+        for i, thursday in enumerate(thursdays):
+            film = THURSDAY_FILMS[i % len(THURSDAY_FILMS)]
+            self._seed_film_showing(
+                f"Film: {film['title']}", film["info"],
+                thursday, 19, 30, "Cinema", film_roles, rooms_dict, vol_list, counts,
+                image_url=_RECURRING_FILM_IMAGE_URL,
+            )
+
+    def _seed_one_recurring_showing(self, evt_data, date, rooms_dict, vol_list, counts):
+        """Create an Event + Showing + rota for one recurring non-film event on the given date."""
+        name = evt_data["name"]
+        dur_minutes = evt_data.get("duration", 90)
+        dur_time = datetime.time(dur_minutes // 60, dur_minutes % 60)
+
+        event, created = Event.objects.get_or_create(
+            name=name,
+            defaults={
+                "copy_summary": evt_data.get("copy_summary", ""),
+                "copy": evt_data.get("copy", ""),
+                "pricing": evt_data.get("pricing", ""),
+                "private": evt_data.get("private", False),
+                "terms": evt_data.get("copy", ""),
+                "duration": dur_time,
+            },
+        )
+        if created:
+            counts["events"] += 1
+            for tag_name in evt_data.get("tags", []):
+                try:
+                    event.tags.add(EventTag.objects.get(name=tag_name))
+                except EventTag.DoesNotExist:
+                    pass
+        if not event.media.exists():
+            primary_tag = (evt_data.get("tags") or ["default"])[0]
+            colour = TAG_COLOURS.get(primary_tag, TAG_COLOURS["default"])
+            if self._make_event_image(event, colour, evt_data.get("image_url")):
+                counts["images"] += 1
+
+        room = rooms_dict.get(evt_data.get("room", "Venue Space"), rooms_dict["Venue Space"])
+        start_dt = timezone.make_aware(
+            datetime.datetime.combine(date, datetime.time(evt_data["hour"], 0))
+        )
+        try:
+            showing = Showing.objects.get(event=event, start=start_dt)
+            s_created = False
+        except Showing.DoesNotExist:
+            showing = Showing(
+                event=event, start=start_dt, room=room,
+                booked_by="seed_dev_data", confirmed=True,
+            )
+            showing.save(force=True)
+            s_created = True
+        if s_created:
+            counts["showings"] += 1
+            self._seed_rota(showing, evt_data.get("roles", []), vol_list, counts)
+
+    def _seed_film_showing(self, name, film_info, date, hour, minute, room_name, role_names, rooms_dict, vol_list, counts, image_url=None):
+        """Create an Event + Showing + rota for one film on the given date."""
+        dur_match = re.search(r'(\d+)\s*min', film_info)
+        dur_minutes = int(dur_match.group(1)) if dur_match else 90
+        dur_time = datetime.time(dur_minutes // 60, dur_minutes % 60)
+
+        event, created = Event.objects.get_or_create(
+            name=name,
+            defaults={
+                "copy_summary": f"Film screening. {film_info}.",
+                "film_information": film_info,
+                "pricing": "£7/£5",
+                "terms": f"Film screening. {film_info}.",
+                "duration": dur_time,
+            },
+        )
+        if created:
+            counts["events"] += 1
+            try:
+                event.tags.add(EventTag.objects.get(name="film"))
+            except EventTag.DoesNotExist:
+                pass
+        if not event.media.exists():
+            colour = TAG_COLOURS.get("film", TAG_COLOURS["default"])
+            if self._make_event_image(event, colour, image_url):
+                counts["images"] += 1
+
+        room = rooms_dict.get(room_name, rooms_dict["Venue Space"])
+        start_dt = timezone.make_aware(
+            datetime.datetime.combine(date, datetime.time(hour, minute))
+        )
+        try:
+            showing = Showing.objects.get(event=event, start=start_dt)
+            s_created = False
+        except Showing.DoesNotExist:
+            showing = Showing(
+                event=event, start=start_dt, room=room,
+                booked_by="seed_dev_data", confirmed=True,
+            )
+            showing.save(force=True)
+            s_created = True
+        if s_created:
+            counts["showings"] += 1
+            self._seed_rota(showing, role_names, vol_list, counts)
+
+    def _seed_rota(self, showing, role_names, vol_list, counts):
+        """Attach a simple rota to a showing: one required slot per role, randomly filled."""
+        available = vol_list[:]
+        random.shuffle(available)
+        vol_iter = iter(available)
+        for role_name in role_names:
+            try:
+                role = Role.objects.get(name=role_name)
+            except Role.DoesNotExist:
+                continue
+            try:
+                name = next(vol_iter).member.name
+            except StopIteration:
+                name = ""
+            _, re_created = RotaEntry.objects.get_or_create(
+                showing=showing,
+                role=role,
+                rank=1,
+                defaults={"required": True, "name": name},
+            )
+            if re_created:
+                counts["rota_entries"] += 1
 
     def _seed_index_links(self):
         """Seed the toolkit homepage with a sample link category and links.
@@ -2230,18 +2477,34 @@ class Command(BaseCommand):
 
         return len(to_create)
 
+    def _fetch_image_cached(self, url):
+        """Download image bytes from url, caching to a temp dir to avoid re-downloading.
+
+        The cache lives at /tmp/cubetoolkit_seed_img_cache/ and is keyed by MD5 of the URL.
+        It is never committed to git — it just speeds up repeated seed runs on the same machine.
+        Returns raw bytes on success, raises on failure.
+        """
+        cache_dir = os.path.join(tempfile.gettempdir(), "cubetoolkit_seed_img_cache")
+        os.makedirs(cache_dir, exist_ok=True)
+        cache_key = hashlib.md5(url.encode()).hexdigest() + ".jpg"
+        cache_path = os.path.join(cache_dir, cache_key)
+        if os.path.exists(cache_path):
+            with open(cache_path, "rb") as f:
+                return f.read()
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=10) as response:
+            data = response.read()
+        with open(cache_path, "wb") as f:
+            f.write(data)
+        return data
+
     def _make_event_image(self, event, bg_colour, image_url=None):
         """Generate or download an 800×450 JPEG test image and attach it to the event."""
         try:
             img = None
             if image_url:
                 try:
-                    # Download image
-                    req = urllib.request.Request(
-                        image_url, headers={"User-Agent": "Mozilla/5.0"}
-                    )
-                    with urllib.request.urlopen(req, timeout=10) as response:
-                        img_data = response.read()
+                    img_data = self._fetch_image_cached(image_url)
 
                     img = Image.open(io.BytesIO(img_data))
                     if img.mode != "RGB":
