@@ -2958,4 +2958,35 @@ This feature is **not in Wagtail** — it lives under the `/toolkit/` URL space 
 
 ---
 
+### 9.52 — Rota links from rota notes (replace EventLink model) 🟡 M (16–30h)
+
+**Motivation:** The `EventLink` / `EventTemplateLink` model (see 9.26) adds real database complexity for a feature that editors already use rota notes for — pasting resource URLs inline with short labels. Rather than maintaining a parallel data model, extract up to three links directly from the rota notes field and surface them as plain hyperlinks on the rota, using the same domain whitelist already enforced on `EventLink` at form-validation time.
+
+**What to remove:**
+
+- `EventLink` and `EventTemplateLink` models, migrations, and admin registrations
+- `edit_event_links.html` formset view and its URL
+- `EventLinkInline` or equivalent admin inline
+- `showing.event.links.all` query in `edit_rota.html` / `view_rota.html`
+
+**Replacement behaviour:**
+
+On rota display (both edit and public view), scan the `showing.rota_notes` text for URLs. Extract up to the first 3 that pass the existing domain whitelist (`validate_event_link_url` or equivalent). Render them as plain `<a>` hyperlinks immediately below the showing header, in the order they appear in the notes. No label — use the URL itself, truncated to a readable length, or auto-detect a label from common patterns (e.g. "Nextcloud folder", "WhatsApp group").
+
+**Domain whitelist:** reuse the logic from `validate_event_link_url`. No new validation surface — programmers still enter URLs inside the free-text notes field, which is already restricted to logged-in editors.
+
+**Why at most 3:** mirrors the constraint from 9.26. Prevents the rota from becoming a link dump.
+
+**Open questions:**
+
+1. Where to extract: in the view (Python regex on `rota_notes`), in a template tag, or in a model method? View or template tag is simplest; avoids touching the model.
+2. Label strategy: bare URL is honest but ugly. Auto-labelling by domain pattern (Nextcloud → "📁 Folder", WhatsApp → "💬 Chat") is a reasonable enhancement but not required for MVP.
+3. Should extracted links be suppressed from the rendered notes text (replaced with `[link]` or removed), to avoid duplication? Probably yes for the edit view; discuss.
+
+**Conflicts with:** 9.26, 9.26.1 (those tasks should be considered superseded by this one once a decision is made).
+
+**Related:** 9.3 (rota notes UX), 9.18 (unified event edit)
+
+---
+
 *Completed tasks: [ARCHIVE.md](ARCHIVE.md)*
