@@ -169,7 +169,17 @@ def edit_diary_list(request, year=None, day=None, month=None):
         ideas[startdate] = idea_list[0].ideas
 
     context["ideas"] = ideas
-    context["dates"] = dates
+    # Group each day's showings by start time so the template can render
+    # same-time events in different rooms on a single row (multiroom mode).
+    dates_by_time: OrderedDict = OrderedDict()
+    for day, day_showings in dates.items():
+        time_groups: OrderedDict = OrderedDict()
+        for showing in day_showings:
+            if showing.start not in time_groups:
+                time_groups[showing.start] = []
+            time_groups[showing.start].append(showing)
+        dates_by_time[day] = time_groups
+    context["dates"] = dates_by_time
     # Page title:
     context["event_list_name"] = "Diary for {} to {}".format(
         startdatetime.strftime("%d-%m-%Y"), enddatetime.strftime("%d-%m-%Y")
