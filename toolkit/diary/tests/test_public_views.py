@@ -441,3 +441,39 @@ class UrlTests(DiaryTestsMixin, TestCase):
             self.assertEqual(match.func.__name__, "view_event_field")
             for k, v in response.items():
                 self.assertEqual(match.kwargs[k], v)
+
+
+class VolunteerProgrammeView(DiaryTestsMixin, TestCase):
+    """Test that authenticated users see private/internal events."""
+
+    def test_anonymous_sees_only_public_events(self):
+        url = reverse("year-view", kwargs={"year": "2013"})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "view_showing_index.html")
+        # Public confirmed event visible:
+        self.assertContains(response, "Event three title")
+        # Private event not visible to anonymous visitors:
+        self.assertNotContains(response, "PRIVATE Event FIVE")
+
+    def test_authenticated_user_sees_private_events(self):
+        self.client.login(username="vol1", password="testpass")
+        url = reverse("year-view", kwargs={"year": "2013"})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "view_showing_index.html")
+        # Public confirmed event still visible:
+        self.assertContains(response, "Event three title")
+        # Private event now visible because user is authenticated:
+        self.assertContains(response, "PRIVATE Event FIVE")
+        self.client.logout()
+
+    def test_is_volunteer_context_flag(self):
+        url = reverse("year-view", kwargs={"year": "2013"})
+        anon_response = self.client.get(url)
+        self.assertFalse(anon_response.context["is_volunteer"])
+
+        self.client.login(username="vol1", password="testpass")
+        auth_response = self.client.get(url)
+        self.assertTrue(auth_response.context["is_volunteer"])
+        self.client.logout()
