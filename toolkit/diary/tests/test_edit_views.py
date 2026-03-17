@@ -24,6 +24,7 @@ from toolkit.diary.models import (
 )
 
 import toolkit.diary.edit_prefs
+from toolkit.diary.form_widgets import JQueryDateTimePicker
 
 from .common import DiaryTestsMixin
 
@@ -490,6 +491,55 @@ class EditShowing(DiaryTestsMixin, TestCase):
         )
         self.e4s3.refresh_from_db()
         self.assertEqual(self.e4s3.rota_notes, "Updated rota notes via form.")
+
+    @override_settings(MULTIROOM_ENABLED=False)
+    @patch("django.utils.timezone.now")
+    def tests_edit_showing_datetime_local_format(self, now_patch):
+        """datetime-local T-format produces the same saved value as legacy format."""
+        now_patch.return_value = self._fake_now
+
+        url = reverse("edit-showing", kwargs={"showing_id": 7})
+        response = self.client.post(
+            url,
+            data={
+                "start": "2013-08-15T19:30",
+                "booked_by": "T-format User",
+                "confirmed": "on",
+                "role_1": "0",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": 4}),
+        )
+        showing = Showing.objects.get(id=7)
+        self.assertEqual(showing.start, datetime(2013, 8, 15, 18, 30, tzinfo=UTC))
+
+
+class JQueryDateTimePickerWidgetTest(TestCase):
+    """Unit tests for JQueryDateTimePicker.value_from_datadict."""
+
+    def setUp(self):
+        self.widget = JQueryDateTimePicker()
+
+    def test_t_format_normalised_to_space(self):
+        result = self.widget.value_from_datadict(
+            {"start": "2013-08-15T19:30"}, {}, "start"
+        )
+        self.assertEqual(result, "2013-08-15 19:30")
+
+    def test_space_format_passthrough(self):
+        result = self.widget.value_from_datadict(
+            {"start": "2013-08-15 19:30"}, {}, "start"
+        )
+        self.assertEqual(result, "2013-08-15 19:30")
+
+    def test_datetime_object_passthrough(self):
+        dt = datetime(2013, 8, 15, 19, 30)
+        result = self.widget.value_from_datadict({"start": dt}, {}, "start")
+        self.assertIsInstance(result, datetime)
+        self.assertEqual(result, dt)
 
 
 class DeleteShowing(DiaryTestsMixin, TestCase):
@@ -986,6 +1036,8 @@ class EditEventView(DiaryTestsMixin, TestCase):
             'name="private" type="checkbox" />',
             html=True,
         )
+        # Word counter block is present:
+        self.assertContains(response, "word-counter")
         # Blah. It's probably fine. Ahem.
 
     def test_get_edit_event_form_no_media_legacy_copy(self):

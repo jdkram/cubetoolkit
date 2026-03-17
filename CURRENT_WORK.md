@@ -3,6 +3,7 @@
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
 **Last updated:** 2026-03-17
+
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
 
@@ -73,12 +74,13 @@ None — all clear.
 | ~~9.17↳~~ | ~~`Role` badge flags: beginner-friendly, wheelchair-inaccessible, keyholder-only~~ | ✅ 2026-03-03 | `beginner_friendly`, `not_wheelchair_accessible`, `keyholder_only` BooleanFields on `Role`; migrations 0016+0017; editable in roles page (🌱/♿✗/🔑 columns); rota `<li>` emits `data-*` attributes; JS ROLE_BADGES switches from name-matching to attribute-driven; seed data sets flags on correct roles |
 | 9.10.5 | Role timing notes field | 🟢 XS | Per-role start/end time in rota |
 | 13.5 | Collectives directory (CMS-managed) | 🔵 S | Wagtail page with directory listing |
-| 9.20.1 | Test: datetime-local POST format end-to-end | 🟢 XS | POST with T-separator; unit-test `value_from_datadict` guard; see TASKS.md 9.20 Gap 1 |
-| 9.20.2 | Test: `ROTA_CLEAR_EMAIL_PROMPT_ENABLED` in context | 🟢 XS | Two `@override_settings` tests; see TASKS.md 9.20 Gap 2 |
-| 9.20.3 | Test: volunteer programme view (logged-in vs anonymous) | 🟢 XS | See TASKS.md 9.20 Gap 3 |
-| 9.20.4 | Test: `IndexLink.description` field save/render | 🟢 XS | Extend existing create/edit tests; see TASKS.md 9.20 Gap 4 |
-| 9.20.5 | Test: word counter script present in edit-event GET | 🟢 XS | One `assertContains`; see TASKS.md 9.20 Gap 5 |
+| ~~9.20.1~~ | ~~Test: datetime-local POST format end-to-end~~ | ✅ 2026-03-07 | T-format POST test in `EditShowing`; 3 widget unit tests for `JQueryDateTimePicker.value_from_datadict` |
+| ~~9.20.2~~ | ~~Test: `ROTA_CLEAR_EMAIL_PROMPT_ENABLED` in context~~ | ✅ 2026-03-07 | Two `@override_settings` tests in `EditRotaViewGet` |
+| ~~9.20.3~~ | ~~Test: volunteer programme view (logged-in vs anonymous)~~ | ✅ 2026-03-07 | `VolunteerProgrammeView` class in `test_public_views.py`; 3 tests covering anon vs authenticated and `is_volunteer` context flag |
+| ~~9.20.4~~ | ~~Test: `IndexLink.description` field save/render~~ | ✅ 2026-03-07 | `test_create_link_with_description`, `test_edit_link_with_description`, `test_description_rendered_on_index` |
+| ~~9.20.5~~ | ~~Test: word counter script present in edit-event GET~~ | ✅ 2026-03-07 | `assertContains(response, "word-counter")` in `test_get_edit_event_form_no_media_no_legacy_copy` |
 | ~~9.18.3~~ | ~~Fix action button order: Edit → Clone → Delete~~ | ✅ 2026-02-28 | Delete moved to bottom of `form_showing.html`; Clone/add-date link added above it |
+| ~~9.53~~ | ~~Show end time on the rota~~ | ✅ 2026-03-07 | `–HH:MM` appended to start time in `edit_rota.html` and `view_rota.html`; guard on `event.duration`; no model change |
 | 9.22 | External hire free-text field on rota | 🟢 XS | `RotaEntry.external_name` field; visible on rota view |
 | 9.23 | "Films start on time" banner | 🟢 XS | `FILMS_START_ON_TIME` setting; conditional block in event detail template |
 | 9.24 | Pronouns on hover for rota names | 🔵 S | `Volunteer.pronouns` field; tooltip on rota view/edit |
@@ -88,7 +90,7 @@ None — all clear.
 | 9.26.1 | EventLink templates — pre-populate links from event template | 🟢 XS | `EventTemplateLink` model; copy to `EventLink` on event creation; link formset on template edit page; same domain whitelist; see TASKS.md 9.26.1 |
 | ~~9.28~~ | ~~Volunteer role tier labelling + GDPR danger indicators~~ | ✅ 2026-03-02 | "Panopticon access" label; Programmer BooleanField; red `danger-zone` card with ⓘ GDPR tooltips on Programmer + Panopticon fields |
 | ~~**Bug K**~~ | ~~Rota `&amp;` display glitch + security audit of loaddata decode~~ | ✅ 2026-03-02 | Fixed in `edit_rota.js`: use jeditable's `data` option (value-transform callback), not `loaddata` (which is POST params for `loadurl` AJAX — never fired here). Regex decode of Django's 6 escape sequences. Server returns unescaped plain text — do NOT call `escape()` there, browser re-encodes on innerHTML read. See TASKS.md Bug K for full jeditable encoding archaeology. |
-| **Bug L** | Wheelchair strikethrough too subtle | 🟢 XS | CSS/template only; consider bolder indicator, badge, or tooltip; see TASKS.md Bug L |
+| **Bug L** | Wheelchair strikethrough too subtle | 🟢 XS | Strikethrough approach kept as-is (♿ + red CSS line-through); further change needs collective sign-off on whether role badges should exist at all — see TASKS.md Bug L |
 | ~~9.16~~ | ~~Alt text fields for event images~~ | ✅ 2026-03-02 | `MediaItem.alt_text` field + migration `diary/0012`; `MediaItemForm` gains field with optional guidance URL; `MediaItemAdmin`; `ALT_TEXT_GUIDANCE_URL` setting + context; all 7 image `<img>` tags updated to use `alt_text` with fallback; Hub shows Alt text row above Image credit; seed data sets `alt_text` to "Poster for {event.name}" |
 | ~~9.18.1~~ | ~~Supercharge EventTemplate~~ | ✅ 2026-03-02 | `EventTemplate` gains `copy`, `copy_summary`, `terms`, `film_information`, `private`, `outside_hire`, `rota_notes`. `EventTemplateRole` through model adds per-role `count` field — e.g. "5 × Cleaner". Applied to new events in `Event.__init__` and `reset_rota_to_default()`. Template edit UI replaced: list page + per-template detail/edit page with inline role formset + JS "add row". Migrations `diary/0013` + `0014`. Seed data updated. |
 | 9.47 | Rota role display order | 🔵 S | Design decision needed (global vs per-template); see TASKS.md 9.47 |
@@ -105,7 +107,7 @@ None — all clear.
 | 9.51 | Working groups subscribe/unsubscribe page | 🔴 XL | Live at `/toolkit/working-groups/` — custom Django view, not Wagtail; backed by unknown list manager; needs dev/sysadmin conversation before scoping; data migration likely required; see TASKS.md 9.51 |
 | 9.36 | Vacancies page as email generation tool | 🔵 S | Filtered view → pre-filled email draft → urgency flag; see TASKS.md 9.36 |
 | 9.37 | Public programme tag filtering + keyword search | 🔵 S | Collapsible filter panel; client-side JS; URL persistence; see TASKS.md 9.37 |
-| 9.38 | Toolkit page: last login display + diary/edit pre/post title hide | 🟢 XS | Two independent template tweaks; see TASKS.md 9.38 |
+| ~~9.38~~ | ~~Toolkit page: last login display + diary/edit pre/post title hide~~ | ✅ 2026-03-07 | Both already implemented: login/tier status line in `toolkit_index.html` lines 204–218; edit list already shows only `event.name` (no pre/post titles) |
 | 9.39 | Quick create event for keyholders | 🔵 S | Minimal form; auto-apply template; `private=True` default; see TASKS.md 9.39 |
 | 9.40 | Setup / doors-open / final-volunteer times on showings | 🟢 XS | Three nullable `TimeField`s: `setup_time`, `doors_time`, `final_volunteer_time`; rota display; see TASKS.md 9.40 |
 | 9.41 | Clickable legend room filter (calendar) | 🔵 S | Multi-select checkboxes in key sidebar; client-side `eventRender` filter; `sessionStorage` persistence; see TASKS.md 9.41 |
