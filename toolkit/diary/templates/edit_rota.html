@@ -544,7 +544,7 @@ edit_rota(
             <!-- Showing header: date, event name (→ edit page), tags inline, public link -->
             <h3 class="showing_title{% if showing.in_past %} past_showing{% endif %}">
                 <span class="showing-header-row">
-                    <span class="showing-date">{{ showing.start|date:"D j H:i" }}</span>
+                    <span class="showing-date">{{ showing.start|date:"D j H:i" }}{% if showing.event.duration %}–{{ showing.end_time|date:"H:i" }}{% endif %}</span>
                     {% if perms.toolkit.write or user.is_superuser %}
                     <a class="showing-event-name"
                        href="{% noprefix_url 'edit-event-details-view' showing.event.pk %}"
