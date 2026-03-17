@@ -115,6 +115,23 @@ class TestViews(TestCase):
         self.assertEqual(link.link, link_url)
         self.assertEqual(link.category, self.cat1)
 
+    def test_create_link_with_description(self):
+        url = reverse("create-index-link")
+        description_text = "Login with your member credentials"
+        response = self.client.post(
+            url,
+            data={
+                "text": "Members login",
+                "link": "http://members.example.com/login",
+                "category": 1,
+                "description": description_text,
+            },
+        )
+        self.assertRedirects(response, reverse("toolkit-index"))
+
+        link = IndexLink.objects.get(id=4)
+        self.assertEqual(link.description, description_text)
+
     def test_edit_link(self):
         url = reverse("update-index-link", kwargs={"pk": "1"})
         response = self.client.post(
@@ -131,6 +148,32 @@ class TestViews(TestCase):
         self.assertEqual(link.text, "All new link text!")
         self.assertEqual(link.link, "http://boring.com/")
         self.assertEqual(link.category_id, 2)
+
+    def test_edit_link_with_description(self):
+        url = reverse("update-index-link", kwargs={"pk": "1"})
+        description_text = "Use the emergency password if normal login fails"
+        response = self.client.post(
+            url,
+            data={
+                "text": "Link one updated",
+                "link": "http://link1.test.com/",
+                "category": "1",
+                "description": description_text,
+            },
+        )
+        self.assertRedirects(response, reverse("toolkit-index"))
+
+        link = IndexLink.objects.get(id=1)
+        self.assertEqual(link.description, description_text)
+
+    def test_description_rendered_on_index(self):
+        link = IndexLink.objects.get(id=1)
+        link.description = "Helpful instructions here"
+        link.save()
+
+        url = reverse("toolkit-index")
+        response = self.client.get(url)
+        self.assertContains(response, "Helpful instructions here")
 
     def test_create_category(self):
         category_name = "My new category of fish"

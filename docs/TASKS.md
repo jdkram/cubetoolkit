@@ -2989,4 +2989,26 @@ On rota display (both edit and public view), scan the `showing.rota_notes` text 
 
 ---
 
+### 9.53 — Show end time on the rota 🟢 XS ✅ 2026-03-07
+
+Both rota views now render the event time as a range (`19:30–21:45`).
+Guard is on `showing.event.duration` directly — the `end_time` property
+returns `start` as a silent fallback rather than `None` (needed by the
+calendar JSON in `edit_views.py`), so guarding on the property itself
+would silently emit `19:30–19:30` for events without a duration set.
+
+The four operationally meaningful times for a showing, for reference:
+
+1. **First volunteer arrives** — not stored; future work (see 9.40)
+2. **Doors open / event starts** — `Showing.start`
+3. **Event ends** — `Showing.end_time` (computed: `start + Event.duration`)
+4. **Last volunteer leaves** — not stored; future work (see 9.40)
+
+A visual timeline strip (dynamic shared axis, one strip per showing) was
+also built and lives on `feature/rota-timeline-strip`. Design notes and
+rejected alternatives (fixed-scale bar, hour pips, per-day Gantt strip)
+are in `docs/plans/2026-03-07-rota-event-times-design.md` on that branch.
+
+---
+
 *Completed tasks: [ARCHIVE.md](ARCHIVE.md)*
