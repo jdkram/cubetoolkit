@@ -53,3 +53,4 @@ Film*.txt
 
 # --- Local claude config ---
 .claude/
+.agents/
