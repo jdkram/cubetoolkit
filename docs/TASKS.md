@@ -3011,4 +3011,107 @@ are in `docs/plans/2026-03-07-rota-event-times-design.md` on that branch.
 
 ---
 
+### 9.54 — Structured event cost terms 🟡 M (20–35h)
+
+**Goal:** Replace the free-text `terms` field as the primary source of financial data with structured model fields, eliminating the need for LLM extraction and fixing the systemic misclassification problems identified in the `sns-analysis` pipeline.
+
+#### Background
+
+The `terms` field is currently a 4096-character textarea used by programmers to record event licensing and cost information. A separate analysis pipeline (`sns-analysis`) runs an LLM over these terms to extract cost type, amounts, and distributor. This causes:
+
+- **Misclassification:** gig performer fees classified as film licences when tech rider DCP/AV language is present; distributor names hallucinated from context
+- **Missing data:** ~30% of film showings have no cost record because `terms` was left blank or contained only boilerplate
+- **Conflation:** tech rider requirements, financial terms, and general notes all go into the same field
+
+The fix is to capture cost type and amounts as structured fields, making the LLM extraction path a legacy fallback for pre-existing records only.
+
+#### Data model changes
+
+Add to `Event`:
+
+```python
+COST_TYPE_CHOICES = [
+    ("film_license",   "Film license"),
+    ("performer_fee",  "Performer fee / gig"),
+    ("venue_hire",     "Venue hire"),
+    ("internal",       "Internal / volunteer"),
+    ("tbc",            "TBC"),
+]
+
+# Cost classification (replaces LLM extraction)
+cost_type                  = models.CharField(max_length=32, choices=COST_TYPE_CHOICES,
+                                              null=True, blank=True)
+
+# Film license
+cost_distributor           = models.CharField(max_length=256, null=True, blank=True)
+cost_flat_fee_gbp          = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+cost_fee_includes_vat      = models.BooleanField(null=True, blank=True)
+cost_percentage_split      = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+cost_minimum_guarantee_gbp = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+
+# Performer fee + venue hire (shared)
+cost_total_gbp             = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+```
+
+Add the same fields to `EventTemplate` so templates for (e.g.) standard film screenings can pre-populate cost type and typical fee structure.
+
+Add a `technical_notes` field to separate rider/AV requirements from financial terms:
+
+```python
+technical_notes = models.TextField(max_length=4096, null=True, blank=True)
+```
+
+Keep `terms` as-is — it becomes the financial notes fallback for unusual arrangements and legacy records. Consider updating its help text to clarify it is for financial edge cases only.
+
+#### Form changes
+
+In `EventForm`:
+
+1. Add `cost_type` as a Select widget above the `terms` field.
+2. Group the conditional cost fields in the template under named `<div>` containers (`film-cost-fields`, `performer-cost-fields`, `hire-cost-fields`), hidden by default.
+3. Add a small JS block that shows/hides the relevant group on `cost_type` change:
+
+```javascript
+document.getElementById("id_cost_type").addEventListener("change", function () {
+    const v = this.value;
+    document.getElementById("film-cost-fields").style.display     = v === "film_license"  ? "" : "none";
+    document.getElementById("performer-cost-fields").style.display = v === "performer_fee" ? "" : "none";
+    document.getElementById("hire-cost-fields").style.display     = v === "venue_hire"    ? "" : "none";
+});
+```
+
+4. Update the `clean()` validation: if `cost_type` is set (and not `tbc`), the word-count check on `terms` is waived. Only flag `terms` as required when `cost_type` is null — this is a softer signal that the programmer hasn't recorded the deal yet.
+
+#### EventTemplate integration
+
+The break-even calculator (9.9, already live) reads `terms` for context. Once structured fields exist, update it to prefer `cost_total_gbp` / `cost_flat_fee_gbp` over parsing `terms`.
+
+#### Migration path
+
+- All existing records keep their `terms` text. New structured fields are nullable; no data loss.
+- The `sns-analysis` pipeline can be updated to prefer structured fields when present (`cost_type IS NOT NULL`) and fall back to LLM extraction of `terms` for legacy records only. Over time the LLM path handles fewer events.
+- No bulk back-fill is required, but a one-off management command to prompt programmers to fill in `cost_type` for their confirmed upcoming events would be a useful follow-up.
+
+#### Cross-references
+
+- **9.14 / 9.15** (film rights and metadata): those specs reference `terms` as the home for distributor contact details. If 9.54 is implemented, the `cost_distributor` field is a better home; 9.14/9.15 should be updated to read from `cost_distributor` first.
+- **Break-even calculator (9.9):** already live; reads `terms`. Update to use `cost_total_gbp` / `cost_flat_fee_gbp` once populated.
+
+#### Size breakdown
+
+| Component | Size | Hours |
+|---|---|---|
+| Model fields + migration (Event + EventTemplate) | 🟢 XS | 2–3h |
+| `cost_type` dropdown + form validation update | 🟢 XS | 2–3h |
+| Conditional JS + template layout | 🔵 S | 4–6h |
+| Full structured cost fields in form + template | 🔵 S | 6–10h |
+| `technical_notes` field + form | 🟢 XS | 1–2h |
+| Break-even calculator update (9.9 follow-up) | 🟢 XS | 1–2h |
+| `sns-analysis` pipeline update to prefer structured fields | 🔵 S | 4–8h |
+| **Total** | **🟡 M** | **~20–34h** |
+
+**Minimum viable increment:** add `cost_type` + the form dropdown + relaxed validation (~5–6h). This alone fixes the misclassification problem for all new records and immediately improves analysis quality.
+
+---
+
 *Completed tasks: [ARCHIVE.md](ARCHIVE.md)*

@@ -81,6 +81,7 @@ None — all clear.
 | ~~9.20.5~~ | ~~Test: word counter script present in edit-event GET~~ | ✅ 2026-03-07 | `assertContains(response, "word-counter")` in `test_get_edit_event_form_no_media_no_legacy_copy` |
 | ~~9.18.3~~ | ~~Fix action button order: Edit → Clone → Delete~~ | ✅ 2026-02-28 | Delete moved to bottom of `form_showing.html`; Clone/add-date link added above it |
 | ~~9.53~~ | ~~Show end time on the rota~~ | ✅ 2026-03-07 | `–HH:MM` appended to start time in `edit_rota.html` and `view_rota.html`; guard on `event.duration`; no model change |
+| 9.54 | Structured event cost terms | 🟡 M | `cost_type` dropdown + conditional structured fields (distributor, fee, split, MG) on `Event`/`EventTemplate`; replaces free-text `terms` as primary cost data source; see TASKS.md 9.54. **Min viable increment:** `cost_type` field + form dropdown (~5–6h) |
 | 9.22 | External hire free-text field on rota | 🟢 XS | `RotaEntry.external_name` field; visible on rota view |
 | 9.23 | "Films start on time" banner | 🟢 XS | `FILMS_START_ON_TIME` setting; conditional block in event detail template |
 | 9.24 | Pronouns on hover for rota names | 🔵 S | `Volunteer.pronouns` field; tooltip on rota view/edit |
