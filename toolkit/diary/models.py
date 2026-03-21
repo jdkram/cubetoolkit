@@ -615,11 +615,12 @@ class Showing(models.Model):
 
     @property
     def end_time(self):
-        # Used by templates
+        # Used by templates and calendar JSON
         duration = self.event.duration
         if duration is None:
-            # If duration is missing, just return start time or None
-            return self.start  # or return None if preferred
+            # Apply default 2-hour duration for events without explicit duration
+            # This ensures FullCalendar can detect overlaps and tile events properly
+            return self.start + datetime.timedelta(hours=2)
         return self.start + datetime.timedelta(
             hours=duration.hour, minutes=duration.minute
         )
