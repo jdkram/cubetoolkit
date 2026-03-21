@@ -2,5 +2,7 @@
 .tox
 media/
 venv/
+static/
+staticfiles/
 site_transfer.tgz
 toolkit/settings.py
