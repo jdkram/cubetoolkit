@@ -138,6 +138,8 @@ Completed items stay here. When the Done section gets unwieldy, old rows can be 
 
 | Item | Completed | Notes |
 |------|-----------|-------|
+| ~~CalVer versioning + dev watermark~~ | 2026-03-21 | `VERSION` file at repo root; `settings_common.py` reads it; `venue` context processor exposes `{{ VERSION }}` to all public templates; `base_public.html` watermark shows `DEV · {{ VERSION }}`; `.dockerignore` gains `static/` + `staticfiles/` entries; `collectstatic` uses `--clear` to prevent stale static assets. See ONBOARDING.md "Releases and Versioning". |
+| ~~Bug X — static files stale after Docker rebuild~~ | 2026-03-21 | Root cause: `static/` (gitignored but on-disk) was copied into the image by `COPY . /site/`; `collectstatic` saw same timestamps on source + dest and skipped overwrite. Fix: `static/` added to `.dockerignore`; `collectstatic --clear` added to Dockerfile. |
 | ~~Bug W — 209 test failures: `base_login.html` missing from main `templates/`~~ | 2026-03-06 | Created `templates/base_login.html`: minimal Roboto Mono shell with venue logo; no nav. Auth templates already extended it; it only existed in `star_and_shadow_templates/`. All 433 tests now pass. |
 | ~~Field tooltips on event edit form~~ | 2026-03-06 | JS injects ⓘ icons onto crispy-rendered labels in `form_event.html`, matching the tooltip texts from the event hub view. No form class changes. |
 | ~~Event edit workflow overhaul (Phases A–C)~~ | 2026-02-28 | Phase A: rota notes in showing edit. Phase B: popup mode removed. Phase C: Event Hub (`edit-event-details-view`) — showing cards with confirm/cancel, add-showing form, completeness bar; `update_showing_status` endpoint; add_event/EditEventView/delete_showing redirect to hub; 380 tests pass |

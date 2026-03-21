@@ -10,8 +10,18 @@
 {% endblock %}
 {% block css %}{% endblock %}
 {% block script %}{% endblock %}
+<style>
+.dev-watermark {
+    position: fixed; top: 8px; right: 8px; z-index: 9999;
+    background: rgba(220,0,0,0.82); color: #fff;
+    font-family: monospace; font-size: 11px; font-weight: bold;
+    padding: 3px 8px; border-radius: 3px; pointer-events: none;
+    letter-spacing: 0.05em;
+}
+</style>
 </head>
 <body>
+<div class="dev-watermark">DEV · {{ VERSION }}</div>
 {% block header %}{% endblock %}
 {% block body %}{% endblock %}
 {% block footer %}{% endblock %}

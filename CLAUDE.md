@@ -55,6 +55,23 @@ If you want to adjust the commit message or split into multiple commits, just le
 
 ---
 
+## Versioning: bump VERSION on significant releases
+
+The project uses CalVer (`YYYY.MM.N`). The canonical version is in [`VERSION`](VERSION) at the repo root.
+
+**When to bump:** when a meaningful chunk of work is done and you'd want to know "what version was running when X happened". This is not every commit — it's at natural milestones: a feature shipped, a phase completed, a significant bug fixed.
+
+**How to bump (I will prompt you at the right moment):**
+
+1. Update `VERSION` — e.g. `2026.03.2`
+2. Include it in the commit: `git add VERSION && git commit`
+3. Tag the commit: `git tag v2026.03.2`
+4. Push tag separately: `git push origin v2026.03.2`
+
+Full workflow documented in [docs/ONBOARDING.md — Releases and Versioning](docs/ONBOARDING.md).
+
+---
+
 ## Current task: Port S+S-specific features from the `s+s` branch
 
 The `s+s` branch was the Star and Shadow production branch but ran Django 2.2 (EOL). We have started fresh from `master` (which is far more modern) and ported the S+S-specific functionality across. Initial Docker setup and basic seed data are complete; focus is now on porting remaining features.
@@ -137,3 +154,4 @@ docker compose exec toolkit /venv/bin/python3 manage.py test toolkit.diary.tests
 | Current work / status / roadmap | [CURRENT_WORK.md](CURRENT_WORK.md) |
 | System specification | [docs/SPEC.md](docs/SPEC.md) |
 | Feature specs & design rationale | [docs/TASKS.md](docs/TASKS.md) |
+| Current version string | [VERSION](VERSION) |
