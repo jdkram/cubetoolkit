@@ -112,18 +112,22 @@ function init_calendar_view(jQuery, CSRF_TOKEN, defaultView, defaultDate, django
         var calendar = $('#calendar');
         currentDate = $.fullCalendar.moment(defaultDate);
 
+        // Detect mobile and set default view
+        var isMobile = window.innerWidth <= 768;
+        var mobileDefaultView = isMobile ? 'month' : defaultView;
+
         var calendar_options = {
             header: {
                 left: 'prev,next today',
                 center: 'title',
                 right:
-                    (resources_enabled ?
+                    (resources_enabled && !isMobile ?
                         'agendaThreeDay,agendaWeek,month,timelineMonth'
-                        : 'agendaWeek,month')
+                        : (resources_enabled ? 'month,timelineMonth' : 'month'))
             },
             allDaySlot: false,
             defaultDate: defaultDate,
-            defaultView: defaultView,
+            defaultView: mobileDefaultView,
             editable: false,
             selectable: true,
             selectHelper: true,
@@ -175,6 +179,10 @@ function init_calendar_view(jQuery, CSRF_TOKEN, defaultView, defaultDate, django
                     );
                 }
             },
+            // Touch event support for mobile
+            longPressDelay: 500,
+            eventLongPressDelay: 500,
+            selectLongPressDelay: 500,
             schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
             resourceAreaWidth: "15%"
         };
@@ -187,5 +195,14 @@ function init_calendar_view(jQuery, CSRF_TOKEN, defaultView, defaultDate, django
 
     $(document).ready(function() {
         init_calendar();
+
+        // Re-render calendar on resize to handle orientation changes
+        var resizeTimer;
+        $(window).on('resize', function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function() {
+                $('#calendar').fullCalendar('render');
+            }, 250);  // Debounce to avoid excessive re-renders
+        });
     });
 }
