@@ -65,7 +65,7 @@ ROLES = [
     {"name": "Sound Technician level 2", "standard": False},
     {"name": "Cafe (Level 1)", "standard": False},
     {"name": "Cafe (Level 2)", "standard": False},
-    {"name": "Cafe Shadowing", "standard": False, "beginner_friendly": True},
+    {"name": "Cafe Shadowing", "standard": False},
     {"name": "Cleaner", "standard": False, "beginner_friendly": True},
     {"name": "Extra Hands (no training needed)", "standard": False, "beginner_friendly": True},
     {"name": "Line Cleaner", "standard": False},
