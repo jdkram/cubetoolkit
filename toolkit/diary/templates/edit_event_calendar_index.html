@@ -113,6 +113,45 @@
       }
   }
 
+  /* ── Mobile calendar fixes ───────────────────────────────────── */
+  @media (max-width: 768px) {
+      #calendar-container {
+          flex: 1 1 100%;
+          min-width: 0;
+          overflow-x: auto;
+      }
+
+      #calendar {
+          min-width: 100%;
+          width: 100%;
+      }
+
+      /* Make calendar touch-friendly */
+      .fc-event {
+          min-height: 30px;  /* Larger touch targets */
+      }
+
+      /* Hide resource area on mobile to save space */
+      .fc-resource-area {
+          display: none;
+      }
+  }
+
+  /* Extra small screens */
+  @media (max-width: 480px) {
+      #calendar .fc-toolbar {
+          flex-direction: column;
+      }
+
+      #calendar .fc-center {
+          margin: 0.5rem 0;
+      }
+
+      #calendar .fc-right {
+          margin-top: 0.5rem;
+      }
+  }
+
   /* ── Legend swatches ─────────────────────────────────────────── */
   .key-swatch {
       display: inline-block;
