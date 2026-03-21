@@ -7,6 +7,13 @@ import django.urls
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
+# Version string — read from the VERSION file at the repo root.
+# Update VERSION and create a matching git tag when cutting a release.
+try:
+    VERSION = open(os.path.join(BASE_DIR, "VERSION")).read().strip()
+except OSError:
+    VERSION = "unknown"
+
 VENUE = {
     "name": "Cube",
     "longname": "Cube Microplex",

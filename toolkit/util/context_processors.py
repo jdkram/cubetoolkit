@@ -2,4 +2,7 @@ from django.conf import settings
 
 
 def venue(request):
-    return {"VENUE": settings.VENUE}
+    return {
+        "VENUE": settings.VENUE,
+        "VERSION": settings.VERSION,
+    }

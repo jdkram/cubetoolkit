@@ -45,7 +45,7 @@ COPY --chown=toolkit:toolkit . /site/
 
 RUN ln -s /site/containerconfig/tk_run.sh /usr/local/bin/tk_run \
      && ln -s /site/toolkit/docker_settings_ss.py /site/toolkit/settings.py \
-     && SECRET_KEY="X" /venv/bin/python3 /site/manage.py collectstatic --noinput --settings=toolkit.docker_settings_ss \
+     && SECRET_KEY="X" /venv/bin/python3 /site/manage.py collectstatic --noinput --clear --settings=toolkit.docker_settings_ss \
      && install -D --owner=toolkit --group=toolkit --directory /site/media/diary \
      && install -D --owner=toolkit --group=toolkit --directory /site/media/documents \
      && install -D --owner=toolkit --group=toolkit --directory /site/media/images \
