@@ -409,6 +409,56 @@ In development (`docker-compose.yml`), only the web app runs. In production (`do
 
 ---
 
+## Releases and Versioning
+
+The project uses **calendar versioning**: `YYYY.MM.N` — year, month, sequence number within that month (e.g. `2026.03.1`). There's no semantic meaning to the numbers; the version just records when something was shipped.
+
+### Where the version lives
+
+The canonical version string is in the [`VERSION`](../VERSION) file at the repo root. It's read by `settings_common.py` and exposed to templates via the `venue` context processor as `{{ VERSION }}`. The dev watermark on the public site (`DEV · 2026.03.1`) is populated from this.
+
+### Cutting a release
+
+1. **Update `VERSION`** to the new version string:
+
+   ```bash
+   echo "2026.04.1" > VERSION
+   ```
+
+2. **Commit it** alongside any other changes for the release:
+
+   ```bash
+   git add VERSION
+   git commit -m "chore: bump version to 2026.04.1"
+   ```
+
+3. **Tag the commit:**
+
+   ```bash
+   git tag v2026.04.1
+   ```
+
+   Tags are named pointers to a commit. The `v` prefix is convention — it keeps tags visually distinct from branch names. `git push` does **not** push tags by default.
+
+4. **Push both the commit and the tag:**
+
+   ```bash
+   git push origin sns_2026_overhaul
+   git push origin v2026.04.1
+   ```
+
+5. **Create a GitHub Release** (optional but useful for a changelog):
+
+   Go to the repo on GitHub → **Releases** → **Draft a new release** → choose the tag you just pushed → write a short summary of what changed → **Publish release**.
+
+   GitHub can auto-generate release notes from commit messages if you click "Generate release notes".
+
+### What the version does not guarantee
+
+The `VERSION` file tells you what the code claims to be. It does not prove which exact Docker image is running — that would require embedding the git commit hash at build time. For a dev site this level of tracking is enough; the watermark gives you a quick sanity check that the right version is deployed.
+
+---
+
 ## Key Concepts and Patterns
 
 **Custom QuerySet methods on models:** Rather than scattering filtering logic across views, models define named query methods. For example, `Showing.objects.public().start_in_future()` chains filters to get upcoming public showings. Look for `QuerySet` subclasses in `models.py` files.
