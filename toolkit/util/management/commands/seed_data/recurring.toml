@@ -1,0 +1,127 @@
+# Recurring event definitions for seed data.
+# These are events that run on a schedule (weekly, biweekly, monthly).
+# The seeding code will generate actual showing dates based on these templates.
+
+# ── Weekly Sunday events ────────────────────────────────────────────────
+
+[[weekly_sunday_events]]
+name = "Café Open Every Sunday 12 Noon–4pm"
+copy_summary = "The café is open every Sunday noon–4pm. Vegan food, filter coffee, good company."
+copy = "Come for a cuppa, stay for the afternoon."
+pricing = "Pay what you can"
+tags = ["cafe"]
+roles = ["Keyholder", "Cafe (Level 1)", "Cafe (Level 2)", "Cafe Shadowing"]
+room = "Café"
+hour = 12
+duration = 240
+image_url = "https://images.pexels.com/photos/376464/pexels-photo-376464.jpeg?auto=compress&cs=tinysrgb&w=800"
+
+[[weekly_sunday_events]]
+name = "Art Club"
+copy_summary = "Open workshop in art room. All welcome, no experience needed."
+copy = "Drop in, pick up some materials, make something. Art Club meets weekly and is open to everyone."
+tags = ["workshop", "exhibition"]
+roles = ["Facilitator"]
+room = "Print Room"
+hour = 12
+duration = 180
+image_url = "https://images.pexels.com/photos/102127/pexels-photo-102127.jpeg?auto=compress&cs=tinysrgb&w=800"
+
+[[weekly_sunday_events]]
+name = "Creative Writing"
+copy_summary = "A small group workshop for writers at all levels."
+copy = "Free and sociable writing group, composed of beginners and pros alike! Bring up to 1,500 words of something - fiction, non-fiction, script, poetry, whatever you're stuck on."
+tags = ["workshop", "meeting"]
+roles = ["Facilitator"]
+room = "Meeting"
+hour = 14
+duration = 120
+image_url = "https://images.pexels.com/photos/733856/pexels-photo-733856.jpeg?auto=compress&cs=tinysrgb&w=800"
+
+# ── Biweekly Sunday events ─────────────────────────────────────────────
+
+[[biweekly_sunday_events]]
+name = "Knitting Circle"
+copy_summary = "Weekly knitting and crafts drop-in. All levels welcome."
+copy = "Bring your needles, bring your wool, bring your half-finished scarf from 2019. No agenda, just knitting, chat, and tea."
+tags = ["workshop"]
+roles = ["Keyholder", "Extra Hands (no training needed)"]
+room = "Venue Space"
+hour = 14
+duration = 120
+image_url = "https://images.pexels.com/photos/4614227/pexels-photo-4614227.jpeg?auto=compress&cs=tinysrgb&w=800"
+
+# ── Monthly events ───────────────────────────────────────────────────
+
+# Monthly events use occurrence field: "first", "second", "third", "fourth", "last"
+# weekday: 0=Monday, 1=Tuesday, 2=Wednesday, 3=Thursday, 4=Friday, 5=Saturday, 6=Sunday
+
+[[monthly_events]]
+name = "Family Film Club"
+weekday = 5
+occurrence = "last"
+copy_summary = "A family film every last Saturday of the month. Free. Come be surprised by what we chose."
+copy = "A family/kids film every last Saturday of the month! Come be surprised by what we chose. Free entry."
+pricing = "Free"
+tags = ["film", "free"]
+roles = ["Keyholder", "Projectionist - MP4", "Box Office - Admission Tickets", "Bar Staff - Shift 1"]
+room = "Cinema"
+hour = 11
+duration = 120
+image_url = "https://images.pexels.com/photos/33129/popcorn-movie-party-entertainment.jpg?auto=compress&cs=tinysrgb&w=800"
+
+[[monthly_events]]
+name = "Friday Cleaning Club & Brunch"
+weekday = 4
+occurrence = "second"
+copy_summary = "Monthly cleaning morning followed by brunch for all volunteers."
+copy = "The building doesn't clean itself. Join us from 10am for a cleaning session, then stay for brunch from noon. A great way to give back and meet people at the same time."
+pricing = "Free"
+tags = ["volunteer"]
+roles = ["Keyholder", "Cleaner", "Cleaner", "Cleaner", "Cafe (Level 1)"]
+room = "Venue Space"
+hour = 10
+duration = 240
+image_url = "https://images.pexels.com/photos/4239091/pexels-photo-4239091.jpeg?auto=compress&cs=tinysrgb&w=800"
+
+[[monthly_events]]
+name = "Volunteer Induction"
+weekday = 6
+occurrence = "first"
+copy_summary = "New to S&S? Come along to our volunteer induction."
+copy = "Our regular volunteer induction - a friendly introduction to Star and Shadow, how we run things, what roles are available, and how to get started. Everyone who wants to volunteer should come to one of these first."
+pricing = "Free"
+tags = ["induction", "volunteer"]
+roles = ["Inductor - 1 (trained)", "Inductor - 2 (shadowing)", "Trainee (inducted)"]
+room = "Meeting"
+hour = 18
+duration = 120
+image_url = "https://images.pexels.com/photos/3184418/pexels-photo-3184418.jpeg?auto=compress&cs=tinysrgb&w=800"
+
+[[monthly_events]]
+name = "Volunteer Hangout"
+weekday = 6
+occurrence = "third"
+copy_summary = "Monthly volunteer social. New faces especially welcome."
+copy = "No agenda. Just bar, us, and whoever turns up. If you've been meaning to come along for ages, this is the night."
+pricing = "Free"
+tags = ["volunteer", "party"]
+roles = ["Keyholder", "Bar Staff - Shift 1"]
+room = "Venue Space"
+hour = 19
+duration = 180
+image_url = "https://images.pexels.com/photos/3171837/pexels-photo-3171837.jpeg?auto=compress&cs=tinysrgb&w=800"
+
+[[monthly_events]]
+name = "Programme Development Meeting"
+weekday = 0
+occurrence = "second"
+copy_summary = "Monthly open pitch session. Bring your event idea."
+copy = "Five minutes per proposal. Feedback from the room. No idea too small or too strange."
+pricing = "Free"
+tags = ["meeting"]
+roles = ["Facilitator", "Minute taker"]
+room = "Meeting"
+hour = 19
+duration = 120
+image_url = "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=800"

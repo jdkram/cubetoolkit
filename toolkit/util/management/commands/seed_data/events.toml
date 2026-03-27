@@ -1,0 +1,349 @@
+# One-off events for seed data.
+# These are special events that don't fit the recurring pattern:
+# - Flag test events (cancelled, unconfirmed, discounted, outside hire)
+# - Special volunteer events (pen sacrifice, inventory crisis, etc.)
+# - Core S&S events (community kitchen, hangouts, inductions)
+
+# Note: room is specified directly in each event (no separate EVENT_ROOMS dict).
+# day_offset and hour are relative to the seed run date.
+
+# ── Core S&S events ───────────────────────────────────────────────────────────
+
+[[events]]
+name = "Community Kitchen Special: Shared Recipes"
+copy_summary = "Come share recipes, whatever you've been enjoying lately that would make a great addition to our roster of vegan dishes."
+copy = """Building will be open for other vols - workshop, print room, cinema - come along and have a go at whatever takes your fancy. We'll be in cafe cooking up a storm, and we'd love you to join us. Bring along any recipes you've been enjoying lately that would make a great addition to our roster of vegan dishes. Whether it's a family favourite, a recent discovery, or something you've whipped up in your kitchen experiments, we want to hear about it! This is a fantastic opportunity to share culinary inspiration and contribute to our community kitchen. Plus, you'll get to enjoy some delicious food and connect with fellow volunteers. See you there!"""
+tags = ["cafe", "workshop"]
+private = false
+rota_notes = """bring your lovely selves and recipes and let's eat stuff from the freezer that's been in there too long
+ _____________________
+< I like mooooooovies >
+---------------------
+        \\   ^__^
+         \\  (oo)\\_______
+            (__)\\       )\\/\\
+                ||----w |
+                ||     ||"""
+roles = ["Keyholder", "Cafe (Level 1)", "Extra Hands (no training needed)"]
+day_offset = 3
+hour = 14
+image_url = "https://images.pexels.com/photos/1267320/pexels-photo-1267320.jpeg?auto=compress&cs=tinysrgb&w=800"
+room = "Café"
+
+[[events]]
+name = "Volunteer Hangout"
+copy_summary = "A chill get together for all volunteers, perfect if you are new or experienced."
+copy = "No agenda, just volunteers getting to know each other over a drink. New volunteers especially welcome - this is a great way to meet people and find out what's going on."
+tags = ["volunteer", "party"]
+private = false
+rota_notes = "A chill get together for all volunteers, perfect if you are new or experienced. Come welcome / ritually haze new folks, veterans."
+roles = ["Keyholder", "Bar Staff - Shift 1"]
+day_offset = 5
+hour = 19
+image_url = "https://images.pexels.com/photos/3171837/pexels-photo-3171837.jpeg?auto=compress&cs=tinysrgb&w=800"
+room = "Venue Space"
+
+[[events]]
+name = "Volunteer Induction"
+copy_summary = "New to S&S? Come along to our volunteer induction."
+copy = "Our regular volunteer induction - a friendly introduction to Star and Shadow, how we run things, what roles are available, and how to get started. Everyone who wants to volunteer should come to one of these first."
+tags = ["induction", "volunteer"]
+private = false
+rota_notes = """Please feel free to join us all and share your experiences of volunteering at Star and Shadow. Running inductions requires some pretty thorough knowledge, but if you're interested in becoming an inductor down the line, coming along and waxing lyrical about things that matter to you most is a phenomenal contribution."""
+roles = ["Inductor - 1 (trained)", "Inductor - 2 (shadowing)"]
+day_offset = 7
+hour = 18
+image_url = "https://images.pexels.com/photos/3184418/pexels-photo-3184418.jpeg?auto=compress&cs=tinysrgb&w=800"
+room = "Meeting"
+
+[[events]]
+name = "Keyholder Training"
+copy_summary = "Training for proposed and agreed keyholders."
+copy = "Keyholder training for those who have been proposed and agreed as keyholders but have not yet had training. Existing keyholders welcome if you want a refresh."
+tags = ["training-for-volunteers"]
+private = true
+hide_in_programme = true
+rota_notes = """Keyholder Training for those who have been proposed and agreed as Keyholders but have not yet had training. (Or if any existing keyholder wants a refresh then that is good too!)"""
+roles = ["Keyholder", "Extra Hands (no training needed)"]
+day_offset = 10
+hour = 11
+image_url = "https://images.pexels.com/photos/279810/pexels-photo-279810.jpeg?auto=compress&cs=tinysrgb&w=800"
+room = "Meeting"
+
+[[events]]
+name = "Seeking a Friend for the End of the World"
+copy_summary = "2012 comedy-drama. Dodge embarks on a road trip as an asteroid threatens Earth. Dir. Lorene Scafaria. 101 min."
+copy = "As a massive asteroid nears Earth, a man finds himself alone after his wife leaves him. He and his neighbour take a road trip across America to find his high school sweetheart. Funny, sweet, and oddly comforting."
+film_information = "Dir. Lorene Scafaria, USA 2012, 101 min, 15"
+tags = ["film"]
+private = false
+rota_notes = "Doors 6:30pm. Film 7pm. Projectionist set up by 6pm. The apostrophe thing's fixed-that's genuinely nice."
+roles = ["Keyholder", "Projectionist - DCP", "Box Office - Admission Tickets", "Bar Staff - Shift 1", "Usher - Fire Trained"]
+day_offset = 12
+hour = 19
+image_url = "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=800"
+room = "Cinema"
+
+[[events]]
+name = "Friday Cleaning Club and Brunch Social"
+copy_summary = "Monthly cleaning morning followed by brunch for all volunteers."
+copy = "The building doesn't clean itself. Join us from 10am for a cleaning session, then stay for brunch from noon. A great way to give back and meet people at the same time."
+tags = ["volunteer", "cafe"]
+private = false
+rota_notes = "Cleaning 10am, brunch noon. Cafe open 10:00 til 1:30pm. \nWowee I sure love these apostrophes '''''''''''''''''''"
+roles = ["Keyholder", "Cleaner", "Cafe (Level 1)", "Cafe Shadowing"]
+day_offset = 14
+hour = 10
+image_url = "https://images.pexels.com/photos/4239091/pexels-photo-4239091.jpeg?auto=compress&cs=tinysrgb&w=800"
+room = "Venue Space"
+
+[[events]]
+name = "Family Film Club"
+copy_summary = "A family film every last Saturday of the month. Free. Come be surprised by what we chose."
+copy = "A family/kids film every last Saturday of the month! Come be surprised by what we chose. Free entry."
+pricing = "Free"
+tags = ["film", "free"]
+private = false
+rota_notes = "Doors 10:30am. Film 11am. Projectionist set up by 10am. Bar open before and after. Closes ~1pm."
+roles = ["Keyholder", "Projectionist - MP4", "Box Office - Admission Tickets", "Bar Staff - Shift 1"]
+day_offset = 19
+hour = 13
+image_url = "https://images.pexels.com/photos/33129/popcorn-movie-party-entertainment.jpg?auto=compress&cs=tinysrgb&w=800"
+room = "Cinema"
+
+[[events]]
+name = "Starcade"
+copy_summary = "Our video game afternoon is back. Come play classic games on original hardware in venue space. Free."
+copy = """STARCADE has spontaneously downloaded and is roaming the halls of Star & Shadow, demanding you come along — or risk infection by its digital virus! Our video game afternoon is back! Come along and play classic games in our venue space. You can also donate consoles, games, and controllers to STARCADE inventory — or even borrow from what we have (just bring returns to the next event). Think of it as a gaming library... or a Blockbuster Video reborn. We'll be filling the venue and bar with as many consoles and games as possible, sticking to original hardware — because that's how STARCADE likes it."""
+pricing = "Free"
+tags = ["party", "free"]
+private = false
+rota_notes = "Set up from 3pm. Fill venue space and bar with consoles — original hardware only. Bar open. Doors 4pm."
+roles = ["Keyholder", "Extra Hands (no training needed)", "Extra Hands (no training needed)", "Bar Staff - Shift 1"]
+day_offset = 21
+hour = 16
+image_url = "https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg?auto=compress&cs=tinysrgb&w=800"
+room = "Venue Space"
+
+[[events]]
+name = "Programme Development Meeting"
+copy_summary = "Meeting to discuss upcoming programme proposals. Open to all."
+copy = "Monthly meeting open to all volunteers and members of public interested in programming. Bring proposals, costings, and ideas."
+tags = ["meeting"]
+private = false
+rota_notes = "Agenda circulated Friday. Please review proposals beforehand."
+roles = ["Facilitator", "Minute taker"]
+day_offset = 25
+hour = 18
+image_url = "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=800"
+room = "Meeting"
+
+[[events]]
+name = "Cafe Induction"
+copy_summary = "Training on how to use coffee machine and run cafe."
+copy = "Essential training for anyone wanting to volunteer in cafe. Covers food hygiene, coffee machine operation, and till use."
+tags = ["induction", "cafe", "training-for-volunteers"]
+private = true
+hide_in_programme = true
+rota_notes = "Please read the cafe handbook before attending."
+roles = ["Inductor - 1 (trained)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)"]
+day_offset = 26
+hour = 11
+image_url = "https://images.pexels.com/photos/1307698/pexels-photo-1307698.jpeg?auto=compress&cs=tinysrgb&w=800"
+room = "Café"
+
+[[events]]
+name = "It's Such a Beautiful Day + ME"
+copy_summary = "Don Hertzfeldt double bill. Strange, beautiful, and genuinely moving."
+copy = "A rare chance to see Don Hertzfeldt's animated features on big screen. It's Such a Beautiful Day (2012) and ME (2022). Warning: may cause existential feelings in a good way."
+film_information = "Dir. Don Hertzfeldt, USA 2012/2022"
+tags = ["film"]
+private = false
+rota_notes = """Two films, short break between. Projectionist: check format carefully - the ME print is DCP, Beautiful Day is MP4."""
+roles = ["Keyholder", "Projectionist - DCP", "Projectionist - MP4", "Box Office - Admission Tickets", "Bar Staff - Shift 1", "Usher - Fire Trained"]
+day_offset = 28
+hour = 19
+image_url = "https://images.pexels.com/photos/269140/pexels-photo-269140.jpeg?auto=compress&cs=tinysrgb&w=800"
+room = "Cinema"
+
+# ── Special volunteer events (quirky S&S traditions) ─────────────────────────
+
+[[events]]
+name = "The Annual Ritual Sacrifice of Pens: A Volunteer Ceremony"
+copy_summary = "Where do all our pens go? Let's investigate through interpretive ritual & ancient summoning."
+copy = """For years, S&S volunteers have wondered: where do all our pens disappear? Tonight, we gather to perform ancient & sacred Ritual Sacrifice - a solemn ceremony combining scavenger hunt, interpretive dance, & mysterious incantations to either return our missing pens or appease pen-stealing spirits. Participants must bring one treasured pen to offer. No writing utensils will survive evening."""
+pricing = "Free / your dignity"
+tags = ["volunteer", "performance", "meeting"]
+private = true
+hide_in_programme = true
+rota_notes = "Volunteer-only ritual ceremony. We can't overstate how important it is that volunteers bring a pen they're willing to lose forever."
+roles = ["Keyholder", "Sound Technician level 1", "Facilitator"]
+day_offset = 5
+hour = 20
+image_url = "https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=800"
+room = "Venue Space"
+
+[[events]]
+name = "Four Hours of a Man Juggling Jelly While Weeping"
+copy_summary = "Wordless. Jiggling. Haunting."
+copy = "A visionary work by reclusive avant-garde artist Klaus Gelatino. For four uninterrupted hours, a solitary figure stands centre frame juggling cubes of translucent jelly, made all the more perilous by the growing pool of tears accumulating around him. No plot, no dialogue, just the relentless geometry of sorrow and gelatine."
+film_information = "Dir. Klaus Gelatino, Switzerland 2024, 240 min, no cert"
+tags = ["film", "exhibition"]
+private = false
+rota_notes = """Doors 4pm. Film 4:30pm-8:30pm. Toilet breaks discouraged but reluctantly permitted. Box office should be prepared to discuss refund policy (spoiler: no). \nhey - anyone mind if i bring ingredients for jelly shots? \n we're in process of negotiating a Q&A with director, provided he eats his way out of the custard tomb that is his current art piece. Please watch this space"""
+roles = ["Keyholder", "Projectionist - MP4", "Box Office - Admission Tickets", "Bar Staff - Shift 1", "Bar Staff - Shift 2", "Usher - Fire Trained"]
+day_offset = 10
+hour = 16
+image_path = "images/klaus the juggler.jpeg"
+room = "Cinema"
+
+[[events]]
+name = "The Badger Orchestra: An Evening of Striped Symphonies"
+copy_summary = "Five badgers. Seventeen instruments. Zero rehearsal. Infinite chaos."
+copy = """Fresh from their sold-out European tour, The Badger Orchestra brings their unique blend of aggressive territorial behavior & accidental musicality to S&S. The sounds have been variously described as 'haunting,' 'feral,' 'somehow melancholic,' & 'are you sure those are badgers?'"""
+pricing = "£8/£5"
+tags = ["music", "performance", "party"]
+private = false
+rota_notes = """Badger gig, so can't stress enough how important it is that we keep door access secure. Badgers are excellent at escaping & also smell quite strong. sound tech might be a challenging setup."""
+roles = ["Keyholder", "Sound Technician level 1", "Sound Technician level 2", "Bar Staff - Shift 1", "Bar Staff - Shift 2", "Box Office - Admission Tickets", "Usher - Fire Trained"]
+day_offset = 15
+hour = 19
+image_url = "https://images.pexels.com/photos/3807517/pexels-photo-3807517.jpeg?auto=compress&cs=tinysrgb&w=800"
+room = "Venue Space"
+
+[[events]]
+name = "The Impossible Film-Athon: 10 Simultaneous Cinema Screenings"
+copy_summary = "Ten films. One screen. Eyes wedged open. Narrative coherence shmoherence."
+copy = """Inspired by the fragmented postmodern consciousness of modern life, our programmers have attempted the impossible: a ten-film parallel marathon. All films play simultaneously on a single screen via split-diopter lens technology and pure spite. You will see: a kung-fu film, a French New Wave piece, Found Footage horror, documentary realism, experimental animation, a period drama, a heist thriller, Nordic noir, a Bollywood spectacular, & something our programmers refuse to categorize that involves a lot of thin ham. Bring neck support, your own eyelid props, and your willingness to question why cinema exists."""
+film_information = "A collaborative fever dream, 8 hours, no coherent rating system"
+tags = ["film", "exhibition", "workshop"]
+private = false
+rota_notes = """Simultaneous film convergence! Doors at noon, screenings 1pm-9pm. Projectionist: you're a hero & we can't thank you enough. Some attendees may experience mild synesthesia, probs a good idea to have a first aider to hand here"""
+roles = ["Keyholder", "Projectionist - DCP", "Projectionist - MP4", "Box Office - Admission Tickets", "Bar Staff - Shift 1", "Bar Staff - Shift 2", "Usher - Fire Trained", "Audio Visual Technician"]
+day_offset = 20
+hour = 13
+image_url = "https://images.pexels.com/photos/7974/pexels-photo.jpeg?auto=compress&cs=tinysrgb&w=800"
+room = "Cinema"
+
+[[events]]
+name = "The Great Inventory Crisis: Volunteer Spirits Appreciation Night"
+copy_summary = "We have too much stock. You have a liver. Let's introduce them."
+copy = """S&S's bar inventory has reached critical levels. Someone ordered seventeen bottles of absinthe in 2019 & we've learned it doesn't expire, and may be gaining sentience. Join us for an evening devoted to singular mission of reducing our stock to manageable levels. Volunteers only as we can't have the public witness our desperation & strategic dedication to cocktails nobody wants. Features: mystery spirit roulette, experimental mixing, & moral satisfaction of preventing waste"""
+pricing = "Free (until the next day)"
+tags = ["volunteer", "party"]
+private = true
+hide_in_programme = true
+rota_notes = """currently plumbed in kegs off limits - please do a stock take before the event and put things aside, no point doing it after as you'll all be hammered - Jerome \n\n and please drink responsibly, but also lots -- fulgencio"""
+roles = ["Keyholder", "Bar Staff - Shift 1", "Bar Staff - Shift 2"]
+day_offset = 6
+hour = 18
+image_url = "https://images.pexels.com/photos/3407814/pexels-photo-3407814.jpeg?auto=compress&cs=tinysrgb&w=800"
+room = "Venue Space"
+
+[[events]]
+name = "The Freezer Expedition: A Journey Into the Unknown"
+copy_summary = "What's in the back? We don't know, but we're going to find out."
+copy = """The back of our catering freezer hasn't been catalogued since approximately 2015. Behind the labelled containers of ice lollies and what is statistically likely to be daal, something waits. Is it treasure? Is it 2kg of coriander that won't have survived being frozen? Tonight, a selected group of brave volunteers will undertake an archaeological expedition into the depths of our freezer unit to discover what culinary relics remain"""
+pricing = "Free (frostbite treatment not covered)"
+tags = ["volunteer", "workshop"]
+private = true
+hide_in_programme = true
+rota_notes = """Freezer archaeology expedition! Bring thick gloves & emotional resilience. Put the hot water on for a cuppa _before_ you start as your hands will be too numb after."""
+roles = ["Keyholder", "Facilitator"]
+day_offset = 8
+hour = 19
+image_url = "https://images.pexels.com/photos/5850537/pexels-photo-5850537.jpeg?auto=compress&cs=tinysrgb&w=800"
+room = "Café"
+
+[[events]]
+name = "The Loft Haunting: Negotiation & Possibly Exorcism"
+copy_summary = "We have a ghost. It's inconvenient. Come help us either evict it or reach detente."
+copy = """For months now, S&S vols have reported strange phenomena in the loft: inexplicable drafts, items rearranged, the sound of something that might be sobbing, rats, or ventiliation system playing up. After careful consideration, we've concluded that the most likely explanation is a poltergeist. Rather than immediately attempting violent supernatural removal, we're trying a more collaborative approach: come join us in a negotiation of reasonable cohabition terms, and when that fails, a good ol' fashioned exorcism. Come armed with: sage, skepticism, & a willingness to communicate with the unknown."""
+pricing = "£5/£3 (proceeds go toward better heating)"
+tags = ["workshop", "performance", "meeting"]
+private = false
+rota_notes = """Doors 7pm, event 7:30pm. Keyholder: loft access needed, please bring torch. Bar open throughout. Have a first aider on standby (not for the ghost, just in general)."""
+roles = ["Keyholder", "Facilitator", "Audio Visual Technician", "Bar Staff - Shift 1", "Usher - Fire Trained"]
+day_offset = 11
+hour = 19
+image_url = "https://images.pexels.com/photos/1303081/pexels-photo-1303081.jpeg?auto=compress&cs=tinysrgb&w=800"
+room = "Venue Space"
+
+# ── Flag test events (test specific UI states) ───────────────────────────────
+
+[[events]]
+name = "Certified Copy (CANCELLED)"
+copy_summary = "Abbas Kiarostami's knotty romantic puzzle. Screening cancelled."
+copy = "A writer and a woman spend the day together in Tuscany. Kiarostami gives nothing away."
+film_information = "Dir. Abbas Kiarostami, France/Italy 2010, 106 min, PG"
+pricing = "£7/£5"
+tags = ["film"]
+private = false
+cancelled = true
+confirmed = true
+roles = ["Keyholder", "Projectionist - DCP", "Box Office - Admission Tickets", "Bar Staff - Shift 1", "Usher - Fire Trained"]
+day_offset = 42
+hour = 19
+image_url = "https://images.pexels.com/photos/1659438/pexels-photo-1659438.jpeg?auto=compress&cs=tinysrgb&w=800"
+room = "Cinema"
+
+[[events]]
+name = "Outside Hire: Private Party"
+copy_summary = "Venue Space hired for a private event."
+copy = "Venue Space booked for a private birthday party. Not open to the public."
+pricing = ""
+tags = ["outside-hire"]
+private = false
+outside_hire = true
+booked_by = "External Booker"
+roles = ["Keyholder"]
+day_offset = 55
+hour = 18
+confirmed = true
+image_url = "https://images.pexels.com/photos/3171837/pexels-photo-3171837.jpeg?auto=compress&cs=tinysrgb&w=800"
+room = "Venue Space"
+
+[[events]]
+name = "Portrait of a Lady on Fire (Unconfirmed)"
+copy_summary = "Céline Sciamma's exquisite 18th-century love story. Date pencilled in."
+copy = "A painter is commissioned to produce a wedding portrait of a young woman who refuses to pose. Dir. Céline Sciamma, France 2019, 122 min, 15."
+film_information = "Dir. Céline Sciamma, France 2019, 122 min, 15"
+pricing = "£7/£5"
+tags = ["film"]
+private = false
+confirmed = false
+roles = ["Keyholder", "Projectionist - DCP", "Box Office - Admission Tickets", "Bar Staff - Shift 1", "Usher - Fire Trained"]
+day_offset = 63
+hour = 19
+image_url = "https://images.pexels.com/photos/269140/pexels-photo-269140.jpeg?auto=compress&cs=tinysrgb&w=800"
+room = "Cinema"
+
+[[events]]
+name = "Toni Erdmann (Discounted Preview)"
+copy_summary = "Maren Ade's three-hour comedy about a father who won't stop."
+copy = "A German father, concerned about his estranged daughter, follows her to Bucharest and inserts himself into her corporate life. Dir. Maren Ade, Germany 2016, 162 min, 15."
+film_information = "Dir. Maren Ade, Germany 2016, 162 min, 15"
+pricing = "£5 preview price"
+tags = ["film"]
+private = false
+confirmed = true
+discounted = true
+roles = ["Keyholder", "Projectionist - DCP", "Box Office - Admission Tickets", "Bar Staff - Shift 1", "Usher - Fire Trained"]
+day_offset = 77
+hour = 18
+image_url = "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=800"
+room = "Cinema"
+
+[[events]]
+name = "Private: Safeguarding Training"
+copy_summary = "Internal safeguarding training for keyholders and facilitators."
+copy = "Mandatory training for anyone taking on keyholder or facilitator roles. Led by safeguarding officer. Not open to the public."
+tags = ["training-for-volunteers"]
+private = true
+hide_in_programme = true
+confirmed = true
+roles = ["Keyholder", "Facilitator"]
+day_offset = 90
+hour = 10
+image_url = "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=800"
+room = "Meeting"
