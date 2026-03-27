@@ -1,0 +1,18 @@
+# Development overrides — applied automatically by docker compose.
+# Bind-mounts source directories so Python and template changes take effect
+# without a full image rebuild. Gunicorn --reload watches for Python changes.
+# Templates reload per-request already (TEMPLATES debug=True in docker_settings_ss.py).
+#
+# Usage: docker compose up  (override is applied automatically)
+# To rebuild from scratch: docker compose up --build
+services:
+  toolkit:
+    environment:
+      GUNICORN_RELOAD: "1"
+    volumes:
+      - type: bind
+        source: ./toolkit
+        target: /site/toolkit
+      - type: bind
+        source: ./star_and_shadow_templates
+        target: /site/star_and_shadow_templates

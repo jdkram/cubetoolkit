@@ -19,7 +19,12 @@ case "$COMMAND" in
     gunicorn)
         echo "Running database migrations"
         /venv/bin/python3 /site/manage.py migrate
-        exec /venv/bin/gunicorn wsgi --bind 0.0.0.0:8000 --chdir /site
+        GUNICORN_EXTRA_ARGS=()
+        if [[ "${GUNICORN_RELOAD:-}" == "1" ]]; then
+            echo "Hot-reload enabled (development mode)"
+            GUNICORN_EXTRA_ARGS+=("--reload")
+        fi
+        exec /venv/bin/gunicorn wsgi --bind 0.0.0.0:8000 --chdir /site "${GUNICORN_EXTRA_ARGS[@]}"
         ;;
     mailerd)
         exec /venv/bin/python3 /site/manage.py mailerd
