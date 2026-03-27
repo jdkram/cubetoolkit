@@ -1,0 +1,183 @@
+# Roles used on the rota. standard=true roles appear by default on new event templates.
+# Badge flags: keyholder_only, beginner_friendly, not_wheelchair_accessible.
+# Add new roles here — no code changes needed.
+
+[[roles]]
+name = "Keyholder"
+standard = true
+keyholder_only = true
+
+[[roles]]
+name = "Programmer"
+standard = true
+# rota scheduling label; diary edit permission is separate (Permissions section)
+
+[[roles]]
+name = "Projectionist - DCP"
+standard = true
+
+[[roles]]
+name = "Projectionist - MP4"
+standard = false
+
+[[roles]]
+name = "Projectionist - Video/DVD"
+standard = false
+
+[[roles]]
+name = "Projectionist (trained shadowing)"
+standard = false
+beginner_friendly = true
+
+[[roles]]
+name = "Bar Staff - Shift 1"
+standard = true
+not_wheelchair_accessible = true
+
+[[roles]]
+name = "Bar Staff - Shift 2"
+standard = false
+not_wheelchair_accessible = true
+
+[[roles]]
+name = "Bar Shadow"
+standard = false
+not_wheelchair_accessible = true
+beginner_friendly = true
+
+[[roles]]
+name = "Box Office - Admission Tickets"
+standard = true
+beginner_friendly = true
+
+[[roles]]
+name = "Box Office - Greeter"
+standard = false
+beginner_friendly = true
+
+[[roles]]
+name = "Box Office - Memberships and Merch"
+standard = false
+
+[[roles]]
+name = "Usher - Fire Trained"
+standard = true
+beginner_friendly = true
+
+[[roles]]
+name = "Facilitator"
+standard = true
+
+[[roles]]
+name = "Facilitator Shadow"
+standard = false
+beginner_friendly = true
+
+[[roles]]
+name = "Minute taker"
+standard = false
+
+[[roles]]
+name = "Inductor - 1 (trained)"
+standard = false
+
+[[roles]]
+name = "Inductor - 2 (shadowing)"
+standard = false
+
+[[roles]]
+name = "Trainee (inducted)"
+standard = false
+
+[[roles]]
+name = "Audio Visual Technician"
+standard = false
+
+[[roles]]
+name = "Sound Technician level 1"
+standard = false
+
+[[roles]]
+name = "Sound Technician level 2"
+standard = false
+
+[[roles]]
+name = "Cafe (Level 1)"
+standard = false
+
+[[roles]]
+name = "Cafe (Level 2)"
+standard = false
+
+[[roles]]
+name = "Cafe Shadowing"
+standard = false
+
+[[roles]]
+name = "Cleaner"
+standard = false
+beginner_friendly = true
+
+[[roles]]
+name = "Extra Hands (no training needed)"
+standard = false
+beginner_friendly = true
+
+[[roles]]
+name = "Line Cleaner"
+standard = false
+
+[[roles]]
+name = "Tech (Shadowing)"
+standard = false
+beginner_friendly = true
+
+# Community / creative roles — not operational, but real S&S volunteer contributions
+
+[[roles]]
+name = "Artist"
+standard = false
+
+[[roles]]
+name = "Biscuit Procurement Officer"
+standard = false
+
+[[roles]]
+name = "Cable Whisperer"
+standard = false
+
+[[roles]]
+name = "Cat Herder"
+standard = false
+
+[[roles]]
+name = "Chaos Coordinator"
+standard = false
+
+[[roles]]
+name = "Fixer"
+standard = false
+
+[[roles]]
+name = "Glitter Technician"
+standard = false
+
+[[roles]]
+name = "Plate Spinner"
+standard = false
+
+[[roles]]
+name = "Poster Wrangler"
+standard = false
+
+[[roles]]
+name = "Snack Lass"
+standard = false
+
+[[roles]]
+name = "Unofficial Historian"
+standard = false
+
+[[roles]]
+name = "Zine Distro"
+standard = false

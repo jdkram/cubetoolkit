@@ -1,0 +1,485 @@
+# Curated film pools for recurring Sunday, Thursday, and Family Film Club screenings.
+# These films have full metadata: copy, copy_summary, film_information, pricing, tags, image_url.
+# The seeding code will cycle through these pools for weekly screenings.
+
+# ── Sunday films (punk/queer/experimental) ───────────────────────────────
+
+[[sunday_films]]
+name = "Seacoal"
+copy_summary = "Survival on the margins: seacoaling community of northeast England, filmed by Amber Collective in their characteristic blend of documentary and drama."
+copy = "Betty and her daughter Corinna are introduced to the harsh seacoaling way of life. Despite exploitation, run-ins with dole snoops, and a hostile council, their lives retain a kind of anarchic romance reflected in the film's lyrical style."
+film_information = "Dir. Amber Collective, GB 1985"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/ptlBtpecd39gYVDNbMpVIg7gYsd.jpg"
+
+[[sunday_films]]
+name = "Born in Flames"
+copy_summary = "Radical feminist sci-fi set in a near-future New York. Diverse coalitions of women organise as promised equality fails to materialise. DIY filmmaking at its most politically urgent."
+copy = "In near-future New York, ten years after the social-democratic war of liberation, diverse groups of women organise a feminist uprising as equality remains unfulfilled."
+film_information = "Dir. Lizzie Borden, US 1983"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/uV8R8B8m5rp1NFvuodWk4ZuCXY0.jpg"
+
+[[sunday_films]]
+name = "Handsworth Songs"
+copy_summary = "The Black Audio Film Collective examines the 1985 Handsworth riots. A landmark of British experimental documentary: archival footage, newsreel, and home movies woven into a meditation on race and decline."
+copy = "The Black Audio Film Collective's acclaimed essay film examines the 1985 race riots in Handsworth and London. Archival photographs, newsreel clips, and home movie footage are woven into a meditation on social and cultural oppression."
+film_information = "Dir. Black Audio Film Collective, GB 1986"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/xyw4V9MbUGujMunBj4latxLSVya.jpg"
+
+[[sunday_films]]
+name = "Titane"
+copy_summary = "Julia Ducournau's Palme d'Or-winning body horror. A woman with a metal plate in her skull and an unsettling relationship with cars. Visceral, uncompromising, extraordinary."
+copy = "A woman with a metal plate in her head from a childhood car accident embarks on a bizarre journey, bringing her into contact with a firefighter who has been reunited with his missing son after 10 years."
+film_information = "Dir. Julia Ducournau, FR 2021"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/mBlpouG3gqB8WLdP65LCOXb3jFb.jpg"
+
+[[sunday_films]]
+name = "News from Home"
+copy_summary = "Chantal Akerman reads aloud letters from her mother in Belgium while the camera observes New York. Quiet, accumulative, devastating."
+copy = "Impersonal and beautiful images of life in New York are combined with letters from her loving but manipulative mother, read by Akerman herself."
+film_information = "Dir. Chantal Akerman, BE / FR 1977"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/nWqWaEySdo8hAKJsd1IS9mdnZpF.jpg"
+
+[[sunday_films]]
+name = "Sambizanga"
+copy_summary = "An Angolan woman searches for her imprisoned husband, a liberation movement member arrested by Portuguese secret police. A founding text of African revolutionary cinema."
+copy = "Domingos is a member of an African liberation movement, arrested by Portuguese secret police. His wife goes from prison to prison, trying to find out where he is."
+film_information = "Dir. Sarah Maldoror, AO / FR 1972"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/isnDnTWjOE9EJqsKXvCwZQrIkeE.jpg"
+
+[[sunday_films]]
+name = "The Arbor"
+copy_summary = "Clio Barnard's formally radical portrait of Andrea Dunbar, Bradford playwright who died aged 29, and her daughter Lorraine. Actors lip-sync to real interviews. Extraordinary and heartbreaking."
+copy = "The lives of Bradford playwright Andrea Dunbar and her daughter Lorraine, in the 30 years since the 18-year-old Andrea wrote a play about growing up on Buttershaw Estate."
+film_information = "Dir. Clio Barnard, GB 2010"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/1ILtGNSUTyrZi8LAco4zkMWXM3q.jpg"
+
+[[sunday_films]]
+name = "Shirkers"
+copy_summary = "In 1992, a teenager shot Singapore's first indie road movie. Her mentor vanished with all the footage. Twenty years on, film is recovered. An extraordinary documentary about loss, memory, and creative theft."
+copy = "In 1992, teenager Sandi Tan shot Singapore's first indie road movie with her enigmatic American mentor Georges, who then vanished with all the footage. Twenty years later, film is recovered."
+film_information = "Dir. Sandi Tan, SG / US 2018"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/spd1fZNePSQFRhNam66jx3ZMoxF.jpg"
+
+[[sunday_films]]
+name = "Under the Skin"
+copy_summary = "Scarlett Johansson drives through Glasgow picking up men. Jonathan Glazer's hypnotic, alien, and visually stunning sci-fi. Shot partly with hidden cameras. Unlike anything else."
+copy = "A seductive stranger prowls the streets of Glasgow in search of prey: unsuspecting men who fall under her spell."
+film_information = "Dir. Jonathan Glazer, GB 2013"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/55wmcXJIDYITr7JDijJTdvwSaAv.jpg"
+
+[[sunday_films]]
+name = "Black Girl"
+copy_summary = "Ousmane Sembene's debut feature: a Senegalese woman in the south of France discovers that her dream of a better life is a gilded trap. The foundational text of sub-Saharan African cinema."
+copy = "Eager to find a better life abroad, a Senegalese woman becomes a governess to a family in southern France, suffering from discrimination and marginalisation."
+film_information = "Dir. Ousmane Sembene, SN / FR 1966"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/hYYAk9I9KkscSr8DC30KyDjzsVu.jpg"
+
+[[sunday_films]]
+name = "A Girl Walks Home Alone at Night"
+copy_summary = "The first Iranian vampire western. Shot in California, in Farsi, in luminous black and white. A skateboarding vampire stalks a dying town. Completely its own thing."
+copy = "In an Iranian ghost-town Bad City, townspeople are unaware they are being stalked by a lonesome vampire."
+film_information = "Dir. Ana Lily Amirpour, US / IR 2014"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/cd2rCE1nun7CESjBI8PGNEof1tb.jpg"
+
+[[sunday_films]]
+name = "The Last Angel of History"
+copy_summary = "John Akomfrah's essay film on Afrofuturism: tracing the hidden connections between Pan-African culture, sci-fi, techno, and the future. Features George Clinton, Sun Ra, and Lee Perry."
+copy = "An examination of the unexplored relationships between Pan-African culture, science fiction, intergalactic travel, and rapidly progressing computer technology."
+film_information = "Dir. John Akomfrah, GB 1996"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/5okDKgtOyFfnD3m62dsmozGzl0f.jpg"
+
+[[sunday_films]]
+name = "Wanda"
+copy_summary = "Barbara Loden wrote, directed, and starred in this raw portrait of a drifting woman in Pennsylvania. Shot on 16mm over two years. A masterpiece of American independent cinema, almost entirely forgotten for decades."
+copy = "After a string of abusive relationships, Wanda abandons her family and seeks solace in the company of a petty criminal."
+film_information = "Dir. Barbara Loden, US 1970"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/izuJ7cUhcihFnTpfsdSnkMCHsRQ.jpg"
+
+[[sunday_films]]
+name = "The Spirit of the Beehive"
+copy_summary = "A young girl in post-Civil War Castile sees Frankenstein and becomes convinced that monster lives in a nearby barn. Victor Erice's extraordinary debut: quiet, strange, heartbreaking."
+copy = "In 1940, a young girl on the Castilian plain is haunted after attending a screening of Frankenstein and hearing that the monster is not dead, but exists as a spirit in a nearby barn."
+film_information = "Dir. Victor Erice, ES 1973"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/p2wx4EWasQaPGxnbS2IsW74ewVN.jpg"
+
+[[sunday_films]]
+name = "Poly Styrene: I Am a Cliche"
+copy_summary = "Poly Styrene's daughter Celeste Bell explores her mother's archives after her death. An intimate portrait of X-Ray Spex front-woman: punk pioneer, mixed-heritage icon, unlikely Hare Krishna."
+copy = "The death of punk icon and X-Ray Spex front-woman Poly Styrene sends her daughter on a journey through her mother's archives in this intimate documentary."
+film_information = "Dir. Celeste Bell / Paul Smeeton, GB 2021"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/o8XVze793XRJQiAI5NFZB9iZp3O.jpg"
+
+[[sunday_films]]
+name = "Eden Valley"
+copy_summary = "Set in the harness racing world of County Durham. A father and son, estranged by class and expectation, attempt to reconnect. Amber Collective's warmly observed drama of working-class northern England."
+copy = "Set in the harness racing fraternity, this feature drama explores the conflict between urban and rural values and the relationship between an estranged father and son."
+film_information = "Dir. Amber Collective, GB 1994"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/nIxue1z7Mc8SdkIj1LFVYWIq2pF.jpg"
+
+[[sunday_films]]
+name = "Bait"
+copy_summary = "Filmed on hand-processed 16mm, Mark Jenkin's study of a Cornish fishing community and the gentrification that is slowly hollowing it out. Abrasive, funny, and genuinely radical in form."
+copy = "Martin Ward is a Cornish fisherman without a boat. His brother has repurposed their father's vessel as a tourist tripper. With their childhood home a getaway for London money, Martin is displaced and his struggle creates increasing friction with tourists and locals alike."
+film_information = "Dir. Mark Jenkin, GB 2019"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/cr6T1ygg5jD3zyqmbR7l2TPaHkN.jpg"
+
+[[sunday_films]]
+name = "Tongues Untied"
+copy_summary = "Marlon Riggs' landmark essay Black men loving Black men as a revolutionary act. Weaves poetry, autobiography, and performance into something urgent and joyful."
+copy = "Marlon Riggs celebrates Black men loving Black men as a revolutionary act. The film intercuts poetry by Essex Hemphill, autobiography, and comic riffs into an urgent celebration of Black queer identity."
+film_information = "Dir. Marlon Riggs, US 1989"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/wbrcRd695aB8D6pkWh0hSurKRbO.jpg"
+
+[[sunday_films]]
+name = "Faya Dayi"
+copy_summary = "A hypnotic journey into the khat-harvesting highlands of Harar, Ethiopia. Jessica Beshir's gorgeous black-and-white documentary is part ethnography, part dream, part political testament."
+copy = "A spiritual journey into the highlands of Harar, immersed in the rituals of khat. A tapestry of intimate stories offers a window into the dreams of youth under a repressive regime."
+film_information = "Dir. Jessica Beshir, ET / US 2021"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/4rtrsTBlxaX92soR1nUMjAXUcpP.jpg"
+
+[[sunday_films]]
+name = "Atlantique"
+copy_summary = "Mati Diop's debut feature: a young Senegalese woman's lover disappears crossing the Atlantic, then returns. A ghost story about love, labour, migration, and the sea. Cannes Grand Prix winner."
+copy = "Arranged to marry a rich man, young Ada is crushed when her true love goes missing at sea during a migration attempt, until a miracle reunites them."
+film_information = "Dir. Mati Diop, SN / FR 2019"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/zRnZM6HqglFK31MYyrTSQVlj1dQ.jpg"
+
+[[sunday_films]]
+name = "Sorry to Bother You"
+copy_summary = "Cassius Green discovers that using a white voice on the phone is the key to corporate success, then discovers what that success actually requires. Boots Riley's furiously anti-capitalist, wildly funny debut."
+copy = "In an alternate present-day Oakland, Black telemarketer Cassius Green discovers a magical key to professional success which propels him into a macabre universe."
+film_information = "Dir. Boots Riley, US 2018"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/peTl1V04E9ppvhgvNmSX0r2ALqO.jpg"
+
+[[sunday_films]]
+name = "Hundreds of Beavers"
+copy_summary = "Shot in Wisconsin woods on $150k, Mike Cheslik's black-and-white slapstick epic pits one hapless man against an army of beavers. Looney Tunes energy, genuinely extraordinary DIY filmmaking."
+copy = "In the 19th century, a drunken applejack salesman must go from zero to hero and become North America's greatest fur trapper by defeating hundreds of beavers."
+film_information = "Dir. Mike Cheslik, US 2022"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/jBg64OA2QEWL0zaOFMoAGipeGjJ.jpg"
+
+[[sunday_films]]
+name = "Bacurau"
+copy_summary = "A small town in the Brazilian sertao discovers it has been erased from maps and that foreign hunters have come to kill its residents. A blazing genre film about colonial violence and collective resistance."
+copy = "Bacurau, a small town in the Brazilian sertao, mourns the loss of its matriarch, then discovers that their community has vanished from most maps. Foreign hunters arrive with weapons."
+film_information = "Dir. Kleber Mendonca Filho, BR 2019"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/tBa4zMGzZUco26XT3WfZZCwQ76i.jpg"
+
+[[sunday_films]]
+name = "Neptune Frost"
+copy_summary = "An Afrofuturist punk musical set in Burundi, where escaped coltan miners hack the infrastructure of their oppressors. Saul Williams and Anisia Uzeyman's dazzling, anti-capitalist, anti-colonial manifesto."
+copy = "In the hilltops of Burundi, escaped coltan miners form an anti-colonialist hacker collective. An intersex runaway and an escaped miner find each other through cosmic forces, sparking glitches in the greater divine circuitry."
+film_information = "Dir. Saul Williams & Anisia Uzeyman, RW / US 2021"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/emlTdAiMcJDomw6Tjz2lFCSen8W.jpg"
+
+# ── Thursday films (prestige arthouse) ───────────────────────────────────
+
+[[thursday_films]]
+name = "Attack the Block"
+copy_summary = "South London teenagers defend their estate from an alien invasion. Joe Cornish's debut is one of the best British genre films of the century: funny, exciting, and politically sharp."
+copy = "A teen gang in a South London housing estate must team up with other residents to protect their neighbourhood from a terrifying alien invasion."
+film_information = "Dir. Joe Cornish, GB 2011"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/wzCMnA6NDruLzgWeqMcLPDrGAdF.jpg"
+
+[[thursday_films]]
+name = "Perfect Blue"
+copy_summary = "A pop idol reinvents herself as an actress and begins losing her grip on reality. Satoshi Kon's debut is one of the most formally dazzling psychological thrillers ever made, in any medium."
+copy = "Rising pop star Mima quits singing to pursue acting. After she takes a role on a detective show, her collaborators begin turning up murdered. Haunted by visions of her former self, her reality and fantasy meld into paranoia."
+film_information = "Dir. Satoshi Kon, JP 1997"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/6WTiOCfDPP8XV4jqfloiVWf7KHq.jpg"
+
+[[thursday_films]]
+name = "Snowpiercer"
+copy_summary = "Bong Joon-ho's class-war allegory: after a climate catastrophe, all surviving humanity lives on a single train, stratified by class. Someone at the back decides to fight their way to the front."
+copy = "In a future where a failed global-warming experiment kills most life on the planet, a class system evolves aboard the Snowpiercer, a train that travels around the globe via a perpetual-motion engine."
+film_information = "Dir. Bong Joon-ho, KR / US 2013"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/kw6YQudA0TMcNmGUGy5XIw7zbnV.jpg"
+
+[[thursday_films]]
+name = "Tangerine"
+copy_summary = "Shot on modified iPhones, Sean Baker's film follows two trans sex workers on Christmas Eve in Los Angeles. Urgent, funny, and deeply humane. A triumph of micro-budget cinema."
+copy = "It's Christmas Eve and Sin-Dee is back on the block. Hearing that her pimp boyfriend was unfaithful during her 28 days inside, she and her best friend Alexandra embark on a mission across Los Angeles."
+film_information = "Dir. Sean Baker, US 2015"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/EKLR5c61XQzBTeMokFrmS3kdt8.jpg"
+
+[[thursday_films]]
+name = "La Haine"
+copy_summary = "Twenty-four hours in the life of three young men in a Paris banlieue following a night of riots. Mathieu Kassovitz's debut is one of the essential political films of the 1990s. Shot in furious, restless black and white."
+copy = "After a chaotic night of rioting in a Paris suburb, three young friends wander around unoccupied, waiting for news about a mutual friend seriously injured while confronting police."
+film_information = "Dir. Mathieu Kassovitz, FR 1995"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/8rgPyWjYZhsphSSxbXguMnhN7H0.jpg"
+
+[[thursday_films]]
+name = "Tetsuo: The Iron Man"
+copy_summary = "Shinya Tsukamoto's ultra-low-budget cyberpunk landmark: a salaryman's body begins to fuse with metal. Shot in grainy black and white with maximum visceral intensity. One of the most alarming films ever made."
+copy = "A metal fetishist, driven mad by maggots in the wound he has made to embed metal in his flesh, runs out and is accidentally run down by a businessman. The businessman finds himself plagued by a curse that transforms his flesh into iron."
+film_information = "Dir. Shinya Tsukamoto, JP 1989"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/8cj8ozXIGxWbY3VdfPDhyfKDMZ0.jpg"
+
+[[thursday_films]]
+name = "The Transformers: The Movie"
+copy_summary = "The 1986 animated feature that killed Optimus Prime in the first reel and traumatised an entire generation. Features Orson Welles as Unicron, a ROCK SCORE, and more death than any film aimed at children has a right to contain."
+copy = "The Autobots must stop a colossal planet-consuming robot who goes after the Autobot Matrix of Leadership. At the same time, they must defend themselves against an all-out attack from the Decepticons."
+film_information = "Dir. Nelson Shin, US / JP 1986"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/xJ5W0mOAWCVaXmU0pBZh4NjSRv2.jpg"
+
+[[thursday_films]]
+name = "The Good, the Bad, the Weird"
+copy_summary = "Kim Jee-woon's Korean Western set in 1930s Manchuria: a bounty hunter, a hitman, and an accidental thief race to a legendary treasure across an impossibly kinetic landscape. Magnificent."
+copy = "Three Korean outlaws in 1930s Manchuria and their dealings with the Japanese army and Chinese and Russian bandits. A bounty hunter, a hitman, and a thief battle everyone in a race to find a legendary treasure."
+film_information = "Dir. Kim Jee-woon, KR 2008"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/lbPZ0aNoF0cHisg6DubFO2eS8so.jpg"
+
+[[thursday_films]]
+name = "House (Hausu)"
+copy_summary = "Seven schoolgirls visit a house that is haunted in ways that defy genre, logic, and possibly sanity. Nobuhiko Obayashi's debut is the most purely experimental film ever made for a major studio. Unmissable."
+copy = "Hoping to find connection to her late mother, Gorgeous takes a trip with her friends to visit her aunt's ancestral house in the countryside. The girls soon discover there is more to the old house than meets the eye."
+film_information = "Dir. Nobuhiko Obayashi, JP 1977"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/myMnHnG6kxYaQYknnW76VCHBpYT.jpg"
+
+[[thursday_films]]
+name = "RoboCop"
+copy_summary = "Paul Verhoeven's savage satire disguised as a crowd-pleasing action film. Privatised police, corporate evil, and a man rebuilt as a product. Brutally anti-capitalist and still scarily prescient."
+copy = "Evil corporation Omni Consumer Products wins a contract to privatie the police force in near-apocalyptic Detroit. When RoboCop learns of the company's plans, he turns on his masters."
+film_information = "Dir. Paul Verhoeven, US 1987"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/esmAU0fCO28FbS6bUBKLAzJrohZ.jpg"
+
+[[thursday_films]]
+name = "High and Low"
+copy_summary = "Kurosawa's razor-sharp thriller about class and conscience: a wealthy man must decide whether to bankrupt himself to ransom the son of his chauffeur. A perfect film in two halves."
+copy = "A Yokohama shoe executive faces a wrenching choice when kidnappers mistakenly seize his chauffeur's son but demand the ransom anyway."
+film_information = "Dir. Akira Kurosawa, JP 1963"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/tgNjemQPG96uIezpiUiXFcer5ga.jpg"
+
+[[thursday_films]]
+name = "Danger: Diabolik"
+copy_summary = "Mario Bava's delirious pop-art caper: master thief Diabolik destroys the entire national tax system in the opening reel and only gets more audacious from there. The entire Italian state fails to stop him."
+copy = "International man of mystery Diabolik and his sensuous lover Eva Kant pull off heist, while European cops and envious mobsters close in on them."
+film_information = "Dir. Mario Bava, IT 1968"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/ozU1Qgu3CqWg2MWz8God3P6PoF3.jpg"
+
+[[thursday_films]]
+name = "The Holy Mountain"
+copy_summary = "Alejandro Jodorowsky's most ambitious a Christ figure, a band of planetary archetypes, and a journey to a mountain where immortal gods must be displaced. Radical, total, overwhelming."
+copy = "The Alchemist assembles a group from all walks of life to represent the planets in the solar system. He puts his recruits through strange mystical rites before they ascend to Holy Mountain to displace the immortal gods who secretly rule the universe."
+film_information = "Dir. Alejandro Jodorowsky, MX 1973"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/mP5FGQbNjFkrjcZ6AVHrvokPRe5.jpg"
+
+[[thursday_films]]
+name = "Stalker"
+copy_summary = "A guide leads a writer and a professor through the forbidden Zone, where deep desires are said to be granted. Tarkovsky's most interior slow, vast, and inexhaustibly strange."
+copy = "Near a grey and unnamed city is the Zone, guarded by soldiers, where the normal laws of physics are victim to frequent anomalies. A Stalker guides two men into the Zone, to an area where deep-seated desires are granted."
+film_information = "Dir. Andrei Tarkovsky, SU 1979"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/1qhOyf5C4s9ZdvY8d5JDx9DFMeT.jpg"
+
+[[thursday_films]]
+name = "Tampopo"
+copy_summary = "The great Japanese ramen western: two truck drivers help a widow perfect her noodle soup. Juzo Itami's joyful love letter to food, community, and pursuit of the perfect bowl."
+copy = "A pair of truck drivers help a widowed ramen shop owner turn her establishment into a paragon of the art of noodle-soup making, while interspersed vignettes explore the importance of food to all aspects of human life."
+film_information = "Dir. Juzo Itami, JP 1985"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/ArYdSuX3zY9fMsE4LqmBl7xJq5R.jpg"
+
+[[thursday_films]]
+name = "The Battle of Algiers"
+copy_summary = "Gillo Pontecorvo's essential anti-colonial Algerian struggle for independence from France, filmed with documentary intensity. Banned in France for five years. Still urgently relevant."
+copy = "French paratroopers are sent to Algeria to suppress the uprisings of the Algerian War. They face Ali la Pointe, leader of the Algerian FLN, who directs terror strategies against the colonial French. As each side resorts to ever-increasing brutality, no act is too unthinkable."
+film_information = "Dir. Gillo Pontecorvo, IT / DZ 1966"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/2p3AFtOHFvP6OeVMqlnL1zLKOqL.jpg"
+
+[[thursday_films]]
+name = "A Matter of Life and Death"
+copy_summary = "A RAF pilot cheats death and must stand trial in heaven to remain among the living, defending his love for an American radio operator. Powell and Pressburger at their most radically inventive."
+copy = "A British wartime aviator who cheats death must argue for his life before a celestial court, hoping to prolong his fledgling romance with an American girl."
+film_information = "Dir. Powell & Pressburger, GB 1946"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/H74LWKnhOeIFSk9gNjBcPjIov3.jpg"
+
+[[thursday_films]]
+name = "Sorcerer"
+copy_summary = "Four men with nothing left to lose agree to drive trucks full of sweating dynamite through a South American jungle. William Friedkin's underrated masterpiece of tension and cynicism."
+copy = "Four men from different parts of the globe, all hiding from their pasts in the same remote South American town, agree to risk their lives transporting several cases of unstable dynamite across dangerous jungle terrain."
+film_information = "Dir. William Friedkin, US 1977"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/2b7oexm173SF1FSEq0DdgxZZNRH.jpg"
+
+[[thursday_films]]
+name = "Fantastic Planet"
+copy_summary = "Rene Laloux's psychedelic animated allegory: on a distant planet, tiny humans are kept as pets by giant blue beings. A hallucinatory fable about colonialism, animal rights, and the logic of oppression."
+copy = "On a planet Ygam, technologically advanced blue humanoids called Draags treat tiny human beings as ignorant animals, kept as pets or hunted as vermin. A young human who has absorbed Draag knowledge uses it to organise resistance."
+film_information = "Dir. Rene Laloux, FR / CS 1973"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/prq0j1S0K07UjwLZLF6oMGflRUI.jpg"
+
+[[thursday_films]]
+name = "Akira"
+copy_summary = "Katsuhiro Otomo's landmark anime: Neo-Tokyo, 2019, after a nuclear explosion. A teenage biker's friend is turned into something vast and terrible. The film that changed what animation could do."
+copy = "A secret military project endangers Neo-Tokyo when it turns a biker gang member into a rampaging psychic, and only two teenagers and a group of psychics can stop him."
+film_information = "Dir. Katsuhiro Otomo, JP 1988"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/neZ0ykEsPqxamsX6o5QNUFILQrz.jpg"
+
+[[thursday_films]]
+name = "Primer"
+copy_summary = "Shane Carruth made this time-travel film for $7,000 in a garage. Two engineers build a machine they do not understand and begin to lose themselves in its possibilities. The gold standard for DIY puzzle-box filmmaking."
+copy = "A group of fledgling inventors discover a complex method to manipulate reality. At first they successfully game the stock market, but the consequences of the invention start to catch up with them."
+film_information = "Dir. Shane Carruth, US 2004"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/xEoq2WmDzpzxhkHEsmOYOg6BPg6.jpg"
+
+[[thursday_films]]
+name = "Funeral Parade of Roses"
+copy_summary = "Toshio Matsumoto's wildly subversive 1969 portrait of Tokyo's gay underground. Breaks every rule of narrative and form, interpolates interviews, and ends somewhere you will absolutely not expect."
+copy = "In 1960s Tokyo, Gonda owns a bar where gay, cross-dresser, and trans scenes meet. As the younger Eddie starts an affair with Gonda, she ignites the jealousy of the madam, unaware of another kind of history between them."
+film_information = "Dir. Toshio Matsumoto, JP 1969"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/7cRQ6rSGajW2soWDr3voEN2rgYO.jpg"
+
+[[thursday_films]]
+name = "Delicatessen"
+copy_summary = "A post-apocalyptic apartment building with a butcher on the ground floor and a very clear sense of what goes into the sausages. Caro and Jeunet's debut is anarchic, grimy, and impeccably designed."
+copy = "In a post-apocalyptic world, residents of an apartment above a butcher shop receive an occasional delicacy of meat. A young man new in town falls in love with the butcher's daughter, which causes conflicts in her family, who need him for other purposes."
+film_information = "Dir. Marc Caro & Jean-Pierre Jeunet, FR 1991"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/gNtOgQHxE5B8e08zuNRAdDpmK5Z.jpg"
+
+[[thursday_films]]
+name = "Coherence"
+copy_summary = "Shot over five nights in a living room with a $50k budget and no script. A dinner party during a comet pass-over begins to feel strangely wrong. One of the best low-budget sci-fi films made this century."
+copy = "Four couples gather for dinner on a night a mysterious and powerful comet passes overhead."
+film_information = "Dir. James Ward Byrkit, US 2013"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/ezUtb9m5DeLwL2gxi4gktzNCvQv.jpg"
+
+[[thursday_films]]
+name = "Suspiria"
+copy_summary = "An American student at a German ballet academy discovers the school is a coven. Dario Argento at his most maximally saturated and violent. The Goblin score alone is worth the price of admission."
+copy = "An American newcomer to a prestigious German ballet academy comes to realise that the school is a front for something sinister amid a series of grisly murders."
+film_information = "Dir. Dario Argento, IT 1977"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/sEcvc9h1X3hYZdFgtiiKMm6RB3f.jpg"
+
+[[thursday_films]]
+name = "A Scanner Darkly"
+copy_summary = "Philip K. Dick's novel, faithfully adapted in rotoscoped animation. An undercover drug cop surveilling a group of addicts discovers he is surveilling himself. Linklater's strangest and most political film."
+copy = "An undercover cop in a not-too-distant future becomes involved with a dangerous new drug and begins to lose his own identity as a result."
+film_information = "Dir. Richard Linklater, US 2006"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/lUKudOpHICDj6A6SO7DdaZM4W48.jpg"
+
+[[thursday_films]]
+name = "Hard Boiled"
+copy_summary = "John Woo's final Hong Kong film before Hollywood: a cop and an undercover detective converge on an arms ring. Contains the greatest single action sequence in cinema history (the hospital). Kinetic, operatic, extraordinary."
+copy = "A cop who loses his partner in a shoot-out with gun smugglers joins forces with an undercover cop working as a gangster hitman. They use all means of excessive force to find the gang's leaders."
+film_information = "Dir. John Woo, HK 1992"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/oMqr4CGGqVlfI8DdrSelK1e9aFM.jpg"
+
+[[thursday_films]]
+name = "The Night of the Hunter"
+copy_summary = "A preacher-serial killer with LOVE and HATE tattooed on his knuckles pursues two children who know where stolen money is hidden. Charles Laughton's only film as director: expressionist, terrifying, unlike anything else from its era."
+copy = "In Depression-era West Virginia, a serial-killing preacher hunts two young children who know the whereabouts of a stash of money."
+film_information = "Dir. Charles Laughton, US 1955"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/rBka0nFWiHxabHRLr0KfIA8Yiaq.jpg"
+
+[[thursday_films]]
+name = "Possession"
+copy_summary = "A marriage collapses with terrifying intensity in cold-war Berlin. Isabelle Adjani's performance is one of the most extreme in cinema history. Andrzej Zulawski's Possession is a horror film about the violence of love."
+copy = "A young woman has left her family for an unspecified reason. Her husband determines to find out the truth and starts following her. He suspects a man is involved, but gradually discovers something far stranger."
+film_information = "Dir. Andrzej Zulawski, FR / DE 1981"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/lUFZsUuJ0YyhBXH8D2BFUd6wODm.jpg"
+

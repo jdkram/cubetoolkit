@@ -1,0 +1,90 @@
+# Event templates — pre-defined event types selectable when creating a new event.
+# roles and tags reference names defined in roles.toml and tags.toml.
+# outside_hire and private default to false if not specified.
+
+[[templates]]
+name = "Film (DCP)"
+pricing = "£7/£5"
+roles = ["Keyholder", "Programmer", "Projectionist - DCP", "Box Office - Admission Tickets", "Bar Staff - Shift 1", "Usher - Fire Trained"]
+tags = ["film"]
+
+[[templates]]
+name = "Film (MP4/DVD)"
+pricing = "£7/£5"
+roles = ["Keyholder", "Programmer", "Projectionist - MP4", "Box Office - Admission Tickets", "Bar Staff - Shift 1", "Usher - Fire Trained"]
+tags = ["film"]
+
+[[templates]]
+name = "Family Film Club"
+pricing = "Free"
+roles = ["Keyholder", "Projectionist - MP4", "Box Office - Admission Tickets", "Bar Staff - Shift 1"]
+tags = ["film", "free"]
+
+[[templates]]
+name = "Gig"
+pricing = ""
+roles = ["Keyholder", "Sound Technician level 1", "Sound Technician level 2", "Bar Staff - Shift 1", "Bar Staff - Shift 2", "Box Office - Admission Tickets", "Usher - Fire Trained"]
+tags = ["music", "performance"]
+
+[[templates]]
+name = "Volunteer Induction"
+pricing = "Free"
+roles = ["Inductor - 1 (trained)", "Inductor - 2 (shadowing)", "Trainee (inducted)"]
+tags = ["induction", "volunteer"]
+
+[[templates]]
+name = "Meeting"
+pricing = "Free"
+roles = ["Facilitator", "Minute taker"]
+tags = ["meeting"]
+
+[[templates]]
+name = "Workshop"
+pricing = ""
+roles = ["Keyholder", "Facilitator", "Facilitator Shadow"]
+tags = ["workshop"]
+
+[[templates]]
+name = "Cleaning Session"
+pricing = "Free"
+roles = ["Keyholder", "Cleaner", "Extra Hands (no training needed)"]
+tags = ["volunteer"]
+
+[[templates]]
+name = "Keyholder Training"
+pricing = "Free"
+roles = ["Keyholder", "Extra Hands (no training needed)"]
+tags = ["training-for-volunteers"]
+
+[[templates]]
+name = "Community Kitchen"
+pricing = "Free"
+roles = ["Keyholder", "Cafe (Level 1)", "Extra Hands (no training needed)"]
+tags = ["cafe", "workshop"]
+
+[[templates]]
+name = "Party"
+pricing = ""
+roles = ["Keyholder", "Bar Staff - Shift 1", "Bar Shadow"]
+tags = ["volunteer", "party"]
+
+[[templates]]
+name = "Exhibition"
+pricing = ""
+roles = ["Keyholder", "Extra Hands (no training needed)"]
+tags = ["exhibition"]
+
+[[templates]]
+name = "Outside Hire"
+pricing = ""
+outside_hire = true
+private = true
+roles = ["Keyholder"]
+tags = ["outside-hire"]
+rota_notes = "Contact the hire organiser before the event to confirm arrival time. Keyholder opens at hire start time and closes after all guests have left."
+
+[[templates]]
+name = "Training"
+pricing = "Free"
+roles = ["Keyholder", "Trainee (inducted)"]
+tags = ["training-for-volunteers"]

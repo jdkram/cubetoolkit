@@ -4,6 +4,7 @@ networks:
     driver: bridge
 volumes:
   media_data:
+  seed_image_cache:
   mariadb_data:
 services:
   toolkit:
@@ -29,6 +30,9 @@ services:
       - type: volume
         source: media_data
         target: /site/media/
+      - type: volume
+        source: seed_image_cache
+        target: /site/.seed_cache/
   mariadb:
     networks:
       - toolkit_dev

@@ -1,0 +1,85 @@
+# Fictional volunteer names — not real people.
+# Inspired by characters/performers from arthouse and world cinema.
+# Single-name entries verify the system handles names without surnames.
+
+[[volunteers]]
+name = "Cleo Marchetti"
+email = "cleo.marchetti@example.com"
+
+[[volunteers]]
+name = "Elia Silveira"
+email = "elia.silveira@example.com"
+
+[[volunteers]]
+name = "Marta Voss"
+email = "marta.voss@example.com"
+
+[[volunteers]]
+name = "Rex Hollis"
+email = "rex.hollis@example.com"
+
+[[volunteers]]
+name = "Phoebe Lund"
+email = "phoebe.lund@example.com"
+
+[[volunteers]]
+name = "Kalani Horita"
+email = "kalani.horita@example.com"
+
+[[volunteers]]
+name = "Vera Deschamps"
+email = "vera.deschamps@example.com"
+
+[[volunteers]]
+name = "Remy Okafor"
+email = "remy.okafor@example.com"
+
+[[volunteers]]
+name = "Jules Travers"
+email = "jules.travers@example.com"
+
+[[volunteers]]
+name = "Lena Barrow"
+email = "lena.barrow@example.com"
+
+[[volunteers]]
+name = "Sasha Pryce"
+email = "sasha.pryce@example.com"
+
+[[volunteers]]
+name = "Tomás Ferreira"
+email = "tomas.ferreira@example.com"
+
+[[volunteers]]
+name = "Nell Arundel"
+email = "nell.arundel@example.com"
+
+[[volunteers]]
+name = "Ivan Solis"
+email = "ivan.solis@example.com"
+
+[[volunteers]]
+name = "Ana Fonseca"
+email = "ana.fonseca@example.com"
+
+# Single-name volunteers
+
+[[volunteers]]
+name = "Beef"
+email = "beef@example.com"
+
+[[volunteers]]
+name = "Sparks"
+email = "sparks@example.com"
+
+[[volunteers]]
+name = "Cheddar"
+email = "cheddar@example.com"
+
+[[volunteers]]
+name = "Moth"
+email = "moth@example.com"
+
+[[volunteers]]
+name = "Fig"
+email = "fig@example.com"
