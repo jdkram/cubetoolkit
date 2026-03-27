@@ -50,7 +50,8 @@ RUN ln -s /site/containerconfig/tk_run.sh /usr/local/bin/tk_run \
      && install -D --owner=toolkit --group=toolkit --directory /site/media/documents \
      && install -D --owner=toolkit --group=toolkit --directory /site/media/images \
      && install -D --owner=toolkit --group=toolkit --directory /site/media/printedprogramme \
-     && install -D --owner=toolkit --group=toolkit --directory /site/media/volunteers
+     && install -D --owner=toolkit --group=toolkit --directory /site/media/volunteers \
+     && install -D --owner=toolkit --group=toolkit --directory /site/.seed_cache
 
 USER toolkit:toolkit
 

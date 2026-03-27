@@ -1,0 +1,74 @@
+# Rooms used in the diary and calendar.
+# is_primary=true rooms get vivid colours; secondary rooms get pastels.
+# Colour notes: Café is bright yellow — _is_light_colour() auto-applies black text.
+
+[[rooms]]
+name = "Cinema"
+colour = "#CC2200"  # vivid vermilion
+is_primary = true
+
+[[rooms]]
+name = "Venue Space"
+colour = "#0057B8"  # royal blue
+is_primary = true
+
+[[rooms]]
+name = "Café"
+colour = "#FFD700"  # bright yellow → black text auto-detected
+is_primary = true
+
+[[rooms]]
+name = "External"
+colour = "#E0F5CC"  # faint lime green
+is_primary = false
+
+[[rooms]]
+name = "Meeting"
+colour = "#DDD0FF"  # soft lavender — matches floorplan meeting room
+is_primary = false
+
+[[rooms]]
+name = "Dark Room"
+colour = "#707070"  # dark grey — text auto-detected as white
+is_primary = false
+
+[[rooms]]
+name = "Print Room"
+colour = "#CCE8F8"  # cool sky blue — matches floorplan screen printing room
+is_primary = false
+
+[[rooms]]
+name = "Workshop"
+colour = "#F2E4A8"  # warm cream/tan — matches floorplan workshop
+is_primary = false
+
+[[rooms]]
+name = "Green room"
+colour = "#74BB88"  # medium mint — more saturated than before; matches floorplan
+is_primary = false
+
+# ---------------------------------------------------------------------------
+# Functional rooms not yet bookable via the diary, included here so colours
+# are consistent if they are added as bookable spaces in future.
+# To activate: remove the leading `# ` from each line, set is_primary as needed.
+# ---------------------------------------------------------------------------
+
+# [[rooms]]
+# name = "Kitchen"
+# colour = "#FFF0A8"  # pastel amber — café family
+# is_primary = false
+
+# [[rooms]]
+# name = "Snug"
+# colour = "#FFE8A0"  # warm pastel amber — café family, cosier than kitchen
+# is_primary = false
+
+# [[rooms]]
+# name = "Projection Booth"
+# colour = "#F5C0B2"  # pastel coral/salmon — cinema family
+# is_primary = false
+
+# [[rooms]]
+# name = "Middle Corridor"
+# colour = "#EBEBEB"  # near-white grey — used as exhibition space occasionally
+# is_primary = false

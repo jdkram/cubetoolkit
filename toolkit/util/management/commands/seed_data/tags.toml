@@ -1,0 +1,115 @@
+# Event tags. promoted=true tags appear in the programme filter sidebar.
+# Add new tags here — no code changes needed.
+
+[[tags]]
+name = "film"
+promoted = true
+
+[[tags]]
+name = "music"
+promoted = true
+
+[[tags]]
+name = "workshop"
+promoted = true
+
+[[tags]]
+name = "exhibition"
+promoted = true
+
+[[tags]]
+name = "performance"
+promoted = true
+
+[[tags]]
+name = "meeting"
+promoted = true
+
+[[tags]]
+name = "induction"
+promoted = true
+
+[[tags]]
+name = "volunteer"
+promoted = false
+
+[[tags]]
+name = "training-for-volunteers"
+promoted = true
+
+[[tags]]
+name = "party"
+promoted = false
+
+[[tags]]
+name = "cafe"
+promoted = false
+
+[[tags]]
+name = "online"
+promoted = true
+
+[[tags]]
+name = "subtitles"
+promoted = true
+
+[[tags]]
+name = "closed-captions"
+promoted = true
+
+[[tags]]
+name = "free"
+promoted = false
+
+[[tags]]
+name = "outside-hire"
+promoted = false
+
+
+# Background colours used when generating placeholder event images,
+# keyed by primary tag. Chosen to be visually distinct and cinema-appropriate.
+# rgb values are [R, G, B] integers 0-255.
+
+[[tag_colours]]
+tag = "film"
+rgb = [20, 20, 60]       # dark navy
+
+[[tag_colours]]
+tag = "music"
+rgb = [60, 10, 60]       # deep purple
+
+[[tag_colours]]
+tag = "performance"
+rgb = [60, 10, 40]       # dark crimson
+
+[[tag_colours]]
+tag = "workshop"
+rgb = [10, 50, 30]       # dark forest green
+
+[[tag_colours]]
+tag = "exhibition"
+rgb = [40, 30, 10]       # dark ochre
+
+[[tag_colours]]
+tag = "cafe"
+rgb = [60, 30, 10]       # dark burnt orange
+
+[[tag_colours]]
+tag = "volunteer"
+rgb = [20, 40, 50]       # dark teal
+
+[[tag_colours]]
+tag = "meeting"
+rgb = [30, 30, 30]       # charcoal
+
+[[tag_colours]]
+tag = "induction"
+rgb = [20, 40, 50]       # dark teal (same as volunteer)
+
+[[tag_colours]]
+tag = "party"
+rgb = [50, 20, 50]       # dark magenta
+
+[[tag_colours]]
+tag = "default"
+rgb = [25, 25, 40]       # neutral dark blue
