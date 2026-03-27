@@ -72,6 +72,15 @@ Full workflow documented in [docs/ONBOARDING.md — Releases and Versioning](doc
 
 ---
 
+## Live site investigation plan
+
+An investigation plan covering compatibility with production data and three staging bug fixes is at:
+`~/notes/Community/Star and Shadow/sns-investigation-plan.md`
+
+Also relevant: `~/notes/Community/Star and Shadow/servers.md` for SSH aliases, server paths, and rsync/DB dump commands.
+
+---
+
 ## Current task: Port S+S-specific features from the `s+s` branch
 
 The `s+s` branch was the Star and Shadow production branch but ran Django 2.2 (EOL). We have started fresh from `master` (which is far more modern) and ported the S+S-specific functionality across. Initial Docker setup and basic seed data are complete; focus is now on porting remaining features.
