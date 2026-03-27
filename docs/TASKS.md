@@ -433,6 +433,16 @@ critically so. Audited February 2026.
 9. Bootstrap 4 → 5 + `crispy-forms` 2.x (batch together) — Effort: 🟠 L
 10. FullCalendar 3 → 6 (large; do when calendar editing needs attention) — Effort: 🔴 XL
 
+### 8.16 No default image when creating an event
+
+When a programmer creates a new event without uploading a poster, the event has no image and appears imageless on the public programme grid. This is more noticeable at S&S than at the Cube because the PVSL licence means film posters often can't be published until shortly before the event.
+
+**Partial solution already in the codebase:** `seed_dev_data` includes `_make_poster_image` — a bold typographic poster generator that takes the event name and a tag-derived colour, renders it at 800×450 with a gradient background, and stretches each line of text to fill the full frame width. It produces something that looks intentional rather than broken.
+
+This could be wired up as an on-demand tool for programmers: a button on the event edit page ("Generate placeholder image") that calls a view invoking the same logic and attaches the result as a `MediaItem`. The bundled `DejaVuSans-Bold.ttf` in `seed_data/fonts/` is available to the server at runtime.
+
+**Not yet implemented.** See 9.57 for the proposed feature spec.
+
 ---
 
 ---
@@ -1357,186 +1367,210 @@ and the venue's accounting system. GDPR obligations for financial records
 differ (statutory retention requirements may apply). This is outside the
 toolkit's scope.
 
-### 9.14 Post-screening film rights reporting 🟡 M (16–30h)
+### 9.14 Post-screening admin checklist 🟡 M (20–35h)
 
-**Goal:** Ensure film rights reports are submitted to distributors promptly
-after every screening, by automating reminders and tracking submission status
-— without anyone having to remember to chase it manually.
+**Goal:** Ensure that every film screening is properly wrapped up — rights
+report submitted, box office totals sent, DCP/disc returned, invoice
+requested and confirmed paid — by tracking these steps per showing and
+prompting the programmer automatically, without relying on memory or
+goodwill alone.
 
 #### Why this matters
 
-When S&S screens a film, it does so under a licence from a distributor or
-rights holder. The agreement typically requires that ticket sales figures are
-reported back within a short window after the screening — often 7–14 days.
-Failure to report is not just an administrative lapse: the pool of
-distributors willing to work with small independent cinemas at affordable
-rates is limited. Getting blacklisted by even one of them is a meaningful
-operational loss that could prevent certain films being screened at all.
+The film programming group identified this as a recurring source of damage
+in late 2025 (December meeting). There are four distinct post-screening
+tasks, each with a different owner and a different failure mode:
 
-At the moment, reporting is entirely dependent on the programmer remembering
-to do it after their event. There is no system prompt, no record of whether
-it was done, and no escalation if it wasn't. This is a high-stakes task
-with a hard deadline, and it currently has no safety net.
+1. **Box office returns** — the programmer must submit ticket sale totals
+   to the distributor, usually within 7–14 days. Failure risks blacklisting.
+   At S&S this has happened; the Janus invoicing crisis of 2025 was partly
+   caused by returns not being filed, which blocked the invoice cycle.
+
+2. **Invoice request** — for individual-hire screenings, the programmer
+   should contact the distributor to confirm the screening took place and
+   request or trigger an invoice. This is separate from the box office
+   return: the return reports attendance; the invoice request initiates
+   payment. Both can be forgotten independently.
+
+3. **Invoice paid** — the finance collective pays the invoice. This step is
+   visible only to finance; the film programming group has no way to know
+   whether an invoice has been paid without chasing manually. The December
+   2025 meeting asked explicitly for the finance collective to CC the
+   programming email when invoices are settled.
+
+4. **DCP/disc returned** — physical media (DCPs, Blu-rays) sent by
+   distributors must be returned promptly. Failure to return media damages
+   the relationship and may incur charges. The projectionist meeting in
+   November 2025 raised this as a gap with no current tracking system.
+
+None of these tasks are currently tracked anywhere in the toolkit. They
+live in the programmer's head, in informal WhatsApp messages, and
+occasionally in spreadsheet columns that the group has to maintain manually.
 
 #### What the toolkit can do
 
-The toolkit cannot submit reports to distributors directly — that process
-varies by distributor and happens outside the system. What it *can* do is:
+The toolkit cannot submit reports or pay invoices. What it can do is:
 
-1. Identify which past showings require a report
-2. Send timely, helpful reminder emails to the responsible programmer
-3. Provide a one-click way for the programmer to mark the report as done
-4. Show a dashboard view of outstanding and overdue reports for Panopticon
+1. Track the status of all four tasks per showing
+2. Send timely reminders to the programmer for tasks 1–3
+3. Provide one-click confirmation links so marking things done is frictionless
+4. Show a dashboard of outstanding and overdue items for Panopticon
+5. Notify the programming group when an invoice is marked paid by finance
 
 #### Data model changes
 
-Add three fields to `Showing`:
+Add a `PostScreeningChecklist` model linked to `Showing` (one-to-one):
 
 ```
-Showing:
-  + report_required:       bool      # True for film screenings; auto-set, overrideable
-  + report_submitted_at:   datetime  # null until the programmer marks it done
-  + report_key:            str(64)   # random token for one-click submission from email
-                                     # (same pattern as Member.mailout_key)
+PostScreeningChecklist:
+  showing:                FK → Showing (OneToOne)
+
+  # Rights report / box office returns
+  report_required:        bool      # True for individual-hire film screenings; auto-set, overrideable
+  report_submitted_at:    datetime  # null until marked done
+  report_token:           str(64)   # single-use token for one-click confirmation from email
+
+  # Invoice tracking
+  invoice_requested_at:   datetime  # null until programmer confirms they've asked for the invoice
+  invoice_paid_at:        datetime  # null until finance collective marks it paid
+  invoice_token:          str(64)   # token for one-click "invoice requested" from email
+
+  # Physical media return
+  media_return_required:  bool      # True if a DCP or disc was supplied by the distributor
+  media_returned_at:      datetime  # null until marked done
+  media_return_token:     str(64)   # token for one-click confirmation from email
 ```
 
-`report_submitted_by` can be inferred from the session if the link is
-clicked while logged in; otherwise recorded as "confirmed via email link".
+The checklist record is created automatically when a showing is confirmed,
+with `report_required` and `media_return_required` set by auto-detection
+(see below). All datetime fields are null until the relevant step is
+completed. Tokens follow the same pattern as `Member.mailout_key`.
 
-**Auto-detection logic:** `report_required` defaults to `True` when a
-Showing is confirmed if:
+**Auto-detection logic:**
+
+`report_required = True` when:
 - the event has the `film` tag, **or**
 - the event has a `FilmLicensing` record with `license_type = individual_hire`
-  (see section 9.15 for the full film metadata model)
+  (see section 9.15)
 
-It defaults to `False` if:
+`report_required = False` (no individual report needed) when:
 - `FilmLicensing.license_type` is `public_license`, `self_produced`, or
-  `rights_free` — these do not require an individual post-screening
-  rights report (though `public_license` screenings are included in the
-  periodic aggregate report — see section 9.15)
+  `rights_free` — these screenings are covered by the aggregate public
+  licence report, not an individual submission
 
-It can be manually overridden in either direction. This should be a
-visible, deliberate override — not a silent default — with a brief prompt:
-*"This event looks like a film screening. Does it require a ticket report
-to be submitted to a rights holder after the showing? [Yes / No]"*
+`media_return_required` defaults to `False` and is set manually by the
+programmer or Panopticon when physical media arrives. There is no reliable
+way to auto-detect this from current data.
 
-#### Reminder email schedule
+Both flags can be manually overridden with a visible, deliberate toggle —
+not a silent default.
 
-After a showing's start time passes:
+#### Reminder schedule
 
-| When | To | Trigger |
-|---|---|---|
-| D+1 (24h after) | Programmer | First reminder |
-| D+4 | Programmer | Second reminder if not submitted |
-| D+8 | Panopticon + Programmer | Escalation — "This is now overdue" |
+After a showing's start time passes, the toolkit sends reminders for each
+incomplete task:
+
+| Task | D+1 | D+4 | D+8 |
+|---|---|---|---|
+| Box office returns | First reminder → programmer | Second reminder → programmer | Escalation → Panopticon + programmer |
+| Invoice request | First reminder → programmer | Second reminder → programmer | Escalation → Panopticon + programmer |
+| DCP/disc return | First reminder → programmer | Second reminder → programmer | Escalation → Panopticon + programmer |
+
+Invoice-paid is not chased by the toolkit directly — that's a finance
+collective responsibility. However, if `invoice_requested_at` is set and
+`invoice_paid_at` remains null after D+30, a single low-priority nudge goes
+to Panopticon.
 
 "Programmer" is identified from the Programmer rota slot for that showing.
 Since rota names are currently free text (8.1), the fallback is to send to
-`vols_admin_address` with the programmer's name in the message body. Once
-rota entries are linked to accounts, the system can email the programmer
-directly.
-
-The D+8 escalation email to Panopticon should be notable — this is not a
-routine reminder but a flag that something may have slipped through.
+`vols_admin_address` with the programmer's name in the message body.
 
 #### Email content
 
-The reminder email should be practically useful, not just a nag. It should
-include:
+Each reminder should be practically useful, not a nag. Include:
 
-- The film title and screening date/time
-- A plain-language description of what needs to be submitted and why
-  (especially useful for new programmers who may not have done this before)
-- A direct link to the event's TicketSource booking report page, if
-  `ticket_link` is set — this saves the programmer having to find it
-  themselves (see TicketSource API note below)
-- A prominent **"Mark as submitted"** button/link — a tokenised URL
-  (`/diary/showing/N/report-submitted/TOKEN/`) that:
-  - Requires no login
-  - Sets `report_submitted_at` to the current time
-  - Shows a brief confirmation page: *"Thanks — we've recorded that the
-    rights report for [Film] ([date]) was submitted."*
-  - Is single-use (the token is invalidated after use)
+- Film title and screening date/time
+- A plain-language description of the task and why it matters (especially
+  for new programmers)
+- Relevant links: TicketSource report page (if `ticket_link` is set),
+  distributor contact from `terms` field
+- A prominent one-click confirm link for each incomplete item
 
-A one-click confirm from email significantly reduces friction. The
-alternative — requiring the programmer to log in to the toolkit to mark
-it done — adds just enough steps that people don't bother, and the
-tracking becomes unreliable.
+A one-click confirm from email is essential. Requiring a login to mark
+things done adds enough friction that people don't bother, and tracking
+becomes unreliable.
 
 #### TicketSource API integration (optional enhancement)
 
-Since TicketSource exposes a REST API (see section 4), and the `ticket_link`
-field contains the TicketSource event URL, the system can extract the
-TicketSource event ID and query the bookings endpoint after the showing.
-
-This would allow the reminder email to include:
+Since TicketSource exposes a REST API (see section 4), the reminder email
+for box office returns can include:
 
 > *As of this morning, TicketSource shows **47 bookings** for this event.*
 
-This gives the programmer the headline number without requiring them to log
-in to TicketSource before submitting the report. It's a meaningful reduction
-in friction for a task that is already easy to procrastinate on.
+This reduces friction: the programmer has the headline figure without
+logging in to TicketSource first.
 
-Implementation notes:
-- Extract the TicketSource event/date identifier from the `ticket_link` URL
-- Call `GET /dates/{id}/bookings` on the TicketSource API
-- Cache the result (the figure is for context, not precision)
-- Fail gracefully: if the API call fails or returns no data, omit the line
-  from the email rather than blocking the send
+Implementation: extract the event ID from `ticket_link`, call
+`GET /dates/{id}/bookings`, cache the result, fail gracefully (omit the
+line if the API call fails).
 
-**Known gap:** door ticket sales are recorded in EPOSnow, not TicketSource.
-The total figure for the report (TicketSource + door) cannot be fully
-automated until an EPOSnow integration exists. Until then, the email should
-note: *"This total doesn't include any door sales — please add those from
-your EPOSNow/door records before submitting."*
+**Known gap:** door sales are in EPOSnow, not TicketSource. Until an
+EPOSnow integration exists, the email should note: *"This doesn't include
+door sales — please add those before submitting."*
 
-#### Dashboard view — film report tracker
+#### Finance collective integration
 
-A new internal page (linked from the toolkit dashboard) showing all showings
-that required a report, grouped by status:
+When an invoice is marked paid (by a finance collective member in
+Panopticon), the toolkit sends a notification to the programming email
+list. This closes the feedback loop that the December 2025 meeting
+identified as missing: programmers currently have no way to know whether
+their distributor has been paid without asking finance directly.
+
+This notification should be low-key — a brief confirmation, not an alert.
+
+#### Dashboard view — post-screening tracker
+
+A new internal page (linked from the toolkit dashboard) showing all
+showings that have a checklist, grouped by urgency:
 
 | Group | Contents |
 |---|---|
-| **Overdue** (red) | Past showings where D+7 has passed and `report_submitted_at` is null |
-| **Pending** (amber) | Past showings within the reminder window, not yet submitted |
-| **Upcoming** | Future confirmed showings that will require a report |
-| **Submitted** | Past showings with `report_submitted_at` set |
+| **Overdue** (red) | Any item past D+8 and not completed |
+| **Pending** (amber) | Items within the reminder window, not yet completed |
+| **Complete** | All items done |
+| **Upcoming** | Future confirmed showings that will generate a checklist |
 
-Each row shows: film title, screening date, programmer name (from rota),
-submission status, and a "mark as submitted" button for Panopticon to use
-if the programmer has reported by other means (phone call, email, etc.).
+Each row shows: film title, date, programmer (from rota), and a status
+icon for each of the four tasks (box office, invoice requested, invoice
+paid, media return). Panopticon can mark any item done from this view
+(for when the programmer has done it outside the system).
 
-This view is read-accessible to all logged-in volunteers (so any volunteer
-can see the current state and chase if needed) and write-accessible to
-Programmer and Panopticon.
+Read-accessible to all logged-in volunteers; write-accessible to Programmer
+and Panopticon.
 
 #### Connection to existing infrastructure
 
-The `terms` field on `Event` already holds distribution agreement details.
-Programmers should be prompted (at event creation or on the report tracker
-view) to include the distributor's reporting contact or portal URL in the
-`terms` field — this means all the information needed to submit the report
-is in one place. The toolkit doesn't currently surface the `terms` content
-prominently to programmers post-screening; the report tracker view is a
-natural place to do this.
+The `terms` field on `Event` already holds distribution agreement details
+including reporting contacts. The post-screening tracker is the natural
+place to surface this: the programmer sees the distributor contact at the
+moment they need it, not just when setting up the event.
 
-The existing `/diary/terms/csv/` endpoint already exports event terms for
-a date range. The film report tracker is a complementary view: where the
-terms CSV covers what agreements exist, the tracker covers whether those
-agreements have been honoured.
+The existing `/diary/terms/csv/` endpoint covers what agreements exist;
+this tracker covers whether they've been honoured.
 
 #### Size breakdown
 
 | Component | Size | Hours |
 |---|---|---|
-| `Showing` model fields + migration | 🟢 XS | 1–2h |
-| Auto-detection logic at event creation | 🟢 XS | 2–3h |
-| Reminder email scheduling (D+1, D+4, D+8) | 🔵 S | 6–10h |
-| One-click token URL for confirmation | 🔵 S | 4–6h |
-| Dashboard / report tracker view | 🔵 S | 4–8h |
+| `PostScreeningChecklist` model + migration | 🟢 XS | 2–3h |
+| Auto-detection logic at showing confirmation | 🟢 XS | 2–3h |
+| Reminder email scheduling (D+1, D+4, D+8 per task) | 🟡 M | 8–12h |
+| One-click token URLs (3 tasks × confirm endpoint) | 🔵 S | 4–6h |
+| Dashboard / tracker view | 🔵 S | 5–8h |
+| Finance notification on invoice-paid | 🟢 XS | 2–3h |
 | TicketSource API booking count in email | 🔵 S | 4–8h (optional) |
-| **Total (without TicketSource)** | **🟡 M** | **~20h** |
-| **Total (with TicketSource)** | **🟡 M** | **~28h** |
+| **Total (without TicketSource)** | **🟡 M** | **~25h** |
+| **Total (with TicketSource)** | **🟡 M** | **~33h** |
 
 ### 9.15 Film metadata, distributor records, and screening reports 🟡 M (20–35h)
 
@@ -3111,6 +3145,131 @@ The break-even calculator (9.9, already live) reads `terms` for context. Once st
 | **Total** | **🟡 M** | **~20–34h** |
 
 **Minimum viable increment:** add `cost_type` + the form dropdown + relaxed validation (~5–6h). This alone fixes the misclassification problem for all new records and immediately improves analysis quality.
+
+---
+
+### 9.55 — Legacy event archive: stub display and import 🔵 S (8–16h)
+
+#### Context
+
+The live S&S database contains roughly 2,000+ events with no copy, no summary, no film information, no media, and `duration = 00:00:00`. These were imported from the old website (pre-toolkit era). They have a name and at least one showing date — that is all.
+
+They show up in the archive and programme views as blank cards, which looks broken and actively discourages exploration of the archive.
+
+#### Option A — Graceful fallbacks (no special treatment, ~1h)
+
+Templates already guard `{% if event.copy %}`. The public programme just renders title + date for stubs. Simple, but the archive looks sparse and stubs are indistinguishable from events that simply haven't been programmed yet.
+
+#### Option B — `is_stub` property on Event (~2–4h, recommended first step)
+
+Add a read-only `@property` on `Event`:
+
+```python
+@property
+def is_stub(self):
+    return (
+        not self.copy
+        and not self.copy_summary
+        and not self.film_information
+        and not self.media.exists()
+    )
+```
+
+Use `{% if event.is_stub %}` in public programme and archive templates to render a compact "Historical record — details not available" state, visually distinct from a fully programmed event (e.g. grey background, smaller card, no empty body text). The event hub should show a banner prompting enrichment.
+
+Add 10–15 past-dated stub events to seed data to test this display path.
+
+#### Option C — Bulk import tool (~1 day, follow-on)
+
+A management command (e.g. `import_legacy_events`) that reads the raw SQL dump or converted SQLite and bulk-creates `Event + Showing` records, setting `legacy_copy=True` (field already exists). Programmers can then enrich stubs over time via the Event Hub. The import should be idempotent (keyed on legacy ID / name + date) and produce a summary of what was created vs skipped.
+
+#### Recommendation
+
+Option B first (small, immediate visual improvement), Option C when the collective has agreed what to do with the archive long-term.
+
+#### See also
+
+- `plans/legacy-events.md` — notes from live data analysis
+- `Event.legacy_copy` BooleanField (already exists) — may need redefining for this purpose
+- `plans/live-data-seed-and-tests.md` — seed data improvements including stub events
+
+---
+
+### 9.56 — Volunteer activity tracking: `active` flag and programmer eligibility 🔵 S (6–12h)
+
+#### Context and current state
+
+`Volunteer.active` is a manually-administered boolean. There is no automated mechanism to set or clear it. The live database shows 13 inactive volunteers, most of which are test accounts or people who registered and never returned — the flag does not reliably indicate whether someone is currently volunteering.
+
+The `RotaEntry.name` field stores free-text volunteer names, not a FK to `Volunteer`. This means rota activity cannot be automatically correlated with a volunteer record without a matching step.
+
+#### Business logic intent
+
+The collective has discussed a policy under which programmers should only be able to schedule events if they have completed at least **10 shifts in the last 12 months**. This is a fairness and accountability mechanism: programming slots are a limited resource and should go to people who are actively contributing in other ways.
+
+#### What would need to change to implement this
+
+1. **Shift completion tracking:** `RotaEntry.name` is currently the only "filled" signal. A proper implementation would need either:
+   - A `completed` BooleanField on `RotaEntry` (set by keyholder or programmer post-event), or
+   - A `shifts_completed` counter on `Volunteer` updated via a management command or webhook.
+
+2. **`Volunteer.active` automation:** Could be auto-derived as "has completed ≥ 1 shift in the last 3 months". Would require the shift-completion tracking above.
+
+3. **Programmer eligibility gate:** The `add_event` and `add_showing` views would check `request.user.volunteer.is_eligible_to_programme` (a property, not a DB field) before allowing access. The index page would surface this eligibility status with a friendly prompt to build more shifts.
+
+#### Design questions for the collective
+
+- What counts as a shift? (All rota roles, or only certain ones?)
+- Who verifies completion? (Keyholder marks it after the event?)
+- Is 10-in-12-months a hard gate or a soft warning?
+- What happens to existing programmers with incomplete records?
+
+#### Current recommendation
+
+Do not implement until the collective has answered the design questions above. The infrastructure (shift tracking) is a prerequisite for the eligibility check. Track the design discussion in a collective meeting before any code is written.
+
+---
+
+### 9.57 — Placeholder image generator for new events 🟢 XS (2–4h)
+
+**Context:** See 8.16. When a programmer creates an event without uploading a poster, the programme grid shows a blank where the image should be. This is jarring, especially for recurring events (café, film club) where a poster may never exist.
+
+**Proposed:** Add a "Generate placeholder image" button to the event edit page. On click, it calls a small Django view that runs the same `_make_poster_image` logic from `seed_dev_data` — gradient background derived from the event's first tag, event name stretched bold across the frame — and attaches the result as a `MediaItem` on the event.
+
+**Implementation sketch:**
+- Extract `_make_poster_image` (and `_find_bold_font`) from `seed_dev_data.py` into a shared utility, e.g. `toolkit/diary/poster.py`
+- Add a POST view `generate_event_poster(event_id)` behind `diary.change_event` permission
+- Wire up a button in the event edit template, next to the existing media upload widget
+- The bundled font at `seed_data/fonts/DejaVuSans-Bold.ttf` works at runtime; the view should use it directly rather than looking up system fonts
+
+**Out of scope for this ticket:** custom colour picker, font choice, or text override — the generated image is a placeholder, not a design tool.
+
+---
+
+### 9.58 — Rethink how recurring events appear on the programme 🟡 M (design first)
+
+**Context:** The current data model has a single `Event` with multiple `Showing` objects — one per occurrence. The public programme grid (`view_showing_index.html`) groups showings by event: one card per event, all dates listed underneath. The list view shows each showing individually in chronological order.
+
+**The problem:** For recurring events like the Sunday café or weekly film screenings, the grid shows one card with a wall of dates stacked in the `start_and_pricing` block. This conflates "what this event is" with "when it's happening next" — which works for a one-off film but is confusing for a rolling programme.
+
+**Options to consider:**
+
+1. **One card per showing (current list behaviour, applied to grid):** Every showing gets its own card. The café appears 52 times in a year view. Clean and consistent, but noisy for recurring events and would need pagination or a shorter default window.
+
+2. **One card per event, show only the next upcoming showing date:** The card says "Next: Sunday 5 April, 12:00" rather than listing all dates. Cleaner, but hides the full schedule.
+
+3. **Separate "recurring event" model:** Distinguish one-offs from recurring series. A `RecurringSeries` has a schedule rule (e.g. "every Sunday") and generates `Showing` objects on demand. The grid shows the series with its next date; a detail page shows the full schedule. This is the most correct model but a significant migration.
+
+4. **Hybrid: show first N upcoming showings per card:** Show the next 2–3 dates on the card with a "see all dates" link. Reasonable middle ground; no model changes needed.
+
+**Recommendation:** Options 1 or 4 are achievable without model changes. Option 2 requires a small template change. Option 3 is the right long-term answer but needs collective input on what "recurring" means — fixed schedule vs ad-hoc.
+
+**Design questions for the collective:**
+- Is the café genuinely the same event each week, or is each Sunday its own thing?
+- Should a cancelled café Sunday affect the recurring series or just that occurrence?
+- Do we want to show programme history (past showings of the same event) on the event detail page?
+
+Do not implement until the data model question (option 3 vs not) is settled — the wrong choice now creates migration debt.
 
 ---
 

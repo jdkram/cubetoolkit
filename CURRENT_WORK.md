@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-03-17
+**Last updated:** 2026-03-27 (added 9.57, 9.58)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -115,6 +115,8 @@ None — all clear.
 | 9.42 | Tests: diary edit list view | 🟢 XS | `rooms` no None sentinel; month heading in thead; empty-day blank time cell; see TASKS.md 9.42 |
 | 9.43 | Room management UI | 🔵 S | Create/edit/delete rooms from toolkit UI (not just Django admin); name, colour picker, is_primary; see TASKS.md 9.43 |
 | 9.45 | Password management in volunteer profile | 🔵 S | "Set/change password" + "send reset email" inline in Permissions card; removes Django admin detour; see TASKS.md 9.45 |
+| 9.57 | Placeholder image generator for new events | 🟢 XS | Button on event edit page to generate a bold typographic poster from the event name + tag colour; extracts `_make_poster_image` from `seed_dev_data` into `diary/poster.py`; see TASKS.md 9.57 |
+| 9.58 | Rethink recurring event display on programme | 🟡 M | Currently: one card per event, all dates stacked. Options: one card per showing, next-date-only, or a RecurringSeries model. Design question for the collective first; see TASKS.md 9.58 |
 | ~~9.50~~ | ~~Volunteer self-service profile edit from nav~~ | ✅ 2026-03-02 | Own name in top nav links to `edit-volunteer/<pk>`; guarded by `user.volunteer.pk`; `seed_dev_data` now creates Member+Volunteer for all demo accounts so link appears in dev |
 | ~~9.46~~ | ~~Login page styling~~ | ✅ 2026-03-02 | Extends `base_public.html`; login, logout + password reset templates styled with centered card layout; friendly titles; `site_custom.css` moved into `base_public.html` so all descendants get nav styling; see TASKS.md 9.46 |
 
@@ -127,7 +129,7 @@ Full specs in [TASKS.md](docs/TASKS.md). Suggested order:
 3. **9.2 Programming pipeline** — independent of accounts; auto-populate programmer slot pays off immediately
 4. **9.7 Room booking** — independent; addresses live operational clashes
 5. **9.4 Induction + 9.5 Wellbeing** — build once accounts foundation is stable
-6. **9.14 Film rights tracker** — independent; blacklisting risk is real; deliver basic version first
+6. **9.14 Post-screening admin checklist** — independent; tracks rights report, invoice request/paid, DCP return per showing; replaces the manual Google Sheet columns the film programming group uses
 7. **9.6 Comms + 8.5 Email sync** — largest cluster; scope depends on mailing list provider decisions
 
 ---
@@ -138,6 +140,7 @@ Completed items stay here. When the Done section gets unwieldy, old rows can be 
 
 | Item | Completed | Notes |
 |------|-----------|-------|
+| ~~seed_dev_data rewrite — fix 8 bugs preventing seeding~~ | 2026-03-27 | Replaced external image downloads with local PIL placeholders; fixed indentation (rota/image/link creation was outside event loop); fixed `_seed_bulk_volunteers` (undefined `_`, tuple not unpacked, `return` inside loop); fixed monthly events nth-weekday calculation; fixed `_seed_one_recurring_showing` inner loop nesting; fixed `_seed_cms_pages` (tuple unpack, Wagtail tree API, `body=` field name, added missing CMS body constants); fixed `_seed_index_links` (field names `text`/`link`/`name`); created missing migration `diary/0018`; changed `--bulk-volunteers` default to 0 (opt-in). Seed now completes in ~4s with no network calls. |
 | ~~CalVer versioning + dev watermark~~ | 2026-03-21 | `VERSION` file at repo root; `settings_common.py` reads it; `venue` context processor exposes `{{ VERSION }}` to all public templates; `base_public.html` watermark shows `DEV · {{ VERSION }}`; `.dockerignore` gains `static/` + `staticfiles/` entries; `collectstatic` uses `--clear` to prevent stale static assets. See ONBOARDING.md "Releases and Versioning". |
 | ~~Bug X — static files stale after Docker rebuild~~ | 2026-03-21 | Root cause: `static/` (gitignored but on-disk) was copied into the image by `COPY . /site/`; `collectstatic` saw same timestamps on source + dest and skipped overwrite. Fix: `static/` added to `.dockerignore`; `collectstatic --clear` added to Dockerfile. |
 | ~~Bug W — 209 test failures: `base_login.html` missing from main `templates/`~~ | 2026-03-06 | Created `templates/base_login.html`: minimal Roboto Mono shell with venue logo; no nav. Auth templates already extended it; it only existed in `star_and_shadow_templates/`. All 433 tests now pass. |
