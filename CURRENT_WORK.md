@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-03-27 (added 9.57–9.61; implemented 9.60)
+**Last updated:** 2026-03-31 (added 9.66–9.68; backlog refinement)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -124,6 +124,9 @@ None — all clear.
 | 9.63 | Interactive SVG venue map for room bookings | 🟡 M | Hook in new SVG floorplan as interactive room booking UI. Visual room selection, availability overlay. **Status:** Needs spec by Jonny+Claude |
 | 9.64 | Calendar mobile view fixes | 🟠 L | Bug M (overlapping events) + full mobile usability. Partially done (default duration fix in). See `plans/calendar-fixes.md` for full plan. **Status:** Needs spec by Jonny+Claude |
 | 9.65 | Panopticon site settings dashboard | 🟡 M | Edit runtime settings (MAX_COUNT_PER_ROLE, etc.) without redeploy. Singleton SiteConfiguration model + Panopticon CRUD view. **Status:** Needs spec by Jonny+Claude |
+| 9.66 | Film event metadata + TMDB integration | 🟡 M | Dedicated `Film` model (Director, year, country, language, etc.) with FK to Event. Pre-populate from TMDB API with programmer override. User has API key. **Status:** Needs spec by Jonny+Claude |
+| 9.67 | Room scratchpad/notes | 🟢 XS | Free-text `scratchpad` field on `Room` model. Any user can edit. Visible on rota and room pages. Photos later. **Status:** Needs spec by Jonny+Claude |
+| 9.68 | Collectives directory + membership | 🟡 M | Collectives page with descriptions + key links (Nextcloud folders, WhatsApp groups). Users select membership for prioritised view. Toolkit-only (no mailing list sync yet). Related to 9.51. **Status:** Needs spec by Jonny+Claude |
 | ~~9.50~~ | ~~Volunteer self-service profile edit from nav~~ | ✅ 2026-03-02 | Own name in top nav links to `edit-volunteer/<pk>`; guarded by `user.volunteer.pk`; `seed_dev_data` now creates Member+Volunteer for all demo accounts so link appears in dev |
 | ~~9.46~~ | ~~Login page styling~~ | ✅ 2026-03-02 | Extends `base_public.html`; login, logout + password reset templates styled with centered card layout; friendly titles; `site_custom.css` moved into `base_public.html` so all descendants get nav styling; see TASKS.md 9.46 |
 
