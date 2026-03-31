@@ -62,7 +62,7 @@ CUBE role rota
 
 {% for showing in showings %}
     {% ifchanged %}<tr><td colspan="6"><h2>{{ showing.start|date:"F Y" }}</h2></td></tr>{% endifchanged %}
-    <tr class="event_head"><td>{{ showing.start|date:"D j H:i" }}{% if showing.event.duration %}–{{ showing.end_time|date:"H:i" }}{% endif %}</td><td colspan="2">{{ showing.event.name }} </td><td> </td></tr>
+    <tr class="event_head"><td>{{ showing.start|date:"D j H:i" }}{% if showing.event.duration %}–{{ showing.end_time|date:"H:i" }}{% endif %}</td><td colspan="2">{{ showing.event.name }} </td><td>{% if MULTIROOM_ENABLED and showing.room %}<span class="room-badge" style="border-left: 4px solid {{ showing.room.colour }}; padding-left: 0.4em;">{{ showing.room.name }}</span>{% endif %}</td></tr>
     {% for rota_entry in showing.rotaentry_set.all %}
         {% if forloop.counter|divisibleby:2 %}
             <td class="rota_box">   {{ rota_entry.name }}</td><td> {% if rota_entry.role.description %}<span title="{{ rota_entry.role.description }}" style="cursor: help; color: #0066cc; font-weight: bold;">ℹ</span> {% endif %}{{ rota_entry.role.name }}-{{ rota_entry.rank }} </td></tr>
