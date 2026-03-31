@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-03-27 (added 9.57, 9.58)
+**Last updated:** 2026-03-27 (added 9.57–9.61; implemented 9.60)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -31,9 +31,9 @@ None — all clear.
 | ✅ Panopticon user management in volunteer edit | Done 2026-02-28 | `UserForm` (username/is_active/is_superuser) shown when `VENUE.show_user_management=True`; gated so Cube tests unaffected |
 | ✅ Custom Django admin `ModelAdmin` classes | Done 2026-02-28 | `members/admin.py` (Member, Volunteer, User+VolunteerInline); `diary/admin.py` (Room, Role, EventTag, Event, Showing) |
 | ✅ Expired members view | Done 2026-02-28 | `/members/expired/` endpoint; reuses `search_members_results.html` |
-| ❌ `view_diary_json` endpoint | Not started | Experimental; existed on `s+s` |
-| ❌ Legacy URL redirects | Not started | Old website had different URL structure |
-| ❌ `utils/mailoutomatic.py` | Not started | Standalone mailout scheduler |
+| ❌ `view_diary_json` endpoint | Shelved | Experimental; existed on `s+s`. Not currently needed. |
+| ❌ Legacy URL redirects | Shelved | Old website had different URL structure. Requirements unclear. |
+| ❌ `utils/mailoutomatic.py` | Shelved | Standalone mailout scheduler. Can revisit if needed. |
 
 ### 2. Template comparison & alignment
 
@@ -117,6 +117,13 @@ None — all clear.
 | 9.45 | Password management in volunteer profile | 🔵 S | "Set/change password" + "send reset email" inline in Permissions card; removes Django admin detour; see TASKS.md 9.45 |
 | 9.57 | Placeholder image generator for new events | 🟢 XS | Button on event edit page to generate a bold typographic poster from the event name + tag colour; extracts `_make_poster_image` from `seed_dev_data` into `diary/poster.py`; see TASKS.md 9.57 |
 | 9.58 | Rethink recurring event display on programme | 🟡 M | Currently: one card per event, all dates stacked. Options: one card per showing, next-date-only, or a RecurringSeries model. Design question for the collective first; see TASKS.md 9.58 |
+| 9.59 | Programmer-defined crop region for index images | 🟡 M | `focal_x`/`focal_y` on `MediaItem`; JS focal-point picker in upload widget; `indexview` thumbnail uses crop mode centred on focal point; full image preserved for detail view; see TASKS.md 9.59 |
+| ~~9.60~~ | ~~Room name and colour on the rota~~ | ✅ 2026-03-27 | Added room name with coloured left-border accent to event heading row in `view_rota.html`; behind `MULTIROOM_ENABLED`; no model/view changes; will need updating once 9.7 adds multi-room bookings |
+| 9.61 | Quick links from event detail to rota and event hub | 🟢 XS | Volunteer-only "View rota" + "Event hub" links on `view_event.html`; guard with `user.is_authenticated`; one pair per showing; see TASKS.md 9.61 |
+| 9.62 | Multi-room bookings architecture | 🟠 L | Replace `Showing.room` ForeignKey with `RoomBooking` through-model (Showing 1+ rooms). Enables events spanning multiple rooms at different times. See TASKS.md 8.11. **Status:** Needs spec by Jonny+Claude |
+| 9.63 | Interactive SVG venue map for room bookings | 🟡 M | Hook in new SVG floorplan as interactive room booking UI. Visual room selection, availability overlay. **Status:** Needs spec by Jonny+Claude |
+| 9.64 | Calendar mobile view fixes | 🟠 L | Bug M (overlapping events) + full mobile usability. Partially done (default duration fix in). See `plans/calendar-fixes.md` for full plan. **Status:** Needs spec by Jonny+Claude |
+| 9.65 | Panopticon site settings dashboard | 🟡 M | Edit runtime settings (MAX_COUNT_PER_ROLE, etc.) without redeploy. Singleton SiteConfiguration model + Panopticon CRUD view. **Status:** Needs spec by Jonny+Claude |
 | ~~9.50~~ | ~~Volunteer self-service profile edit from nav~~ | ✅ 2026-03-02 | Own name in top nav links to `edit-volunteer/<pk>`; guarded by `user.volunteer.pk`; `seed_dev_data` now creates Member+Volunteer for all demo accounts so link appears in dev |
 | ~~9.46~~ | ~~Login page styling~~ | ✅ 2026-03-02 | Extends `base_public.html`; login, logout + password reset templates styled with centered card layout; friendly titles; `site_custom.css` moved into `base_public.html` so all descendants get nav styling; see TASKS.md 9.46 |
 
