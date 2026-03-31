@@ -347,3 +347,52 @@ day_offset = 90
 hour = 10
 image_url = "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=800"
 room = "Meeting"
+
+# ── Image format test events ──────────────────────────────────────────────────
+# These exist to exercise the index and detail templates with different aspect
+# ratios. Real programmers upload whatever they have — portrait posters,
+# landscape banners, phone-camera squares — so the templates need to handle all
+# of them gracefully without us baking in any assumptions.
+#
+# Portrait (2:3): TMDB film poster — closest to a real S+S poster upload.
+# Square (1:1):   Pexels photo cropped square — phone camera square mode.
+# Wide (16:9):    Pexels panoramic — venue banner / landscape promo image.
+
+[[events]]
+name = "Image Test: Portrait Poster (2:3)"
+copy_summary = "Test event to exercise portrait-format images in the index and detail views."
+copy = "This event exists only to seed a portrait-format image (2:3 aspect ratio, like a film poster). It should be ignored in UI design reviews — it is here so the grid and list views can be checked with a realistic tall image."
+tags = ["film"]
+private = false
+hide_in_programme = true
+roles = ["Keyholder"]
+day_offset = 120
+hour = 19
+image_url = "https://image.tmdb.org/t/p/w780/ptlBtpecd39gYVDNbMpVIg7gYsd.jpg"
+room = "Cinema"
+
+[[events]]
+name = "Image Test: Square Format (1:1)"
+copy_summary = "Test event to exercise square-format images in the index and detail views."
+copy = "This event exists only to seed a square-format image (1:1 aspect ratio, like a phone camera square or social card). It should be ignored in UI design reviews — it is here so the grid and list views can be checked with a square image."
+tags = ["workshop"]
+private = false
+hide_in_programme = true
+roles = ["Keyholder"]
+day_offset = 121
+hour = 14
+image_url = "https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=800&h=800"
+room = "Venue Space"
+
+[[events]]
+name = "Image Test: Wide Landscape (16:9)"
+copy_summary = "Test event to exercise wide-landscape images in the index and detail views."
+copy = "This event exists only to seed a wide-landscape image (16:9 aspect ratio, like a venue banner or promo photo). It should be ignored in UI design reviews — it is here so the grid and list views can be checked with a wide image."
+tags = ["performance"]
+private = false
+hide_in_programme = true
+roles = ["Keyholder"]
+day_offset = 122
+hour = 20
+image_url = "https://images.pexels.com/photos/1047442/pexels-photo-1047442.jpeg?auto=compress&cs=tinysrgb&w=1600&h=900&fit=crop"
+room = "Venue Space"
