@@ -1166,21 +1166,15 @@ class Command(BaseCommand):
                     img = Image.open(io.BytesIO(img_data))
                     if img.mode != "RGB":
                         img = img.convert("RGB")
-                    # Resize and centre-crop to 800x450
-                    target_w, target_h = 800, 450
-                    img_ratio = img.width / img.height
-                    target_ratio = target_w / target_h
-                    if img_ratio > target_ratio:
-                        new_h = target_h
-                        new_w = int(new_h * img_ratio)
-                    else:
-                        new_w = target_w
-                        new_h = int(new_w / img_ratio)
-                    resample = getattr(Image.Resampling, "LANCZOS", Image.BICUBIC)
-                    img = img.resize((new_w, new_h), resample=resample)
-                    left = (new_w - target_w) / 2
-                    top = (new_h - target_h) / 2
-                    img = img.crop((left, top, left + target_w, top + target_h))
+                    # Scale down if very large, preserving aspect ratio.
+                    # Do NOT crop -- store the full image so real-world aspect
+                    # ratios (portrait posters, landscape banners, square social
+                    # cards) are preserved and the index/detail templates can be
+                    # tested with authentic variety.
+                    max_dim = 1200
+                    if img.width > max_dim or img.height > max_dim:
+                        resample = getattr(Image.Resampling, "LANCZOS", Image.BICUBIC)
+                        img.thumbnail((max_dim, max_dim), resample=resample)
 
             if img is None:
                 img = self._make_poster_image(event_name, colour)
