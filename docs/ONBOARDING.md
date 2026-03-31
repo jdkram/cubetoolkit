@@ -502,6 +502,34 @@ docker compose exec toolkit /venv/bin/python3 manage.py configure_toolkit_users 
 docker compose exec toolkit /venv/bin/python3 manage.py seed_dev_data
 ```
 
+### Archive view fails with `SELECT command denied … mysql.time_zone`
+
+**Symptom:** Visiting `/programme/archive/` throws:
+
+```
+OperationalError: (1142, "SELECT command denied to user 'starandshadow'@'localhost' for table `mysql`.`time_zone`")
+```
+
+**Cause:** `USE_TZ = True` is set in `settings_common.py`. Django's generic archive views (`ArchiveIndexView`, `YearArchiveView`, `MonthArchiveView`) do timezone-aware date queries; on MariaDB/MySQL this translates to `CONVERT_TZ()` calls which read from the `mysql.time_zone` system tables. The app DB user doesn't have `SELECT` permission on those tables, or they haven't been populated.
+
+**Fix (run as root on the database server):**
+
+```bash
+# Populate the system timezone tables from the OS (skip if already done)
+mysql_tzinfo_to_sql /usr/share/zoneinfo | sudo mysql -u root mysql
+
+# Grant read access to the app user
+sudo mysql -u root -e "GRANT SELECT ON mysql.time_zone TO 'starandshadow'@'localhost'; FLUSH PRIVILEGES;"
+```
+
+In Docker dev (the DB container's root user has no password by default):
+
+```bash
+docker compose exec db mariadb -u root -e "GRANT SELECT ON mysql.time_zone TO 'starandshadow'@'%'; FLUSH PRIVILEGES;"
+```
+
+This is a one-time server configuration step that must be re-applied any time the database is rebuilt or the DB user is recreated. Production works because this has already been done on the production host.
+
 ---
 
 ## Next Steps
