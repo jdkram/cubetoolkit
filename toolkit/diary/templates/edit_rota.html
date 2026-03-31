@@ -107,6 +107,15 @@
         color: #777;
     }
 
+    .showing-room-badge {
+        font-size: 0.8rem;
+        color: #444;
+        padding: 0.05em 0.45em 0.05em 0.5em;
+        border-left: 3px solid #ccc;
+        align-self: center;
+        white-space: nowrap;
+    }
+
     /* Tags sit inline to the right of the event name, visually quiet */
     .event-tag-badges {
         display: inline-flex;
@@ -554,6 +563,7 @@ edit_rota(
                        href="{% noprefix_url 'single-showing-view' showing.pk %}"
                        title="View event">{{ showing.event.name }}</a>
                     {% endif %}
+                    {% if MULTIROOM_ENABLED and showing.room %}<span class="showing-room-badge" style="border-left-color: {{ showing.room.colour }};">{{ showing.room.name }}</span>{% endif %}
                     <span class="event-tag-badges">{% for tag in tag_slugs %}<span class="badge event-tag" data-tag-slug="{{ tag.slug }}">{{ tag.name }}</span>{% endfor %}</span>
                     <a class="showing-public-link"
                        href="{% noprefix_url 'single-showing-view' showing.pk %}"
