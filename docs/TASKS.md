@@ -3273,4 +3273,64 @@ Do not implement until the data model question (option 3 vs not) is settled — 
 
 ---
 
+### 9.59 — Programmer-defined crop region for index/listing images 🟡 M (16–30h)
+
+**Context:** Event images are stored at their full uploaded aspect ratio (portrait, landscape, square — whatever the programmer chose). The public programme index (`view_showing_index.html`) displays these as thumbnails via `easy_thumbnails`' `indexview` alias (`600×0` — scales to 600px wide, proportional height). This means portrait posters appear very tall in the grid and landscape banners appear very short; the grid becomes visually uneven.
+
+The current live S+S site sidesteps this by serving all images square (800×800 with implicit crop). That works but destroys context — the top of a tall poster may be chopped off, cutting out the film title. The Cube site has the same problem with its `indexview` alias.
+
+**The right solution:** let the programmer choose a crop region at upload time, similar to how Wagtail handles focal points. The stored image remains uncropped (so the event detail page shows the full poster), but the index thumbnail uses the chosen crop.
+
+**Design options:**
+
+1. **Focal point only (simplest):** Programmer picks a focal point (x, y) on the image. The thumbnail generator always centres its crop on that point. `easy_thumbnails` supports this via the `crop` option + a source anchor. Small form widget needed.
+
+2. **Explicit crop box:** Programmer drags a rectangle on the image to define the crop region. More control, higher implementation cost. Similar to Wagtail's image crop UI.
+
+3. **Free-form crop per alias:** Different crops for `indexview` vs `editpreview` vs future sizes. Most flexible, most complex — probably overkill.
+
+**Recommended approach:** Option 1 (focal point). Store `media_item.focal_x` and `media_item.focal_y` as floats (0.0–1.0, relative coordinates). Update `indexview` alias to use `crop="smart"` or a custom thumbnailer that honours the focal point. Default (no focal point set) falls back to centre-crop.
+
+**Data model change needed:**
+- Add `focal_x`, `focal_y` to `MediaItem` (nullable floats, `null=True, blank=True`)
+- Migration required
+
+**Form change needed:**
+- In the media upload widget on the event edit page, add a simple click-to-set-focal-point UI (JS overlay on the image preview)
+
+**Template/thumbnail change:**
+- Update `indexview` alias to use crop mode
+- Custom thumbnail tag may be needed if `easy_thumbnails` can't be given per-item focal points via aliases alone (its built-in focal-point support is limited)
+
+**Out of scope for this ticket:** full Wagtail-style drag-crop UI, per-alias crop regions, or changes to the event detail view (which should always show the full uncropped image).
+
+---
+
+### 9.60 — Room name and colour on the rota 🟢 XS (1–2h)
+
+**Context:** The rota view (`view_rota.html`) shows event name, date/time, rota entries, and notes, but gives no indication of which room the event is in. Volunteers working multiple rooms on the same night have to cross-reference the edit index or remember verbally. The `Room` model already has a `colour` field used in the calendar and edit index; the rota should use it.
+
+**What was done:** Added the room name to the event heading row in `view_rota.html`, behind the existing `MULTIROOM_ENABLED` flag, with a coloured left-border accent (`border-left: 4px solid {{ room.colour }}`). No model changes. No view changes.
+
+**What's still missing (for after 9.7 is implemented):** Once `Showing` can have multiple `RoomBooking` records, the rota heading will need to list all booked rooms rather than just `showing.room`. The template change will be minor; the data model change is the work.
+
+---
+
+### 9.61 — Quick links from event detail page to rota and event hub 🟢 XS (1–2h)
+
+**Context:** Volunteers arriving at an event's public detail page (`view_event.html`) currently have no direct path to the rota or the private event hub for that event. They have to navigate back to the diary or rota from scratch and search for the event again. This is friction for volunteers who bookmark event pages or arrive via a link in a mailout.
+
+**What to add:**
+
+For authenticated volunteers only (guard with `{% if user.is_authenticated %}`):
+
+- A "View rota" link → `diary:rota` view filtered to the event's date range, or directly to the showing's date
+- A "Event hub" link → `diary:view-showing-details` for the relevant showing
+
+Both links should be visually low-key (not CTAs) so they don't distract public visitors from the event info. A small "Volunteer links" section or a subtle inline strip at the bottom of the private details block would work.
+
+**Note:** The public `view_event.html` page can have multiple showings. If there are multiple showings, each should get its own rota/hub link pair. If there is only one, a single pair of links suffices.
+
+---
+
 *Completed tasks: [ARCHIVE.md](ARCHIVE.md)*
