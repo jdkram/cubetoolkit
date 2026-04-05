@@ -742,6 +742,9 @@ class Command(BaseCommand):
             datetime.datetime.combine(date, datetime.time(hour, 0, 0))
         )
 
+        if showing_start < timezone.now():
+            return
+
         showing, s_created = Showing.objects.get_or_create(
             event=event,
             start=showing_start,
@@ -854,6 +857,9 @@ class Command(BaseCommand):
         showing_start = timezone.make_aware(
             datetime.datetime.combine(date, datetime.time(hour, 0, 0))
         )
+
+        if showing_start < timezone.now():
+            return
 
         showing, s_created = Showing.objects.get_or_create(
             event=event,
