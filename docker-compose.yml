@@ -1,4 +1,10 @@
 # This compose file is for development and test, not for production deployment!
+#
+# Dev workflow:
+#   - Source is bind-mounted from the host — no rebuild needed for code changes
+#   - Django's runserver serves static files directly from source (DEBUG=True)
+#   - Python changes auto-reload; template changes are instant (no caching)
+#   - Only rebuild the image when dependencies change (requirements/*.txt, Dockerfile)
 networks:
   toolkit_dev:
     driver: bridge
@@ -12,7 +18,7 @@ services:
       - toolkit_dev
     image: toolkit:latest
     build: .
-    command: ["tk_run", "gunicorn"]
+    command: ["tk_run", "runserver"]
     restart: on-failure
     environment: &commonEnv
       DB_NAME: "${DB_NAME:-toolkit}"
@@ -27,6 +33,10 @@ services:
         published: "8000"
         protocol: tcp
     volumes:
+      # Bind-mount source so all code/template/static changes are live immediately.
+      - type: bind
+        source: .
+        target: /site/
       - type: volume
         source: media_data
         target: /site/media/
