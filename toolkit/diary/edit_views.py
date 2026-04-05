@@ -297,11 +297,11 @@ def edit_diary_data(request):
 
 @permission_required("toolkit.read")
 def edit_diary_calendar(request, year=None, month=None, day=None):
-    defaultView = "month"
+    defaultView = "dayGridMonth"
     try:
         if year and month and day:
             display_time = datetime.date(int(year), int(month), int(day))
-            defaultView = "agendaWeek"
+            # defaultView stays dayGridMonth for MVP; week view added later
         elif year and month:
             display_time = datetime.date(int(year), int(month), 1)
         elif year and not month:

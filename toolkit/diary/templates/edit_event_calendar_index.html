@@ -8,8 +8,7 @@
 {% block css %}
 {{ block.super }}
 <link rel="stylesheet" href="{{ STATIC_URL }}css/messages.css">
-<link rel='stylesheet' href='{{ STATIC_URL }}diary/js/lib/fullcalendar/fullcalendar.min.css' />
-<link rel='stylesheet' href='{{ STATIC_URL }}diary/js/lib/fullcalendar-scheduler/scheduler.min.css' />
+{# FC6 global bundle injects its own CSS via JS — no separate <link> needed. #}
 <style>
   @import url('{{ STATIC_URL }}css/lib/smoothness/jquery-ui.css');
 
@@ -21,10 +20,11 @@
       font-weight: bold;
       font-family: sans-serif;
   }
-  .s_discounted div.fc-title::after {
+  /* FC6: title element is .fc-event-title (was .fc-title in FC3) */
+  .s_discounted .fc-event-title::after {
       content: " *";
   }
-  .s_cancelled div.fc-title {
+  .s_cancelled .fc-event-title {
       text-decoration: line-through;
   }
   .s_unconfirmed {
@@ -38,7 +38,7 @@
   /* .s_auxiliary_room — class still emitted for JS filter hooks (9.41),
      but no CSS filter: secondary room colours are stored as pastels directly. */
 
-  /* Status label injected by eventRender below the event title */
+  /* Status label injected by eventDidMount below the event title */
   .fc-event-status {
       display: block;
       font-size: 0.75em;
@@ -50,18 +50,27 @@
       opacity: 0.9;
   }
 
-  /* ── Now-indicator: make the past/future boundary prominent ─── */
-  /* (replaces the old "historic" colour variant) */
-  .fc-now-indicator-line {
+  /* ── Now-indicator ───────────────────────────────────────────── */
+  .fc-timegrid-now-indicator-line {
       border-top-width: 3px;
       border-top-color: #d00;
   }
-  .fc-now-indicator-arrow {
+  .fc-timegrid-now-indicator-arrow {
       display: none;
   }
-  /* Today cell in month view */
-  .fc-day.fc-today {
+  /* FC6 today cell in month view */
+  .fc-day-today {
       background: rgba(255, 235, 180, 0.45) !important;
+  }
+
+  /* ── Full-viewport-width calendar ──────────────────────────── */
+  /* Override Bootstrap container max-width so the calendar fills the
+     available screen width on large monitors. Only affects this page. */
+  body > .container {
+      max-width: none;
+      width: 100%;
+      padding-left: 0;
+      padding-right: 0;
   }
 
   /* ── Layout ─────────────────────────────────────────────────── */
@@ -103,6 +112,7 @@
       flex: 1 1 100%;   /* full width row below calendar + key */
       background: white;
   }
+
   /* Mobile: stack vertically, key above calendar */
   @media (max-width: 800px) {
       #controls {
@@ -113,42 +123,43 @@
       }
   }
 
-  /* ── Mobile calendar fixes ───────────────────────────────────── */
   @media (max-width: 768px) {
       #calendar-container {
           flex: 1 1 100%;
           min-width: 0;
           overflow-x: auto;
       }
-
       #calendar {
           min-width: 100%;
           width: 100%;
       }
-
-      /* Make calendar touch-friendly */
       .fc-event {
-          min-height: 30px;  /* Larger touch targets */
+          min-height: 30px;
       }
-
-      /* Hide resource area on mobile to save space */
-      .fc-resource-area {
-          display: none;
+      /* Timeline view: allow horizontal scroll for room rows */
+      .fc-timeline-body {
+          overflow-x: auto;
       }
-  }
-
-  /* Extra small screens */
-  @media (max-width: 480px) {
-      #calendar .fc-toolbar {
+      /* Timeline resource labels: keep readable */
+      .fc-timeline-resource-area {
+          min-width: 80px;
+          max-width: 120px;
+      }
+      /* Toolbar: stack on mobile */
+      .fc-toolbar.fc-header-toolbar {
           flex-direction: column;
+          gap: 0.5rem;
       }
-
-      #calendar .fc-center {
-          margin: 0.5rem 0;
+      .fc-toolbar-chunk {
+          display: flex;
+          justify-content: center;
       }
-
-      #calendar .fc-right {
-          margin-top: 0.5rem;
+      .fc-toolbar-chunk:nth-child(2) {
+          order: -1;
+      }
+      .fc-button {
+          padding: 0.3rem 0.5rem;
+          font-size: 0.9rem;
       }
   }
 
@@ -162,7 +173,6 @@
       margin-right: 3px;
       flex-shrink: 0;
   }
-  /* No filter needed: secondary room pastels are stored directly in Room.colour */
   #diary-key summary {
       cursor: pointer;
       padding: 0.1rem 0;
@@ -188,46 +198,34 @@
 
 {% block script %}
 {{ block.super }}
-<script src='{{ STATIC_URL }}diary/js/lib/fullcalendar/lib/moment.min.js'></script>
-<script src='{{ STATIC_URL }}diary/js/lib/fullcalendar/fullcalendar.min.js'></script>
-<script src='{{ STATIC_URL }}diary/js/lib/fullcalendar-scheduler/scheduler.min.js'></script>
+{# FC6 global bundle — includes core, daygrid, timegrid, interaction. No separate CSS needed. #}
+<script src="{{ STATIC_URL }}diary/js/lib/fullcalendar-6/index.global.min.js"></script>
+{# FC6 scheduler plugins for multi-room calendar views (order matters: premium-common → scrollgrid → timeline → resource → resource-timeline) #}
+<script src="{{ STATIC_URL }}diary/js/lib/fullcalendar-6/premium-common.global.min.js"></script>
+<script src="{{ STATIC_URL }}diary/js/lib/fullcalendar-6/scrollgrid.global.min.js"></script>
+<script src="{{ STATIC_URL }}diary/js/lib/fullcalendar-6/timeline.global.min.js"></script>
+<script src="{{ STATIC_URL }}diary/js/lib/fullcalendar-6/resource.global.min.js"></script>
+<script src="{{ STATIC_URL }}diary/js/lib/fullcalendar-6/resource-timeline.global.min.js"></script>
 <script src="{{ STATIC_URL }}js/lib/jquery.jeditable.mini.js"></script>
 <script src="{{ STATIC_URL }}diary/js/calendar_index.js"></script>
 
 <script type="text/javascript">
-// FullCalendar 3.x uses $(htmlString) to batch-create event nodes and
-// correlates the result back to segment objects by array index. jQuery 3.5.0
-// introduced $.htmlPrefilter which can produce extra whitespace/text nodes in
-// that collection, causing an index mismatch (seg is undefined → crash, and
-// the timeline view's lane placement breaks). Restore the pre-3.5 no-op
-// behaviour for the calendar page. Safe because this is an internal admin UI.
-jQuery.htmlPrefilter = function(html) { return html; };
-
 var urls = {
-    'add-event': '{% url "add-event" %}',
+    'add-event':           '{% url "add-event" %}',
     'diary-edit-calendar': '{% url "diary-edit-calendar" %}',
-    'edit-diary-data': '{% url "edit-diary-data" %}',
-    'edit-ideas': '{% url "edit-ideas" year=9999 month=0 %}'.replace("/9999/0", "")
+    'edit-diary-data':     '{% url "edit-diary-data" %}',
+    'edit-ideas':          '{% url "edit-ideas" year=9999 month=0 %}'.replace("/9999/0", "")
 };
 
-$(document).ready(function() {
-    document.getElementById('diary-key').addEventListener('toggle', function() {
-        var ctrl = document.getElementById('controls');
-        ctrl.classList.toggle('controls-collapsed', !this.open);
-        // Give the flex layout one frame to settle, then tell FullCalendar to
-        // recalculate its size so it fills the newly available space.
-        setTimeout(function() { $('#calendar').fullCalendar('render'); }, 210);
-    });
-});
-
-init_calendar_view(jQuery,
-                   '{{ csrf_token }}',
-                   '{{ defaultView }}',
-                   '{{ display_time|date:"Y-m-d" }}',
-                   urls,
-                   [{% for room in rooms_and_colours %}
-                       { "id": {{ room.id }}, "title": "{{ room.name }}", "eventColor": "{{ room.colour }}"}{% if not forloop.last %},{% endif %}{% endfor %}
-                   ]);
+init_calendar_view(
+    '{{ csrf_token }}',
+    '{{ defaultView }}',
+    '{{ display_time|date:"Y-m-d" }}',
+    urls,
+    [{% for room in rooms_and_colours %}
+        { "id": {{ room.id }}, "title": "{{ room.name }}", "eventColor": "{{ room.colour }}"}{% if not forloop.last %},{% endif %}
+    {% endfor %}]
+);
 </script>
 {% endblock %}
 
@@ -237,6 +235,9 @@ init_calendar_view(jQuery,
 <div id="flex-container">
 
 <div id='calendar-container'>
+<div id="time-range-control" style="display:none;text-align:right;margin-bottom:0.3rem">
+  <button type="button" id="time-range-btn" class="fc-button fc-button-primary">all hours</button>
+</div>
 <div id='calendar'></div>
 </div>
 
@@ -285,6 +286,5 @@ init_calendar_view(jQuery,
 <div id='ideas'></div>
 </div>
 
-</div>
 </div>
 {% endblock %}
