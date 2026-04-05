@@ -119,35 +119,42 @@ docker compose exec toolkit /venv/bin/python manage.py <command>
 docker compose exec toolkit /venv/bin/python manage.py test --settings=toolkit.test_settings
 ```
 
-### ⚠️ Source code is baked into the image — always rebuild after changes
+### Edit / reload cycle
 
-Unlike many dev setups, **the source code is copied into the Docker image at build time**. There is no volume mount that keeps the container in sync with your local files. This means:
+The source code is bind-mounted into the container at `/site/`, so the running container always sees your local files directly. No rebuild is needed for most changes.
 
-- **Any change to Python files, templates, management commands, or static files requires a rebuild** before it takes effect in the running container.
-- Running `docker compose exec toolkit ...` after editing a file will silently run the **old baked version**.
-- This has caused confusion where seed data or template changes appeared to have no effect.
+| What changed | What to do |
+|---|---|
+| Python files (views, models, forms…) | Nothing — gunicorn watches `*.py` files and reloads workers automatically |
+| Templates (`.html`) | Nothing — debug mode disables template caching |
+| CSS or JS (static files) | Run collectstatic (see below) |
+| New Python dependency | `docker compose up --build -d` (must rebuild) |
+| Dockerfile or `tk_run.sh` | `docker compose up --build -d` (must rebuild) |
 
-**The correct workflow after any code change:**
+**After changing CSS or JS:**
 
 ```bash
-# 1. Rebuild the image and restart the container (detached)
+docker compose exec toolkit /venv/bin/python3 manage.py collectstatic --noinput
+```
+
+This takes a few seconds. Refresh the browser and the new files are live.
+
+**If you need a full rebuild** (new dependency, Dockerfile change):
+
+```bash
 docker compose up --build -d
+```
 
-# 2. Wait ~10 seconds for gunicorn to start, then test your change
-# e.g. re-run a management command:
+The container runs `collectstatic` automatically on every start, so static files are always up to date after a rebuild too.
+
+**Running management commands:**
+
+```bash
+# Seed dev data
 docker compose exec toolkit /venv/bin/python3 manage.py seed_dev_data --wipe
-```
 
-To confirm the running container has your latest code, check the build timestamp in the logs:
-
-```bash
-docker compose logs toolkit | head -20
-```
-
-Or grep for a string you just added to verify the file contents are correct:
-
-```bash
-docker compose exec toolkit grep -n "your new string" /path/to/file.py
+# Run migrations (happens automatically on start, but you can trigger manually)
+docker compose exec toolkit /venv/bin/python3 manage.py migrate
 ```
 
 ---
