@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-03-31 (added 9.66–9.68; backlog refinement)
+**Last updated:** 2026-04-05 (FC6 timeline views added — week + month views working)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -48,7 +48,7 @@ None — all clear.
 | ID | Bug | Size |
 | -- | --- | ---- |
 | ~~**E**~~ | ~~Volunteer login dropdown inaccessible on touch~~ | ✅ 2026-03-02 — sidebar scrollbar fix resolved this |
-| **M** | Calendar edit view: simultaneous events overwrite each other on busy days | 🟠 L |
+| ~~**M**~~ | ~~Calendar edit view: simultaneous events overwrite each other on busy days~~ | ✅ 2026-04-04 — `Showing.end_time` now returns `start + 2h` when `event.duration` is None; FullCalendar can detect overlaps and tile events side-by-side |
 | ~~**R**~~ | ~~Mobile: public-site sidebar always visible through content (not gated by hamburger)~~ | ✅ 2026-03-03 — `site_custom.css`: sidebar starts at `left: -240px; z-index:200` on mobile; desktop-only `@media (1000px+)` block keeps it always visible; `site-common.js` now also toggles `.sidebar-open` on `#sidebar` |
 | ~~**S**~~ | ~~Login page: nav bar overlaps form on mobile; style inconsistent with post-login admin nav~~ | ✅ 2026-03-03 — `star_and_shadow_templates/base_login.html` created: minimal logo-only base (no nav); login, logout, all four password-reset templates now extend it instead of `base_public.html` |
 | ~~**T**~~ | ~~Admin toolkit: navbar toggler off-screen on mobile; body padding too large; rota controls overflow~~ | ✅ 2026-03-03 — `base_admin.html`: brand img `max-width:120px`; `padding: 3.5rem 0.5rem` on ≤576px; `.navbar-collapse { background-color: inherit }` on ≤767px; rota controls: date inputs `6em` on ≤640px |
@@ -122,11 +122,16 @@ None — all clear.
 | 9.61 | Quick links from event detail to rota and event hub | 🟢 XS | Volunteer-only "View rota" + "Event hub" links on `view_event.html`; guard with `user.is_authenticated`; one pair per showing; see TASKS.md 9.61 |
 | 9.62 | Multi-room bookings architecture | 🟠 L | Replace `Showing.room` ForeignKey with `RoomBooking` through-model (Showing 1+ rooms). Enables events spanning multiple rooms at different times. See TASKS.md 8.11. **Status:** Needs spec by Jonny+Claude |
 | 9.63 | Interactive SVG venue map for room bookings | 🟡 M | Hook in new SVG floorplan as interactive room booking UI. Visual room selection, availability overlay. **Status:** Needs spec by Jonny+Claude |
-| 9.64 | Calendar mobile view fixes | 🟠 L | Bug M (overlapping events) + full mobile usability. Partially done (default duration fix in). See `plans/calendar-fixes.md` for full plan. **Status:** Needs spec by Jonny+Claude |
+| ~~9.64~~ | ~~Calendar: FC6 migration + month view~~ | ✅ 2026-04-05 | Migrated from FC3.5.1 + Scheduler 1.7.1 to FC6.1.20 global bundle. Full JS rewrite (`calendar_index.js`): jQuery-free FC init, FC6 API (`headerToolbar`, `initialView`, `datesSet`, `eventDidMount`, `dateClick`, `dayMaxEvents`). Removed `htmlPrefilter` workaround. CSS updated (`.fc-title` → `.fc-event-title`, `.fc-day.fc-today` → `.fc-day-today`). Calendar now full-viewport-width (Bootstrap container override). Dev setup switched to `runserver` + bind-mount (no collectstatic for JS/CSS changes). Month view confirmed working. |
+| ~~9.74~~ | ~~Calendar: timeline week + month views~~ | ✅ 2026-04-05 | Added `resourceTimelineWeek` and `resourceTimelineMonth` views for multi-room venues. FC6 Scheduler bundles (`resource.global.min.js`, `resource-timeline.global.min.js`) vendored. Views show rooms as rows. Added `schedulerLicenseKey` for GPL exemption. Events open in new tab (`window.open`). `localStorage` remembers last view. Mobile CSS for toolbar stacking and touch targets. Fixed test regex for 5-arg `init_calendar_view` (was 6 args with jQuery in FC3). |
 | 9.65 | Panopticon site settings dashboard | 🟡 M | Edit runtime settings (MAX_COUNT_PER_ROLE, etc.) without redeploy. Singleton SiteConfiguration model + Panopticon CRUD view. **Status:** Needs spec by Jonny+Claude |
 | 9.66 | Film event metadata + TMDB integration | 🟡 M | Dedicated `Film` model (Director, year, country, language, etc.) with FK to Event. Pre-populate from TMDB API with programmer override. User has API key. **Status:** Needs spec by Jonny+Claude |
 | 9.67 | Room scratchpad/notes | 🟢 XS | Free-text `scratchpad` field on `Room` model. Any user can edit. Visible on rota and room pages. Photos later. **Status:** Needs spec by Jonny+Claude |
 | 9.68 | Collectives directory + membership | 🟡 M | Collectives page with descriptions + key links (Nextcloud folders, WhatsApp groups). Users select membership for prioritised view. Toolkit-only (no mailing list sync yet). Related to 9.51. **Status:** Needs spec by Jonny+Claude |
+| 9.69 | Event detail showing date UX improvements | 🟡 M | On event detail pages, the full list of showing dates creates cognitive overhead. Users must scroll through past or distant future dates to find the next occurrence. Design solution needed: hide past dates, bold next upcoming, or restructure how multi-date events are presented. See TASKS.md 9.69 |
+| 9.70 | Nightly production DB backup | 🟢 XS | Infrastructure task on xtreamlab_jorn: \`.my.cnf\`, backup script, cron at 03:00, 30-day rolling retention. **Needs Marcus conversation before setting up.** See TASKS.md 9.70 |
+| 9.71 | Event terms and financial field change log | 🔵 S | \`EventTermsRevision\` model + \`pre_save\` signal records who changed terms and what the prior value was. Hub shows collapsible history. Motivated by April 2026 incident where terms on a confirmed event were silently rewritten. Min viable: model + signal + admin inline (~3–4h). See TASKS.md 9.71 |
+| 9.73 | Outside hire flag prominent on rota | 🟢 XS | Badge or banner on `edit_rota.html` + `view_rota.html` when `showing.event.outside_hire` is True. No model change. See TASKS.md 9.73 |
 | ~~9.50~~ | ~~Volunteer self-service profile edit from nav~~ | ✅ 2026-03-02 | Own name in top nav links to `edit-volunteer/<pk>`; guarded by `user.volunteer.pk`; `seed_dev_data` now creates Member+Volunteer for all demo accounts so link appears in dev |
 | ~~9.46~~ | ~~Login page styling~~ | ✅ 2026-03-02 | Extends `base_public.html`; login, logout + password reset templates styled with centered card layout; friendly titles; `site_custom.css` moved into `base_public.html` so all descendants get nav styling; see TASKS.md 9.46 |
 
@@ -150,6 +155,7 @@ Completed items stay here. When the Done section gets unwieldy, old rows can be 
 
 | Item | Completed | Notes |
 |------|-----------|-------|
+| ~~Staging database migration to master~~ | 2026-03-31 | Successfully migrated staging DB from `s+s` branch to current `master`. Fixed migration name mismatches (`members.0008`/`0009` renumbering), added 19 new migrations, all 9,214 events / 10,994 showings / 2,334 members / 1,879 volunteers preserved. Created `migrate-staging-db.sh` automation script and `docs/DATABASE_MIGRATION.md` documentation. |
 | ~~seed_dev_data rewrite — fix 8 bugs preventing seeding~~ | 2026-03-27 | Replaced external image downloads with local PIL placeholders; fixed indentation (rota/image/link creation was outside event loop); fixed `_seed_bulk_volunteers` (undefined `_`, tuple not unpacked, `return` inside loop); fixed monthly events nth-weekday calculation; fixed `_seed_one_recurring_showing` inner loop nesting; fixed `_seed_cms_pages` (tuple unpack, Wagtail tree API, `body=` field name, added missing CMS body constants); fixed `_seed_index_links` (field names `text`/`link`/`name`); created missing migration `diary/0018`; changed `--bulk-volunteers` default to 0 (opt-in). Seed now completes in ~4s with no network calls. |
 | ~~CalVer versioning + dev watermark~~ | 2026-03-21 | `VERSION` file at repo root; `settings_common.py` reads it; `venue` context processor exposes `{{ VERSION }}` to all public templates; `base_public.html` watermark shows `DEV · {{ VERSION }}`; `.dockerignore` gains `static/` + `staticfiles/` entries; `collectstatic` uses `--clear` to prevent stale static assets. See ONBOARDING.md "Releases and Versioning". |
 | ~~Bug X — static files stale after Docker rebuild~~ | 2026-03-21 | Root cause: `static/` (gitignored but on-disk) was copied into the image by `COPY . /site/`; `collectstatic` saw same timestamps on source + dest and skipped overwrite. Fix: `static/` added to `.dockerignore`; `collectstatic --clear` added to Dockerfile. |

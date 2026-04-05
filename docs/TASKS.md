@@ -3205,7 +3205,7 @@ The `RotaEntry.name` field stores free-text volunteer names, not a FK to `Volunt
 
 #### Business logic intent
 
-The collective has discussed a policy under which programmers should only be able to schedule events if they have completed at least **10 shifts in the last 12 months**. This is a fairness and accountability mechanism: programming slots are a limited resource and should go to people who are actively contributing in other ways.
+The collective has discussed a policy under which programmers should only be able to schedule events if they have completed at least **10 shifts in the last 12 months**. This is a fairness and accountability mechanism: programming slots are a limited resource and should go to people who are actively contributing in other ways, and have enough experience to run an event that goes well and doesn't cause too much stress for the volunteers helping with it.
 
 #### What would need to change to implement this
 
@@ -3334,3 +3334,338 @@ Both links should be visually low-key (not CTAs) so they don't distract public v
 ---
 
 *Completed tasks: [ARCHIVE.md](ARCHIVE.md)*
+
+---
+
+### 9.69 — Event detail showing date UX improvements 🟡 M (design first)
+
+**Context:** The event detail page (`view_event.html`) currently lists ALL showing dates for an event in a simple chronological loop (lines 34–48). For events with multiple occurrences (e.g., weekly Sunday café, month-long film seasons), this creates a wall of dates that users must scroll through to find the next upcoming showing. Past dates, distant future dates, and cancelled dates all have equal visual weight, creating cognitive overhead.
+
+**Current behaviour:**
+```html
+<p class="showings">
+    {% for showing in showings %}
+        {{ showing.start|date:"D j F " }}//{{ showing.start|date:" H:i" }}<br>
+    {% endfor %}
+</p>
+```
+
+This shows every date equally — there's no visual hierarchy helping users identify "what's next" or "what can I actually attend".
+
+**The problem:**
+- Users looking at a café event see 52 weekly dates stacked
+- Past dates (already happened) have same visual weight as future dates
+- Cancelled/sold out dates don't stand out
+- No clear "next occurrence" at a glance
+- On mobile, this becomes an overwhelming wall of text
+
+**Options to consider:**
+
+1. **Hide past dates (default view):** Only show future showings. Add a "Show past dates" toggle. Cleanest immediate fix — no design ambiguity.
+
+2. **Highlight next upcoming date:** Bold/larger font for the next showing, normal weight for others. Past dates greyed out or in a separate section.
+
+3. **Group by time horizon:** "This week", "Next week", "Later this month", "Future dates" sections. Collapsible sections to reduce visual noise.
+
+4. **Restructure entirely — one card per showing:** Abandon the "event has multiple showings" model on the detail page. Each showing gets its own URL/card. This is a bigger architectural change (affects URL structure, SEO, linking) but matches how users actually think ("I'm going to the Sunday café" not "I'm going to one of the café events").
+
+5. **Smart truncation:** Show first 3 upcoming dates with "See all X dates" link. Always hide past dates unless explicitly requested.
+
+**Recommended approach:** Option 1 or 5 are quickest wins. Option 1 (hide past) is pure template logic — filter `showings` to `future_showings` with `{% if showing.start > now %}`. Option 5 adds a "show more" interaction but requires JS or a separate expand/collapse toggle.
+
+**Design questions for the collective:**
+- Do users ever need to see past dates on the event detail page? (For archive/historical purposes?)
+- Should cancelled dates be shown at all on the public page?
+- Is there a maximum number of future dates we should show before collapsing/truncating?
+- Do we want a "Add to calendar" link per showing, and if so, how does that interact with multiple showing display?
+
+**Technical notes:**
+- The `view_event` view already passes `showings` (all showings for the event)
+- Would need to add `future_showings` filtered queryset, or annotate with "is_next" flag
+- Past date hiding is easiest — just template filter: `{% for showing in showings %}{% if not showing.in_past %}`
+- "Bold next date" requires identifying which showing is chronologically next (after `now`)
+- Related to 9.58 (recurring event display) but this is about the detail page UX, not the programme grid
+
+**Do not implement until:**
+- Collective agrees on whether past dates should be accessible (and if so, how — toggle? separate archive page?)
+- Decision on truncation threshold (show all vs first N)
+- Confirmation that this doesn't break any workflows (e.g., do programmers need to see all dates for editing purposes?)
+
+
+---
+
+### 9.70 — Nightly production database backup 🟢 XS (2–4h)
+
+**Goal:** Automate a nightly compressed backup of the production MySQL database on xtreamlab_jorn, with rolling retention, so that any accidental or unauthorised data change can be detected and reversed.
+
+#### Background
+
+The production DB is currently backed up manually and infrequently (two snapshots exist in `~/code/sns-live-toolkit/backups/` as of April 2026). The gap between backups means that changes to records — including financial terms on events — can go undetected. A nightly automated backup closes this window and provides a reliable rollback point.
+
+The existing manual dump procedure is documented in `~/notes/Community/Star and Shadow/servers.md`.
+
+#### Implementation
+
+**1. MySQL credentials file on the server**
+
+Create `/home/users/starandshadow/.my.cnf` on xtreamlab_jorn:
+
+```ini
+[mysqldump]
+user=starandshadow
+password=<production password>
+```
+
+Set permissions: `chmod 600 ~/.my.cnf`. This allows `mysqldump` to run without a password prompt, safe for cron use.
+
+**2. Backup script**
+
+Create `/home/users/starandshadow/bin/sns_backup.sh`:
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+BACKUP_DIR="/home/users/starandshadow/backups/db"
+DB_NAME="starandshadow"
+DATE=$(date +%Y-%m-%d)
+FILE="$BACKUP_DIR/sns_production_${DATE}.sql.gz"
+RETAIN_DAYS=30
+
+mkdir -p "$BACKUP_DIR"
+mysqldump --single-transaction "$DB_NAME" | gzip > "$FILE"
+
+# Rolling retention: delete backups older than RETAIN_DAYS
+find "$BACKUP_DIR" -name "sns_production_*.sql.gz" -mtime +$RETAIN_DAYS -delete
+
+echo "Backup complete: $FILE"
+```
+
+`--single-transaction` acquires a consistent snapshot without locking tables (safe for InnoDB).
+
+**3. Cron entry**
+
+Add via `crontab -e` on xtreamlab_jorn as user `starandshadow`:
+
+```
+0 3 * * * /home/users/starandshadow/bin/sns_backup.sh >> /home/users/starandshadow/logs/sns_backup.log 2>&1
+```
+
+Runs at 03:00 daily (low-traffic window). Appends stdout/stderr to a log file for manual inspection if needed.
+
+**4. Verify**
+
+After deploying, run the script manually once and confirm the `.sql.gz` lands in `BACKUP_DIR` and can be decompressed cleanly:
+
+```bash
+zcat "$FILE" | head -20
+```
+
+#### Scope
+
+This is an infrastructure task on xtreamlab_jorn, not a code change in the toolkit repo. It requires SSH access and knowledge of the production MySQL password. Coordinate with Marcus (Xtreamlab) before running — the backup user and `.my.cnf` placement should be confirmed against their server policy.
+
+#### Optional follow-up
+
+A separate cron or manual pull from Jonny's local machine can rsync the latest backup down to `~/code/sns-live-toolkit/backups/` for offline analysis. Use the existing rsync pattern from servers.md.
+
+#### Interim solution (April 2026)
+
+While the server-side setup awaits the Marcus conversation, a nightly backup is running from Jonny's desktop PC via `~/bin/sns_backup.sh`. It SSHes into jorn, pipes `mysqldump --single-transaction` output back through gzip, and stores compressed backups in `~/code/sns-live-toolkit/backups/` with 30-day rolling retention. Logs go to `~/.local/share/sns_backup/sns_backup.log`.
+
+Prerequisites for this to work: `~/.my.cnf` must exist on jorn with credentials (see script header for setup steps). The desktop drive is LUKS-encrypted so no credentials are stored locally.
+
+Crontab entry (user crontab on desktop, `crontab -e`):
+```
+0 3 * * * /home/jdkram/bin/sns_backup.sh
+```
+
+For Anacron catch-up on missed runs, copy the script to `/etc/cron.daily/sns-backup` (requires sudo; runs as root).
+
+---
+
+### 9.71 — Event terms and financial field change log 🔵 S (6–12h)
+
+**Goal:** Record who changed the `terms` field (and financial fields added in 9.54) on an event, when, and what the previous value was. Surface this history in the event hub so that discrepancies between agreed terms and the live record can be investigated without relying on DB snapshots.
+
+#### Background
+
+In April 2026, a real incident occurred where the `terms` field on a confirmed event was edited in the early hours of the morning before the event date, changing the financial arrangement (cost type, total amounts, and the outside-hire flag) from what had been agreed at a collective programming meeting. The `updated_at` timestamp on the `Event` record showed the change happened, but the database holds only the current state — the prior terms were only recoverable by diffing two manually-taken DB snapshots that happened to exist.
+
+Without a change log, there is no accountability mechanism. Anyone with programmer access can silently rewrite the financial terms on an event after it has been ratified.
+
+#### Data model
+
+Add a new model `EventTermsRevision` in `diary/models.py`:
+
+```python
+class EventTermsRevision(models.Model):
+    event      = models.ForeignKey(Event, on_delete=models.CASCADE,
+                                   related_name="terms_revisions")
+    saved_at   = models.DateTimeField(auto_now_add=True)
+    saved_by   = models.ForeignKey(settings.AUTH_USER_MODEL,
+                                   null=True, blank=True,
+                                   on_delete=models.SET_NULL)
+    terms_text = models.TextField()  # snapshot of terms at this revision
+
+    class Meta:
+        ordering = ["-saved_at"]
+```
+
+When 9.54 is implemented, extend this to also snapshot `cost_type`, `cost_total_gbp`, `cost_flat_fee_gbp`, and `outside_hire` at revision time.
+
+#### Signal to create revisions
+
+In `diary/signals.py` (create if not present):
+
+```python
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
+from .models import Event, EventTermsRevision
+
+@receiver(pre_save, sender=Event)
+def snapshot_terms_on_change(sender, instance, **kwargs):
+    if not instance.pk:
+        return  # new record, nothing to snapshot
+    try:
+        prior = Event.objects.get(pk=instance.pk)
+    except Event.DoesNotExist:
+        return
+    if prior.terms != instance.terms:
+        EventTermsRevision.objects.create(
+            event=instance,
+            saved_by=getattr(instance, "_saved_by", None),
+            terms_text=prior.terms or "",
+        )
+```
+
+The `_saved_by` attribute is set by the view before calling `form.save()`:
+
+```python
+# in the edit event view, after form.is_valid():
+event = form.save(commit=False)
+event._saved_by = request.user
+event.save()
+```
+
+#### UI: terms history in the event hub
+
+In `edit_event_details.html` (the event hub), add a collapsible "Terms history" section below the current terms display:
+
+```html
+{% if event.terms_revisions.exists %}
+<details class="mt-2">
+    <summary class="small text-muted">Terms history ({{ event.terms_revisions.count }} revision{{ event.terms_revisions.count|pluralize }})</summary>
+    <ul class="small mt-2">
+    {% for rev in event.terms_revisions|slice:":10" %}
+        <li>
+            <strong>{{ rev.saved_at|date:"j M Y H:i" }}</strong>
+            {% if rev.saved_by %}by {{ rev.saved_by.get_full_name|default:rev.saved_by.username }}{% endif %}
+            — <em>{{ rev.terms_text|truncatechars:120 }}</em>
+        </li>
+    {% endfor %}
+    </ul>
+</details>
+{% endif %}
+```
+
+Limit display to the 10 most recent revisions. Panopticon users see a link to the full history in Django admin.
+
+#### Permissions and access
+
+- Revision records are read-only from the UI. Only Panopticon (superuser) access via Django admin can delete them.
+- The history panel is visible to all users who can view the event hub (Programmer tier and above).
+
+#### Migration
+
+Add `EventTermsRevision` as a new table. No changes to existing `Event` fields. All existing records have no history — the log starts from the point of deployment.
+
+#### Size breakdown
+
+| Component | Size | Hours |
+|---|---|---|
+| `EventTermsRevision` model + migration | 🟢 XS | 1–2h |
+| `pre_save` signal + `_saved_by` wiring in view | 🟢 XS | 1–2h |
+| Terms history panel in event hub | 🟢 XS | 1–2h |
+| Django admin inline for revisions | 🟢 XS | 0.5–1h |
+| Tests | 🟢 XS | 2–4h |
+| **Total** | **🔵 S** | **~6–11h** |
+
+**Minimum viable increment:** the model, signal, and admin inline alone (~3–4h) give you a working audit trail without any UI work. The hub panel is a follow-up.
+
+---
+
+### 9.72 — Role deletion cascades silently to all historical rota entries 🔴 XL (design first)
+
+**Goal:** Prevent role deletion from silently destroying rota data across all past and future events.
+
+#### The bug
+
+`RotaEntry.role` is declared as `ForeignKey(Role, on_delete=models.CASCADE)` (`diary/models.py:686`). This means that deleting a `Role` immediately and permanently deletes every `RotaEntry` referencing it — across every showing, past and present, with no warning, no confirmation, and no recovery path.
+
+This was discovered in April 2026 when a new "Projectionist - MP4" role was created and the question arose of what would happen if any existing role were deleted. The answer — immediate, silent cascade across all historical rota entries — is not obvious from the UI, which presents deletion as a routine checkbox with no warning.
+
+The `read_only` flag on `Role` provides partial protection: roles with `read_only=True` will refuse deletion (see `Role.delete()`, `diary/models.py:74–82`). But this protection only applies to roles that someone remembered to mark read-only. Any other role can be deleted without warning.
+
+#### Why CASCADE is wrong here
+
+Roles are a shared reference type — they describe a job category, not an instance of work. Deleting the category should not delete the historical record of work done under it. The correct behaviour depends on the use case:
+
+- **Retiring a role** (no new events should use it, but historical records are preserved): `on_delete=models.PROTECT` or a soft-delete `active` flag on `Role`.
+- **Renaming a role**: update the name in place; the FK relationships are unaffected.
+- **True deletion** (role was a mistake, genuinely has no rota entries): `PROTECT` will block deletion cleanly, making the precondition explicit.
+
+#### Options
+
+**Option A — Change `on_delete` to `PROTECT` (safest, smallest change)**
+
+Change `RotaEntry.role` from `CASCADE` to `PROTECT`. Django will then refuse to delete any `Role` that has `RotaEntry` rows referencing it, raising an error rather than silently cascading. The admin UI will show a meaningful error message listing the dependent objects.
+
+Downside: there is no UI path for retiring a role that has historical entries. A superuser would have to do it via the Django admin by first reassigning or deleting entries manually — which is the right friction level for an irreversible operation.
+
+**Option B — Add an `active` boolean to `Role` (soft delete)**
+
+Add `active = models.BooleanField(default=True)` to `Role`. Retiring a role sets `active=False`; it remains in the database and all historical entries are intact. The event creation UI filters to `active=True` roles only.
+
+This is more user-friendly but requires a migration and UI changes. Combined with `PROTECT`, it provides both a safe retirement path and a hard guard against accidental deletion.
+
+**Option C — Status quo with better `read_only` coverage**
+
+Mark all roles that have historical entries as `read_only=True`. This is low-effort but fragile: it relies on administrators remembering to set the flag, and it provides no protection for newly-created roles that accumulate entries over time.
+
+#### Recommended approach
+
+Option B (soft delete with `active` flag) plus change `on_delete` to `PROTECT` as a belt-and-braces guard. The migration is small; the UI change is a one-line filter in role dropdowns.
+
+This should be treated as a data-integrity fix, not a feature. The current behaviour is a silent data-loss risk that any programmer-level user can trigger from the roles admin page without realising what they are doing.
+
+#### Sizing
+
+| Component | Size | Est. |
+|---|---|---|
+| Migration: add `active` to `Role`, change `on_delete` to `PROTECT` | 🟢 XS | 1–2h |
+| Filter role dropdowns to `active=True` in event/rota UI | 🟢 XS | 1–2h |
+| Admin UI: retire action (sets `active=False`) with confirmation | 🟢 XS | 1–2h |
+| Tests | 🟢 XS | 2–3h |
+| **Total** | **🔵 S** | **~5–9h** |
+
+**Minimum viable increment:** change `on_delete` to `PROTECT` alone (~1h including migration and test). This stops the data loss without any UI work. Soft-delete is a follow-up.
+
+---
+
+### 9.73 — Display outside hire flag prominently on rota 🟢 XS (1–2h)
+
+**Context:** Volunteers on the rota currently have no way to tell whether an event is an outside hire (an external organisation using the venue) or an internally programmed event. This matters because:
+- Volunteer roles and expectations can differ (e.g. external clients may have their own crew)
+- It helps volunteers understand the context before they arrive
+- Currently `outside_hire` is shown on the event edit form, the terms page, and the edit diary list — but not on any rota view
+
+**What to add:**
+
+A clearly visible badge or banner on both the edit rota and view rota pages when `showing.event.outside_hire` is True. Something like a bold "Outside hire" or "External event" label at the top of the showing block, analogous to how "Unconfirmed" and "Cancelled" are already highlighted.
+
+**Files to change:**
+- `toolkit/diary/templates/edit_rota.html` — add conditional badge in the per-showing header
+- `toolkit/diary/templates/view_rota.html` — same
+
+No model change needed. No migration needed.
