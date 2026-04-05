@@ -91,23 +91,26 @@ a {
  * Bug R fix: on mobile the sidebar should be off-screen until the hamburger
  * is tapped. position:fixed with left:-240px hides it; the .sidebar-open
  * class (toggled by site-common.js) slides it in. On desktop (>=1000px)
- * the sidebar is always visible so left:0 and transition:none. */
+ * the sidebar is always visible so left:0 and transition:none.
+ * top:0 is explicit to override static_pages.css base rule (position:absolute
+ * on non-responsive viewport) which could otherwise leave top:auto. */
 #sidebar {
-    position: fixed;
+    position: fixed !important;
+    top: 0;
     left: -240px;
-    z-index: 200;
+    z-index: 500;
     height: 100vh;
     overflow-y: auto;
     transition: left 0.3s ease;
 }
 
 #sidebar.sidebar-open {
-    left: 0;
+    left: 0 !important;
 }
 
 @media screen and (min-width: 1000px) {
     #sidebar {
-        left: 0;
+        left: 0 !important;
         transition: none;
     }
 }
