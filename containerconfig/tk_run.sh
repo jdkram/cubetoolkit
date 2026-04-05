@@ -16,12 +16,21 @@ elif ! [[ -S /var/run/mysqld/mysqld.sock ]] ; then
 fi
 
 case "$COMMAND" in
+    runserver)
+        # Development only. Django's runserver serves static files directly from
+        # source directories (no collectstatic needed) and auto-reloads on changes.
+        echo "Running database migrations"
+        /venv/bin/python3 /site/manage.py migrate
+        exec /venv/bin/python3 /site/manage.py runserver 0.0.0.0:8000
+        ;;
     gunicorn)
+        # Production-equivalent. Static files must be baked into the image via
+        # collectstatic at build time (see Dockerfile).
         echo "Running database migrations"
         /venv/bin/python3 /site/manage.py migrate
         GUNICORN_EXTRA_ARGS=()
         if [[ "${GUNICORN_RELOAD:-}" == "1" ]]; then
-            echo "Hot-reload enabled (development mode)"
+            echo "Hot-reload enabled"
             GUNICORN_EXTRA_ARGS+=("--reload")
         fi
         exec /venv/bin/gunicorn wsgi --bind 0.0.0.0:8000 --chdir /site "${GUNICORN_EXTRA_ARGS[@]}"
@@ -30,7 +39,7 @@ case "$COMMAND" in
         exec /venv/bin/python3 /site/manage.py mailerd
         ;;
     *)
-        echo "Unknown option; expected gunicorn or mailerd"
+        echo "Unknown option; expected runserver, gunicorn, or mailerd"
         exit 5
         ;;
 esac

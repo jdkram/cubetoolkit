@@ -97,25 +97,29 @@ The `s+s` branch is available locally for reference (`git checkout s+s`, or insp
 
 - Multi-stage Dockerfile: `base` → `build` (compiles wheels) → `run` (lean final image)
 - Non-root user (`toolkit:toolkit`)
-- Runs via gunicorn, not Django's dev server
+- Runs via gunicorn with `--reload` (hot-reload enabled via `GUNICORN_RELOAD=1` in docker-compose.yml)
 - Entrypoint: `containerconfig/tk_run.sh` — accepts `gunicorn` or `mailerd` as argument
-- Settings file: symlinks `toolkit/settings.py` → `toolkit/docker_settings.py` at build time
-- Static files: collected during Docker build (`collectstatic` in `RUN` step)
+- Settings file: `DJANGO_SETTINGS_MODULE=toolkit.docker_settings_ss` (env var; no symlink needed)
+- Static files: collected at container start by `tk_run.sh` (not baked into image)
+- Source code: bind-mounted from host at runtime — container always sees your local files
 - Requirements split into `requirements/base.txt`, `requirements/dev.txt`, `requirements/docker.txt`
 
-**To build and run:**
-```bash
-docker compose up --build
-```
+**Edit/reload cycle — tell the user which command to run after making changes:**
 
-> ⚠️ **Source is baked in — always rebuild after code changes.**
-> There is **no volume mount** for the source code. The files are copied into the image at build time.
-> Running `docker compose exec toolkit ...` on a running container will use the **old version** of any file you have just edited.
-> After *any* change to Python files, templates, or management commands, run:
-> ```bash
-> docker compose up --build -d
-> ```
-> before expecting to see the effect in the live dev site or via `manage.py` commands.
+| Change type | Command needed |
+|---|---|
+| Python files (views, models, forms, management commands) | None — `runserver` auto-reloads |
+| Templates (`.html` files) | None — `runserver` picks them up immediately |
+| CSS or JS (static files) | None — `runserver` serves static files directly from source |
+| New Python dependency (requirements files) | `docker compose up --build -d` |
+| Dockerfile or `tk_run.sh` | `docker compose up --build -d` |
+
+After telling the user what you changed, always state which of the above applies. For almost all day-to-day changes the answer is "just refresh your browser."
+
+**To build and run (first time, or after Dockerfile/dependency changes):**
+```bash
+docker compose up --build -d
+```
 
 **To create initial users and seed sample data after first boot:**
 ```bash
