@@ -79,9 +79,7 @@ def edit_diary_list(request, year=None, day=None, month=None):
     query_days_ahead = request.GET.get("daysahead", None)
 
     if query_days_ahead:
-        edit_prefs.set_preference(
-            request.session, "daysahead", query_days_ahead
-        )
+        edit_prefs.set_preference(request.session, "daysahead", query_days_ahead)
         default_days_ahead = query_days_ahead
     else:
         default_days_ahead = int(
@@ -147,9 +145,7 @@ def edit_diary_list(request, year=None, day=None, month=None):
     # Now get all 'ideas' in date range. Fiddle the date range to be from the
     # start of the month in startdate, so the idea for that month gets
     # included:
-    idea_startdate = datetime.date(
-        day=1, month=startdate.month, year=startdate.year
-    )
+    idea_startdate = datetime.date(day=1, month=startdate.month, year=startdate.year)
     idea_list = (
         DiaryIdea.objects.filter(month__range=[idea_startdate, enddatetime])
         .order_by("month")
@@ -235,6 +231,7 @@ def edit_diary_data(request):
         Showing.objects.start_in_range(start, end)
         .order_by("start")
         .select_related()
+        .prefetch_related("event__tags")
     )
 
     local_now = timezone.localtime(timezone.now())
@@ -273,14 +270,23 @@ def edit_diary_data(request):
         if settings.MULTIROOM_ENABLED and showing.room and not showing.room.is_primary:
             styles.append("s_auxiliary_room")
 
+        # Extract hour for time-of-day filtering (0-23)
+        local_start = timezone.localtime(showing.start)
+        hour = local_start.hour
+
+        # Build tag list for filtering
+        tag_slugs = [tag.slug for tag in showing.event.tags.all()]
+
         showing_data = {
             "id": showing.pk,
             "title": showing.event.name,
-            "start": timezone.localtime(showing.start).isoformat(),
+            "start": local_start.isoformat(),
             "end": timezone.localtime(showing.end_time).isoformat(),
             "url": url,
             "className": styles,
             "color": colour,
+            "hour": hour,
+            "tags": tag_slugs,
         }
         if _is_light_colour(colour):
             showing_data["textColor"] = "#111111"
@@ -316,9 +322,8 @@ def edit_diary_calendar(request, year=None, month=None, day=None):
         "display_time": display_time,
         "defaultView": defaultView,
         "settings": settings,
-        "rooms_and_colours": (
-            Room.objects.all() if settings.MULTIROOM_ENABLED else []
-        ),
+        "rooms_and_colours": (Room.objects.all() if settings.MULTIROOM_ENABLED else []),
+        "all_tags": EventTag.objects.all(),
     }
 
     return render(request, "edit_event_calendar_index.html", context)
@@ -374,14 +379,18 @@ def event_detail_view(request, event_id):
         "has_future_showing": bool(future_showings),
     }
 
-    return render(request, "view_event_privatedetails.html", {
-        "event": event,
-        "past_showings": past_showings,
-        "future_showings": future_showings,
-        "add_showing_form": add_showing_form,
-        "completeness": completeness,
-        "all_showings_in_past": event.all_showings_in_past(),
-    })
+    return render(
+        request,
+        "view_event_privatedetails.html",
+        {
+            "event": event,
+            "past_showings": past_showings,
+            "future_showings": future_showings,
+            "add_showing_form": add_showing_form,
+            "completeness": completeness,
+            "all_showings_in_past": event.all_showings_in_past(),
+        },
+    )
 
 
 @permission_required("toolkit.write")
@@ -509,11 +518,15 @@ def clone_event(request, event_id):
             }
         )
 
-    return render(request, "clone_event.html", {
-        "source_event": source_event,
-        "latest_showing": latest_showing,
-        "form": form,
-    })
+    return render(
+        request,
+        "clone_event.html",
+        {
+            "source_event": source_event,
+            "latest_showing": latest_showing,
+            "form": form,
+        },
+    )
 
 
 @permission_required("toolkit.write")
@@ -538,10 +551,14 @@ def edit_event_links(request, event_id):
     else:
         formset = diary_forms.EventLinkFormSet(instance=event)
 
-    return render(request, "edit_event_links.html", {
-        "event": event,
-        "formset": formset,
-    })
+    return render(
+        request,
+        "edit_event_links.html",
+        {
+            "event": event,
+            "formset": formset,
+        },
+    )
 
 
 @permission_required("toolkit.write")
@@ -614,9 +631,7 @@ def add_event(request):
         # GET: Show form blank, with date filled in from GET date and start
         # parameters:
         # Marshal date and time out of the GET request:
-        default_date = django.utils.timezone.now().date() + datetime.timedelta(
-            1
-        )
+        default_date = django.utils.timezone.now().date() + datetime.timedelta(1)
         date = request.GET.get("date", default_date.strftime("%d-%m-%Y"))
         date = date.split("-")
 
@@ -929,9 +944,7 @@ def delete_showing(request, showing_id):
 
 
 @permission_required("toolkit.read")
-def view_terms_report_csv(
-    request, year: int, month: int, day: int
-) -> HttpResponse:
+def view_terms_report_csv(request, year: int, month: int, day: int) -> HttpResponse:
     query_days_ahead = request.GET.get("daysahead", None)
     start_date, days_ahead = get_date_range(year, month, day, query_days_ahead)
     if start_date is None:
@@ -1081,9 +1094,7 @@ def edit_event_tags(request):
             # Reset formset, so get another blank one at the
             # end, deleted ones disappear, etc.
             formset = event_tag_formset()
-            messages.add_message(
-                request, messages.SUCCESS, "Event tags updated"
-            )
+            messages.add_message(request, messages.SUCCESS, "Event tags updated")
     else:
         formset = event_tag_formset()
     context = {"formset": formset}
@@ -1225,9 +1236,7 @@ class EditRotaView(PermissionRequiredMixin, View):
     def get(self, request, year=None, day=None, month=None):
         # Fiddly way to set startdate to the start of the local day:
         # Get current UTC time and convert to local time:
-        now_local = django.utils.timezone.localtime(
-            django.utils.timezone.now()
-        )
+        now_local = django.utils.timezone.localtime(django.utils.timezone.now())
         # Create a new local time with hour/min/sec set to zero:
         current_tz = django.utils.timezone.get_current_timezone()
         today_local_date = datetime.datetime(
@@ -1258,9 +1267,7 @@ class EditRotaView(PermissionRequiredMixin, View):
         )
 
         # Used by per-showing rota notes click to edit control:
-        url_with_id = reverse(
-            "edit-showing-rota-notes", kwargs={"showing_id": 999}
-        )
+        url_with_id = reverse("edit-showing-rota-notes", kwargs={"showing_id": 999})
         showing_notes_url_prefix = url_with_id[: url_with_id.find("999")]
 
         context = {
@@ -1300,8 +1307,7 @@ class EditRotaView(PermissionRequiredMixin, View):
             )
 
         logger.info(
-            "Update role id {0} (#{1}) for showing "
-            "{2} '{3}' -> '{4}' ({5})".format(
+            "Update role id {0} (#{1}) for showing {2} '{3}' -> '{4}' ({5})".format(
                 rota_entry.role_id,
                 rota_entry.rank,
                 rota_entry.showing_id,
@@ -1327,16 +1333,12 @@ def edit_showing_rota_notes(request, showing_id):
     form = diary_forms.ShowingRotaNotesForm(request.POST, instance=showing)
 
     if showing.in_past():
-        return HttpResponse(
-            "Can't change rota for showings in the past", status=403
-        )
+        return HttpResponse("Can't change rota for showings in the past", status=403)
     elif form.is_valid():
         form.save()
     else:
         logger.error("Rota notes edit form not valid!")
-        return HttpResponse(
-            "Unknown error", status=500, content_type="text/plain"
-        )
+        return HttpResponse("Unknown error", status=500, content_type="text/plain")
 
     return HttpResponse(showing.rota_notes, content_type="text/plain")
 
@@ -1349,9 +1351,7 @@ def get_messages(request):
         for m in messages.get_messages(request)
     ]
 
-    return HttpResponse(
-        json.dumps(message_list), content_type="application/json"
-    )
+    return HttpResponse(json.dumps(message_list), content_type="application/json")
 
 
 @permission_required("toolkit.write")

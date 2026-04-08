@@ -1997,8 +1997,9 @@ class DiaryCalendarViewTests(DiaryTestsMixin, TestCase):
         self.client.login(username="admin", password="T3stPassword!")
 
     def _get_room_list(self, response):
+        # Match room list in init call, accounting for IIFE wrapper and initialFilters param
         match = re.search(
-            r"init_calendar_view\((?:.*?,){4}\s*(?P<room_list>\[.*?\])\s*\);",
+            r"init_calendar_view\(\s*'[^']*'\s*,\s*'[^']*'\s*,\s*'[^']*'\s*,\s*urls\s*,\s*(?P<room_list>\[.*?\])\s*,\s*initialFilters",
             response.content.decode("utf-8"),
             re.DOTALL,
         )
@@ -2119,6 +2120,8 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
                 "start": "2013-04-01T19:00:00+01:00",
                 "title": "Event two title",
                 "url": "/diary/edit/event/id/2/view/",
+                "hour": 19,
+                "tags": [],
             },
             2: {
                 "id": 2,
@@ -2128,6 +2131,8 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
                 "start": "2013-04-02T19:00:00+01:00",
                 "title": "Event two title",
                 "url": "/diary/edit/event/id/2/view/",
+                "hour": 19,
+                "tags": [],
             },
             3: {
                 "id": 3,
@@ -2137,6 +2142,8 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
                 "start": "2013-04-03T19:00:00+01:00",
                 "title": "Event two title",
                 "url": "/diary/edit/event/id/2/view/",
+                "hour": 19,
+                "tags": [],
             },
             4: {
                 "id": 4,
@@ -2146,6 +2153,8 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
                 "start": "2013-04-04T19:00:00+01:00",
                 "title": "Event two title",
                 "url": "/diary/edit/event/id/2/view/",
+                "hour": 19,
+                "tags": [],
             },
             5: {
                 "id": 5,
@@ -2160,6 +2169,8 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
                 "start": "2013-04-05T19:00:00+01:00",
                 "title": "Event two title",
                 "url": "/diary/edit/event/id/2/view/",
+                "hour": 19,
+                "tags": [],
             },
             6: {
                 "id": 6,
@@ -2169,6 +2180,8 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
                 "start": "2013-04-13T18:00:00+01:00",
                 "title": "Event three title",
                 "url": "/diary/edit/event/id/3/view/",
+                "hour": 18,
+                "tags": ["tag-two"],
             },
             7: {
                 "id": 7,
@@ -2178,6 +2191,8 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
                 "start": "2013-06-09T18:00:00+01:00",
                 "title": "Event four titl\u0113",
                 "url": "/diary/edit/event/id/4/view/",
+                "hour": 18,
+                "tags": ["tag-two"],
             },
             10: {
                 "id": 10,
@@ -2192,6 +2207,8 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
                 "start": "2013-02-15T18:00:00+00:00",
                 "title": "Event one title",
                 "url": "/diary/edit/event/id/1/view/",
+                "hour": 18,
+                "tags": [],
             },
         }
 
