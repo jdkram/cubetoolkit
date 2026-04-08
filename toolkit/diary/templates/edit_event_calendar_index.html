@@ -108,11 +108,6 @@
       flex: 0 0 auto;
       overflow-y: visible;
   }
-  #ideas-container {
-      flex: 1 1 100%;   /* full width row below calendar + key */
-      background: white;
-  }
-
   /* Mobile: stack vertically, key above calendar */
   @media (max-width: 800px) {
       #controls {
@@ -163,35 +158,303 @@
       }
   }
 
-  /* ── Legend swatches ─────────────────────────────────────────── */
+  /* ── Key legend row (integrated into filterline) ───────────────── */
+  .key-legend {
+      font-size: 0.8em;
+      color: #6c757d;
+      padding-top: 0.5em;
+      border-top: 1px solid #dee2e6;
+  }
+
+  .key-legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3em;
+      margin-right: 1em;
+  }
+
   .key-swatch {
       display: inline-block;
       width: 0.9em;
       height: 0.9em;
       border-radius: 2px;
       vertical-align: middle;
-      margin-right: 3px;
       flex-shrink: 0;
   }
-  #diary-key summary {
-      cursor: pointer;
-      padding: 0.1rem 0;
-      margin-bottom: 0.3rem;
-  }
-  #diary-key p {
-      margin: 0.3rem 0;
-  }
-  #diary-key details summary {
-      font-size: 0.9em;
-      color: #555;
+
+  .key-swatch.unconfirmed {
+      outline: 2px dashed rgba(0, 0, 0, 0.6);
+      outline-offset: -2px;
+      opacity: 0.65;
   }
 
-  .idea {
-      white-space: pre-wrap;
-      cursor: pointer;
+  /* ── Filter bar ────────────────────────────────────────────────── */
+  .calendar-filters {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      padding: 0.75em 1em;
+      margin-bottom: 1em;
   }
-  .idea-historic {
-      white-space: pre-wrap;
+
+  .calendar-filters-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75em;
+      margin-bottom: 0.5em;
+  }
+
+  .calendar-filters-row:last-child {
+      margin-bottom: 0;
+  }
+
+  .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 0.4em;
+  }
+
+  .filter-group label {
+      margin-bottom: 0;
+      font-size: 0.9em;
+      color: #495057;
+      white-space: nowrap;
+  }
+
+  .filter-divider {
+      width: 1px;
+      height: 1.5em;
+      background: #ced4da;
+      margin: 0 0.25em;
+  }
+
+  /* Tag filter buttons */
+  .tag-filter-btn {
+      font-size: 0.85em;
+      padding: 0.2em 0.6em;
+      border: 1px solid #adb5bd;
+      background: white;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+  }
+
+  .tag-filter-btn:hover {
+      background: #e9ecef;
+      border-color: #6c757d;
+  }
+
+  .tag-filter-btn.active {
+      background: #495057;
+      border-color: #495057;
+      color: white;
+  }
+
+  /* Time filter buttons */
+  .time-filter-btn {
+      font-size: 0.85em;
+      padding: 0.2em 0.8em;
+      border: 1px solid #adb5bd;
+      background: white;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+  }
+
+  .time-filter-btn:hover {
+      background: #e9ecef;
+  }
+
+  .time-filter-btn.active {
+      background: #0066cc;
+      border-color: #0066cc;
+      color: white;
+  }
+
+  /* Room filter checkboxes */
+  .room-filter-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3em;
+      font-size: 0.85em;
+      cursor: pointer;
+      padding: 0.2em 0.5em;
+      border-radius: 3px;
+      transition: background 0.15s ease;
+  }
+
+  .room-filter-item:hover {
+      background: #e9ecef;
+  }
+
+  /* Primary rooms (Cinema, Venue Space, Cafe) - bold text, larger swatch */
+  .room-filter-item.primary-room {
+      font-weight: 600;
+  }
+
+  .room-filter-item.primary-room .room-filter-swatch {
+      width: 1em;
+      height: 1em;
+      border: 1px solid rgba(0, 0, 0, 0.2);
+  }
+
+  /* Secondary rooms - muted appearance */
+  .room-filter-item.secondary-room {
+      opacity: 0.85;
+  }
+
+  .room-filter-swatch {
+      width: 0.8em;
+      height: 0.8em;
+      border-radius: 2px;
+      flex-shrink: 0;
+  }
+
+  /* Room section labels */
+  .room-section-label {
+      font-size: 0.75em;
+      color: #6c757d;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-right: 0.3em;
+  }
+
+  /* Status checkboxes with visual indicators */
+  .status-filter-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75em;
+  }
+
+  .status-filter-group .form-check {
+      margin-bottom: 0;
+      font-size: 0.9em;
+  }
+
+  .status-filter-group .form-check-label[for="filter-private"] {
+      font-style: italic;
+  }
+
+  .status-filter-group .form-check-label[for="filter-outside"] {
+      font-weight: bold;
+  }
+
+  .status-filter-group .form-check-label[for="filter-cancelled"] {
+      text-decoration: line-through;
+  }
+
+  .status-filter-group .form-check-label[for="filter-unconfirmed"] {
+      opacity: 0.7;
+  }
+
+  .unconfirmed-badge {
+      display: inline-block;
+      width: 0.7em;
+      height: 0.7em;
+      background: #888;
+      border-radius: 2px;
+      outline: 2px dashed rgba(0, 0, 0, 0.6);
+      outline-offset: -2px;
+      opacity: 0.65;
+      vertical-align: middle;
+      margin-right: 0.2em;
+  }
+
+  /* Filter counts */
+  .filter-count {
+      font-size: 0.8em;
+      color: #6c757d;
+      margin-left: 0.3em;
+  }
+
+   /* Mobile filter collapse */
+   @media (max-width: 768px) {
+       .calendar-filters-row {
+           gap: 0.5em;
+       }
+       .filter-divider {
+           display: none;
+       }
+       .filter-group {
+           flex: 1 1 100%;
+       }
+       .tag-filter-btn, .time-filter-btn {
+           font-size: 0.8em;
+           padding: 0.25em 0.5em;
+       }
+   }
+
+   /* Collapsible filter bar */
+   .calendar-filters.collapsed .calendar-filters-row:not(:first-child) {
+       display: none;
+   }
+
+   .calendar-filters.collapsed .key-legend {
+       display: none;
+   }
+
+   .filter-toggle-btn {
+       font-size: 0.85em;
+       padding: 0.2em 0.6em;
+       background: #e9ecef;
+       border: 1px solid #adb5bd;
+       border-radius: 3px;
+       cursor: pointer;
+       margin-left: auto;
+   }
+
+    .filter-toggle-btn:hover {
+        background: #dee2e6;
+    }
+
+    /* Desktop: position toggle at right edge of first filter row */
+    @media (min-width: 769px) {
+        .calendar-filters-row:first-child {
+            position: relative;
+        }
+        .filter-toggle-btn {
+            margin-left: auto;
+        }
+    }
+
+   /* Name search input */
+   .name-search-group {
+       display: flex;
+       align-items: center;
+       gap: 0.4em;
+   }
+
+   .name-search-input {
+       font-size: 0.9em;
+       padding: 0.2em 0.5em;
+       border: 1px solid #adb5bd;
+       border-radius: 3px;
+       width: 12em;
+   }
+
+   .name-search-input:focus {
+       outline: none;
+       border-color: #0066cc;
+       box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.15);
+   }
+
+  /* ── Event badges ──────────────────────────────────────────────── */
+  .fc-event-badges {
+      display: inline-flex;
+      gap: 0.15em;
+      margin-left: 0.3em;
+      font-size: 0.85em;
+      vertical-align: middle;
+  }
+
+  .fc-event-badge {
+      opacity: 0.8;
+  }
+
+  /* ── Hidden event styling ─────────────────────────────────────── */
+  .fc-event-hidden {
+      display: none !important;
   }
 </style>
 {% endblock %}
@@ -206,84 +469,154 @@
 <script src="{{ STATIC_URL }}diary/js/lib/fullcalendar-6/timeline.global.min.js"></script>
 <script src="{{ STATIC_URL }}diary/js/lib/fullcalendar-6/resource.global.min.js"></script>
 <script src="{{ STATIC_URL }}diary/js/lib/fullcalendar-6/resource-timeline.global.min.js"></script>
-<script src="{{ STATIC_URL }}js/lib/jquery.jeditable.mini.js"></script>
 <script src="{{ STATIC_URL }}diary/js/calendar_index.js"></script>
 
 <script type="text/javascript">
 var urls = {
     'add-event':           '{% url "add-event" %}',
     'diary-edit-calendar': '{% url "diary-edit-calendar" %}',
-    'edit-diary-data':     '{% url "edit-diary-data" %}',
-    'edit-ideas':          '{% url "edit-ideas" year=9999 month=0 %}'.replace("/9999/0", "")
+    'edit-diary-data':     '{% url "edit-diary-data" %}'
 };
 
-init_calendar_view(
-    '{{ csrf_token }}',
-    '{{ defaultView }}',
-    '{{ display_time|date:"Y-m-d" }}',
-    urls,
-    [{% for room in rooms_and_colours %}
-        { "id": {{ room.id }}, "title": "{{ room.name }}", "eventColor": "{{ room.colour }}"}{% if not forloop.last %},{% endif %}
-    {% endfor %}]
-);
+// Collect initial filter state from DOM
+(function() {
+    var initialFilters = {
+        timeOfDay: 'all',
+        showUnconfirmed: true,
+        showPrivate: true,
+        showOutsideHire: true,
+        showCancelled: true,
+        nameQuery: '',
+        selectedTags: [],
+        visibleRooms: [{% for room in rooms_and_colours %}{{ room.id }}{% if not forloop.last %},{% endif %}{% endfor %}]
+    };
+
+    init_calendar_view(
+        '{{ csrf_token }}',
+        '{{ defaultView }}',
+        '{{ display_time|date:"Y-m-d" }}',
+        urls,
+        [{% for room in rooms_and_colours %}
+            { "id": {{ room.id }}, "title": "{{ room.name }}", "eventColor": "{{ room.colour }}"}{% if not forloop.last %},{% endif %}
+        {% endfor %}],
+        initialFilters
+    );
+})();
 </script>
 {% endblock %}
 
 {% block body %}
 <p><a href="{% url "add-event" %}">+ New booking</a></p>
 
+{# ── Filter bar ─────────────────────────────────────────────────────── #}
+<div class="calendar-filters" id="calendar-filters">
+  <div class="calendar-filters-row">
+    {# Time of day filter #}
+    <div class="filter-group">
+      <label>Time:</label>
+      <button type="button" class="time-filter-btn active" data-time-filter="all">All</button>
+      <button type="button" class="time-filter-btn" data-time-filter="daytime">Daytime</button>
+      <button type="button" class="time-filter-btn" data-time-filter="evening">Evening</button>
+    </div>
+
+    <div class="filter-divider"></div>
+
+    {# Name search #}
+    <div class="filter-group name-search-group">
+      <label for="filter-name">Search:</label>
+      <input type="text" id="filter-name" class="name-search-input" placeholder="Event name...">
+    </div>
+
+    <div class="filter-divider"></div>
+
+    {# Status filters with visual indicators matching event styling #}
+    <div class="filter-group status-filter-group">
+      <div class="form-check form-check-inline" title="Events awaiting confirmation">
+        <input class="form-check-input" type="checkbox" id="filter-unconfirmed" checked>
+        <label class="form-check-label" for="filter-unconfirmed">
+          <span class="unconfirmed-badge"></span>Unconfirmed
+        </label>
+      </div>
+      <div class="form-check form-check-inline" title="Internal/private events not shown to the public">
+        <input class="form-check-input" type="checkbox" id="filter-private" checked>
+        <label class="form-check-label" for="filter-private">Private</label>
+      </div>
+      <div class="form-check form-check-inline" title="Events booked by external hirers">
+        <input class="form-check-input" type="checkbox" id="filter-outside" checked>
+        <label class="form-check-label" for="filter-outside">Outside hire</label>
+      </div>
+      <div class="form-check form-check-inline" title="Cancelled events (still visible for record-keeping)">
+        <input class="form-check-input" type="checkbox" id="filter-cancelled" checked>
+        <label class="form-check-label" for="filter-cancelled">Cancelled</label>
+      </div>
+    </div>
+
+    <span class="filter-count" id="active-filter-count"></span>
+
+    {# Collapse toggle (available on all screen sizes) #}
+    <button type="button" class="filter-toggle-btn" id="filter-toggle">
+      <span id="filter-toggle-text">Hide filters</span>
+    </button>
+  </div>
+
+  {# Tag filters - only show if tags exist #}
+  {% if all_tags %}
+  <div class="calendar-filters-row">
+    <div class="filter-group" style="flex-wrap: wrap;">
+      <label>Tags:</label>
+      <span id="tag-filter-container">
+        <button type="button" class="tag-filter-btn" data-tag="">All</button>
+        {% for tag in all_tags %}
+        <button type="button" class="tag-filter-btn" data-tag="{{ tag.slug }}">{{ tag.name }}</button>
+        {% endfor %}
+      </span>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Room filters - only in multiroom mode, with primary/secondary distinction #}
+  {% if MULTIROOM_ENABLED and rooms_and_colours %}
+  <div class="calendar-filters-row">
+    <div class="filter-group" style="flex-wrap: wrap;">
+      <label>Rooms:</label>
+      {% for room in rooms_and_colours %}
+        {% if room.is_primary %}
+        <label class="room-filter-item primary-room" title="Main space">
+          <input type="checkbox" class="room-filter-checkbox" value="{{ room.id }}" checked>
+          <span class="room-filter-swatch" style="background: {{ room.colour }}"></span>
+          <span>{{ room.name }}</span>
+        </label>
+        {% endif %}
+      {% endfor %}
+      <span class="filter-divider" style="height: 1.2em;"></span>
+      {% for room in rooms_and_colours %}
+        {% if not room.is_primary %}
+        <label class="room-filter-item secondary-room" title="Secondary space">
+          <input type="checkbox" class="room-filter-checkbox" value="{{ room.id }}" checked>
+          <span class="room-filter-swatch" style="background: {{ room.colour }}"></span>
+          <span>{{ room.name }}</span>
+        </label>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# Key legend row - explains visual indicators #}
+  <div class="calendar-filters-row key-legend">
+    <span class="key-legend-item"><span class="unconfirmed-badge"></span> Unconfirmed</span>
+    <span class="key-legend-item" style="font-style: italic;">Private</span>
+    <span class="key-legend-item" style="font-weight: bold;">Outside hire</span>
+    <span class="key-legend-item" style="text-decoration: line-through;">Cancelled</span>
+    <span class="key-legend-item">✻ Discounted</span>
+    <span class="key-legend-item" style="margin-left: auto;"><small>Yellow cell / red line = now</small></span>
+  </div>
+</div>
+
 <div id="flex-container">
 
 <div id='calendar-container'>
-<div id="time-range-control" style="display:none;text-align:right;margin-bottom:0.3rem">
-  <button type="button" id="time-range-btn" class="fc-button fc-button-primary">all hours</button>
-</div>
 <div id='calendar'></div>
-</div>
-
-<div id="controls">
-  <details open id="diary-key">
-    <summary><strong>Key</strong></summary>
-
-    {% if MULTIROOM_ENABLED %}
-    <p>
-      <strong>Main spaces</strong><br>
-      {% for room in rooms_and_colours %}{% if room.is_primary %}
-        <span class="key-swatch" style="background:{{ room.colour }}"></span>{{ room }}<br>
-      {% endif %}{% endfor %}
-    </p>
-
-    <details>
-      <summary>Other spaces</summary>
-      <p>
-        {% for room in rooms_and_colours %}{% if not room.is_primary %}
-          <span class="key-swatch" style="background:{{ room.colour }}"></span>{{ room }}<br>
-        {% endif %}{% endfor %}
-      </p>
-    </details>
-
-    {% else %}
-    <p>
-      <span class="key-swatch s_confirmed" style="background:{{ settings.CALENDAR_DEFAULT_COLOUR }}"></span>Confirmed<br>
-      <span class="key-swatch s_unconfirmed" style="background:{{ settings.CALENDAR_DEFAULT_COLOUR }}; outline:2px dashed rgba(0,0,0,0.6); outline-offset:-2px;"></span>Unconfirmed
-    </p>
-    {% endif %}
-
-    <p>
-      <strong>Status</strong><br>
-      <span style="display:inline-block;background:#888;padding:0 3px;border-radius:2px;color:white;font-size:0.95em;outline:2px dashed rgba(0,0,0,0.6);outline-offset:-2px;opacity:0.65;">event</span> Unconfirmed<br>
-      <em>event</em> Private<br>
-      <span style="text-decoration:line-through">event</span> Cancelled<br>
-      <strong>event</strong> Outside hire<br>
-      event * Discounted
-    </p>
-
-    <p><small>The red line marks now — events before it are in the past.</small></p>
-  </details>
-</div>
-
-<div id='ideas-container'>
-<div id='ideas'></div>
 </div>
 
 </div>
