@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-04-05 (FC6 timeline views added — week + month views working)
+**Last updated:** 2026-04-08 (9.71 spec expanded to cover outside_hire + private; prioritised)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -65,6 +65,7 @@ None — all clear.
 
 | # | Feature | Size | Notes |
 |----|---------|------|-------|
+| **9.71** | **Event terms and financial field change log** | **🔵 S — NEXT PRIORITY** | `EventTermsRevision` model snapshots `terms`, `outside_hire`, `private` on each save. `pre_save` signal + `_saved_by` wiring in view. Motivated by April 2026 incident where terms + outside_hire were silently rewritten on a confirmed event. Min viable: model + signal + admin inline (~3–4h). See TASKS.md 9.71 |
 | ~~9.9~~ | ~~Break-even calculator for programmers~~ | ✅ 2026-03-02 | Collapsible panel in event edit form beneath terms; pure JS; Finance Collective threshold warnings; fill-level table |
 | ~~9.10.2~~ | ~~Clone rota notes with event clone~~ | ✅ 2026-02-28 | `clone_rota_from_showing` now copies `rota_notes`; test added |
 | 9.10.6 | Inline warning when rota notes carry to cloned showing | 🟢 XS | Template banner in clone form; see TASKS.md 9.10.6 option 2 |
@@ -124,13 +125,14 @@ None — all clear.
 | 9.63 | Interactive SVG venue map for room bookings | 🟡 M | Hook in new SVG floorplan as interactive room booking UI. Visual room selection, availability overlay. **Status:** Needs spec by Jonny+Claude |
 | ~~9.64~~ | ~~Calendar: FC6 migration + month view~~ | ✅ 2026-04-05 | Migrated from FC3.5.1 + Scheduler 1.7.1 to FC6.1.20 global bundle. Full JS rewrite (`calendar_index.js`): jQuery-free FC init, FC6 API (`headerToolbar`, `initialView`, `datesSet`, `eventDidMount`, `dateClick`, `dayMaxEvents`). Removed `htmlPrefilter` workaround. CSS updated (`.fc-title` → `.fc-event-title`, `.fc-day.fc-today` → `.fc-day-today`). Calendar now full-viewport-width (Bootstrap container override). Dev setup switched to `runserver` + bind-mount (no collectstatic for JS/CSS changes). Month view confirmed working. |
 | ~~9.74~~ | ~~Calendar: timeline week + month views~~ | ✅ 2026-04-05 | Added `resourceTimelineWeek` and `resourceTimelineMonth` views for multi-room venues. FC6 Scheduler bundles (`resource.global.min.js`, `resource-timeline.global.min.js`) vendored. Views show rooms as rows. Added `schedulerLicenseKey` for GPL exemption. Events open in new tab (`window.open`). `localStorage` remembers last view. Mobile CSS for toolbar stacking and touch targets. Fixed test regex for 5-arg `init_calendar_view` (was 6 args with jQuery in FC3). |
+| ~~9.41 + 9.37~~ | ~~Calendar: filtering + visual polish~~ | ✅ 2026-04-06 | **Filtering:** Time-of-day (All/Daytime/Evening), Name search (text input), Status (Unconfirmed/Private/Outside hire/Cancelled toggles with visual indicators matching event styling), Tags (multi-select button group), Rooms (multi-select checkboxes with primary/secondary visual distinction). **Key integrated into filterline:** Visual legend row shows indicators (dashed box=unconfirmed, italic=private, bold=outside hire, strikethrough=cancelled). **Visual polish:** Compact emoji badges on events (🔒 private, 👥 outside hire, 🚫 cancelled, ✻ discounted). **Mobile UX:** Filter bar auto-collapses on mobile (<768px) with toggle button to expand; maximises calendar real estate on small screens. **Technical:** Extended `edit-diary-data` JSON endpoint with `hour` and `tags`; client-side filtering via `event.setProp('display', 'none')`; 150ms debounce on name search. All 275 tests pass. |
 | 9.65 | Panopticon site settings dashboard | 🟡 M | Edit runtime settings (MAX_COUNT_PER_ROLE, etc.) without redeploy. Singleton SiteConfiguration model + Panopticon CRUD view. **Status:** Needs spec by Jonny+Claude |
 | 9.66 | Film event metadata + TMDB integration | 🟡 M | Dedicated `Film` model (Director, year, country, language, etc.) with FK to Event. Pre-populate from TMDB API with programmer override. User has API key. **Status:** Needs spec by Jonny+Claude |
 | 9.67 | Room scratchpad/notes | 🟢 XS | Free-text `scratchpad` field on `Room` model. Any user can edit. Visible on rota and room pages. Photos later. **Status:** Needs spec by Jonny+Claude |
 | 9.68 | Collectives directory + membership | 🟡 M | Collectives page with descriptions + key links (Nextcloud folders, WhatsApp groups). Users select membership for prioritised view. Toolkit-only (no mailing list sync yet). Related to 9.51. **Status:** Needs spec by Jonny+Claude |
 | 9.69 | Event detail showing date UX improvements | 🟡 M | On event detail pages, the full list of showing dates creates cognitive overhead. Users must scroll through past or distant future dates to find the next occurrence. Design solution needed: hide past dates, bold next upcoming, or restructure how multi-date events are presented. See TASKS.md 9.69 |
 | 9.70 | Nightly production DB backup | 🟢 XS | Infrastructure task on xtreamlab_jorn: \`.my.cnf\`, backup script, cron at 03:00, 30-day rolling retention. **Needs Marcus conversation before setting up.** See TASKS.md 9.70 |
-| 9.71 | Event terms and financial field change log | 🔵 S | \`EventTermsRevision\` model + \`pre_save\` signal records who changed terms and what the prior value was. Hub shows collapsible history. Motivated by April 2026 incident where terms on a confirmed event were silently rewritten. Min viable: model + signal + admin inline (~3–4h). See TASKS.md 9.71 |
+| **9.71** | **Event terms and financial field change log** | **🔵 S — NEXT PRIORITY** | See top of table. |
 | 9.73 | Outside hire flag prominent on rota | 🟢 XS | Badge or banner on `edit_rota.html` + `view_rota.html` when `showing.event.outside_hire` is True. No model change. See TASKS.md 9.73 |
 | ~~9.50~~ | ~~Volunteer self-service profile edit from nav~~ | ✅ 2026-03-02 | Own name in top nav links to `edit-volunteer/<pk>`; guarded by `user.volunteer.pk`; `seed_dev_data` now creates Member+Volunteer for all demo accounts so link appears in dev |
 | ~~9.46~~ | ~~Login page styling~~ | ✅ 2026-03-02 | Extends `base_public.html`; login, logout + password reset templates styled with centered card layout; friendly titles; `site_custom.css` moved into `base_public.html` so all descendants get nav styling; see TASKS.md 9.46 |
