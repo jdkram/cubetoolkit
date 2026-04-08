@@ -3486,13 +3486,27 @@ For Anacron catch-up on missed runs, copy the script to `/etc/cron.daily/sns-bac
 
 ### 9.71 — Event terms and financial field change log 🔵 S (6–12h)
 
-**Goal:** Record who changed the `terms` field (and financial fields added in 9.54) on an event, when, and what the previous value was. Surface this history in the event hub so that discrepancies between agreed terms and the live record can be investigated without relying on DB snapshots.
+**Goal:** Record who changed any financial or contractual field on an event, when, and what the previous values were. Surface this history in the event hub so that discrepancies between agreed terms and the live record can be investigated without relying on DB snapshots.
 
 #### Background
 
-In April 2026, a real incident occurred where the `terms` field on a confirmed event was edited in the early hours of the morning before the event date, changing the financial arrangement (cost type, total amounts, and the outside-hire flag) from what had been agreed at a collective programming meeting. The `updated_at` timestamp on the `Event` record showed the change happened, but the database holds only the current state — the prior terms were only recoverable by diffing two manually-taken DB snapshots that happened to exist.
+In April 2026, a real incident occurred where multiple fields on a confirmed event were edited in the early hours of the morning before the event date: `terms` (financial agreement text), `outside_hire` (flag indicating an external hire rather than collectively programmed event), and `private`. These changes were made after the arrangement had been agreed at a collective programming meeting. The `updated_at` timestamp on the `Event` record showed the change happened, but the database holds only the current state — the prior values were only recoverable by diffing two manually-taken DB snapshots that happened to exist.
 
 Without a change log, there is no accountability mechanism. Anyone with programmer access can silently rewrite the financial terms on an event after it has been ratified.
+
+#### Fields to audit
+
+The following `Event` fields are in scope for the initial implementation (all already exist on the model):
+
+| Field | Type | Why |
+|---|---|---|
+| `terms` | `TextField` | Primary financial agreement text |
+| `outside_hire` | `BooleanField` | Determines whether the event is internally programmed or an external hire — key financial distinction |
+| `private` | `BooleanField` | Controls public visibility — changing this after ratification has reputational and operational consequences |
+
+When 9.54 is implemented, also add: `cost_type`, `cost_total_gbp`, `cost_flat_fee_gbp`.
+
+One revision record is created per save that changes any of these fields. The record stores a full snapshot of all audited fields at the moment before the change.
 
 #### Data model
 
@@ -3500,19 +3514,20 @@ Add a new model `EventTermsRevision` in `diary/models.py`:
 
 ```python
 class EventTermsRevision(models.Model):
-    event      = models.ForeignKey(Event, on_delete=models.CASCADE,
-                                   related_name="terms_revisions")
-    saved_at   = models.DateTimeField(auto_now_add=True)
-    saved_by   = models.ForeignKey(settings.AUTH_USER_MODEL,
-                                   null=True, blank=True,
-                                   on_delete=models.SET_NULL)
-    terms_text = models.TextField()  # snapshot of terms at this revision
+    event        = models.ForeignKey(Event, on_delete=models.CASCADE,
+                                     related_name="terms_revisions")
+    saved_at     = models.DateTimeField(auto_now_add=True)
+    saved_by     = models.ForeignKey(settings.AUTH_USER_MODEL,
+                                     null=True, blank=True,
+                                     on_delete=models.SET_NULL)
+    # Snapshot of audited fields immediately before this save
+    terms_text   = models.TextField(blank=True)
+    outside_hire = models.BooleanField()
+    private      = models.BooleanField()
 
     class Meta:
         ordering = ["-saved_at"]
 ```
-
-When 9.54 is implemented, extend this to also snapshot `cost_type`, `cost_total_gbp`, `cost_flat_fee_gbp`, and `outside_hire` at revision time.
 
 #### Signal to create revisions
 
@@ -3523,19 +3538,23 @@ from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from .models import Event, EventTermsRevision
 
+_AUDITED_FIELDS = ("terms", "outside_hire", "private")
+
 @receiver(pre_save, sender=Event)
-def snapshot_terms_on_change(sender, instance, **kwargs):
+def snapshot_financial_fields_on_change(sender, instance, **kwargs):
     if not instance.pk:
         return  # new record, nothing to snapshot
     try:
         prior = Event.objects.get(pk=instance.pk)
     except Event.DoesNotExist:
         return
-    if prior.terms != instance.terms:
+    if any(getattr(prior, f) != getattr(instance, f) for f in _AUDITED_FIELDS):
         EventTermsRevision.objects.create(
             event=instance,
             saved_by=getattr(instance, "_saved_by", None),
             terms_text=prior.terms or "",
+            outside_hire=prior.outside_hire,
+            private=prior.private,
         )
 ```
 
@@ -3548,20 +3567,21 @@ event._saved_by = request.user
 event.save()
 ```
 
-#### UI: terms history in the event hub
+#### UI: change history in the event hub
 
-In `edit_event_details.html` (the event hub), add a collapsible "Terms history" section below the current terms display:
+In `edit_event_details.html` (the event hub), add a collapsible "Change history" section below the terms display:
 
 ```html
 {% if event.terms_revisions.exists %}
 <details class="mt-2">
-    <summary class="small text-muted">Terms history ({{ event.terms_revisions.count }} revision{{ event.terms_revisions.count|pluralize }})</summary>
+    <summary class="small text-muted">Change history ({{ event.terms_revisions.count }} revision{{ event.terms_revisions.count|pluralize }})</summary>
     <ul class="small mt-2">
     {% for rev in event.terms_revisions|slice:":10" %}
         <li>
             <strong>{{ rev.saved_at|date:"j M Y H:i" }}</strong>
             {% if rev.saved_by %}by {{ rev.saved_by.get_full_name|default:rev.saved_by.username }}{% endif %}
-            — <em>{{ rev.terms_text|truncatechars:120 }}</em>
+            — outside hire: {{ rev.outside_hire|yesno }}; private: {{ rev.private|yesno }};
+            terms: <em>{{ rev.terms_text|truncatechars:100 }}</em>
         </li>
     {% endfor %}
     </ul>
@@ -3586,7 +3606,7 @@ Add `EventTermsRevision` as a new table. No changes to existing `Event` fields. 
 |---|---|---|
 | `EventTermsRevision` model + migration | 🟢 XS | 1–2h |
 | `pre_save` signal + `_saved_by` wiring in view | 🟢 XS | 1–2h |
-| Terms history panel in event hub | 🟢 XS | 1–2h |
+| Change history panel in event hub | 🟢 XS | 1–2h |
 | Django admin inline for revisions | 🟢 XS | 0.5–1h |
 | Tests | 🟢 XS | 2–4h |
 | **Total** | **🔵 S** | **~6–11h** |
