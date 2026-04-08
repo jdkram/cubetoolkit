@@ -14,11 +14,34 @@
 //   - dayMaxEvents: true replaces eventLimit: true
 //   - CSS class .fc-event-title replaces .fc-title
 //   - FC6 global bundle injects its own CSS; no separate <link> needed
+//
+// Filtering (added 2026-04-06):
+//   - Tags: multi-select, events must match ANY selected tag
+//   - Time of day: all/daytime(0-16)/evening(17+)
+//   - Status: Unconfirmed, Private, Outside hire, Cancelled (checkbox toggles)
+//   - Name: text search on event title
+//   - Rooms: multi-select checkbox (multiroom venues only)
 
-function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, resources) {
+function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, resources, initialFilters) {
     "use strict";
 
     var STORAGE_KEY = 'fc6-calendar-view';
+    var FILTER_STORAGE_KEY = 'fc6-calendar-filters';
+
+    // Filter state (mutable)
+    var filterState = initialFilters || {
+        timeOfDay: 'all',
+        showUnconfirmed: true,
+        showPrivate: true,
+        showOutsideHire: true,
+        showCancelled: true,
+        nameQuery: '',
+        selectedTags: [],
+        visibleRooms: resources ? resources.map(function(r) { return r.id; }) : []
+    };
+
+    // Calendar instance (set in _init)
+    var calendar;
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -85,6 +108,262 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
         history.replaceState(null, document.title, newUrl);
     }
 
+    // ── Filtering logic ───────────────────────────────────────────────────────
+
+    function eventMatchesFilters(event) {
+        var classNames = event.classNames || [];
+        var title = (event.title || '').toLowerCase();
+        var query = filterState.nameQuery.toLowerCase();
+
+        // Name search filter
+        if (query && title.indexOf(query) === -1) {
+            return false;
+        }
+
+        // Time of day filter
+        if (filterState.timeOfDay !== 'all') {
+            var hour = event.extendedProps?.hour ?? parseInt(event.start.getHours(), 10);
+            if (filterState.timeOfDay === 'daytime' && hour >= 17) {
+                return false;
+            }
+            if (filterState.timeOfDay === 'evening' && hour < 17) {
+                return false;
+            }
+        }
+
+        // Status filters (if unchecked, hide events with that status)
+        if (!filterState.showUnconfirmed && classNames.indexOf('s_unconfirmed') !== -1) {
+            return false;
+        }
+        if (!filterState.showPrivate && classNames.indexOf('s_private') !== -1) {
+            return false;
+        }
+        if (!filterState.showOutsideHire && classNames.indexOf('s_outside_hire') !== -1) {
+            return false;
+        }
+        if (!filterState.showCancelled && classNames.indexOf('s_cancelled') !== -1) {
+            return false;
+        }
+
+        // Tag filter (multi-select: event must have AT LEAST ONE of selected tags)
+        if (filterState.selectedTags && filterState.selectedTags.length > 0) {
+            var eventTags = event.extendedProps?.tags || [];
+            var hasMatchingTag = false;
+            for (var i = 0; i < filterState.selectedTags.length; i++) {
+                if (eventTags.indexOf(filterState.selectedTags[i]) !== -1) {
+                    hasMatchingTag = true;
+                    break;
+                }
+            }
+            if (!hasMatchingTag) {
+                return false;
+            }
+        }
+
+        // Room filter (multi-select: event must be in one of visible rooms)
+        if (resources && resources.length > 0) {
+            var eventRoomId = event.getResources ? event.getResources()[0]?.id : event.extendedProps?.resourceId;
+            if (eventRoomId && filterState.visibleRooms.indexOf(parseInt(eventRoomId, 10)) === -1) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    function applyFilters() {
+        if (!calendar) { return; }
+
+        var allEvents = calendar.getEvents();
+        var visibleCount = 0;
+        var hiddenCount = 0;
+
+        allEvents.forEach(function(event) {
+            var shouldShow = eventMatchesFilters(event);
+            if (shouldShow) {
+                event.setProp('display', 'auto');
+                visibleCount++;
+            } else {
+                event.setProp('display', 'none');
+                hiddenCount++;
+            }
+        });
+
+        // Update filter count indicator
+        var countEl = document.getElementById('active-filter-count');
+        if (countEl) {
+            var activeFilters = [];
+            if (filterState.timeOfDay !== 'all') { activeFilters.push('time'); }
+            if (filterState.nameQuery) { activeFilters.push('name'); }
+            if (!filterState.showUnconfirmed) { activeFilters.push('no-unconfirmed'); }
+            if (!filterState.showPrivate) { activeFilters.push('no-private'); }
+            if (!filterState.showOutsideHire) { activeFilters.push('no-outside'); }
+            if (!filterState.showCancelled) { activeFilters.push('no-cancelled'); }
+            if (filterState.selectedTags.length > 0) { activeFilters.push(filterState.selectedTags.length + ' tag(s)'); }
+            if (filterState.visibleRooms.length !== resources.length) { activeFilters.push(filterState.visibleRooms.length + ' room(s)'); }
+
+            if (activeFilters.length > 0) {
+                countEl.textContent = '(' + visibleCount + ' shown, ' + hiddenCount + ' hidden)';
+            } else {
+                countEl.textContent = '';
+            }
+        }
+    }
+
+    function updateTimelineHours(timeFilter) {
+        if (!calendar) { return; }
+        
+        var view = calendar.view;
+        if (view.type !== 'resourceTimelineWeek') { return; }
+        
+        var minTime, maxTime;
+        switch (timeFilter) {
+            case 'daytime':
+                minTime = '09:00:00';
+                maxTime = '17:00:00';
+                break;
+            case 'evening':
+                minTime = '17:00:00';
+                maxTime = '24:00:00';
+                break;
+            default: // 'all'
+                minTime = '09:00:00';
+                maxTime = '24:00:00';
+                break;
+        }
+        
+        calendar.setOption('slotMinTime', minTime);
+        calendar.setOption('slotMaxTime', maxTime);
+    }
+
+    function setupFilterListeners() {
+        // Time of day buttons
+        var timeBtns = document.querySelectorAll('.time-filter-btn');
+        timeBtns.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                timeBtns.forEach(function(b) { b.classList.remove('active'); });
+                btn.classList.add('active');
+                filterState.timeOfDay = btn.dataset.timeFilter || 'all';
+                applyFilters();
+                updateTimelineHours(filterState.timeOfDay);
+            });
+        });
+
+        // Name search input
+        var nameInput = document.getElementById('filter-name');
+        if (nameInput) {
+            var debounceTimer;
+            nameInput.addEventListener('input', function() {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(function() {
+                    filterState.nameQuery = nameInput.value.trim();
+                    applyFilters();
+                }, 150);
+            });
+        }
+
+        // Status checkboxes
+        var unconfirmedCb = document.getElementById('filter-unconfirmed');
+        var privateCb = document.getElementById('filter-private');
+        var outsideCb = document.getElementById('filter-outside');
+        var cancelledCb = document.getElementById('filter-cancelled');
+
+        if (unconfirmedCb) {
+            unconfirmedCb.addEventListener('change', function() {
+                filterState.showUnconfirmed = unconfirmedCb.checked;
+                applyFilters();
+            });
+        }
+        if (privateCb) {
+            privateCb.addEventListener('change', function() {
+                filterState.showPrivate = privateCb.checked;
+                applyFilters();
+            });
+        }
+        if (outsideCb) {
+            outsideCb.addEventListener('change', function() {
+                filterState.showOutsideHire = outsideCb.checked;
+                applyFilters();
+            });
+        }
+        if (cancelledCb) {
+            cancelledCb.addEventListener('change', function() {
+                filterState.showCancelled = cancelledCb.checked;
+                applyFilters();
+            });
+        }
+
+        // Tag filter buttons (multi-select)
+        var tagBtns = document.querySelectorAll('.tag-filter-btn[data-tag]');
+        tagBtns.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var tag = btn.dataset.tag;
+                var isActive = btn.classList.contains('active');
+
+                if (isActive) {
+                    // Deselect this tag
+                    btn.classList.remove('active');
+                    var idx = filterState.selectedTags.indexOf(tag);
+                    if (idx !== -1) {
+                        filterState.selectedTags.splice(idx, 1);
+                    }
+                } else {
+                    // Select this tag
+                    btn.classList.add('active');
+                    if (filterState.selectedTags.indexOf(tag) === -1) {
+                        filterState.selectedTags.push(tag);
+                    }
+                }
+
+                applyFilters();
+            });
+        });
+
+        // Room filter checkboxes
+        var roomCbs = document.querySelectorAll('.room-filter-checkbox');
+        roomCbs.forEach(function(cb) {
+            cb.addEventListener('change', function() {
+                var roomId = parseInt(cb.value, 10);
+                if (cb.checked) {
+                    if (filterState.visibleRooms.indexOf(roomId) === -1) {
+                        filterState.visibleRooms.push(roomId);
+                    }
+                } else {
+                    var idx = filterState.visibleRooms.indexOf(roomId);
+                    if (idx !== -1) {
+                        filterState.visibleRooms.splice(idx, 1);
+                    }
+                }
+                applyFilters();
+            });
+        });
+
+        // Filter collapse toggle (works on all screen sizes)
+        var filterToggle = document.getElementById('filter-toggle');
+        var filterBar = document.getElementById('calendar-filters');
+        var toggleText = document.getElementById('filter-toggle-text');
+
+        if (filterToggle && filterBar) {
+            // Auto-collapse on mobile only; desktop starts expanded
+            var isMobile = window.innerWidth <= 768;
+            if (isMobile) {
+                filterBar.classList.add('collapsed');
+                if (toggleText) { toggleText.textContent = 'Show filters'; }
+            }
+
+            filterToggle.addEventListener('click', function() {
+                var isCollapsed = filterBar.classList.toggle('collapsed');
+                if (toggleText) {
+                    toggleText.textContent = isCollapsed ? 'Show filters' : 'Hide filters';
+                }
+                // Re-render calendar after transition
+                setTimeout(function() {
+                    if (calendar) { calendar.render(); }
+                }, 200);
+            });
+        }
+    }
+
     // ── Ideas panel (jQuery/jeditable) ────────────────────────────────────────
 
     function showIdeas(viewStart) {
@@ -99,11 +378,16 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
                 var editId    = 'ideas-' + year + '-' + month;
                 var label     = monthDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
-                document.getElementById('ideas').innerHTML =
-                    '<h3>Ideas for ' + label + ':</h3>'
+                var html = '<h3>Ideas for ' + label + ':</h3>'
                     + '<div class="idea' + (historic ? '-historic' : '') + '" id="' + editId + '">'
                     + (data.ideas !== null ? data.ideas : '')
                     + '</div>';
+
+                // Update both ideas containers (sidebar and bottom)
+                var ideasContainers = document.querySelectorAll('#ideas');
+                ideasContainers.forEach(function(container) {
+                    container.innerHTML = html;
+                });
 
                 if (!historic) {
                     $('#' + editId).editable(
@@ -128,18 +412,8 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
 
     // ── Main init (deferred until DOM is ready) ───────────────────────────────
 
-    // ── Time-range toggle state for week timeline ─────────────────────────────
-    // Cycles: all → hide early (09:00+) → evening only (17:00+) → all
-    var TIME_RANGES = [
-        { label: 'all hours', min: '00:00:00', max: '24:00:00' },
-        { label: '09:00+',    min: '09:00:00', max: '24:00:00' },
-        { label: 'evening',   min: '17:00:00', max: '24:00:00' }
-    ];
-    var timeRangeIdx = 0;
-
     function _init() {
         var calendarEl = document.getElementById('calendar');
-        var calendar;
         var hasResources = resources && resources.length > 0;
 
         var isMobile = window.innerWidth <= 768;
@@ -197,8 +471,8 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
             },
 
             dateClick: function(info) {
-                if (info.date < new Date()) return;
-                if (!info.allDay) return;
+                if (info.date < new Date()) { return; }
+                if (!info.allDay) { return; }
                 var url = django_urls['add-event'] + '?date=' + fmtDateDMY(info.date);
                 if (hasResources && info.resource) {
                     url += '&room=' + info.resource.id;
@@ -214,7 +488,7 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
                 var url = django_urls['add-event'] + '?date=' + fmtDateDMY(info.start);
                 if (!info.allDay) {
                     url += '&time=' + fmtHM(info.start);
-                    url += '&duration=' + Math.round((info.end - info.start) /1000);
+                    url += '&duration=' + Math.round((info.end - info.start) / 1000);
                 }
                 if (hasResources && info.resource) {
                     url += '&room=' + info.resource.id;
@@ -226,11 +500,11 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
             eventDidMount: function(info) {
                 var classNames = info.event.classNames || [];
                 var statuses   = [];
-                if (classNames.indexOf('s_unconfirmed')  !== -1) statuses.push('Unconfirmed');
-                if (classNames.indexOf('s_cancelled')    !== -1) statuses.push('Cancelled');
-                if (classNames.indexOf('s_private')      !== -1) statuses.push('Private');
-                if (classNames.indexOf('s_outside_hire') !== -1) statuses.push('Outside hire');
-                if (classNames.indexOf('s_discounted')   !== -1) statuses.push('Discounted');
+                if (classNames.indexOf('s_unconfirmed') !== -1) { statuses.push('Unconfirmed'); }
+                if (classNames.indexOf('s_cancelled') !== -1) { statuses.push('Cancelled'); }
+                if (classNames.indexOf('s_private') !== -1) { statuses.push('Private'); }
+                if (classNames.indexOf('s_outside_hire') !== -1) { statuses.push('Outside hire'); }
+                if (classNames.indexOf('s_discounted') !== -1) { statuses.push('Discounted'); }
 
                 // Multi-line tooltip: title, time range, duration, room, statuses
                 var lines = [info.event.title];
@@ -244,26 +518,60 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
                 if (roomResources.length > 0) {
                     lines.push(roomResources[0].title);
                 }
-                if (statuses.length > 0) lines.push(statuses.join(', '));
+                if (statuses.length > 0) { lines.push(statuses.join(', ')); }
                 info.el.title = lines.join('\n');
 
+                // Add status badges inside the event
+                var badgesHtml = '';
+                if (classNames.indexOf('s_private') !== -1) {
+                    badgesHtml += '<span class="fc-event-badge" title="Private">🔒</span>';
+                }
+                if (classNames.indexOf('s_outside_hire') !== -1) {
+                    badgesHtml += '<span class="fc-event-badge" title="Outside hire">👥</span>';
+                }
+                if (classNames.indexOf('s_cancelled') !== -1) {
+                    badgesHtml += '<span class="fc-event-badge" title="Cancelled">🚫</span>';
+                }
+                if (classNames.indexOf('s_discounted') !== -1) {
+                    badgesHtml += '<span class="fc-event-badge" title="Discounted">✻</span>';
+                }
+
+                if (badgesHtml) {
+                    var titleEl = info.el.querySelector('.fc-event-title');
+                    if (titleEl) {
+                        var badgeContainer = document.createElement('span');
+                        badgeContainer.className = 'fc-event-badges';
+                        badgeContainer.innerHTML = badgesHtml;
+                        titleEl.appendChild(badgeContainer);
+                    }
+                }
+
+                // Status label below title (like before)
                 if (statuses.length > 0) {
                     var span       = document.createElement('span');
                     span.className = 'fc-event-status';
                     span.textContent = statuses.join(' · ');
+                    var statusEl = info.el.querySelector('.fc-event-status');
                     var titleEl = info.el.querySelector('.fc-event-title');
-                    if (titleEl) titleEl.after(span);
+                    if (!statusEl && titleEl) {
+                        titleEl.after(span);
+                    }
+                }
+
+                // Apply initial filters to newly mounted events
+                if (!eventMatchesFilters(info.event)) {
+                    info.event.setProp('display', 'none');
                 }
             },
 
             datesSet: function(info) {
                 setStoredView(info.view.type);
                 syncUrl(info.view, calendar.getDate());
-                showIdeas(info.view.currentStart);
-                var ctrl = document.getElementById('time-range-control');
-                if (ctrl) {
-                    ctrl.style.display = (info.view.type === 'resourceTimelineWeek') ? 'block' : 'none';
-                }
+                // Re-apply filters and timeline hours when view changes
+                setTimeout(function() {
+                    applyFilters();
+                    updateTimelineHours(filterState.timeOfDay);
+                }, 100);
             }
         };
 
@@ -298,17 +606,11 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
         calendar = new FullCalendar.Calendar(calendarEl, calendarOpts);
         calendar.render();
 
-        // External time-range toggle (only visible in week timeline view)
-        var timeRangeBtn = document.getElementById('time-range-btn');
-        if (timeRangeBtn) {
-            timeRangeBtn.addEventListener('click', function() {
-                timeRangeIdx = (timeRangeIdx + 1) % TIME_RANGES.length;
-                var range = TIME_RANGES[timeRangeIdx];
-                timeRangeBtn.textContent = range.label;
-                calendar.setOption('slotMinTime', range.min);
-                calendar.setOption('slotMaxTime', range.max);
-            });
-        }
+        // Apply initial timeline hours if starting in week view
+        updateTimelineHours(filterState.timeOfDay);
+
+        // Setup filter UI listeners
+        setupFilterListeners();
 
         var resizeTimer;
         window.addEventListener('resize', function() {
@@ -317,15 +619,6 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
                 calendar.render();
             }, 250);
         });
-
-        var diaryKey = document.getElementById('diary-key');
-        if (diaryKey) {
-            diaryKey.addEventListener('toggle', function() {
-                var ctrl = document.getElementById('controls');
-                if (ctrl) ctrl.classList.toggle('controls-collapsed', !diaryKey.open);
-                setTimeout(function() { calendar.render(); }, 210);
-            });
-        }
     }
 
     if (document.readyState === 'loading') {
