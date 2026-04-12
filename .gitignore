@@ -18,7 +18,10 @@ venv26/
 
 # --- Django / web app ---
 media/
-static/
+# /static/ (anchored to repo root) is the STATIC_ROOT output directory — ignore it.
+# Do NOT use bare `static/` here: that would also ignore app static source dirs
+# like toolkit/diary/static/, preventing those files from being committed.
+/static/
 staticfiles/
 site_transfer.tgz
 toolkit/settings.py
