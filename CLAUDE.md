@@ -123,7 +123,7 @@ docker compose up --build -d
 
 **To create initial users and seed sample data after first boot:**
 ```bash
-docker compose exec toolkit /venv/bin/python3 manage.py configure_toolkit_users --password DevPassword1!
+docker compose exec toolkit /venv/bin/python3 manage.py configure_toolkit_users --password password
 docker compose exec toolkit /venv/bin/python3 manage.py seed_dev_data
 ```
 
@@ -131,9 +131,14 @@ docker compose exec toolkit /venv/bin/python3 manage.py seed_dev_data
 
 | Username | Tier | Password |
 | --- | --- | --- |
-| `admin` | Panopticon (superuser) | `DevPassword1!` |
-| `programmer`, `programmer2` | Programmer | `DevPassword1!` |
-| `volunteer` … `volunteer5` | Volunteer (rota only) | `DevPassword1!` |
+| `admin` | Panopticon (superuser) | `password` |
+| `programmer`, `programmer2` | Programmer | `password` |
+| `volunteer` … `volunteer5` | Volunteer (rota only) | `password` |
+
+To reset passwords on already-existing accounts, add `--force-password`:
+```bash
+docker compose exec toolkit /venv/bin/python3 manage.py configure_toolkit_users --password password --force-password
+```
 
 Omit `--password` for production — it will prompt interactively for each new account and skip any that already exist.
 

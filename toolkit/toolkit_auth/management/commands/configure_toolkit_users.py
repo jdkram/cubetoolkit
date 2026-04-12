@@ -20,7 +20,8 @@ def _get_password(use):
 
 
 def _create_or_update_user(
-    name, email, permissions, is_superuser=False, is_staff=False, password=None
+    name, email, permissions, is_superuser=False, is_staff=False, password=None,
+    force_password=False,
 ):
     if not auth_models.User.objects.filter(username=name).exists():
         if password is None:
@@ -28,8 +29,12 @@ def _create_or_update_user(
         user = auth_models.User.objects.create_user(name, email, password)
         print(f"Created user '{name}'")
     else:
-        print(f"User '{name}' exists: not changing password")
         user = auth_models.User.objects.get(username=name)
+        if force_password and password is not None:
+            user.set_password(password)
+            print(f"User '{name}' exists: password updated")
+        else:
+            print(f"User '{name}' exists: not changing password")
 
     # Remove all permissions:
     user.user_permissions.clear()
@@ -45,7 +50,7 @@ def _create_or_update_user(
     return user
 
 
-def _configure_users(password=None):
+def _configure_users(password=None, force_password=False):
     # Create dummy ContentType:
     ct = contenttypes.models.ContentType.objects.get_or_create(
         model="", app_label="toolkit"
@@ -91,6 +96,7 @@ def _configure_users(password=None):
         is_superuser=True,
         is_staff=True,
         password=password,
+        force_password=force_password,
     )
 
     # --- Programmer tier ---
@@ -104,6 +110,7 @@ def _configure_users(password=None):
             email,
             [write_permission, read_permission, edit_rota_permission],
             password=password,
+            force_password=force_password,
         )
         programmer_users.append(user)
 
@@ -127,6 +134,7 @@ def _configure_users(password=None):
             email,
             [edit_rota_permission],
             password=password,
+            force_password=force_password,
         )
 
 
@@ -149,9 +157,19 @@ class Command(BaseCommand):
                 "If omitted, prompts interactively for each new account."
             ),
         )
+        parser.add_argument(
+            "--force-password",
+            action="store_true",
+            default=False,
+            help=(
+                "Also update the password on existing accounts. "
+                "Requires --password. Do not use in production."
+            ),
+        )
 
     def handle(self, *args, **options):
         password = options.get("password")
+        force_password = options.get("force_password", False)
         if password:
             self.stdout.write(
                 self.style.WARNING(
@@ -159,5 +177,7 @@ class Command(BaseCommand):
                     "Do not use this flag in production."
                 )
             )
-        _configure_users(password=password)
+        if force_password and not password:
+            raise CommandError("--force-password requires --password.")
+        _configure_users(password=password, force_password=force_password)
         self.stdout.write(self.style.SUCCESS("Users configured successfully."))
