@@ -77,10 +77,10 @@ copy = "As a massive asteroid nears Earth, a man finds himself alone after his w
 film_information = "Dir. Lorene Scafaria, USA 2012, 101 min, 15"
 tags = ["film"]
 private = false
-rota_notes = "Doors 6:30pm. Film 7pm. Projectionist set up by 6pm. The apostrophe thing's fixed-that's genuinely nice."
+rota_notes = "Doors 30 min before start. Projectionist set up 90 min early. The apostrophe thing's fixed-that's genuinely nice."
 roles = ["Keyholder", "Projectionist - DCP", "Box Office - Admission Tickets", "Bar Staff - Shift 1", "Usher - Fire Trained"]
 day_offset = 12
-hour = 19
+hour = 20
 image_url = "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=800"
 room = "Cinema"
 
@@ -162,7 +162,7 @@ private = false
 rota_notes = """Two films, short break between. Projectionist: check format carefully - the ME print is DCP, Beautiful Day is MP4."""
 roles = ["Keyholder", "Projectionist - DCP", "Projectionist - MP4", "Box Office - Admission Tickets", "Bar Staff - Shift 1", "Usher - Fire Trained"]
 day_offset = 28
-hour = 19
+hour = 20
 image_url = "https://images.pexels.com/photos/269140/pexels-photo-269140.jpeg?auto=compress&cs=tinysrgb&w=800"
 room = "Cinema"
 
@@ -283,7 +283,7 @@ cancelled = true
 confirmed = true
 roles = ["Keyholder", "Projectionist - DCP", "Box Office - Admission Tickets", "Bar Staff - Shift 1", "Usher - Fire Trained"]
 day_offset = 42
-hour = 19
+hour = 15
 image_url = "https://images.pexels.com/photos/1659438/pexels-photo-1659438.jpeg?auto=compress&cs=tinysrgb&w=800"
 room = "Cinema"
 
@@ -314,7 +314,7 @@ private = false
 confirmed = false
 roles = ["Keyholder", "Projectionist - DCP", "Box Office - Admission Tickets", "Bar Staff - Shift 1", "Usher - Fire Trained"]
 day_offset = 63
-hour = 19
+hour = 18
 image_url = "https://images.pexels.com/photos/269140/pexels-photo-269140.jpeg?auto=compress&cs=tinysrgb&w=800"
 room = "Cinema"
 
@@ -367,7 +367,7 @@ private = false
 hide_in_programme = true
 roles = ["Keyholder"]
 day_offset = 120
-hour = 19
+hour = 14
 image_url = "https://image.tmdb.org/t/p/w780/ptlBtpecd39gYVDNbMpVIg7gYsd.jpg"
 room = "Cinema"
 
