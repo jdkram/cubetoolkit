@@ -58,6 +58,9 @@ DATABASES = {
         "CONN_MAX_AGE": 60,
         "OPTIONS": {
             "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+            # Fail fast if MariaDB is unreachable rather than hanging a worker
+            # indefinitely. Django's default has no timeout.
+            "connect_timeout": 10,
         },
     }
 }
@@ -66,6 +69,9 @@ DATABASES = {
 # Set EMAIL_BACKEND to smtp.EmailBackend and configure these if you want
 # mailouts to actually send. Console backend is safe for now.
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# Fail fast on SMTP connection attempts rather than hanging a worker.
+# Django's default has no timeout. Only takes effect with smtp.EmailBackend.
+EMAIL_TIMEOUT = 10
 # EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 # EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
 # EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))

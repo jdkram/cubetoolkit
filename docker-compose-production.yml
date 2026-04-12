@@ -30,6 +30,9 @@ services:
     image: toolkit:production
     command: ["tk_run", "mailerd"]
     restart: on-failure
+    # Give mailerd time to finish sending in-progress emails before Docker
+    # kills it. Default is 10s, which is too short for a large mailout.
+    stop_grace_period: 5m
     volumes:
       - type: bind
         source: /var/run/mysqld/mysqld.sock
