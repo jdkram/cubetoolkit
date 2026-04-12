@@ -9,10 +9,10 @@ from .common import MembersTestsMixin
 class SecurityTests(MembersTestsMixin, TestCase):
     """Basic test that the private pages do not load without a login"""
 
+    # Views that use @permission_required: redirect to login even when
+    # the user is logged in but lacks the required permission.
     write_required = {
         # Volunteer urls:
-        "add-volunteer": {},
-        "edit-volunteer": {"volunteer_id": 1},
         "activate-volunteer": {},
         "inactivate-volunteer": {},
         "add-volunteer-training-group-record": {},
@@ -22,6 +22,13 @@ class SecurityTests(MembersTestsMixin, TestCase):
         "add-member": {},
         "edit-member": {"member_id": 1},
         "delete-member": {"member_id": 1},
+    }
+
+    # Views that use @login_required + raise PermissionDenied: unauthenticated
+    # users get a login redirect (302); logged-in users without permission get 403.
+    write_or_own_required = {
+        "add-volunteer": {},
+        "edit-volunteer": {"volunteer_id": 1},
     }
 
     only_read_required = {
@@ -49,12 +56,23 @@ class SecurityTests(MembersTestsMixin, TestCase):
             response = self.client.post(url)
             self.assertRedirects(response, expected_redirect)
 
+    def _assert_need_perm(self, views_to_test):
+        """Assert that given URLs return 403 for a logged-in but unauthorised user"""
+        for view_name, kwargs in views_to_test.items():
+            url = reverse(view_name, kwargs=kwargs)
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 403, f"Expected 403 for GET {url}")
+            response = self.client.post(url)
+            self.assertEqual(response.status_code, 403, f"Expected 403 for POST {url}")
+
     def test_need_login(self):
         """
-        Checks all URLs that shouldn't work when not logged in at all
+        Checks all URLs that shouldn't work when not logged in at all.
+        Both @permission_required and @login_required views redirect to login.
         """
         views_to_test = {}
         views_to_test.update(self.write_required)
+        views_to_test.update(self.write_or_own_required)
         views_to_test.update(self.only_read_required)
 
         self._assert_need_login(views_to_test)
@@ -62,16 +80,20 @@ class SecurityTests(MembersTestsMixin, TestCase):
     def test_need_write(self):
         """
         Checks all URLs that shouldn't work when logged in user doesn't have
-        'toolkit.write' permission
+        'toolkit.write' permission.
+
+        @permission_required views redirect to login; views that use
+        @login_required + PermissionDenied return 403 instead.
         """
         # login as read only user:
         self.client.login(username="read_only", password="T3stPassword!1")
         self._assert_need_login(self.write_required)
+        self._assert_need_perm(self.write_or_own_required)
 
     def test_need_read_or_write(self):
         """
         Checks all URLs that shouldn't work when logged in user doesn't have
-        'toolkit.write' or 'toolkit.read' permission
+        'toolkit.write' or 'toolkit.read' permission.
         """
         views_to_test = {}
         views_to_test.update(self.write_required)
@@ -81,6 +103,7 @@ class SecurityTests(MembersTestsMixin, TestCase):
         self.client.login(username="no_perm", password="T3stPassword!2")
 
         self._assert_need_login(views_to_test)
+        self._assert_need_perm(self.write_or_own_required)
 
     def test_protected_urls(self):
         """URLs which should only work if the member key is known"""

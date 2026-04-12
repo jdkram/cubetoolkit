@@ -7,7 +7,8 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.conf import settings
 from django.core.mail import send_mail
-from django.contrib.auth.decorators import permission_required
+from django.contrib.auth.decorators import login_required, permission_required
+from django.core.exceptions import PermissionDenied
 from django.contrib import messages
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST, require_safe
@@ -260,10 +261,12 @@ def activate_volunteer(request, set_active=True):
     return HttpResponseRedirect(reverse("view-volunteer-list"))
 
 
-@permission_required("toolkit.write")
+@login_required
 def edit_volunteer(request, volunteer_id, create_new=False):
     # If called from the "add" url, then create_new will be True. If called
     # from the edit url then it'll be False
+
+    can_write = request.user.has_perm("toolkit.write")
 
     # Depending on which way this method was called, either create a totally
     # new volunteer object with default values (add) or load the volunteer
@@ -271,11 +274,17 @@ def edit_volunteer(request, volunteer_id, create_new=False):
     if not create_new:
         # Called from "edit" url
         volunteer = get_object_or_404(Volunteer, id=volunteer_id)
+        # Programmers (toolkit.write) can edit anyone; volunteers can only
+        # edit their own record.
+        if not can_write and volunteer.user != request.user:
+            raise PermissionDenied
         member = volunteer.member
         user = volunteer.user
         new_training_record = TrainingRecord(volunteer=volunteer)
     else:
-        # Called from "add" url
+        # Called from "add" url — requires write permission
+        if not can_write:
+            raise PermissionDenied
         volunteer = Volunteer()
         member = Member()
         volunteer.member = Member()

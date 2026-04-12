@@ -3689,3 +3689,39 @@ A clearly visible badge or banner on both the edit rota and view rota pages when
 - `toolkit/diary/templates/view_rota.html` — same
 
 No model change needed. No migration needed.
+
+---
+
+### 9.74 — Permission model redesign investigation 🟡 M (design first)
+
+**Context:** The current permission tiers (read, write, superuser) are a Cube Microplex inheritance and don't fully fit S+S. The immediate trigger is realising that `toolkit.write` grants access to volunteer and member personal data, which may be more than programmers should have. Current state (as of 2026-04-12):
+
+| Tier | Current access |
+|------|---------------|
+| Unauthenticated | Public programme only |
+| Volunteer | Rota edit (`change_rotaentry`); no programme write; now can edit own profile |
+| Read-only (`toolkit.read`) | Read most views; no write |
+| Programmer (`toolkit.write`) | Read + write all data including volunteer/member records |
+| Panopticon (`is_superuser`) | Everything + Django admin |
+
+**Proposed redesign (draft, for collective ratification):**
+
+| Tier | Access |
+|------|--------|
+| Unauthenticated | Public programme |
+| Volunteer | Own rota slots; own profile edit |
+| Programmer | Programme data (events, showings, templates, roles); NOT volunteer/member PII |
+| Panopticon | Everything including volunteer/member data |
+
+**Questions to answer:**
+1. Should programmers be able to *view* the volunteer list and member data, or only their own contact info?
+2. Should there be a separate "volunteer admin" role (currently only Panopticon)? Probably yes — many cinemas have a volunteer coordinator who isn't a sysadmin.
+3. What does "read" permission mean in the proposed model? Is it still useful, or does it collapse into other tiers?
+4. Does 9.49 (Panopticon-only roles, templates) need revisiting in light of this? (Currently: roles page is superuser-only.)
+
+**Related:** 9.49 (programmer/panopticon split for roles/templates), 9.25 (tap to sign up), 9.36 (vacancies)
+
+**Implementation notes when the design is settled:**
+- The `toolkit.write` permission is used in many `@permission_required("toolkit.write")` decorators and template `{% if perms.toolkit.write %}` guards. A redesign will touch a significant portion of the codebase.
+- Consider whether to use Django's group system (new groups: "Volunteer Coordinator", etc.) or add a new `toolkit.volunteer_admin` permission.
+- New tests for each tier boundary will be essential.

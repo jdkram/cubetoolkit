@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-04-12 (infrastructure hardening from outage investigation; VERSION 2026.04.1)
+**Last updated:** 2026-04-12 (volunteer self-edit; permission redesign task 9.74 added)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -133,6 +133,7 @@ None — all clear.
 | 9.69 | Event detail showing date UX improvements | 🟡 M | On event detail pages, the full list of showing dates creates cognitive overhead. Users must scroll through past or distant future dates to find the next occurrence. Design solution needed: hide past dates, bold next upcoming, or restructure how multi-date events are presented. See TASKS.md 9.69 |
 | 9.70 | Nightly production DB backup | 🟢 XS | Infrastructure task on xtreamlab_jorn: \`.my.cnf\`, backup script, cron at 03:00, 30-day rolling retention. **Needs Marcus conversation before setting up.** See TASKS.md 9.70 |
 | **9.71** | **Event terms and financial field change log** | **🔵 S — NEXT PRIORITY** | See top of table. |
+| **9.74** | **Permission model redesign investigation** | **🟡 M (design first)** | Programmers currently have read/write on volunteer/member PII — likely wrong. Proposed: programmers can only touch programme data; panopticon controls volunteer/member data; volunteers keep self-edit. Design questions listed in TASKS.md 9.74 — needs collective discussion before implementation. |
 | 9.73 | Outside hire flag prominent on rota | 🟢 XS | Badge or banner on `edit_rota.html` + `view_rota.html` when `showing.event.outside_hire` is True. No model change. See TASKS.md 9.73 |
 | ~~9.50~~ | ~~Volunteer self-service profile edit from nav~~ | ✅ 2026-03-02 | Own name in top nav links to `edit-volunteer/<pk>`; guarded by `user.volunteer.pk`; `seed_dev_data` now creates Member+Volunteer for all demo accounts so link appears in dev |
 | ~~9.46~~ | ~~Login page styling~~ | ✅ 2026-03-02 | Extends `base_public.html`; login, logout + password reset templates styled with centered card layout; friendly titles; `site_custom.css` moved into `base_public.html` so all descendants get nav styling; see TASKS.md 9.46 |
