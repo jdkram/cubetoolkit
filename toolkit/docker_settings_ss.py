@@ -22,6 +22,9 @@ DATABASES = {
         "CONN_MAX_AGE": 10,
         "OPTIONS": {
             "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+            # Fail fast if MariaDB is unreachable rather than hanging a worker
+            # indefinitely. Django's default has no timeout.
+            "connect_timeout": 10,
         },
     }
 }
@@ -31,6 +34,9 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "insecure-dev-secret-key-change-in-pro
 # Print emails to the container logs instead of attempting SMTP delivery.
 # Change to smtp.EmailBackend and set EMAIL_HOST/PORT/etc. in production.
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# Fail fast on SMTP connection attempts rather than hanging a worker.
+# Django's default has no timeout. Only takes effect with smtp.EmailBackend.
+EMAIL_TIMEOUT = 10
 
 # Log to console only inside the container
 del LOGGING["handlers"]["file"]

@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-04-08 (9.71 spec expanded to cover outside_hire + private; prioritised)
+**Last updated:** 2026-04-12 (infrastructure hardening from outage investigation; VERSION 2026.04.1)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -136,6 +136,19 @@ None — all clear.
 | 9.73 | Outside hire flag prominent on rota | 🟢 XS | Badge or banner on `edit_rota.html` + `view_rota.html` when `showing.event.outside_hire` is True. No model change. See TASKS.md 9.73 |
 | ~~9.50~~ | ~~Volunteer self-service profile edit from nav~~ | ✅ 2026-03-02 | Own name in top nav links to `edit-volunteer/<pk>`; guarded by `user.volunteer.pk`; `seed_dev_data` now creates Member+Volunteer for all demo accounts so link appears in dev |
 | ~~9.46~~ | ~~Login page styling~~ | ✅ 2026-03-02 | Extends `base_public.html`; login, logout + password reset templates styled with centered card layout; friendly titles; `site_custom.css` moved into `base_public.html` so all descendants get nav styling; see TASKS.md 9.46 |
+
+### 3b. Infrastructure / deployment hardening
+
+Items identified during the April 2026 SNS production site outage investigation. The critical fixes (gunicorn workers, timeout, max-requests, DB connect_timeout, EMAIL_TIMEOUT, stop_grace_period) have already been applied. These are the remaining loose ends.
+
+| # | Item | Size | Notes |
+|---|------|------|-------|
+| **D.1** | **WhiteNoise cache-busting storage backend** | **🟢 XS** | Add `STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"` to both `docker_settings_ss.py` (build-time collectstatic) and `docker_settings_prod_ss.py` (runtime). Adds content hashes to filenames so browsers get fresh CSS/JS immediately on deploy. Needs a test image build to verify collectstatic doesn't error on any static files before committing. |
+| **D.2** | **Docker health checks** | **🔵 S** | Add a lightweight `/health/` Django view that checks DB connectivity (`connection.ensure_connection()`), then wire `healthcheck:` into `docker-compose-production.yml` for both `toolkit` and `mailer`. Enables zero-downtime deploys and faster failure detection: Docker won't route traffic to a container that failed its DB check. |
+| **D.3** | **Dependency pinning** | **🟡 M** | Several packages in `requirements/` have no version constraint (`nh3`, `python-dateutil`, `html2text`, `monthdelta`, `python-magic`). Run `uv pip compile requirements/base.txt -o requirements/base.lock` and switch the Dockerfile to install from the lockfile. Prevents surprise breakage when rebuilding the image months later. Do in a separate branch; test the full image build before merging. |
+| **D.4** | **Docker resource limits** | **🟢 XS** | Add `deploy.resources.limits` (memory, CPU) to both services in `docker-compose-production.yml`. Prevents a runaway query or mailout loop from starving the host. Exact values depend on the production host's available RAM — check with Marcus before setting. Suggested starting point: `toolkit: 512M`, `mailer: 256M`. |
+
+---
 
 ### 4. Medium and large Phase 2 features
 

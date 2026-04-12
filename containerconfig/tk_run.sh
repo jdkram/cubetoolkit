@@ -33,7 +33,28 @@ case "$COMMAND" in
             echo "Hot-reload enabled"
             GUNICORN_EXTRA_ARGS+=("--reload")
         fi
-        exec /venv/bin/gunicorn wsgi --bind 0.0.0.0:8000 --chdir /site "${GUNICORN_EXTRA_ARGS[@]}"
+        # Worker count: gunicorn's rule of thumb is (2 × CPU cores) + 1.
+        # On a 1-core VM that's 3; on a 2-core VM that's 5.
+        # Check with: nproc --all
+        # Each sync worker holds one DB connection and ~50-100MB RSS.
+        # Stay within available RAM — check with: free -h
+        #
+        # --timeout: kill and respawn any worker that doesn't respond within
+        #   N seconds. Gunicorn's default is already 30s, set explicitly here
+        #   so it's visible and intentional. This is the key protection against
+        #   a stuck request taking the site down.
+        #
+        # --max-requests / --max-requests-jitter: recycle workers after N
+        #   requests (±jitter) to prevent slow memory growth over long uptimes.
+        #   Jitter staggers recycling so all workers don't restart at once.
+        exec /venv/bin/gunicorn wsgi \
+            --bind 0.0.0.0:8000 \
+            --chdir /site \
+            --workers 3 \
+            --timeout 30 \
+            --max-requests 5000 \
+            --max-requests-jitter 500 \
+            "${GUNICORN_EXTRA_ARGS[@]}"
         ;;
     mailerd)
         exec /venv/bin/python3 /site/manage.py mailerd
