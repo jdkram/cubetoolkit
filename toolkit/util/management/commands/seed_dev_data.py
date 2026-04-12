@@ -951,9 +951,14 @@ class Command(BaseCommand):
         and _book_slot can detect clashes without hitting the DB on every check.
         """
         self._room_bookings = defaultdict(list)  # room_pk → [(start, end), ...]
-        for showing in Showing.objects.filter(start__gte=timezone.now()).select_related(
-            "event", "room"
-        ):
+        # Exclude seed showings: they will register themselves via _book_slot as
+        # they're created, so existing seed data doesn't cause time-shifting on
+        # idempotent re-runs (which would create duplicate showings).
+        for showing in Showing.objects.filter(
+            start__gte=timezone.now()
+        ).exclude(
+            booked_by="seed_dev_data"
+        ).select_related("event", "room"):
             if showing.room is None:
                 continue
             duration = showing.event.duration
