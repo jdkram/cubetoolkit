@@ -13,6 +13,7 @@ import random
 import re
 import tempfile
 import urllib.request
+from collections import defaultdict
 
 from django.conf import settings
 from django.contrib.auth.models import Group, User
@@ -360,6 +361,9 @@ class Command(BaseCommand):
             rooms_dict[room_data["name"]] = room_obj
         default_room = rooms_dict["Venue Space"]
 
+        # Initialise in-memory room schedule for clash detection
+        self._init_room_schedule()
+
         # Events and Showings
         now = timezone.now()
         anchor = now + datetime.timedelta(days=14)
@@ -412,6 +416,7 @@ class Command(BaseCommand):
                 + datetime.timedelta(days=event_data["day_offset"])
                 - datetime.timedelta(days=14)
             )
+            showing_start = self._find_free_slot(event_room, showing_start, dur_minutes)
 
             showing, s_created = Showing.objects.get_or_create(
                 event=event,
@@ -428,6 +433,7 @@ class Command(BaseCommand):
             )
             if s_created:
                 counts["showings"] += 1
+                self._book_slot(event_room, showing_start, dur_minutes)
 
             # Rota entries
             available_vols = list(volunteer_objects.values())
@@ -763,6 +769,9 @@ class Command(BaseCommand):
         if showing_start < timezone.now():
             return
 
+        _dur_mins = duration.hour * 60 + duration.minute or 60
+        showing_start = self._find_free_slot(room, showing_start, _dur_mins)
+
         showing, s_created = Showing.objects.get_or_create(
             event=event,
             start=showing_start,
@@ -778,6 +787,7 @@ class Command(BaseCommand):
         )
         if s_created:
             counts["showings"] += 1
+            self._book_slot(room, showing_start, _dur_mins)
 
         # Rota entries
         if not roles:
@@ -880,6 +890,8 @@ class Command(BaseCommand):
         if showing_start < timezone.now():
             return
 
+        showing_start = self._find_free_slot(room, showing_start, 120)
+
         showing, s_created = Showing.objects.get_or_create(
             event=event,
             start=showing_start,
@@ -895,6 +907,7 @@ class Command(BaseCommand):
         )
         if s_created:
             counts["showings"] += 1
+            self._book_slot(room, showing_start, 120)
 
         # Rota entries for a film screening
         available_vols = list(vol_list)
@@ -930,6 +943,54 @@ class Command(BaseCommand):
             )
             if re_created:
                 counts["rota_entries"] += 1
+
+    def _init_room_schedule(self):
+        """Pre-load existing future showings into an in-memory schedule.
+
+        Called once before any showings are created so that _find_free_slot
+        and _book_slot can detect clashes without hitting the DB on every check.
+        """
+        self._room_bookings = defaultdict(list)  # room_pk → [(start, end), ...]
+        for showing in Showing.objects.filter(start__gte=timezone.now()).select_related(
+            "event", "room"
+        ):
+            if showing.room is None:
+                continue
+            duration = showing.event.duration
+            if duration is None:
+                continue
+            dur_mins = duration.hour * 60 + duration.minute
+            if dur_mins == 0:
+                dur_mins = 120
+            end = showing.start + datetime.timedelta(minutes=dur_mins)
+            self._room_bookings[showing.room.pk].append((showing.start, end))
+
+    def _find_free_slot(self, room, preferred_start, duration_minutes):
+        """Return the first start time >= preferred_start where room is free.
+
+        Shifts in 30-minute steps; gives up after 3 hours and returns the
+        preferred_start unchanged (to avoid infinite deferral).
+        """
+        if room is None:
+            return preferred_start
+        duration = datetime.timedelta(minutes=duration_minutes)
+        step = datetime.timedelta(minutes=30)
+        attempt = preferred_start
+        limit = preferred_start + datetime.timedelta(hours=3)
+        while attempt <= limit:
+            end = attempt + duration
+            booked = self._room_bookings.get(room.pk, [])
+            if not any(attempt < b_end and end > b_start for b_start, b_end in booked):
+                return attempt
+            attempt += step
+        return preferred_start
+
+    def _book_slot(self, room, start, duration_minutes):
+        """Register a newly created showing in the in-memory schedule."""
+        if room is None:
+            return
+        end = start + datetime.timedelta(minutes=duration_minutes)
+        self._room_bookings[room.pk].append((start, end))
 
     def _seed_cms_pages(self):
         """Seed CMS content pages under the site root."""
