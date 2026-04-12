@@ -3,7 +3,11 @@
 # without a full image rebuild. Gunicorn --reload watches for Python changes.
 # Templates reload per-request already (TEMPLATES debug=True in docker_settings_ss.py).
 #
-# Usage: docker compose up  (override is applied automatically)
+# WARNING: DO NOT USE IN PRODUCTION. GUNICORN_RELOAD=1 will cause workers to
+# restart on any filesystem change, dropping in-flight requests. Deploy with
+# docker-compose-production.yml explicitly: docker compose -f docker-compose-production.yml up
+#
+# Usage: docker compose up  (override is applied automatically in dev)
 # To rebuild from scratch: docker compose up --build
 services:
   toolkit:
