@@ -75,9 +75,9 @@ Full workflow documented in [docs/ONBOARDING.md — Releases and Versioning](doc
 ## Live site investigation plan
 
 An investigation plan covering compatibility with production data and three staging bug fixes is at:
-`~/notes/Community/Star and Shadow/sns-investigation-plan.md`
+`~/notes/Community/sns/sns-investigation-plan.md`
 
-Also relevant: `~/notes/Community/Star and Shadow/servers.md` for SSH aliases, server paths, and rsync/DB dump commands.
+Also relevant: `~/notes/Community/sns/servers.md` for SSH aliases, server paths, and rsync/DB dump commands.
 
 ---
 
