@@ -615,15 +615,24 @@ class Command(BaseCommand):
                     image_url=evt_data.get("image_url"),
                 )
 
+        # Varied start times for Sunday films — a realistic spread across evening
+        # slots. No two consecutive Sundays share a time. Cycling rather than
+        # random keeps the sequence stable across idempotent reseeds.
+        sunday_film_times = [
+            (19, 0), (17, 30), (20, 0), (18, 30),
+            (19, 0), (20, 30), (17, 0), (19, 30),
+        ]
+
         # Seed Sunday evening films
         for i, d in enumerate(sundays):
             film_idx = i % len(SUNDAY_FILMS)
             film = SUNDAY_FILMS[film_idx]
+            hour, minute = sunday_film_times[i % len(sunday_film_times)]
             self._seed_film_showing(
                 film["name"],
                 film["film_information"],
                 d,
-                19,
+                hour,
                 rooms_dict["Cinema"],
                 film["tags"],
                 vol_list,
@@ -632,17 +641,25 @@ class Command(BaseCommand):
                 copy=film.get("copy", ""),
                 pricing=film.get("pricing", "£7/£5/£3/£0"),
                 image_url=film.get("image_url"),
+                minute=minute,
             )
+
+        # Varied start times for Thursday films — slightly earlier/later
+        # than a standard 19:00 to suggest a realistic programme.
+        thursday_film_times = [
+            (19, 0), (18, 30), (20, 0), (19, 30), (18, 0), (20, 30),
+        ]
 
         # Seed Thursday evening films
         for i, d in enumerate(thursdays):
             film_idx = i % len(THURSDAY_FILMS)
             film = THURSDAY_FILMS[film_idx]
+            hour, minute = thursday_film_times[i % len(thursday_film_times)]
             self._seed_film_showing(
                 film["name"],
                 film["film_information"],
                 d,
-                19,
+                hour,
                 rooms_dict["Cinema"],
                 film["tags"],
                 vol_list,
@@ -651,6 +668,7 @@ class Command(BaseCommand):
                 copy=film.get("copy", ""),
                 pricing=film.get("pricing", "£7/£5/£3/£0"),
                 image_url=film.get("image_url"),
+                minute=minute,
             )
 
         # Seed monthly events
@@ -824,6 +842,7 @@ class Command(BaseCommand):
         copy="",
         pricing="£7/£5/£3/£0",
         image_url=None,
+        minute=0,
     ):
         event, created = Event.objects.get_or_create(
             name=title,
@@ -855,7 +874,7 @@ class Command(BaseCommand):
                 counts["images"] += 1
 
         showing_start = timezone.make_aware(
-            datetime.datetime.combine(date, datetime.time(hour, 0, 0))
+            datetime.datetime.combine(date, datetime.time(hour, minute, 0))
         )
 
         if showing_start < timezone.now():
