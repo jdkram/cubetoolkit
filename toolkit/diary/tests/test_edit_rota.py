@@ -4,10 +4,9 @@ import zoneinfo
 from unittest.mock import patch
 
 from django.test import TestCase
-from django.test.utils import override_settings
 from django.urls import reverse
 
-from toolkit.diary.models import RotaEntry, Showing
+from toolkit.diary.models import RotaEntry, Showing, get_site_config
 
 from .common import DiaryTestsMixin
 
@@ -56,18 +55,22 @@ class EditRotaViewGet(DiaryTestsMixin, TestCase):
         # Notes present:
         self.assertContains(response, "Some notes about the Rota!")
 
-    @override_settings(ROTA_CLEAR_EMAIL_PROMPT_ENABLED=True)
     @patch("django.utils.timezone.now")
     def test_rota_edit_context_prompt_enabled(self, now_patch):
         now_patch.return_value = self._fake_now
+        config = get_site_config()
+        config.rota_clear_email_prompt_enabled = True
+        config.save()
         response = self.client.get(reverse("rota-edit"))
         self.assertEqual(response.status_code, 200)
         self.assertIs(response.context["rota_clear_email_prompt_enabled"], True)
 
-    @override_settings(ROTA_CLEAR_EMAIL_PROMPT_ENABLED=False)
     @patch("django.utils.timezone.now")
     def test_rota_edit_context_prompt_disabled(self, now_patch):
         now_patch.return_value = self._fake_now
+        config = get_site_config()
+        config.rota_clear_email_prompt_enabled = False
+        config.save()
         response = self.client.get(reverse("rota-edit"))
         self.assertEqual(response.status_code, 200)
         self.assertIs(response.context["rota_clear_email_prompt_enabled"], False)

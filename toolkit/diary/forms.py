@@ -16,6 +16,7 @@ from toolkit.diary.form_widgets import (
 )
 
 import toolkit.diary.models
+from toolkit.diary.models import SiteConfiguration, get_site_config
 from collections import OrderedDict
 
 from toolkit.diary.validators import validate_in_future
@@ -180,9 +181,10 @@ class EventForm(forms.ModelForm):
 
     def clean_copy_summary(self):
         copy_summary = self.cleaned_data.get("copy_summary", "")
-        if len(copy_summary) > settings.PROGRAMME_COPY_SUMMARY_MAX_CHARS:
+        max_chars = get_site_config().programme_copy_summary_max_chars
+        if len(copy_summary) > max_chars:
             raise forms.ValidationError(
-                f"Copy summary must be {settings.PROGRAMME_COPY_SUMMARY_MAX_CHARS} "
+                f"Copy summary must be {max_chars} "
                 f"characters or fewer (currently {len(copy_summary)} characters)"
             )
         return copy_summary
@@ -197,14 +199,15 @@ class EventForm(forms.ModelForm):
                 "tags"
             ).contains_tag_to_not_need_terms()
 
+            min_words = get_site_config().programme_event_terms_min_words
             if (
-                terms_word_count < settings.PROGRAMME_EVENT_TERMS_MIN_WORDS
+                terms_word_count < min_words
                 and not terms_not_required
             ):
                 msg = (
                     f"Event terms for confirmed event '{self.instance.name}' "
                     f"are missing or too short. Please enter at least "
-                    f"{settings.PROGRAMME_EVENT_TERMS_MIN_WORDS} words."
+                    f"{min_words} words."
                 )
                 self.add_error("terms", msg)
         return cleaned_data
@@ -219,7 +222,7 @@ class MediaItemForm(forms.ModelForm):
         self.helper.label_class = "col-sm-2"
         self.helper.field_class = "col-sm-10"
 
-        guidance_url = getattr(settings, "ALT_TEXT_GUIDANCE_URL", None)
+        guidance_url = get_site_config().alt_text_guidance_url or None
         if guidance_url:
             from django.utils.safestring import mark_safe
             base = self.fields["alt_text"].help_text
@@ -240,7 +243,7 @@ class MediaItemForm(forms.ModelForm):
         media_file = self.cleaned_data.get("media_file", None)
         if media_file:
             size_MB = media_file.size / 1048576.0
-            max_MB = settings.PROGRAMME_MEDIA_MAX_SIZE_MB
+            max_MB = get_site_config().programme_media_max_size_mb
             if size_MB > max_MB:
                 raise forms.ValidationError(
                     f"Media file must be {max_MB} MB or less "
@@ -346,7 +349,7 @@ def rota_form_factory(showing):
         prefix = "role_" if role.standard else "other_"
         members[f"{prefix}{role.pk}"] = forms.IntegerField(
             min_value=0,
-            max_value=settings.MAX_COUNT_PER_ROLE,
+            max_value=get_site_config().max_count_per_role,
             required=False,  # Missing field treated as 0 — you don't need to explicitly zero every role
             label=role.name,
             initial=rota_entry_count_by_role.get(role.pk, 0),
@@ -608,3 +611,46 @@ class NewPrintedProgrammeForm(forms.ModelForm):
         self.instance.month = programme_month
 
         return cleaned_data
+
+
+class SiteConfigurationForm(forms.ModelForm):
+    class Meta:
+        model = SiteConfiguration
+        fields = (
+            "films_start_on_time",
+            "films_start_on_time_banner_text",
+            "rota_show_tags",
+            "rota_clear_email_prompt_enabled",
+            "show_archive_images",
+            "images_start_date",
+            "max_count_per_role",
+            "programme_copy_summary_max_chars",
+            "programme_event_terms_min_words",
+            "programme_media_max_size_mb",
+            "mailout_details_days_ahead",
+            "mailout_listings_days_ahead",
+            "membership_length_days",
+            "default_training_expiry_months",
+            "image_copyright_guidance_url",
+            "alt_text_guidance_url",
+        )
+        widgets = {
+            "films_start_on_time_banner_text": forms.Textarea(
+                attrs={"rows": 3, "class": "form-control"}
+            ),
+            "images_start_date": forms.DateInput(
+                attrs={"type": "date", "class": "form-control"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            widget = field.widget
+            if isinstance(widget, forms.CheckboxInput):
+                widget.attrs.setdefault("class", "form-check-input")
+            else:
+                existing = widget.attrs.get("class", "")
+                if "form-control" not in existing:
+                    widget.attrs["class"] = (existing + " form-control").strip()
+

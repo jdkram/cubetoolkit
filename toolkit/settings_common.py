@@ -143,6 +143,15 @@ SHOW_ARCHIVE_IMAGES = True
 # Only used when SHOW_ARCHIVE_IMAGES = False. Format: "1 May 2018".
 IMAGES_START_DATE = None
 
+# When True, a banner is shown on the public event detail page stating that
+# films start at the advertised time with no adverts or trailers.
+FILMS_START_ON_TIME = False
+
+# When True, event tag badges are shown on the edit rota page alongside the
+# per-showing tag filter bar. Set to False to hide tags until metadata quality
+# justifies the visual weight.
+ROTA_SHOW_TAGS = True
+
 # Extra domains permitted in EventLink URLs, beyond the built-in whitelist
 # (riseup.net, nextcloud.com, nextcloud.org, chat.whatsapp.com, linktr.ee).
 # Each entry is a bare domain; subdomains are automatically accepted.

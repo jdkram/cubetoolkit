@@ -58,6 +58,12 @@ DEFAULT_MUGSHOT = "/static/content/ss_logo_e3cae3_pink3.jpg"
 SHOW_ARCHIVE_IMAGES = False
 IMAGES_START_DATE = "1 May 2018"
 
+# S+S films start at the advertised time — no adverts or trailers.
+FILMS_START_ON_TIME = True
+
+# Tags are not yet well-used at S+S; hide them from the rota to reduce clutter.
+ROTA_SHOW_TAGS = False
+
 # Currently only used for setting an outer limit on what year printed
 # programmes can be uploaded
 DAWN_OF_TIME = 1998

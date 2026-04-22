@@ -41,6 +41,11 @@ class DiaryTestsMixin(fixtures.TestWithFixtures):
     def setUp(self):
         self._setup_test_data()
         self.useFixture(ToolkitUsersFixture())
+        # Per-process cache persists across transaction-rolled-back tests, so
+        # a previous test's SiteConfiguration mutation could leak in. Clear it.
+        from django.core.cache import cache
+        from toolkit.diary.models import SiteConfiguration
+        cache.delete(SiteConfiguration._CACHE_KEY)
         return super().setUp()
 
     def assert_redirect_to_index(self, response):

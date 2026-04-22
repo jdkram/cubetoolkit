@@ -12,7 +12,7 @@ from django.utils.html import conditional_escape
 import django.utils.timezone as timezone
 import django.views.generic as generic
 
-from toolkit.diary.models import Showing, Event, PrintedProgramme
+from toolkit.diary.models import Showing, Event, PrintedProgramme, get_site_config
 from toolkit.diary.daterange import get_date_range
 from toolkit.diary.forms import SearchForm
 from toolkit.content.models import BasicArticlePage
@@ -33,13 +33,15 @@ def _show_archive_images(request, showings):
     """
     if request.user.is_authenticated:
         return True
-    if getattr(settings, "SHOW_ARCHIVE_IMAGES", True):
+    config = get_site_config()
+    if config.show_archive_images:
         return True
-    images_start = getattr(settings, "IMAGES_START_DATE", None)
-    if not images_start:
+    if not config.images_start_date:
         return True
-    cutoff = datetime.datetime.strptime(images_start, "%d %b %Y").replace(
-        tzinfo=datetime.timezone.utc
+    cutoff = datetime.datetime.combine(
+        config.images_start_date,
+        datetime.time.min,
+        tzinfo=datetime.timezone.utc,
     )
     return all(s.start > cutoff for s in showings)
 
@@ -269,6 +271,8 @@ def view_event(request, event_id=None, legacy_id=None, event_slug=None):
         "media": {event.id: media},
         "media_url": settings.MEDIA_URL,
         "show_archive_images": _show_archive_images(request, showings),
+        "films_start_on_time": get_site_config().films_start_on_time,
+        "films_start_on_time_banner_text": get_site_config().films_start_on_time_banner_text,
     }
     return render(request, "view_event.html", context)
 

@@ -1,0 +1,99 @@
+{% extends "base_admin.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Site configuration{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/messages.css">
+<style type="text/css">
+  .config-section {
+    margin-bottom: 1.5rem;
+  }
+  .config-section .card-header {
+    font-weight: 600;
+  }
+  .config-section .form-group {
+    margin-bottom: 1rem;
+  }
+  .config-section .form-text {
+    color: #666;
+    font-size: 0.85em;
+  }
+  .config-section input[type="text"],
+  .config-section input[type="url"],
+  .config-section input[type="number"],
+  .config-section input[type="date"],
+  .config-section textarea {
+    max-width: 38rem;
+  }
+  .config-section input[type="number"] {
+    max-width: 8rem;
+  }
+  .panopticon-banner {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 0.6rem 0.9rem;
+    margin-bottom: 1rem;
+    font-size: 0.9em;
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-3">
+
+  <h1>Site configuration</h1>
+
+  <div class="panopticon-banner">
+    <strong>Panopticon only.</strong> These settings affect everyone using the
+    toolkit. Changes apply immediately. Defaults match the values in the
+    settings file at the time of the last deploy.
+  </div>
+
+  {% include "messages.html" %}
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    {% for label, fields in grouped_fields %}
+    <div class="card config-section">
+      <div class="card-header">{{ label }}</div>
+      <div class="card-body">
+        {% for field in fields %}
+          <div class="form-group">
+            {% if field.field.widget.input_type == "checkbox" %}
+              <div class="form-check">
+                {{ field }}
+                <label class="form-check-label" for="{{ field.id_for_label }}">
+                  {{ field.label }}
+                </label>
+              </div>
+            {% else %}
+              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+            {% endif %}
+            {% if field.help_text %}
+              <small class="form-text">{{ field.help_text }}</small>
+            {% endif %}
+            {% if field.errors %}
+              <div class="text-danger small mt-1">{{ field.errors }}</div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+
+    <div class="mb-4">
+      <button type="submit" class="btn btn-primary">Save changes</button>
+      <a href="{% url 'toolkit-index' %}" class="btn btn-link">Cancel</a>
+    </div>
+  </form>
+
+</div>
+{% endblock %}

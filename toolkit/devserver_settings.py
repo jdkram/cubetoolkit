@@ -52,6 +52,8 @@ except ImportError:
 
 CRISPY_FAIL_SILENTLY = False
 
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
 warnings.filterwarnings(
     "error",
     r"DateTimeField received a naive datetime",
