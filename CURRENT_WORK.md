@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-04-12 (volunteer self-edit; permission redesign task 9.74 added)
+**Last updated:** 2026-04-22 (9.71 event terms change log)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -65,7 +65,7 @@ None — all clear.
 
 | # | Feature | Size | Notes |
 |----|---------|------|-------|
-| **9.71** | **Event terms and financial field change log** | **🔵 S — NEXT PRIORITY** | `EventTermsRevision` model snapshots `terms`, `outside_hire`, `private` on each save. `pre_save` signal + `_saved_by` wiring in view. Motivated by April 2026 incident where terms + outside_hire were silently rewritten on a confirmed event. Min viable: model + signal + admin inline (~3–4h). See TASKS.md 9.71 |
+| ~~**9.71**~~ | ~~**Event terms and financial field change log**~~ | ✅ 2026-04-22 | `EventTermsRevision` model + migration `diary/0020`; `pre_save` signal in `diary/signals.py`; `DiaryConfig.ready()` in `diary/apps.py`; `_saved_by` wired in `EditEventView.post()`; collapsible change history panel in `view_event_privatedetails.html`; `EventTermsRevisionInline` in `EventAdmin`; 13 new tests in `test_terms_revision.py` |
 | ~~9.9~~ | ~~Break-even calculator for programmers~~ | ✅ 2026-03-02 | Collapsible panel in event edit form beneath terms; pure JS; Finance Collective threshold warnings; fill-level table |
 | ~~9.10.2~~ | ~~Clone rota notes with event clone~~ | ✅ 2026-02-28 | `clone_rota_from_showing` now copies `rota_notes`; test added |
 | 9.10.6 | Inline warning when rota notes carry to cloned showing | 🟢 XS | Template banner in clone form; see TASKS.md 9.10.6 option 2 |
@@ -84,7 +84,7 @@ None — all clear.
 | ~~9.53~~ | ~~Show end time on the rota~~ | ✅ 2026-03-07 | `–HH:MM` appended to start time in `edit_rota.html` and `view_rota.html`; guard on `event.duration`; no model change |
 | 9.54 | Structured event cost terms | 🟡 M | `cost_type` dropdown + conditional structured fields (distributor, fee, split, MG) on `Event`/`EventTemplate`; replaces free-text `terms` as primary cost data source; see TASKS.md 9.54. **Min viable increment:** `cost_type` field + form dropdown (~5–6h) |
 | 9.22 | External hire free-text field on rota | 🟢 XS | `RotaEntry.external_name` field; visible on rota view |
-| 9.23 | "Films start on time" banner | 🟢 XS | `FILMS_START_ON_TIME` setting; conditional block in event detail template |
+| ~~9.23~~ | ~~"Films start on time" banner~~ | ✅ 2026-04-16 | `FILMS_START_ON_TIME` setting (`False` in common, `True` in `settings_ss.py`); `films_start_on_time` context var in `view_event`; conditional `<p class="films-start-on-time">` in S+S template; subtle italic styling in `event_custom.css` |
 | 9.24 | Pronouns on hover for rota names | 🔵 S | `Volunteer.pronouns` field; tooltip on rota view/edit |
 | 9.21 | Recurring events / clone-to-dates | 🟡 M | Multi-date batch clone UI; builds on 9.10.7; one Showing per date; see TASKS.md 9.21 |
 | 9.25 | Tap to sign up on rota (mobile) | 🔵 S | Self-service slot claim for logged-in volunteers; see TASKS.md 9.25 |
@@ -132,9 +132,10 @@ None — all clear.
 | 9.68 | Collectives directory + membership | 🟡 M | Collectives page with descriptions + key links (Nextcloud folders, WhatsApp groups). Users select membership for prioritised view. Toolkit-only (no mailing list sync yet). Related to 9.51. **Status:** Needs spec by Jonny+Claude |
 | 9.69 | Event detail showing date UX improvements | 🟡 M | On event detail pages, the full list of showing dates creates cognitive overhead. Users must scroll through past or distant future dates to find the next occurrence. Design solution needed: hide past dates, bold next upcoming, or restructure how multi-date events are presented. See TASKS.md 9.69 |
 | 9.70 | Nightly production DB backup | 🟢 XS | Infrastructure task on xtreamlab_jorn: \`.my.cnf\`, backup script, cron at 03:00, 30-day rolling retention. **Needs Marcus conversation before setting up.** See TASKS.md 9.70 |
-| **9.71** | **Event terms and financial field change log** | **🔵 S — NEXT PRIORITY** | See top of table. |
+| ~~**9.71**~~ | ~~**Event terms and financial field change log**~~ | ✅ 2026-04-22 | See above. |
+| **9.75** | **Starred events on the rota** | **🔵 S** | Star icon on event rows; toggle via AJAX; "starred only" filter in filterline. See TASKS.md 9.75 |
 | **9.74** | **Permission model redesign investigation** | **🟡 M (design first)** | Programmers currently have read/write on volunteer/member PII — likely wrong. Proposed: programmers can only touch programme data; panopticon controls volunteer/member data; volunteers keep self-edit. Design questions listed in TASKS.md 9.74 — needs collective discussion before implementation. |
-| 9.73 | Outside hire flag prominent on rota | 🟢 XS | Badge or banner on `edit_rota.html` + `view_rota.html` when `showing.event.outside_hire` is True. No model change. See TASKS.md 9.73 |
+| ~~9.73~~ | ~~Outside hire flag prominent on rota~~ | ✅ 2026-04-16 | Amber `Outside hire` badge in showing header on `edit_rota.html` (`.outside-hire-badge` CSS class) and `view_rota.html` (inline style in `event_head` row). No model change. |
 | ~~9.50~~ | ~~Volunteer self-service profile edit from nav~~ | ✅ 2026-03-02 | Own name in top nav links to `edit-volunteer/<pk>`; guarded by `user.volunteer.pk`; `seed_dev_data` now creates Member+Volunteer for all demo accounts so link appears in dev |
 | ~~9.46~~ | ~~Login page styling~~ | ✅ 2026-03-02 | Extends `base_public.html`; login, logout + password reset templates styled with centered card layout; friendly titles; `site_custom.css` moved into `base_public.html` so all descendants get nav styling; see TASKS.md 9.46 |
 
@@ -148,6 +149,7 @@ Items identified during the April 2026 SNS production site outage investigation.
 | **D.2** | **Docker health checks** | **🔵 S** | Add a lightweight `/health/` Django view that checks DB connectivity (`connection.ensure_connection()`), then wire `healthcheck:` into `docker-compose-production.yml` for both `toolkit` and `mailer`. Enables zero-downtime deploys and faster failure detection: Docker won't route traffic to a container that failed its DB check. |
 | **D.3** | **Dependency pinning** | **🟡 M** | Several packages in `requirements/` have no version constraint (`nh3`, `python-dateutil`, `html2text`, `monthdelta`, `python-magic`). Run `uv pip compile requirements/base.txt -o requirements/base.lock` and switch the Dockerfile to install from the lockfile. Prevents surprise breakage when rebuilding the image months later. Do in a separate branch; test the full image build before merging. |
 | **D.4** | **Docker resource limits** | **🟢 XS** | Add `deploy.resources.limits` (memory, CPU) to both services in `docker-compose-production.yml`. Prevents a runaway query or mailout loop from starving the host. Exact values depend on the production host's available RAM — check with Marcus before setting. Suggested starting point: `toolkit: 512M`, `mailer: 256M`. |
+| ~~**D.5**~~ | ~~**Console email backend in dev settings**~~ | ✅ 2026-04-21 | `EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'` already in `devserver_settings.py` (line 55). |
 
 ---
 

@@ -1,6 +1,16 @@
 from django.contrib import admin
 
-from toolkit.diary.models import Event, EventLink, MediaItem, Showing, Room, Role, EventTag
+from toolkit.diary.models import (
+    Event,
+    EventLink,
+    EventTermsRevision,
+    MediaItem,
+    Showing,
+    Room,
+    Role,
+    EventTag,
+    SiteConfiguration,
+)
 
 
 @admin.register(Room)
@@ -50,13 +60,24 @@ class EventLinkInline(admin.TabularInline):
     fields = ("label", "url", "order")
 
 
+class EventTermsRevisionInline(admin.TabularInline):
+    model = EventTermsRevision
+    extra = 0
+    readonly_fields = ("saved_at", "saved_by", "terms_text", "outside_hire", "private")
+    can_delete = False
+    ordering = ("-saved_at",)
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
     list_display = ("name", "created_at", "private")
     list_filter = ("private", "tags")
     search_fields = ("name", "copy", "booked_by")
     readonly_fields = ("created_at", "updated_at", "legacy_id")
-    inlines = (ShowingInline, EventLinkInline)
+    inlines = (ShowingInline, EventLinkInline, EventTermsRevisionInline)
 
 
 @admin.register(Showing)
@@ -66,3 +87,16 @@ class ShowingAdmin(admin.ModelAdmin):
     search_fields = ("event__name", "booked_by", "rota_notes")
     date_hierarchy = "start"
     readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(SiteConfiguration)
+class SiteConfigurationAdmin(admin.ModelAdmin):
+    # The custom /toolkit/diary/edit/site-config/ page is the recommended UI;
+    # this registration is mainly so superusers can spot the singleton in
+    # Django admin if they go looking.
+
+    def has_add_permission(self, request):
+        return not SiteConfiguration.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False

@@ -3333,6 +3333,46 @@ Both links should be visually low-key (not CTAs) so they don't distract public v
 
 ---
 
+### 9.62 — Mailing list subscriptions as a proper toolkit Django view 🔵 S (3–6h)
+
+**Context:** The current "Working groups" page at `/toolkit/working-groups/` is a live Wagtail `ComplexArticlePage` with `show_in_menus=False` (unlisted — access by URL only). It embeds mailing list signup forms via `raw_html` blocks — almost certainly Mailman subscription form embeds. It has been live since 2017 and is widely shared in rota notes and at inductions.
+
+The problems with the current setup:
+- It is **publicly accessible** — anyone with the URL can sign up to internal volunteer mailing lists, no auth required
+- It lives in the CMS, which makes it awkward to maintain consistently and easy to accidentally publish to the nav
+- It belongs in the toolkit proper alongside other volunteer-only pages, not hidden in the Wagtail tree
+
+**What to build:**
+
+A new Django view at `/toolkit/mailing-lists/` (or `/toolkit/working-groups/` if we want to preserve the existing URL) that:
+
+1. Requires `@login_required` (redirects to `/auth/login/` like all other toolkit views)
+2. Renders a page listing all mailing lists volunteers can subscribe to
+3. Embeds the same Mailman subscription form(s) currently in the Wagtail page — either as an `<iframe>` or as raw form HTML — so the behaviour is identical to today's page from a volunteer perspective
+
+The view should be:
+- Added to `toolkit/index/views.py` or a new `toolkit/content/views.py`
+- Registered in `urls_flat.py` under `/toolkit/mailing-lists/` with `login_required`
+- Rendered by a template at `star_and_shadow_templates/mailing_lists.html` (or toolkit template dir)
+
+**IndexLink update:** Update the `IndexLink` record (id=5, currently pointing at the Wagtail URL) to point to the new Django URL. This is a DB change — either a migration or a manual admin edit.
+
+**Wagtail page:** Once the Django view is live and the `IndexLink` is updated, the old Wagtail page (id=31, `/toolkit/working-groups/`) can be unpublished via the CMS. Do not delete it immediately — keep it as a draft for a few weeks in case any bookmarked URLs need redirecting.
+
+**Optional redirect:** Add a Wagtail redirect (via the Wagtail admin Redirects panel) from `/toolkit/working-groups/` → `/toolkit/mailing-lists/` so old bookmarks don't 404.
+
+**What the template needs:**
+- Page title: "Mailing lists" or "Working group mailing lists"
+- Brief intro (1–2 sentences): what the lists are, that you can unsubscribe at any time
+- The subscription form embed(s) — inspect the current Wagtail page source on the live site to extract the exact form HTML before migrating
+
+**Out of scope for this ticket:** actually managing list membership from the toolkit (showing which lists a volunteer is subscribed to, one-click subscribe/unsubscribe). That would require a Mailman API integration — a separate, larger ticket.
+
+**Related:**
+- The `Micro-projects (form)` Wagtail page (`/toolkit/micro-projects/`, `EmailFormPage`, id=71) is also unlisted and volunteer-facing — same problem, probably worth a similar migration once this one is done
+
+---
+
 *Completed tasks: [ARCHIVE.md](ARCHIVE.md)*
 
 ---
@@ -3725,3 +3765,33 @@ No model change needed. No migration needed.
 - The `toolkit.write` permission is used in many `@permission_required("toolkit.write")` decorators and template `{% if perms.toolkit.write %}` guards. A redesign will touch a significant portion of the codebase.
 - Consider whether to use Django's group system (new groups: "Volunteer Coordinator", etc.) or add a new `toolkit.volunteer_admin` permission.
 - New tests for each tier boundary will be essential.
+
+---
+
+### 9.75 — Starred events on the rota 🔵 S (6–12h)
+
+Volunteers can star events on the rota, and then filter the rota view to show only starred events.
+
+**Motivation:** Volunteers who work regularly with specific events or collectives want a quick way to find "their" events without scrolling through the full rota. Currently there is no personalisation at all on the rota.
+
+**Proposed model change:**
+- `StarredEvent` through-model: `Volunteer` → `Event` (not `Showing`) M2M, with `created_at`.
+- No per-showing starring — starring the event covers all its showings.
+- Alternatively: a simple `ManyToManyField` on `Volunteer` to `Event`.
+
+**UI — starring:**
+- Star icon (☆/★) on each event heading row in `edit_rota.html` and `view_rota.html`.
+- Clicking toggles the star via a lightweight AJAX POST (no page reload). Authenticated volunteers only.
+- Star state persisted server-side (not localStorage) so it follows the volunteer across devices.
+
+**UI — filtering:**
+- "Starred only" toggle in the rota filterline (alongside the existing date navigation).
+- When active: hides all showings whose event is not starred. Client-side filter via JS, same pattern as the calendar filters.
+- Empty state: "No starred events this week. Click ☆ on any event to star it."
+
+**Scope boundaries:**
+- No notifications or email for starred events (out of scope here; related to 9.36 vacancies).
+- No sharing starred lists between volunteers.
+- No starring of roles within an event — that's a different and much harder problem.
+
+**Related:** 9.25 (tap to sign up — also requires per-volunteer rota personalisation), 9.36 (vacancies)

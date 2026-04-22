@@ -178,6 +178,19 @@
         opacity: 0.7;
     }
 
+    /* ── Outside hire badge ──────────────────────────────────────────── */
+    .outside-hire-badge {
+        font-size: 0.75rem;
+        font-weight: bold;
+        color: #856404;
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 3px;
+        padding: 0.1em 0.4em;
+        white-space: nowrap;
+        align-self: center;
+    }
+
     /* ── Empty slot highlight ────────────────────────────────────────── */
     li.rota-empty-slot {
         background: #fff3cd;
@@ -531,11 +544,13 @@ edit_rota(
             </div>
         </div>
 
+        {% if rota_show_tags %}
         <!-- Tag filter bar: buttons built dynamically from tags in current view -->
         <div class="rota-tag-filters">
             <span class="tag-filter-label">Filter by tag:</span>
             <div id="rota-tag-filter-buttons" style="display: inline-flex; flex-wrap: wrap; gap: 0.4em;"></div>
         </div>
+        {% endif %}
     </div>
 
     <!-- ── Rota content ────────────────────────────────────────────────── -->
@@ -564,7 +579,8 @@ edit_rota(
                        title="View event">{{ showing.event.name }}</a>
                     {% endif %}
                     {% if MULTIROOM_ENABLED and showing.room %}<span class="showing-room-badge" style="border-left-color: {{ showing.room.colour }};">{{ showing.room.name }}</span>{% endif %}
-                    <span class="event-tag-badges">{% for tag in tag_slugs %}<span class="badge event-tag" data-tag-slug="{{ tag.slug }}">{{ tag.name }}</span>{% endfor %}</span>
+                    {% if showing.event.outside_hire %}<span class="outside-hire-badge">Outside hire</span>{% endif %}
+                    {% if rota_show_tags %}<span class="event-tag-badges">{% for tag in tag_slugs %}<span class="badge event-tag" data-tag-slug="{{ tag.slug }}">{{ tag.name }}</span>{% endfor %}</span>{% endif %}
                     <a class="showing-public-link"
                        href="{% noprefix_url 'single-showing-view' showing.pk %}"
                        title="Public programme view">↗</a>

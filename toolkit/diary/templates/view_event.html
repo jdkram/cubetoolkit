@@ -54,6 +54,21 @@
         <div class="copy">
             {{ event.copy_html }}
         </div><!-- end .copy -->
+        {% if user.is_authenticated %}
+        <div class="volunteer-links">
+            <p class="volunteer-links__label">Volunteer:</p>
+            {% if showings|length == 1 %}
+            <a href="{% url "rota-edit" %}">Rota</a> &middot;
+            <a href="{% url "edit-event-details-view" event_id=event.id %}">Event hub</a>
+            {% else %}
+            {% for showing in showings %}
+            <p>{{ showing.start|date:"j N H:i" }}:
+            <a href="{% url "rota-edit" %}">Rota</a> &middot;
+            <a href="{% url "edit-event-details-view" event_id=event.id %}">Event hub</a></p>
+            {% endfor %}
+            {% endif %}
+        </div>
+        {% endif %}
     </div><!-- end .grid-item -->
 </div><!-- end .programme -->
 {% endblock %}

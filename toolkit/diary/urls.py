@@ -28,6 +28,7 @@ from toolkit.diary.edit_views import (
     update_showing_status,
     clone_event,
     edit_event_links,
+    edit_site_configuration,
 )
 from toolkit.diary.public_views import (
     ArchiveIndex,
@@ -234,6 +235,12 @@ diary_urls = [
     re_path(r"^edit/eventtags/", edit_event_tags, name="edit_event_tags"),
     # Edit event roles
     re_path(r"^edit/roles/", edit_roles, name="edit_roles"),
+    # Site configuration (Panopticon only)
+    re_path(
+        r"^edit/site-config/?$",
+        edit_site_configuration,
+        name="edit-site-configuration",
+    ),
     # The slightly OTT regex in the following will match:
     # "rota" "rota/" "rota/2001/01" "rota/2001/01/" "rota/2001/1/02"
     # "rota/2001/1/2/"

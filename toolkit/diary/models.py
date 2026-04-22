@@ -416,7 +416,7 @@ class Event(models.Model):
         if not self.terms:
             return False
         word_count = len(self.terms.split())
-        return word_count >= settings.PROGRAMME_EVENT_TERMS_MIN_WORDS
+        return word_count >= get_site_config().programme_event_terms_min_words
 
     def terms_required(self):
         return not self.tags.contains_tag_to_not_need_terms()
@@ -903,3 +903,176 @@ class EventLink(models.Model):
 
     def __str__(self):
         return f"{self.label} ({self.event_id})"
+
+
+class EventTermsRevision(models.Model):
+    """Snapshot of audited financial fields on an Event, captured on each change.
+
+    A new record is created by a pre_save signal whenever terms, outside_hire,
+    or private changes. It stores the values *before* the save so the history
+    is a complete chain of prior states.
+    """
+
+    event = models.ForeignKey(
+        Event, on_delete=models.CASCADE, related_name="terms_revisions"
+    )
+    saved_at = models.DateTimeField(auto_now_add=True)
+    saved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
+    # Snapshot of audited fields immediately before this save
+    terms_text = models.TextField(blank=True)
+    outside_hire = models.BooleanField()
+    private = models.BooleanField()
+
+    class Meta:
+        ordering = ["-saved_at"]
+
+    def __str__(self):
+        return f"Revision of '{self.event_id}' at {self.saved_at}"
+
+
+DEFAULT_FILMS_START_BANNER_TEXT = (
+    "We don't show adverts or trailers, so please arrive promptly, as films "
+    "start as soon as most people have arrived."
+)
+
+
+class SiteConfiguration(models.Model):
+    """Singleton (pk=1) holding runtime-editable site settings.
+
+    A Panopticon edits these via /toolkit/site-config/ instead of needing a
+    code deploy. The DB row is the source of truth; settings.py values are
+    only used to seed the row in the initial data migration.
+    """
+
+    # --- Display & UX ---
+    films_start_on_time = models.BooleanField(
+        default=False,
+        help_text="Show a banner on public event detail pages stating that films start on time.",
+    )
+    films_start_on_time_banner_text = models.TextField(
+        blank=True,
+        default=DEFAULT_FILMS_START_BANNER_TEXT,
+        help_text="The banner copy. Only shown when 'Films start on time' is enabled.",
+    )
+    rota_show_tags = models.BooleanField(
+        default=True,
+        help_text="Show event tag badges on the edit rota page.",
+    )
+    rota_clear_email_prompt_enabled = models.BooleanField(
+        default=True,
+        help_text="When clearing a rota slot, prompt the user to email the volunteer.",
+    )
+    show_archive_images = models.BooleanField(
+        default=True,
+        help_text=(
+            "If off, hide event images on the public site for events whose "
+            "showings all predate the 'Images start date' below. Volunteers "
+            "(authenticated users) always see images. Useful for taking "
+            "pre-archive imagery offline quickly (e.g. copyright issues)."
+        ),
+    )
+    images_start_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text=(
+            "Cutoff date for the 'Show archive images' setting above. Has no "
+            "effect unless that setting is off. Leave blank to disable hiding."
+        ),
+    )
+
+    # --- Programme limits ---
+    max_count_per_role = models.PositiveSmallIntegerField(
+        default=8,
+        help_text="Maximum number of slots per role on a single showing's rota.",
+    )
+    programme_copy_summary_max_chars = models.PositiveSmallIntegerField(
+        default=450,
+        help_text="Maximum length of an event's copy summary (the listing blurb).",
+    )
+    programme_event_terms_min_words = models.PositiveSmallIntegerField(
+        default=3,
+        help_text="Minimum word count in an event's terms before it can be confirmed.",
+    )
+    programme_media_max_size_mb = models.PositiveSmallIntegerField(
+        default=5,
+        help_text="Maximum size in megabytes for an uploaded event image.",
+    )
+
+    # --- Mailout ---
+    mailout_details_days_ahead = models.PositiveSmallIntegerField(
+        default=9,
+        help_text="Days ahead to include detailed event copy in the members mailout.",
+    )
+    mailout_listings_days_ahead = models.PositiveSmallIntegerField(
+        default=14,
+        help_text="Days ahead to include listings in the members mailout.",
+    )
+
+    # --- Membership ---
+    membership_length_days = models.PositiveSmallIntegerField(
+        default=365,
+        help_text="Default length of a new membership in days. Only used when membership expiry is enabled.",
+    )
+    default_training_expiry_months = models.PositiveSmallIntegerField(
+        default=12,
+        help_text="Months after which volunteer training records are considered expired.",
+    )
+
+    # --- Guidance URLs ---
+    image_copyright_guidance_url = models.URLField(
+        blank=True,
+        default="",
+        max_length=500,
+        help_text="Link shown next to the image upload field — e.g. a Nextcloud doc on image rights.",
+    )
+    alt_text_guidance_url = models.URLField(
+        blank=True,
+        default="",
+        max_length=500,
+        help_text="Link shown next to the alt-text field — e.g. a guide to writing good alt text.",
+    )
+
+    _CACHE_KEY = "diary.site_config.v1"
+
+    class Meta:
+        db_table = "SiteConfiguration"
+        verbose_name = "Site configuration"
+        verbose_name_plural = "Site configuration"
+
+    def __str__(self):
+        return "Site configuration"
+
+    def save(self, *args, **kwargs):
+        # Singleton: always pk=1
+        self.pk = 1
+        super().save(*args, **kwargs)
+        from django.core.cache import cache
+
+        cache.delete(self._CACHE_KEY)
+
+    def delete(self, *args, **kwargs):
+        # Don't allow the singleton to be deleted
+        pass
+
+    @classmethod
+    def load(cls):
+        # Cache the singleton to avoid a SELECT per render. Local-memory
+        # cache is per-worker; the 5-minute TTL bounds staleness in other
+        # workers after a save.
+        from django.core.cache import cache
+
+        config = cache.get(cls._CACHE_KEY)
+        if config is None:
+            config, _ = cls.objects.get_or_create(pk=1)
+            cache.set(cls._CACHE_KEY, config, timeout=300)
+        return config
+
+
+def get_site_config():
+    """Return the SiteConfiguration singleton, creating it on first call."""
+    return SiteConfiguration.load()

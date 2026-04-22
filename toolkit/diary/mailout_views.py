@@ -14,7 +14,7 @@ from django.views.decorators.http import (
 )
 from django.conf import settings
 
-from toolkit.diary.models import Showing
+from toolkit.diary.models import Showing, get_site_config
 from toolkit.members.models import Member
 import toolkit.mailer.forms as mailer_forms
 import toolkit.diary.forms as diary_forms
@@ -112,8 +112,9 @@ def mailout(request):
     # confirms, posts to the "exec-mailout" view
 
     if request.method == "GET":
-        days_ahead = settings.MAILOUT_LISTINGS_DAYS_AHEAD
-        copy_days_ahead = settings.MAILOUT_DETAILS_DAYS_AHEAD
+        config = get_site_config()
+        days_ahead = config.mailout_listings_days_ahead
+        copy_days_ahead = config.mailout_details_days_ahead
 
         try:
             days_ahead = int(request.GET.get("daysahead", days_ahead))

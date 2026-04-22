@@ -13,7 +13,7 @@ from django.db.models import Q
 from django.utils.timezone import now as timezone_now
 from django.core.exceptions import ValidationError
 
-from toolkit.diary.models import Role
+from toolkit.diary.models import Role, get_site_config
 from toolkit.util import generate_random_string
 
 logger = logging.getLogger(__name__)
@@ -85,7 +85,7 @@ class MemberManager(models.Manager):
 def get_default_membership_expiry():
     if settings.MEMBERSHIP_EXPIRY_ENABLED:
         return timezone_now().date() + datetime.timedelta(
-            days=settings.MEMBERSHIP_LENGTH_DAYS
+            days=get_site_config().membership_length_days
         )
     else:
         return None
@@ -341,8 +341,7 @@ class TrainingRecord(models.Model):
         return super().save(*args, **kwargs)
 
     def has_expired(self, expiry_age=None):
-        # Don't use settings. in declaration, as it makes it impossible to mock
         if expiry_age is None:
-            expiry_age = settings.DEFAULT_TRAINING_EXPIRY_MONTHS
+            expiry_age = get_site_config().default_training_expiry_months
         threshold = timezone_now().date() - monthdelta(expiry_age)
         return self.training_date and self.training_date < threshold

@@ -156,6 +156,7 @@
       </div>
       <div class="card-body">
         <ul class="card-links">
+          <li><a href="{% url "edit-site-configuration" %}">Site configuration</a></li>
           <li><a href="{% url "wagtailadmin_home" %}">Content management (Wagtail)</a></li>
           {% if VENUE.show_user_management %}
           <li><a href="/toolkit/admin/">Administration backend</a></li>
