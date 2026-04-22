@@ -37,6 +37,7 @@ from toolkit.diary.models import (
     RotaEntry,
     PrintedProgramme,
     Room,
+    get_site_config,
 )
 import toolkit.diary.forms as diary_forms
 import toolkit.diary.edit_prefs as edit_prefs
@@ -740,7 +741,7 @@ def edit_showing(request, showing_id=None):
         "form": form,
         "rota_form": rota_form,
         "rota_notes_form": rota_notes_form,
-        "max_role_assignment_count": settings.MAX_COUNT_PER_ROLE,
+        "max_role_assignment_count": get_site_config().max_count_per_role,
     }
 
     return render(request, "form_showing.html", context)
@@ -809,6 +810,7 @@ class EditEventView(PermissionRequiredMixin, View):
 
         # Validate
         if form.is_valid() and media_form.is_valid():
+            event._saved_by = request.user
             self._save(event, media_item, form, media_form)
             messages.add_message(
                 request,
@@ -827,7 +829,7 @@ class EditEventView(PermissionRequiredMixin, View):
             "event": event,
             "event_form": form,
             "media_form": media_form,
-            "programme_copy_summary_max_chars": settings.PROGRAMME_COPY_SUMMARY_MAX_CHARS,
+            "programme_copy_summary_max_chars": get_site_config().programme_copy_summary_max_chars,
         }
         return render(request, "form_event.html", context)
 
@@ -848,7 +850,7 @@ class EditEventView(PermissionRequiredMixin, View):
             "event": event,
             "event_form": form,
             "media_form": media_form,
-            "programme_copy_summary_max_chars": settings.PROGRAMME_COPY_SUMMARY_MAX_CHARS,
+            "programme_copy_summary_max_chars": get_site_config().programme_copy_summary_max_chars,
         }
 
         return render(request, "form_event.html", context)
@@ -1276,7 +1278,8 @@ class EditRotaView(PermissionRequiredMixin, View):
             "days_ahead": days_ahead,
             "showings": showings,
             "edit_showing_notes_url_prefix": showing_notes_url_prefix,
-            "rota_clear_email_prompt_enabled": settings.ROTA_CLEAR_EMAIL_PROMPT_ENABLED,
+            "rota_clear_email_prompt_enabled": get_site_config().rota_clear_email_prompt_enabled,
+            "rota_show_tags": get_site_config().rota_show_tags,
         }
 
         return render(request, "edit_rota.html", context)
@@ -1357,3 +1360,66 @@ def get_messages(request):
 @permission_required("toolkit.write")
 def view_force_error(request):
     raise AssertionError("Forced exception")
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def edit_site_configuration(request):
+    """Panopticon-only page for editing the SiteConfiguration singleton."""
+
+    config = get_site_config()
+
+    field_groups = [
+        (
+            "Display & UX",
+            [
+                "films_start_on_time",
+                "films_start_on_time_banner_text",
+                "rota_show_tags",
+                "rota_clear_email_prompt_enabled",
+                "show_archive_images",
+                "images_start_date",
+            ],
+        ),
+        (
+            "Programme limits",
+            [
+                "max_count_per_role",
+                "programme_copy_summary_max_chars",
+                "programme_event_terms_min_words",
+                "programme_media_max_size_mb",
+            ],
+        ),
+        (
+            "Mailout",
+            ["mailout_details_days_ahead", "mailout_listings_days_ahead"],
+        ),
+        (
+            "Membership",
+            ["membership_length_days", "default_training_expiry_months"],
+        ),
+        (
+            "Guidance URLs",
+            ["image_copyright_guidance_url", "alt_text_guidance_url"],
+        ),
+    ]
+
+    if request.method == "POST":
+        form = diary_forms.SiteConfigurationForm(request.POST, instance=config)
+        if form.is_valid():
+            form.save()
+            messages.add_message(
+                request, messages.SUCCESS, "Site configuration updated."
+            )
+            return HttpResponseRedirect(reverse("edit-site-configuration"))
+    else:
+        form = diary_forms.SiteConfigurationForm(instance=config)
+
+    grouped_fields = [
+        (label, [form[name] for name in names]) for label, names in field_groups
+    ]
+
+    return render(
+        request,
+        "edit_site_configuration.html",
+        {"form": form, "grouped_fields": grouped_fields},
+    )

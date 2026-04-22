@@ -4,6 +4,12 @@
 /*
  * Event detail page overrides.
  * Shared site-wide rules live in static_common/css/site_custom.css.
- *
- * No event-specific overrides at this time.
  */
+
+.films-start-on-time {
+    font-style: italic;
+    font-size: 0.9em;
+    margin-top: 0.25em;
+    margin-bottom: 1.5em;
+    opacity: 0.8;
+}

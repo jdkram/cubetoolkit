@@ -13,6 +13,7 @@ from django.conf import settings
 
 from toolkit.members.forms import NewMemberForm, MemberForm
 from toolkit.members.models import Member, Volunteer
+from toolkit.diary.models import get_site_config
 from toolkit.util import compare_constant_time
 from toolkit.toolkit_auth.decorators import ip_or_permission_required
 
@@ -305,7 +306,7 @@ def edit_member(request, member_id):
         "member": member,
         "form": form,
         "membership_expiry_enabled": settings.MEMBERSHIP_EXPIRY_ENABLED,
-        "membership_length_days": settings.MEMBERSHIP_LENGTH_DAYS,
+        "membership_length_days": get_site_config().membership_length_days,
     }
     return render(request, "form_member.html", context)
 

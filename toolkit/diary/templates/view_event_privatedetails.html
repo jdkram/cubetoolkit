@@ -211,6 +211,26 @@ function hideAddShowingForm() {
     {% else %}
     <span class="text-muted">—</span>
     {% endif %}
+    {% if event.terms_revisions.exists %}
+    <details class="mt-2">
+      <summary class="small text-muted">Change history ({{ event.terms_revisions.count }} revision{{ event.terms_revisions.count|pluralize }})</summary>
+      <ul class="small mt-2 pl-3">
+        {% for rev in event.terms_revisions.all|slice:":10" %}
+        <li>
+          <strong>{{ rev.saved_at|date:"j M Y H:i" }}</strong>
+          {% if rev.saved_by %}by {{ rev.saved_by.get_full_name|default:rev.saved_by.username }}{% endif %}
+          &mdash; outside hire: {{ rev.outside_hire|yesno }};
+          private: {{ rev.private|yesno }};
+          terms: <em>{{ rev.terms_text|truncatechars:100 }}</em>
+        </li>
+        {% endfor %}
+      </ul>
+      {% if request.user.is_superuser %}
+      {% url 'admin:diary_eventtermsrevision_changelist' as admin_history_url %}
+      {% if admin_history_url %}<p class="small text-muted mt-1"><a href="{{ admin_history_url }}?event__id={{ event.pk }}">Full history in admin →</a></p>{% endif %}
+      {% endif %}
+    </details>
+    {% endif %}
   </dd>
 
   <dt class="col-sm-3">Image
