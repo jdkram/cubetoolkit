@@ -3768,30 +3768,210 @@ No model change needed. No migration needed.
 
 ---
 
-### 9.75 — Starred events on the rota 🔵 S (6–12h)
+### 9.75 — Starred and shadowed events on the rota 🔵 S (10–16h)
 
-Volunteers can star events on the rota, and then filter the rota view to show only starred events.
+Volunteers can mark events with a star (★) or a shadow (🌙), then filter or highlight the rota by those marks. Two distinct markers because they have distinct meanings; the naming is a gift — it mirrors the venue name.
 
-**Motivation:** Volunteers who work regularly with specific events or collectives want a quick way to find "their" events without scrolling through the full rota. Currently there is no personalisation at all on the rota.
+**Motivation:** The rota is the primary surface where volunteers decide where to put their energy. Currently it has no personalisation at all — every event looks the same. Scrolling through a long rota to find the things you care about is tedious. These two marks let each volunteer build their own signal-to-noise view of the upcoming programme.
 
-**Proposed model change:**
-- `StarredEvent` through-model: `Volunteer` → `Event` (not `Showing`) M2M, with `created_at`.
-- No per-showing starring — starring the event covers all its showings.
-- Alternatively: a simple `ManyToManyField` on `Volunteer` to `Event`.
+---
 
-**UI — starring:**
-- Star icon (☆/★) on each event heading row in `edit_rota.html` and `view_rota.html`.
-- Clicking toggles the star via a lightweight AJAX POST (no page reload). Authenticated volunteers only.
-- Star state persisted server-side (not localStorage) so it follows the volunteer across devices.
+**Meaning of the two marks:**
 
-**UI — filtering:**
-- "Starred only" toggle in the rota filterline (alongside the existing date navigation).
-- When active: hides all showings whose event is not starred. Client-side filter via JS, same pattern as the calendar filters.
-- Empty state: "No starred events this week. Click ☆ on any event to star it."
+- **★ Star** — Bookmark / personal interest flag. Does not imply any commitment to work the event. Purely a private tag to surface events the volunteer wants to keep an eye on. Stars should be visually prominent — a future filter mode will let you show only starred events.
+- **🌙 Shadow** — Deprioritise. The event is collapsed to title-only in the rota and faded out. Lets volunteers mark events they've already decided are not for them so they can scroll past quickly. The rota functions like an RSS feed: star the interesting, moon the noise.
+
+These marks are private (visible only to the marking user) and have no operational consequence — they don't affect rostering, scheduling, or any coordinator view.
+
+---
+
+**Data model:**
+
+```python
+class VolunteerEventMark(models.Model):
+    MARK_STAR   = 'star'
+    MARK_SHADOW = 'shadow'
+    MARK_CHOICES = [(MARK_STAR, 'Star'), (MARK_SHADOW, 'Shadow')]
+
+    volunteer  = models.ForeignKey(Volunteer, on_delete=models.CASCADE,
+                                   related_name='event_marks')
+    event      = models.ForeignKey(Event, on_delete=models.CASCADE,
+                                   related_name='volunteer_marks')
+    mark_type  = models.CharField(max_length=10, choices=MARK_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [('volunteer', 'event', 'mark_type')]
+```
+
+Marks are per-event (not per-showing) so the mark follows all future dates of a recurring event. Server-side persistence means marks follow the volunteer across devices.
+
+---
+
+**UI — mark icons (desktop gutter layout):**
+
+The visual design places the icons in the margin outside the main content column — so they're visible at a glance when scrolling without cluttering the event row.
+
+```
+[★]  [event row content........................]  [🌙]
+     [role list, notes, links....................]
+[  ]  [event row content........................]  [   ]
+[★]  [event row content........................]  [🌙]
+```
+
+Implementation:
+- `.rota-wrapper` sets `position: relative` and has enough horizontal clearance (e.g. max-width ~900px centred with auto margins, so ~40px side gutters exist on desktop).
+- `.rota-showing` sets `position: relative`.
+- Each showing emits two icon buttons: `.rota-star-gutter` (absolute, `left: -2.5rem`) and `.rota-shadow-gutter` (absolute, `right: -2.5rem`).
+- Icons: ☆ / ★ for star; ☽ / 🌙 for shadow (or Unicode crescent ☾). Filled = marked, outline = unmarked.
+- On narrow viewports (<900px where gutters disappear), the icons move inline below the event title with `position: static; display: inline-block`.
+
+Both icons are always present (unauthenticated users see them greyed out with a tooltip "Log in to mark events"). Authenticated users without a volunteer record also see greyed-out icons.
+
+---
+
+**UI — AJAX toggle:**
+
+- Click star icon → POST to `/diary/mark-event/<event_pk>/star/` → toggles mark → returns `{ "marked": true/false }` → JS updates icon state.
+- Same pattern for shadow.
+- On page load: the view serialises the current user's mark states into a JS object: `window.ROTA_MARKS = { star: [event_pk, ...], shadow: [event_pk, ...] }`. JS uses this to set initial icon states without a separate AJAX call.
+- Icons use `data-event-pk` attributes for the AJAX URL.
+
+---
+
+**UI — filter modes:**
+
+The existing filterline gains two new toggles:
+- "Starred" — show only starred events (hide/dim others)
+- "Shadowed" — show only shadowed events
+
+These work the same as the existing tag/role filter. Can combine with spotlight mode (9.76.5): instead of hiding, dim non-matching events.
+
+Empty state: "Nothing starred/shadowed in this date range. Click ☆ or ☽ on any event."
+
+---
 
 **Scope boundaries:**
-- No notifications or email for starred events (out of scope here; related to 9.36 vacancies).
-- No sharing starred lists between volunteers.
-- No starring of roles within an event — that's a different and much harder problem.
+- No notifications or email for starred events (out of scope; related to 9.36 vacancies).
+- No sharing marks between volunteers.
+- No per-role marks within an event.
+- No public visibility of marks — they are private to the volunteer.
 
-**Related:** 9.25 (tap to sign up — also requires per-volunteer rota personalisation), 9.36 (vacancies)
+**Implementation order:**
+1. Model + migration + AJAX toggle endpoint
+2. Icon rendering in template (inline first, gutter layout second)
+3. `window.ROTA_MARKS` page-load serialisation
+4. JS icon state init + toggle handler
+5. Filter toggles in filterline
+6. Gutter layout CSS (desktop only)
+
+**Related:** 9.25 (tap to sign up — also requires per-volunteer rota personalisation), 9.36 (vacancies), 9.76 (rota date navigation)
+
+---
+
+### 9.76 — Rota date navigation and orientation 🔵 S (12–20h total, see sub-items)
+
+**Problem:** The rota is a continuous vertical scroll of event blocks. A busy day with many events — each with a full role list and rota notes — creates a long, uniform wall of content. Users lose their vertical position, can't quickly jump to a specific date, and have no quick way to visually distinguish events of interest from background noise.
+
+**Three related sub-problems:**
+1. Visual day separation — day boundaries are hard to see; month headers are the only landmark
+2. Date controls — can jump to a date range but can't quickly jump to today or a specific month within the current view
+3. Event type emphasis — the existing tag filter hides non-matching events; sometimes you want to spot-check matching events without losing the surrounding context
+
+---
+
+#### 9.76.1 — Day-group visual separation 🟢 XS (2–3h)
+
+**Change:** Group showings by calendar day. Add a full-width day header row at each day boundary (e.g. "Sunday 18 May"). Optionally use alternating background tints on day groups to make boundaries visible at a glance.
+
+**Implementation:**
+- Template: extend the existing `{% ifchanged %}` pattern. Add a second `{% ifchanged showing.start|date:"j M Y" %}` block to emit a `<div class="rota-day-group">` with an `<h3 class="rota-day-header">` before each day's showings.
+- CSS: day header = small-caps, muted colour, full-width bottom border. Optional alternating background: `.rota-day-group:nth-child(odd) { background: #fafafa; }`.
+- Decision: alternating bands vs hard separator lines only. Bands are more visible but can clash with the outside-hire yellow and other per-event colours. Recommendation: hard separator line + date label first (simpler, no colour clash).
+
+**Note:** This is the prerequisite for 9.76.2 (sticky header) and 9.76.3 (Today/jump buttons).
+
+---
+
+#### 9.76.2 — Sticky day header 🟢 XS (2–4h)
+
+**Change:** Make the day headers from 9.76.1 stick to the top of the viewport as you scroll through a long day's events.
+
+**Implementation:**
+- CSS only: `position: sticky; top: 9rem; background: white; z-index: 10;` on `.rota-day-header`. The `9rem` offset clears the fixed navbar; adjust if the controls bar is also sticky.
+- No JS needed for basic sticky behaviour. A JS resize observer would be needed if the controls bar height becomes variable (e.g. collapsible filters).
+
+**Caveat:** `position: sticky` requires that no ancestor has `overflow: hidden` or `overflow: auto`. The current template uses a plain `<div class="rota-wrapper">` with no overflow constraint, so this should work without restructuring.
+
+**Depends on:** 9.76.1.
+
+---
+
+#### 9.76.3 — "Today" button + in-view month jump 🟢 XS (2–3h)
+
+**Two additions to the controls bar:**
+
+**"Today" button** — scrolls to the first showing on or after today within the current view, without a page reload. If today is outside the loaded date range, redirects to today's date.
+- Implementation: JS compares `data-date="YYYY-MM-DD"` attributes on `.rota-day-header` elements against today. Finds first match ≥ today, calls `element.scrollIntoView({ behavior: 'smooth', block: 'start' })`. If no match, appends `?from_date=YYYY-MM-DD` to the current URL.
+- The `data-date` attribute must be emitted from the template (Django `{{ showing.start|date:"Y-m-d" }}`).
+
+**Month-jump select** — a compact `<select>` listing all months present in the current view. Choosing one smooth-scrolls to that month's `<h2>` header without a page reload. This is faster than the existing +1/+2/+3 month buttons, which trigger a full page reload to shift the date range.
+- Implementation: JS builds `<select>` from existing `.rota-month-header` elements. On change, calls `scrollIntoView`.
+- The existing quick-select buttons remain — they change the date range; month-jump only scrolls within it.
+
+**Depends on:** 9.76.1 (day headers with `data-date` attributes).
+
+---
+
+#### 9.76.4 — Navigation rail (scrollbar companion) 🔵 S (5–8h)
+
+**Change:** A fixed-position vertical strip on the right margin listing months as clickable labels, positioned proportionally to their location in the scrollable content.
+
+**Background:** Native scrollbar modification is not feasible cross-browser (WebKit partial, Firefox very limited). A companion rail alongside the native scrollbar achieves the same navigation goal without touching the OS scrollbar.
+
+**UI:**
+- Fixed to right edge of viewport, ~22px wide, semi-transparent background.
+- Month labels (abbreviated: "May", "Jun") as small text, spaced proportionally to content volume.
+- Clicking a label smooth-scrolls to that month.
+- A small line or highlight tracks current scroll position and moves in real time.
+- Auto-hides on narrow viewports (<768px) where it would obstruct content.
+
+**Implementation:**
+- JS builds the rail from `.rota-month-header` elements at page load.
+- Label position: `el.offsetTop / document.body.scrollHeight * railClientHeight`.
+- Scroll cursor: `window.addEventListener('scroll', ...)` updates a small `<div class="rail-cursor">` via `top` percentage.
+- The rail overlaps the native scrollbar (simpler than shifting layout); on most desktops the native scrollbar is only 15–17px wide, so a 22px rail will slightly cover it. Acceptable tradeoff given the nav benefit.
+
+**Depends on:** 9.76.1 (month headers must exist with stable IDs).
+
+---
+
+#### 9.76.5 — Spotlight filter mode 🟢 XS (2–3h)
+
+**Change:** Add a "spotlight" (dim) mode as an alternative to the existing "hide" mode on tag and role filters. Matching events are shown normally; non-matching events are dimmed rather than hidden. This lets you quickly scan for e.g. "all Film events" in the visual flow of the rota without losing the surrounding programme context.
+
+**UI:**
+- Add a small toggle next to the tag filter bar: [Hide ▾] / [Dim] (two-state toggle).
+- In "Dim" mode: non-matching `.rota-showing` elements get `opacity: 0.3; filter: grayscale(0.5);` instead of `display: none`.
+- The toggle applies to both tag and role filters simultaneously.
+- State persisted in `sessionStorage` — survives tab switches but not fresh loads.
+
+**Implementation:**
+- JS: add a `rotaFilterMode` state variable.
+- Modify `applyFilters()` in `edit_rota.html` to branch on `rotaFilterMode`:
+  - `'hide'` mode: `.hide()` / `.show()` — existing behaviour
+  - `'dim'` mode: `opacity: 0.3` / `opacity: ''` — new branch
+- Non-matching events in dim mode: also set `pointer-events: none` to prevent accidental jeditable clicks on dimmed rows.
+
+**Depends on:** Nothing — can be implemented independently of 9.76.1–9.76.4.
+
+---
+
+**Recommended implementation order:**
+1. 9.76.1 (day groups) — highest impact-to-effort ratio; fixes the core disorientation problem
+2. 9.76.5 (spotlight mode) — independent; enhances existing filter system
+3. 9.76.2 (sticky day headers) — free once day groups exist
+4. 9.76.3 (Today + month-jump) — depends on day group anchors; low effort
+5. 9.76.4 (navigation rail) — highest effort; only needed if 1–4 are insufficient
+
+**Related:** 9.32 (rota past-date navigation), 9.75 (starred events), 9.37/9.41 (calendar filtering for comparison)

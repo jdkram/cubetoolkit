@@ -12,7 +12,6 @@
 {% block css %}
 {{ block.super }}
 <style type="text/css">
-    @import url('{{ STATIC_URL }}css/lib/smoothness/jquery-ui.css');
 
     /* ── Controls bar ────────────────────────────────────────────────── */
     .rota-controls {
@@ -23,39 +22,93 @@
         margin-bottom: 1.5em;
     }
 
+    /* ── Filter header row (toggle + excluded-count badge) ───────────── */
+    .rota-filter-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+        margin-bottom: 0;
+    }
+    .rota-filter-toggle {
+        background: none;
+        border: none;
+        padding: 0;
+        font-size: 0.88em;
+        color: #0056b3;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.3em;
+    }
+    .rota-filter-toggle:hover { text-decoration: underline; }
+    .rota-filter-chevron { font-style: normal; font-size: 0.8em; }
+    .rota-filter-status {
+        font-size: 0.8em;
+        color: #856404;
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 3px;
+        padding: 0.1em 0.5em;
+        display: none;
+    }
+
+    /* ── Collapsible filter body ─────────────────────────────────────── */
+    #rota-filter-body { padding-top: 0.5em; }
+
+    /* ── Top row: date range + search side by side on desktop ───────── */
+    .rota-top-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5em 1.2em;
+        margin-bottom: 0.5em;
+    }
     .rota-daterange {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 0.5em;
-        margin-bottom: 0.6em;
+        gap: 0.4em;
     }
+    .rota-daterange label { font-size: 0.88em; margin-bottom: 0; white-space: nowrap; }
+    .rota-daterange input[type="date"] { width: 9.5em; min-width: 0; }
+    .rota-search { flex: 1; min-width: 10em; max-width: 22em; }
+    .rota-search input { width: 100%; }
 
-    .rota-daterange input[type="text"] {
-        width: 8em;
-    }
-
+    /* ── Filter row: filters left, highlights right ──────────────────── */
     .rota-filters {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 1em;
-        margin-bottom: 0.5em;
+        gap: 0.5em 0.9em;
+        margin-bottom: 0.4em;
     }
-
-    .rota-filters .form-check {
-        margin-bottom: 0;
-    }
-
+    .rota-filters .form-check { margin-bottom: 0; }
+    .rota-filters .form-check-label { font-size: 0.88em; }
     .rota-filters .filter-group {
         display: flex;
         align-items: center;
-        gap: 0.4em;
+        gap: 0.35em;
     }
-
-    .rota-filters .filter-group label {
-        margin-bottom: 0;
-        font-size: 0.9em;
+    .rota-filters .filter-group label { margin-bottom: 0; font-size: 0.88em; }
+    /* Thin vertical rule between filters and highlights */
+    .filter-section-divider {
+        width: 1px;
+        height: 1.1em;
+        background: #ced4da;
+        align-self: center;
+        flex-shrink: 0;
+    }
+    /* Highlight section label */
+    .highlight-section-label {
+        font-size: 0.78em;
+        color: #6c757d;
+        font-style: italic;
+        white-space: nowrap;
+    }
+    /* Highlight checkboxes: amber label to match what they do in the list */
+    .form-check--highlight .form-check-label {
+        font-size: 0.88em;
+        color: #6d5310;
     }
 
     /* Tag filter bar */
@@ -64,26 +117,45 @@
         flex-wrap: wrap;
         align-items: center;
         gap: 0.4em;
-        padding-top: 0.5em;
+        padding-top: 0.4em;
         border-top: 1px solid #dee2e6;
+        margin-top: 0.2em;
     }
-
     .rota-tag-filters .tag-filter-label {
         font-size: 0.85em;
         color: #6c757d;
-        margin-right: 0.25em;
+        margin-right: 0.15em;
     }
 
     /* ── Showing header row ──────────────────────────────────────────── */
+    /* Two-line layout: meta row (date/room/link) above title row.
+       Consistent on both mobile and desktop; the toggle button floats
+       to the gutter on desktop via position:absolute. */
     .showing-header-row {
         display: flex;
-        flex-wrap: wrap;
-        align-items: baseline;
-        gap: 0.5em;
+        flex-direction: column;
+        gap: 0.1em;
         margin: 0.3em 0;
     }
 
-    .showing-header-row .showing-date {
+    /* Meta row: toggle (mobile-only inline), date, room, external link */
+    .showing-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.4em;
+        flex-wrap: nowrap;
+        min-width: 0;
+    }
+
+    /* Title row: event name + optional tags */
+    .showing-title-line {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 0.3em;
+    }
+
+    .showing-meta .showing-date {
         font-size: 0.9rem;
         font-weight: normal;
         color: #666;
@@ -91,19 +163,18 @@
     }
 
     /* Event name is the visual anchor — make it clearly dominant */
-    .showing-header-row .showing-event-name {
+    .showing-title-line .showing-event-name {
         font-size: 1.2rem;
         font-weight: bold;
     }
 
-    .showing-header-row .showing-public-link {
-        font-size: 0.75em;
+    .showing-meta .showing-public-link {
+        font-size: 0.85em;
         color: #bbb;
         text-decoration: none;
-        align-self: center;
     }
 
-    .showing-header-row .showing-public-link:hover {
+    .showing-meta .showing-public-link:hover {
         color: #777;
     }
 
@@ -112,7 +183,6 @@
         color: #444;
         padding: 0.05em 0.45em 0.05em 0.5em;
         border-left: 3px solid #ccc;
-        align-self: center;
         white-space: nowrap;
     }
 
@@ -197,6 +267,97 @@
         border-radius: 3px;
     }
 
+    /* ── Event mark toggle (☆ → ★ → ☽ → ☆) ─────────────────────────── */
+    .rota-showing {
+        position: relative;
+    }
+    .rota-mark-toggle {
+        background: none;
+        border: none;
+        cursor: pointer;
+        /* Fixed box so ☆/★/☽ all occupy the same space */
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.6rem;
+        height: 1.6rem;
+        font-size: 1.1rem;
+        padding: 0;
+        user-select: none;
+        color: #ccc;
+        transition: color 0.12s;
+        vertical-align: middle;
+    }
+    .rota-mark-toggle:hover {
+        color: #999;
+    }
+    .rota-mark-toggle[data-mark="star"] {
+        color: #e8a000;
+    }
+    .rota-mark-toggle[data-mark="shadow"] {
+        color: #7ba7c0;
+    }
+    /* ☽ mooned: collapse to title row only, fade the whole showing */
+    .rota-showing.rota-mooned ul.rota,
+    .rota-showing.rota-mooned .event-links,
+    .rota-showing.rota-mooned .showing_rota_notes,
+    .rota-showing.rota-mooned .past_showing_rota_notes {
+        display: none;
+    }
+    .rota-showing.rota-mooned {
+        opacity: 0.45;
+    }
+    .rota-showing.rota-mooned:hover {
+        opacity: 0.75;
+    }
+    /* Good-first-role slot highlight (applied via wrapper class) */
+    .rota-beginner-active li[data-beginner="1"] {
+        background: #e8f5e9;
+        border-radius: 3px;
+    }
+    @media (min-width: 800px) {
+        .rota-wrapper {
+            padding-left: 2.5rem;
+            padding-right: 2.5rem;
+        }
+        /* On desktop, collapse the two sub-spans so all children flow into
+           a single flex row — same one-line layout as before, mobile
+           two-line structure is still in the HTML */
+        .showing-header-row {
+            flex-direction: row;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 0.5em;
+        }
+        .showing-meta,
+        .showing-title-line {
+            display: contents;
+        }
+        /* Restore original visual order: date → name → room → hire → tags → link */
+        .showing-date        { order: 1; }
+        .showing-event-name  { order: 2; }
+        .showing-room-badge  { order: 3; }
+        .outside-hire-badge  { order: 4; }
+        .event-tag-badges    { order: 5; }
+        .showing-public-link { order: 6; }
+        /* Pull toggle out of flow into the left gutter */
+        .rota-mark-toggle {
+            position: absolute;
+            left: -2.2rem;
+            top: 0.15rem;
+        }
+    }
+    @media (max-width: 640px) {
+        /* Let date inputs shrink on very narrow screens */
+        .rota-daterange input[type="date"] { width: 8em; }
+        /* Role dropdown goes full-width so long role names don't clip or overflow */
+        .rota-filters .filter-group { width: 100%; }
+        .rota-filters .filter-group select { width: 100% !important; }
+        /* Divider + highlight label wrap awkwardly at this width — hide them */
+        .filter-section-divider,
+        .highlight-section-label { display: none; }
+    }
+
     /* ── Existing rota styles ────────────────────────────────────────── */
     .na {
         color: lightgray;
@@ -236,8 +397,8 @@
         display: inline-block;
         width: 50%;
         font-weight: bold;
-        height: 0.65cm;
         font-size: 90%;
+        vertical-align: top;
     }
     .rota_name form {
         display: inline;
@@ -261,26 +422,9 @@
         .showing_rota_notes,
         .past_showing_rota_notes { margin-left: 0.5em; }
         .event-links { margin-left: 0.5em; }
-        .rota-daterange input[type="text"] { width: 6em; }
     }
-    .rota-info {
-        display: inline-block;
-        width: 1.2em;
-        height: 1.2em;
-        line-height: 1.2em;
-        text-align: center;
-        background-color: #e7f3ff;
-        border: 1px solid #b3d9ff;
-        border-radius: 50%;
-        font-size: 90%;
-        color: #0066cc;
+    .rota_role--described {
         cursor: help;
-        margin-right: 0.25em;
-        font-weight: normal;
-    }
-    .rota-info:hover {
-        background-color: #cce5ff;
-        border-color: #0066cc;
     }
 </style>
 {% endblock %}
@@ -303,24 +447,35 @@ edit_rota(
 (function($) {
     "use strict";
 
-    // ── Quick-select month buttons ─────────────────────────────────────────
-    // Read start date from data attributes on the form (avoids datepicker
-    // format parsing ambiguity when the value comes straight from Django).
-    function setupQuickSelect() {
-        var form    = $("#daterange");
-        var editUrl = form.data("edit-url");
-        var year    = parseInt(form.data("start-year"),  10);
-        var month   = parseInt(form.data("start-month"), 10);  // 1-based
-        var day     = parseInt(form.data("start-day"),   10);
-
-        $(".rota-quickselect-btn").on("click", function() {
-            var months    = parseInt($(this).data("months"), 10);
-            var fromDate  = new Date(year, month - 1, day);
-            var toDate    = new Date(year, month - 1 + months, day);
-            var daysAhead = Math.round((toDate - fromDate) / 86400000);
-            window.location.href = editUrl + "/" + year + "/" + month + "/" + day
-                                   + "?daysahead=" + daysAhead;
+    // ── Filter panel collapse ──────────────────────────────────────────────
+    function setupFilterToggle() {
+        $("#rota-filter-toggle").on("click", function() {
+            var body       = $("#rota-filter-body");
+            var btn        = $(this);
+            var isExpanded = btn.attr("aria-expanded") === "true";
+            if (isExpanded) {
+                body.slideUp(150);
+                btn.attr("aria-expanded", "false");
+                btn.find(".rota-filter-chevron").text("▸");
+            } else {
+                body.slideDown(150);
+                btn.attr("aria-expanded", "true");
+                btn.find(".rota-filter-chevron").text("▾");
+            }
         });
+    }
+
+    // ── Excluded-count badge ───────────────────────────────────────────────
+    function updateFilterStatus() {
+        var total    = $(".rota-showing").length;
+        var visible  = $(".rota-showing:visible").length;
+        var excluded = total - visible;
+        var badge    = $("#rota-filter-status");
+        if (excluded > 0) {
+            badge.text(excluded + " hidden").show();
+        } else {
+            badge.hide();
+        }
     }
 
     // ── Role badges ────────────────────────────────────────────────────────
@@ -331,7 +486,7 @@ edit_rota(
     var ROLE_BADGES = [
         {
             attr: "beginner",
-            html: '<span class="role-badge role-badge--beginner" title="Beginner-friendly — a great first role for new volunteers">🌱</span>'
+            html: '<span class="role-badge role-badge--beginner" title="Good first role — great for new volunteers">🌱</span>'
         },
         {
             attr: "no-wheelchair",
@@ -356,23 +511,39 @@ edit_rota(
         });
     }
 
-    // ── Tag filter bar: build from tags already in the DOM ─────────────────
+    // ── Utilities ─────────────────────────────────────────────────────────
+    function debounce(fn, delay) {
+        var timer;
+        return function() {
+            clearTimeout(timer);
+            timer = setTimeout(fn, delay);
+        };
+    }
+
+    // Strips diacritical marks so "cafe" matches "Café", "resume" matches "résumé", etc.
+    function foldAccents(str) {
+        return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
+    // ── Tag filter bar: build from data-tags/data-tag-names on each showing ──
+    // Reads data attributes (always in the DOM) rather than rendered badge
+    // elements, so it works regardless of the rota_show_tags setting.
     function buildTagFilterBar() {
         var seen = {};
         var tags = [];
-        $(".rota-showing .event-tag-badges .badge").each(function() {
-            var slug = $(this).data("tag-slug");
-            var name = $(this).text().trim();
-            if (slug && !seen[slug]) {
-                seen[slug] = true;
-                tags.push({ slug: slug, name: name });
-            }
+        $(".rota-showing[data-tags]").each(function() {
+            var slugs = ($(this).attr("data-tags") || "").split(",");
+            var names = ($(this).attr("data-tag-names") || "").split("|");
+            $.each(slugs, function(i, slug) {
+                slug = $.trim(slug);
+                if (slug && !seen[slug]) {
+                    seen[slug] = true;
+                    tags.push({ slug: slug, name: names[i] || slug });
+                }
+            });
         });
 
-        if (tags.length === 0) {
-            $(".rota-tag-filters").hide();
-            return;
-        }
+        if (tags.length === 0) { return; }
 
         var bar = $("#rota-tag-filter-buttons");
         $.each(tags, function(i, tag) {
@@ -383,11 +554,12 @@ edit_rota(
             );
         });
 
+        $(".rota-tag-filters").show();
+
         bar.on("click", ".rota-tag-btn", function() {
             var btn  = $(this);
             var wasActive = btn.hasClass("active");
-            // Single-select: deactivate all, then activate this one unless
-            // it was already active (click again = clear filter).
+            // Single-select: click again to clear.
             $(".rota-tag-btn").removeClass("active btn-secondary").addClass("btn-outline-secondary");
             if (!wasActive) {
                 btn.removeClass("btn-outline-secondary").addClass("btn-secondary active");
@@ -437,17 +609,21 @@ edit_rota(
 
     // ── Apply all current filter settings ─────────────────────────────────
     function applyFilters() {
-        var showPast       = $("#rota-filter-past").is(":checked");
-        var selectedRole   = $("#rota-filter-role").val();
-        var highlightEmpty = $("#rota-filter-empty").is(":checked");
-        var activeTagBtn   = $(".rota-tag-btn.active");
-        var activeTagSlug  = activeTagBtn.length ? activeTagBtn.data("tag-slug") : null;
+        var selectedRole    = $("#rota-filter-role").val();
+        var highlightEmpty  = $("#rota-filter-empty").is(":checked");
+        var highlightBeginner = $("#rota-filter-beginner").is(":checked");
+        var onlyVacancies   = $("#rota-filter-vacancies").is(":checked");
+        var activeTagBtn    = $(".rota-tag-btn.active");
+        var activeTagSlug   = activeTagBtn.length ? activeTagBtn.data("tag-slug") : null;
+        var searchTerm      = $.trim($("#rota-search").val()).toLowerCase();
+        {% if can_mark_events %}
+        var onlyStarred     = $("#rota-filter-starred").is(":checked");
+        {% else %}
+        var onlyStarred     = false;
+        {% endif %}
 
         $(".rota-showing").each(function() {
             var showing = $(this);
-            var isPast  = showing.data("in-past") === 1;
-
-            if (isPast && !showPast) { showing.hide(); return; }
 
             if (selectedRole) {
                 var hasRole = false;
@@ -467,18 +643,88 @@ edit_rota(
                 }
             }
 
+            if (onlyVacancies) {
+                var hasVacancy = showing.find(".rota-empty-slot").length > 0
+                              || showing.find("[data-in-past='0'] .rota_name .na").length > 0;
+                // Re-check directly since the class may not be applied yet
+                var hasMissingSlot = false;
+                showing.find("li").each(function() {
+                    if ($(this).find(".rota_name .na").length > 0) {
+                        hasMissingSlot = true; return false;
+                    }
+                });
+                if (!hasMissingSlot) { showing.hide(); return; }
+            }
+
+            if (onlyStarred && showing.attr("data-mark") !== "star") {
+                showing.hide(); return;
+            }
+
+            if (searchTerm) {
+                var name = foldAccents(showing.find(".showing-event-name").text().toLowerCase());
+                if (name.indexOf(foldAccents(searchTerm)) === -1) { showing.hide(); return; }
+            }
+
             showing.show();
         });
 
         updateMonthHeaders();
         applyEmptyHighlight(highlightEmpty);
+        $(".rota-wrapper").toggleClass("rota-beginner-active", highlightBeginner);
+        updateFilterStatus();
     }
 
+    // ── Event mark toggle (☆ → ★ → ☽ → ☆) ───────────────────────────────
+    {% if can_mark_events %}
+    var ROTA_MARKS      = {{ rota_marks_json|safe }};
+    var MARK_TOGGLE_URL = "{% url 'toggle-event-mark' %}";
+    var MARK_CYCLE = { "": "star", "star": "shadow", "shadow": "" };
+    var MARK_ICON  = { "": "☆", "star": "★", "shadow": "☽" };
+    var MARK_TITLE = {
+        "":       "Click to bookmark this event",
+        "star":   "★ Bookmarked — click for ☽ deprioritise",
+        "shadow": "☽ Deprioritised — click to clear"
+    };
+
+    function setToggleState(btn, markType) {
+        var showing = btn.closest(".rota-showing");
+        btn.data("mark", markType).attr("data-mark", markType);
+        btn.text(MARK_ICON[markType]);
+        btn.attr("title", MARK_TITLE[markType]);
+        showing.attr("data-mark", markType);
+        showing.toggleClass("rota-mooned", markType === "shadow");
+    }
+
+    function initMarkButtons() {
+        $(".rota-mark-toggle").each(function() {
+            var btn     = $(this);
+            var eventId = parseInt(btn.data("event-id"), 10);
+            setToggleState(btn, ROTA_MARKS[eventId] || "");
+        });
+    }
+
+    $(document).on("click", ".rota-mark-toggle", function() {
+        var btn     = $(this);
+        var eventId = btn.data("event-id");
+        var current = btn.attr("data-mark") || "";
+        var next    = MARK_CYCLE[current];
+        btn.prop("disabled", true);
+        $.ajax({
+            url:  MARK_TOGGLE_URL,
+            type: "POST",
+            data: { mark_type: next, event_id: eventId, csrfmiddlewaretoken: "{{ csrf_token }}" },
+            success: function(resp) { setToggleState(btn, resp.mark_type); },
+            complete: function() { btn.prop("disabled", false); }
+        });
+    });
+    {% endif %}
+
     $(document).ready(function() {
-        setupQuickSelect();
+        setupFilterToggle();
         buildRoleDropdown();
         buildTagFilterBar();
         injectRoleBadges();
+        {% if can_mark_events %}initMarkButtons();{% endif %}
 
         // Clicking a tag badge on any showing activates that tag in the
         // filter bar at the top, exactly as if the user had clicked the
@@ -495,8 +741,11 @@ edit_rota(
             }
         });
 
-        $("#rota-filter-past, #rota-filter-role, #rota-filter-empty")
+        $("#rota-filter-role, #rota-filter-empty, " +
+          "#rota-filter-beginner, #rota-filter-vacancies{% if can_mark_events %}, #rota-filter-starred{% endif %}")
             .on("change", applyFilters);
+
+        $("#rota-search").on("input", debounce(applyFilters, 200));
     });
 
 })(jQuery);
@@ -506,51 +755,73 @@ edit_rota(
 {% block body %}
 <div class="rota-wrapper">
 
-    <!-- ── Controls: date range, quick-select, filters ────────────────── -->
+    <!-- ── Controls: collapsible filters (date range lives inside) ──── -->
     <div class="rota-controls">
-        <form id="daterange" class="rota-daterange"
-              data-edit-url="{% url 'rota-edit' %}"
-              data-start-year="{{ start_date|date:'Y' }}"
-              data-start-month="{{ start_date|date:'n' }}"
-              data-start-day="{{ start_date|date:'j' }}">
-            <label for="id_from_date">Rota from</label>
-            <input type="text" name="from_date" value="{{ start_date|date:'j-m-Y'}}"
-                   id="id_from_date" class="form-control form-control-sm" placeholder="d-m-yyyy" />
-            <label for="id_to_date">to</label>
-            <input type="text" name="to_date" value="{{ end_date|date:'j-m-Y'}}"
-                   id="id_to_date" class="form-control form-control-sm" placeholder="d-m-yyyy" />
-            <button type="button" class="btn btn-sm btn-outline-secondary rota-quickselect-btn"
-                    data-months="1" title="Set end date to 1 month from start">+1 month</button>
-            <button type="button" class="btn btn-sm btn-outline-secondary rota-quickselect-btn"
-                    data-months="2" title="Set end date to 2 months from start">+2 months</button>
-            <button type="button" class="btn btn-sm btn-outline-secondary rota-quickselect-btn"
-                    data-months="3" title="Set end date to 3 months from start">+3 months</button>
-        </form>
-
-        <div class="rota-filters">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="rota-filter-past" checked>
-                <label class="form-check-label" for="rota-filter-past">Show past</label>
-            </div>
-            <div class="filter-group">
-                <label for="rota-filter-role">Role:</label>
-                <select id="rota-filter-role" class="form-control form-control-sm" style="width: auto;">
-                    <option value="">All roles</option>
-                </select>
-            </div>
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="rota-filter-empty">
-                <label class="form-check-label" for="rota-filter-empty">Highlight empty slots</label>
-            </div>
+        <div class="rota-filter-header">
+            <button type="button" id="rota-filter-toggle" class="rota-filter-toggle"
+                    aria-expanded="true" aria-controls="rota-filter-body">
+                <em class="rota-filter-chevron">▾</em> Filters
+            </button>
+            <span id="rota-filter-status" class="rota-filter-status"></span>
         </div>
 
-        {% if rota_show_tags %}
-        <!-- Tag filter bar: buttons built dynamically from tags in current view -->
-        <div class="rota-tag-filters">
-            <span class="tag-filter-label">Filter by tag:</span>
-            <div id="rota-tag-filter-buttons" style="display: inline-flex; flex-wrap: wrap; gap: 0.4em;"></div>
+        <div id="rota-filter-body">
+            {# Date range + search on one flex row (stack on narrow screens) #}
+            <div class="rota-top-row">
+                <form id="daterange" class="rota-daterange"
+                      data-edit-url="{% url 'rota-edit' %}"
+                      data-start-year="{{ start_date|date:'Y' }}"
+                      data-start-month="{{ start_date|date:'n' }}"
+                      data-start-day="{{ start_date|date:'j' }}">
+                    <label for="id_from_date">From</label>
+                    <input type="date" name="from_date" value="{{ start_date|date:'Y-m-d' }}"
+                           id="id_from_date" class="form-control form-control-sm" />
+                    <label for="id_to_date">to</label>
+                    <input type="date" name="to_date" value="{{ end_date|date:'Y-m-d' }}"
+                           id="id_to_date" class="form-control form-control-sm" />
+                </form>
+                <div class="rota-search">
+                    <input type="search" id="rota-search" class="form-control form-control-sm"
+                           placeholder="Search events…" autocomplete="off" aria-label="Search events">
+                </div>
+            </div>
+
+            {# Filter row: actual filters, then a visual break, then highlight toggles #}
+            <div class="rota-filters">
+                <div class="filter-group">
+                    <label for="rota-filter-role">Role:</label>
+                    <select id="rota-filter-role" class="form-control form-control-sm" style="width: auto;">
+                        <option value="">All</option>
+                    </select>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="rota-filter-vacancies">
+                    <label class="form-check-label" for="rota-filter-vacancies">Vacancies</label>
+                </div>
+                {% if can_mark_events %}
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="rota-filter-starred">
+                    <label class="form-check-label" for="rota-filter-starred">Starred ★</label>
+                </div>
+                {% endif %}
+                <span class="filter-section-divider" aria-hidden="true"></span>
+                <span class="highlight-section-label">Highlight:</span>
+                <div class="form-check form-check--highlight">
+                    <input class="form-check-input" type="checkbox" id="rota-filter-empty">
+                    <label class="form-check-label" for="rota-filter-empty">Empty slots</label>
+                </div>
+                <div class="form-check form-check--highlight">
+                    <input class="form-check-input" type="checkbox" id="rota-filter-beginner">
+                    <label class="form-check-label" for="rota-filter-beginner">Good first role 🌱</label>
+                </div>
+            </div>
+
+            <!-- Tag filter bar: buttons built dynamically from data-tags on showings -->
+            <div class="rota-tag-filters" style="display:none;">
+                <span class="tag-filter-label">Tag:</span>
+                <div id="rota-tag-filter-buttons" style="display: inline-flex; flex-wrap: wrap; gap: 0.4em;"></div>
+            </div>
         </div>
-        {% endif %}
     </div>
 
     <!-- ── Rota content ────────────────────────────────────────────────── -->
@@ -563,27 +834,35 @@ edit_rota(
         {# Build comma-separated tag slugs for JS filtering #}
         {% with tag_slugs=showing.event.tags.all %}
         <div class="rota-showing" data-in-past="{% if showing.in_past %}1{% else %}0{% endif %}"
-             data-tags="{% for tag in tag_slugs %}{{ tag.slug }}{% if not forloop.last %},{% endif %}{% endfor %}">
+             data-tags="{% for tag in tag_slugs %}{{ tag.slug }}{% if not forloop.last %},{% endif %}{% endfor %}"
+             data-tag-names="{% for tag in tag_slugs %}{{ tag.name }}{% if not forloop.last %}|{% endif %}{% endfor %}">
 
-            <!-- Showing header: date, event name (→ edit page), tags inline, public link -->
+            <!-- Showing header: meta row (date/room/link) then title row -->
             <h3 class="showing_title{% if showing.in_past %} past_showing{% endif %}">
                 <span class="showing-header-row">
-                    <span class="showing-date">{{ showing.start|date:"D j H:i" }}{% if showing.event.duration %}–{{ showing.end_time|date:"H:i" }}{% endif %}</span>
-                    {% if perms.toolkit.write or user.is_superuser %}
-                    <a class="showing-event-name"
-                       href="{% noprefix_url 'edit-event-details-view' showing.event.pk %}"
-                       title="Edit event">{{ showing.event.name }}</a>
-                    {% else %}
-                    <a class="showing-event-name"
-                       href="{% noprefix_url 'single-showing-view' showing.pk %}"
-                       title="View event">{{ showing.event.name }}</a>
-                    {% endif %}
-                    {% if MULTIROOM_ENABLED and showing.room %}<span class="showing-room-badge" style="border-left-color: {{ showing.room.colour }};">{{ showing.room.name }}</span>{% endif %}
-                    {% if showing.event.outside_hire %}<span class="outside-hire-badge">Outside hire</span>{% endif %}
-                    {% if rota_show_tags %}<span class="event-tag-badges">{% for tag in tag_slugs %}<span class="badge event-tag" data-tag-slug="{{ tag.slug }}">{{ tag.name }}</span>{% endfor %}</span>{% endif %}
-                    <a class="showing-public-link"
-                       href="{% noprefix_url 'single-showing-view' showing.pk %}"
-                       title="Public programme view">↗</a>
+                    {# Meta row: toggle (inline on mobile, gutter on desktop), date, room, public link #}
+                    <span class="showing-meta">
+                        {% if can_mark_events %}<button class="rota-mark-toggle" data-event-id="{{ showing.event.pk }}" data-mark="" title="Click to bookmark this event" aria-label="Cycle event mark">☆</button>{% endif %}
+                        <span class="showing-date">{{ showing.start|date:"D j H:i" }}{% if showing.event.duration %}–{{ showing.end_time|date:"H:i" }}{% endif %}</span>
+                        {% if MULTIROOM_ENABLED and showing.room %}<span class="showing-room-badge" style="border-left-color: {{ showing.room.colour }};">{{ showing.room.name }}</span>{% endif %}
+                        {% if showing.event.outside_hire %}<span class="outside-hire-badge">Outside hire</span>{% endif %}
+                        <a class="showing-public-link"
+                           href="{% noprefix_url 'single-showing-view' showing.pk %}"
+                           title="Public programme view">↗</a>
+                    </span>
+                    {# Title row: event name (links to edit or public view) + optional tags #}
+                    <span class="showing-title-line">
+                        {% if perms.toolkit.write or user.is_superuser %}
+                        <a class="showing-event-name"
+                           href="{% noprefix_url 'edit-event-details-view' showing.event.pk %}"
+                           title="Edit event">{{ showing.event.name }}</a>
+                        {% else %}
+                        <a class="showing-event-name"
+                           href="{% noprefix_url 'single-showing-view' showing.pk %}"
+                           title="View event">{{ showing.event.name }}</a>
+                        {% endif %}
+                        {% if rota_show_tags %}<span class="event-tag-badges">{% for tag in tag_slugs %}<span class="badge event-tag" data-tag-slug="{{ tag.slug }}">{{ tag.name }}</span>{% endfor %}</span>{% endif %}
+                    </span>
                 </span>
             </h3>
 
@@ -593,8 +872,7 @@ edit_rota(
                     data-beginner="{{ rota_entry.role.beginner_friendly|yesno:'1,0' }}"
                     data-no-wheelchair="{{ rota_entry.role.not_wheelchair_accessible|yesno:'1,0' }}"
                     data-keyholder="{{ rota_entry.role.keyholder_only|yesno:'1,0' }}">
-                {% if rota_entry.role.description %}<span class="rota-info" title="{{ rota_entry.role.description }}">ℹ</span>{% endif %}
-                <span class="rota_role">{{ rota_entry.role.name }}-{{ rota_entry.rank }}</span>
+                <span class="rota_role{% if rota_entry.role.description %} rota_role--described{% endif %}"{% if rota_entry.role.description %} title="{{ rota_entry.role.description }}"{% endif %}>{{ rota_entry.role.name }}-{{ rota_entry.rank }}</span>
                 &nbsp;
                 {% if showing.in_past %}
                     {{ rota_entry.name }}

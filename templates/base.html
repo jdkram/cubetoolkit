@@ -18,6 +18,16 @@
     padding: 3px 8px; border-radius: 3px; pointer-events: none;
     letter-spacing: 0.05em;
 }
+/* On narrow screens the badge overlaps the navbar toggler button.
+   Centre it at the top so it clears both the logo (left) and burger (right). */
+@media (max-width: 767px) {
+    .dev-watermark {
+        right: auto;
+        left: 50%;
+        transform: translateX(-50%);
+        white-space: nowrap;
+    }
+}
 </style>
 </head>
 <body>
