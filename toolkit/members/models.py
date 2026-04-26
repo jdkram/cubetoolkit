@@ -83,12 +83,14 @@ class MemberManager(models.Manager):
 
 
 def get_default_membership_expiry():
-    if settings.MEMBERSHIP_EXPIRY_ENABLED:
-        return timezone_now().date() + datetime.timedelta(
-            days=get_site_config().membership_length_days
-        )
-    else:
+    if not settings.MEMBERSHIP_EXPIRY_ENABLED:
         return None
+    try:
+        days = get_site_config().membership_length_days
+    except Exception:
+        # SiteConfiguration table may not exist yet during early migrations
+        days = 365
+    return timezone_now().date() + datetime.timedelta(days=days)
 
 
 class Member(models.Model):

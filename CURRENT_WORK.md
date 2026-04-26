@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-04-22 (9.71 event terms change log)
+**Last updated:** 2026-04-25 (9.75 mark toggle ☆→★→☽; filterline expanded)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -11,7 +11,9 @@
 
 ## Immediate blockers (fix first)
 
-None — all clear.
+| # | Bug | Notes |
+|---|-----|-------|
+| **Bug W** | **Burger menu vanishes on very narrow mobile views** | Navbar toggler disappears at ~320px width. Root cause not yet confirmed — likely horizontal overflow expanding the layout viewport (pushing the right-side toggler off-screen), but attempts to fix via `overflow-x: hidden` on `html` and via flex-based date input sizing both caused side-effects and were reverted. Needs a systematic investigation: (1) open DevTools mobile emulator, (2) find which element is wider than the viewport using `document.querySelectorAll('*')` + `getBoundingClientRect`, (3) fix the overflow source directly. Date inputs (`input[type="date"]`) in `.rota-top-row` are a prime suspect — they have `width: 9.5em` which may not account for Bootstrap's `.form-control` box model on all devices. |
 
 ---
 
@@ -120,7 +122,7 @@ None — all clear.
 | 9.58 | Rethink recurring event display on programme | 🟡 M | Currently: one card per event, all dates stacked. Options: one card per showing, next-date-only, or a RecurringSeries model. Design question for the collective first; see TASKS.md 9.58 |
 | 9.59 | Programmer-defined crop region for index images | 🟡 M | `focal_x`/`focal_y` on `MediaItem`; JS focal-point picker in upload widget; `indexview` thumbnail uses crop mode centred on focal point; full image preserved for detail view; see TASKS.md 9.59 |
 | ~~9.60~~ | ~~Room name and colour on the rota~~ | ✅ 2026-03-27 | Added room name with coloured left-border accent to event heading row in `view_rota.html`; behind `MULTIROOM_ENABLED`; no model/view changes; will need updating once 9.7 adds multi-room bookings |
-| 9.61 | Quick links from event detail to rota and event hub | 🟢 XS | Volunteer-only "View rota" + "Event hub" links on `view_event.html`; guard with `user.is_authenticated`; one pair per showing; see TASKS.md 9.61 |
+| ~~9.61~~ | ~~Quick links from event detail to rota and event hub~~ | ✅ 2026-04-25 | Volunteer-only "View rota" + "Event hub" links on `view_event.html` |
 | 9.62 | Multi-room bookings architecture | 🟠 L | Replace `Showing.room` ForeignKey with `RoomBooking` through-model (Showing 1+ rooms). Enables events spanning multiple rooms at different times. See TASKS.md 8.11. **Status:** Needs spec by Jonny+Claude |
 | 9.63 | Interactive SVG venue map for room bookings | 🟡 M | Hook in new SVG floorplan as interactive room booking UI. Visual room selection, availability overlay. **Status:** Needs spec by Jonny+Claude |
 | ~~9.64~~ | ~~Calendar: FC6 migration + month view~~ | ✅ 2026-04-05 | Migrated from FC3.5.1 + Scheduler 1.7.1 to FC6.1.20 global bundle. Full JS rewrite (`calendar_index.js`): jQuery-free FC init, FC6 API (`headerToolbar`, `initialView`, `datesSet`, `eventDidMount`, `dateClick`, `dayMaxEvents`). Removed `htmlPrefilter` workaround. CSS updated (`.fc-title` → `.fc-event-title`, `.fc-day.fc-today` → `.fc-day-today`). Calendar now full-viewport-width (Bootstrap container override). Dev setup switched to `runserver` + bind-mount (no collectstatic for JS/CSS changes). Month view confirmed working. |
@@ -133,7 +135,8 @@ None — all clear.
 | 9.69 | Event detail showing date UX improvements | 🟡 M | On event detail pages, the full list of showing dates creates cognitive overhead. Users must scroll through past or distant future dates to find the next occurrence. Design solution needed: hide past dates, bold next upcoming, or restructure how multi-date events are presented. See TASKS.md 9.69 |
 | 9.70 | Nightly production DB backup | 🟢 XS | Infrastructure task on xtreamlab_jorn: \`.my.cnf\`, backup script, cron at 03:00, 30-day rolling retention. **Needs Marcus conversation before setting up.** See TASKS.md 9.70 |
 | ~~**9.71**~~ | ~~**Event terms and financial field change log**~~ | ✅ 2026-04-22 | See above. |
-| **9.75** | **Starred events on the rota** | **🔵 S** | Star icon on event rows; toggle via AJAX; "starred only" filter in filterline. See TASKS.md 9.75 |
+| **9.75** | **Starred + shadowed events on the rota** | **🔵 S** | ✅ 2026-04-25 — VolunteerEventMark (one mark per event); single ☆→★→☽ toggle cycling; ☽ collapses showing to title; filterline: starred filter + beginner highlight + vacancies filter. |
+| **9.76** | **Rota date navigation and orientation** | **🔵 S** | Day-group separators (9.76.1), sticky day headers (9.76.2), Today/jump controls (9.76.3), nav rail (9.76.4), spotlight filter mode (9.76.5). See TASKS.md 9.76 |
 | **9.74** | **Permission model redesign investigation** | **🟡 M (design first)** | Programmers currently have read/write on volunteer/member PII — likely wrong. Proposed: programmers can only touch programme data; panopticon controls volunteer/member data; volunteers keep self-edit. Design questions listed in TASKS.md 9.74 — needs collective discussion before implementation. |
 | ~~9.73~~ | ~~Outside hire flag prominent on rota~~ | ✅ 2026-04-16 | Amber `Outside hire` badge in showing header on `edit_rota.html` (`.outside-hire-badge` CSS class) and `view_rota.html` (inline style in `event_head` row). No model change. |
 | ~~9.50~~ | ~~Volunteer self-service profile edit from nav~~ | ✅ 2026-03-02 | Own name in top nav links to `edit-volunteer/<pk>`; guarded by `user.volunteer.pk`; `seed_dev_data` now creates Member+Volunteer for all demo accounts so link appears in dev |
