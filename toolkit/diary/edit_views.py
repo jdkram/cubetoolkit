@@ -9,6 +9,7 @@ from django.http import (
     HttpResponse,
     Http404,
     HttpResponseRedirect,
+    JsonResponse,
 )
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
@@ -37,6 +38,7 @@ from toolkit.diary.models import (
     RotaEntry,
     PrintedProgramme,
     Room,
+    VolunteerEventMark,
     get_site_config,
 )
 import toolkit.diary.forms as diary_forms
@@ -1248,7 +1250,7 @@ class EditRotaView(PermissionRequiredMixin, View):
 
         query_days_ahead = request.GET.get("daysahead", None)
         start_date, days_ahead = get_date_range(
-            year, month, day, query_days_ahead, default_days_ahead=30
+            year, month, day, query_days_ahead, default_days_ahead=92
         )
 
         if not request.user.is_superuser:
@@ -1272,6 +1274,21 @@ class EditRotaView(PermissionRequiredMixin, View):
         url_with_id = reverse("edit-showing-rota-notes", kwargs={"showing_id": 999})
         showing_notes_url_prefix = url_with_id[: url_with_id.find("999")]
 
+        # Load the current user's event marks (one per event) for JS serialisation.
+        # Keyed by event_id -> mark_type string ("star" or "shadow").
+        rota_marks: dict[int, str] = {}
+        can_mark_events = False
+        try:
+            volunteer = request.user.volunteer
+            can_mark_events = True
+            event_ids = [s.event_id for s in showings]
+            for mark in VolunteerEventMark.objects.filter(
+                volunteer=volunteer, event_id__in=event_ids
+            ):
+                rota_marks[mark.event_id] = mark.mark_type
+        except Exception:
+            pass
+
         context = {
             "start_date": start_date,
             "end_date": end_date,
@@ -1280,6 +1297,8 @@ class EditRotaView(PermissionRequiredMixin, View):
             "edit_showing_notes_url_prefix": showing_notes_url_prefix,
             "rota_clear_email_prompt_enabled": get_site_config().rota_clear_email_prompt_enabled,
             "rota_show_tags": get_site_config().rota_show_tags,
+            "can_mark_events": can_mark_events,
+            "rota_marks_json": json.dumps(rota_marks),
         }
 
         return render(request, "edit_rota.html", context)
@@ -1355,6 +1374,42 @@ def get_messages(request):
     ]
 
     return HttpResponse(json.dumps(message_list), content_type="application/json")
+
+
+@require_POST
+@permission_required("diary.change_rotaentry")
+def toggle_event_mark(request):
+    """Set or clear the ★/☽ mark for the current user on an event. Returns JSON.
+
+    Accepts mark_type: "star", "shadow", or "" (clear).
+    One mark per (volunteer, event) — setting a new type replaces any existing one.
+    """
+    mark_type = request.POST.get("mark_type", "")
+    event_id = request.POST.get("event_id")
+
+    if mark_type not in ("", VolunteerEventMark.MARK_STAR, VolunteerEventMark.MARK_SHADOW):
+        return JsonResponse({"error": "Invalid mark type"}, status=400)
+
+    try:
+        event = Event.objects.get(pk=event_id)
+    except (Event.DoesNotExist, ValueError):
+        return JsonResponse({"error": "Event not found"}, status=404)
+
+    try:
+        volunteer = request.user.volunteer
+    except Exception:
+        return JsonResponse({"error": "No volunteer record for this user"}, status=403)
+
+    if not mark_type:
+        VolunteerEventMark.objects.filter(volunteer=volunteer, event=event).delete()
+    else:
+        VolunteerEventMark.objects.update_or_create(
+            volunteer=volunteer,
+            event=event,
+            defaults={"mark_type": mark_type},
+        )
+
+    return JsonResponse({"mark_type": mark_type})
 
 
 @permission_required("toolkit.write")

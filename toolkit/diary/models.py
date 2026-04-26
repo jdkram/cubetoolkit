@@ -48,8 +48,8 @@ class Role(models.Model):
 
     beginner_friendly = models.BooleanField(
         default=False,
-        help_text="Show the 🌱 beginner-friendly badge on the rota — "
-        "a great first role for new volunteers.",
+        help_text="Show the 🌱 good-first-role badge on the rota — "
+        "great for new volunteers.",
     )
 
     not_wheelchair_accessible = models.BooleanField(
@@ -1076,3 +1076,34 @@ class SiteConfiguration(models.Model):
 def get_site_config():
     """Return the SiteConfiguration singleton, creating it on first call."""
     return SiteConfiguration.load()
+
+
+class VolunteerEventMark(models.Model):
+    """Per-user interest markers on events shown in the rota.
+
+    ★ Star = bookmark / personal interest flag.
+    🌙 Shadow = deprioritise; collapses the event to title-only in the rota view.
+    """
+
+    MARK_STAR = "star"
+    MARK_SHADOW = "shadow"
+    MARK_CHOICES = [(MARK_STAR, "Star"), (MARK_SHADOW, "Shadow")]
+
+    volunteer = models.ForeignKey(
+        "members.Volunteer",
+        on_delete=models.CASCADE,
+        related_name="event_marks",
+    )
+    event = models.ForeignKey(
+        Event,
+        on_delete=models.CASCADE,
+        related_name="volunteer_marks",
+    )
+    mark_type = models.CharField(max_length=10, choices=MARK_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("volunteer", "event")]
+
+    def __str__(self):
+        return f"volunteer:{self.volunteer_id} {self.mark_type} event:{self.event_id}"

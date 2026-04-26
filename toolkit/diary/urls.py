@@ -29,6 +29,7 @@ from toolkit.diary.edit_views import (
     clone_event,
     edit_event_links,
     edit_site_configuration,
+    toggle_event_mark,
 )
 from toolkit.diary.public_views import (
     ArchiveIndex,
@@ -275,6 +276,7 @@ diary_urls = [
         "^edit/setprefs$", set_edit_preferences, name="set_edit_preferences"
     ),
     re_path("^messages$", get_messages, name="get-messages"),
+    re_path("^edit/rota/mark$", toggle_event_mark, name="toggle-event-mark"),
     # Printed programme archive edit/upload:
     re_path(
         "^printedprogrammes$",
