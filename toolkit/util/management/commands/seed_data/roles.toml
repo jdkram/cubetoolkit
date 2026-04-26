@@ -6,131 +6,157 @@
 name = "Keyholder"
 standard = true
 keyholder_only = true
+description = "Holds overall responsibility for opening and closing the building during your shift. Requires keyholder training."
 
 [[roles]]
 name = "Programmer"
 standard = true
+description = "Curate and schedule events. Involves being responsible for coordinating the event."
 # rota scheduling label; diary edit permission is separate (Permissions section)
 
 [[roles]]
 name = "Projectionist - DCP"
 standard = true
+description = "Run the main digital cinema projector (DCP). Requires level 1 projectionist induction."
 
 [[roles]]
 name = "Projectionist - MP4"
 standard = false
+description = "Play back MP4 or laptop files through the projector. Requires level 1 projectionist induction."
 
 [[roles]]
 name = "Projectionist - Video/DVD"
 standard = false
+description = "Run video or DVD playback. Requires level 1 projectionist induction."
 
 [[roles]]
 name = "Projectionist (trained shadowing)"
 standard = false
 beginner_friendly = true
+description = "Shadow an experienced projectionist and learn the system. Arrive early! Requires level 1 projectionist training."
 
 [[roles]]
 name = "Bar Staff - Shift 1"
 standard = true
-not_wheelchair_accessible = true
+description = "Serve drinks and snacks at the bar. Requires bar induction."
 
 [[roles]]
 name = "Bar Staff - Shift 2"
 standard = false
-not_wheelchair_accessible = true
+description = "Second bar shift, timings hopefully specified below. Requires bar induction."
 
 [[roles]]
 name = "Bar Shadow"
 standard = false
-not_wheelchair_accessible = true
 beginner_friendly = true
+description = "Shadow an experienced bar person and get a feel for how the bar works. Requires bar induction."
 
 [[roles]]
 name = "Box Office - Admission Tickets"
 standard = true
 beginner_friendly = true
+description = "Welcome guests at the door, check tickets, and direct people. Okay to rock up on the day, typically 45 min before the screening time, please leave extra time for a quick rundown if it's your first time."
 
 [[roles]]
 name = "Box Office - Greeter"
 standard = false
 beginner_friendly = true
+description = "Stand at the entrance and welcome people as they arrive."
 
 [[roles]]
 name = "Box Office - Memberships and Merch"
 standard = false
+description = "Handle membership sign-ups, renewals, and merch sales at the front desk."
 
 [[roles]]
 name = "Usher - Fire Trained"
 standard = true
 beginner_friendly = true
+description = "Help people find their seats, assist during the show if needed, and manage fire safety. Fire training was covered in your induction but let the keyholder if you need a refresher for this role."
 
 [[roles]]
 name = "Facilitator"
 standard = true
+description = "Help an event or discussion go well: make sure everyone gets heard, things stay on track, and the group gets where it needs to go. Not chairing, just enabling."
 
 [[roles]]
 name = "Facilitator Shadow"
 standard = false
 beginner_friendly = true
+description = "Shadow the facilitator and help the meeting go swimmingly. Good preparation for stepping up to facilitate next time around."
 
 [[roles]]
 name = "Minute taker"
 standard = false
+description = "Take notes during meetings and write them up afterwards. Guide is on the Nextcloud."
 
 [[roles]]
 name = "Inductor - 1 (trained)"
 standard = false
+description = "Lead an induction session for new volunteers. Requires completing the inductor training."
 
 [[roles]]
 name = "Inductor - 2 (shadowing)"
 standard = false
+description = "Shadow an experienced inductor and learn how volunteer inductions work."
 
 [[roles]]
 name = "Trainee (inducted)"
 standard = false
+description = "Attendee for an induction - the '(inducted)' is about being an inducted volunteer."
 
 [[roles]]
 name = "Audio Visual Technician"
 standard = false
+description = "Set up and run the AV equipment for events. Involves sound, projection, or both depending on the event."
 
 [[roles]]
 name = "Sound Technician level 1"
 standard = false
+description = "Run basic audio setups — single-source bar events, DJ decks, or a simple analogue mixer for small live acts. Covered in the basic sound training (stages 1–3)."
 
 [[roles]]
 name = "Sound Technician level 2"
 standard = false
+description = "Full live sound for bands and larger events — Behringer X32, drum kit mics, stage box, monitors, and full backline. Requires completion of the full sound training (stages 1–6)."
 
 [[roles]]
 name = "Cafe (Level 1)"
 standard = false
+description = "Help run the cafe — making drinks and simple food. Requires a cafe induction."
 
 [[roles]]
 name = "Cafe (Level 2)"
 standard = false
+description = "Prepare and handle food directly. Requires food hygiene level 2 training."
 
 [[roles]]
 name = "Cafe Shadowing"
 standard = false
+description = "Shadow in the cafe and learn the ropes. Requires a cafe induction."
 
 [[roles]]
 name = "Cleaner"
 standard = false
 beginner_friendly = true
+description = "Help tidy up after the event — usually 20–30 minutes. No training needed, just willingness to pitch in."
 
 [[roles]]
 name = "Extra Hands (no training needed)"
 standard = false
 beginner_friendly = true
+description = "Whatever needs doing on the night — setting up, clearing away, or generally being helpful. No training required."
 
 [[roles]]
 name = "Line Cleaner"
 standard = false
+description = "Clean the beer lines. Blast music. Requires training as it's a bit of a palaver."
 
 [[roles]]
 name = "Tech (Shadowing)"
 standard = false
 beginner_friendly = true
+description = "Shadow a tech volunteer and learn how the AV and projection equipment works. Please leave a note and ask when to show up, as tech setup tends to be hours ahead of the doors opening."
 
 # Community / creative roles — not operational, but real S&S volunteer contributions
 
