@@ -136,7 +136,7 @@ function hideAddShowingForm() {
     <span class="field-tip" data-toggle="tooltip" data-placement="right"
           title="Running time of the event. Shown in public listings if set.">ⓘ</span>
   </dt>
-  <dd class="col-sm-9">{{ event.duration|default:"—" }}</dd>
+  <dd class="col-sm-9">{{ event.duration|time:"G:i"|default:"—" }}</dd>
 
   <dt class="col-sm-3">Pricing
     <span class="field-tip" data-toggle="tooltip" data-placement="right"
