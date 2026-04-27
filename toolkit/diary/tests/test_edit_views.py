@@ -21,6 +21,7 @@ from toolkit.diary.models import (
     EventTemplate,
     MediaItem,
     RotaEntry,
+    get_site_config,
 )
 
 import toolkit.diary.edit_prefs
@@ -1368,8 +1369,11 @@ class EditEventView(DiaryTestsMixin, TestCase):
             # Media item should be gone:
             self.assertEqual(event.media.count(), 0)
 
-    @override_settings(MEDIA_ROOT="/tmp", PROGRAMME_MEDIA_MAX_SIZE_MB=1)
+    @override_settings(MEDIA_ROOT="/tmp")
     def test_post_edit_event_add_media_too_big(self):
+        config = get_site_config()
+        config.programme_media_max_size_mb = 1
+        config.save()
         url = reverse("edit-event-details", kwargs={"event_id": 2})
 
         with tempfile.NamedTemporaryFile(
@@ -1408,8 +1412,11 @@ class EditEventView(DiaryTestsMixin, TestCase):
         event = Event.objects.get(id=2)
         self.assertEqual(event.media.count(), 0)
 
-    @override_settings(MEDIA_ROOT="/tmp", PROGRAMME_MEDIA_MAX_SIZE_MB=1)
+    @override_settings(MEDIA_ROOT="/tmp")
     def test_post_edit_event_add_media_max_size(self):
+        config = get_site_config()
+        config.programme_media_max_size_mb = 1
+        config.save()
         url = reverse("edit-event-details", kwargs={"event_id": 2})
 
         with tempfile.NamedTemporaryFile(
@@ -1439,8 +1446,10 @@ class EditEventView(DiaryTestsMixin, TestCase):
             reverse("edit-event-details-view", kwargs={"event_id": self.e2.pk}),
         )
 
-    @override_settings(PROGRAMME_COPY_SUMMARY_MAX_CHARS=50)
     def test_post_edit_event_too_much_copy_summary(self):
+        config = get_site_config()
+        config.programme_copy_summary_max_chars = 50
+        config.save()
         url = reverse("edit-event-details", kwargs={"event_id": 2})
 
         original_summary = Event.objects.get(id=2).copy_summary
@@ -1468,8 +1477,10 @@ class EditEventView(DiaryTestsMixin, TestCase):
         event = Event.objects.get(id=2)
         self.assertEqual(event.copy_summary, original_summary)
 
-    @override_settings(PROGRAMME_COPY_SUMMARY_MAX_CHARS=50)
     def test_post_edit_event_just_enough_copy_summary(self):
+        config = get_site_config()
+        config.programme_copy_summary_max_chars = 50
+        config.save()
         url = reverse("edit-event-details", kwargs={"event_id": 2})
 
         copy_summary_data = "X" * 50
@@ -1493,8 +1504,10 @@ class EditEventView(DiaryTestsMixin, TestCase):
         event = Event.objects.get(id=2)
         self.assertEqual(event.copy_summary, copy_summary_data)
 
-    @override_settings(PROGRAMME_EVENT_TERMS_MIN_WORDS=5)
     def test_post_edit_event_not_enough_terms(self):
+        config = get_site_config()
+        config.programme_event_terms_min_words = 5
+        config.save()
         event = Event.objects.get(id=1)
         original_terms = event.terms
         url = reverse("edit-event-details", kwargs={"event_id": 1})
@@ -1523,8 +1536,10 @@ class EditEventView(DiaryTestsMixin, TestCase):
         event = Event.objects.get(id=1)
         self.assertEqual(event.terms, original_terms)
 
-    @override_settings(PROGRAMME_EVENT_TERMS_MIN_WORDS=5)
     def test_post_edit_event_just_enough_terms(self):
+        config = get_site_config()
+        config.programme_event_terms_min_words = 5
+        config.save()
         event = Event.objects.get(id=1)
         url = reverse("edit-event-details", kwargs={"event_id": 1})
 
@@ -1545,8 +1560,10 @@ class EditEventView(DiaryTestsMixin, TestCase):
         event = Event.objects.get(id=1)
         self.assertEqual(event.terms, "One two three four five.")
 
-    @override_settings(PROGRAMME_EVENT_TERMS_MIN_WORDS=5)
     def test_post_edit_meeting_event_no_terms_required(self):
+        config = get_site_config()
+        config.programme_event_terms_min_words = 5
+        config.save()
         event = Event.objects.get(id=1)
         url = reverse("edit-event-details", kwargs={"event_id": 1})
 
