@@ -113,22 +113,22 @@ description = "Set up and run the AV equipment for events. Involves sound, proje
 [[roles]]
 name = "Sound Technician level 1"
 standard = false
-description = "Run basic audio setups — single-source bar events, DJ decks, or a simple analogue mixer for small live acts. Covered in the basic sound training (stages 1–3)."
+description = "Run basic audio setups: single-source bar events, DJ decks, or a simple analogue mixer for small live acts. Covered in the basic sound training (stages 1–3)."
 
 [[roles]]
 name = "Sound Technician level 2"
 standard = false
-description = "Full live sound for bands and larger events — Behringer X32, drum kit mics, stage box, monitors, and full backline. Requires completion of the full sound training (stages 1–6)."
+description = "Full live sound for bands and larger events: Behringer X32, drum kit mics, stage box, monitors, and full backline. Requires completion of the full sound training (stages 1–6)."
 
 [[roles]]
 name = "Cafe (Level 1)"
 standard = false
-description = "Help run the cafe — making drinks and simple food. Requires a cafe induction."
+description = "Help run the cafe: serve drinks and vegan food, take payments. Requires a cafe induction."
 
 [[roles]]
 name = "Cafe (Level 2)"
 standard = false
-description = "Prepare and handle food directly. Requires food hygiene level 2 training."
+description = "Prepare and handle food directly. Requires food hygiene level 2 training and cafe induction."
 
 [[roles]]
 name = "Cafe Shadowing"
@@ -139,13 +139,13 @@ description = "Shadow in the cafe and learn the ropes. Requires a cafe induction
 name = "Cleaner"
 standard = false
 beginner_friendly = true
-description = "Help tidy up after the event — usually 20–30 minutes. No training needed, just willingness to pitch in."
+description = "Help tidy up after the event. No training needed, just willingness to pitch in."
 
 [[roles]]
 name = "Extra Hands (no training needed)"
 standard = false
 beginner_friendly = true
-description = "Whatever needs doing on the night — setting up, clearing away, or generally being helpful. No training required."
+description = "Whatever needs doing on the night: setting up, clearing away, or generally being helpful. No training required."
 
 [[roles]]
 name = "Line Cleaner"
