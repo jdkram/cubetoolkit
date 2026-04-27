@@ -105,7 +105,7 @@ for m in MediaItem.objects.all():
 
 **Why We Got Confused:**
 - Demo accounts (`admin`, `programmer`, etc.) — we set these to new passwords
-- Existing accounts (`JonnyKram`, etc. from live site) — kept their **original passwords**
+- Existing accounts kept their **original passwords**
 - We didn't know the original live site passwords, so we couldn't test them!
 
 **The Fix:**
