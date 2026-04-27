@@ -5,7 +5,7 @@
 **Last updated:** 2026-04-25 (9.75 mark toggle ☆→★→☽; filterline expanded)
 
 **Current phase:** Phase 1 — Stable foundation
-**See also:** [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
+**See also:** [ROADMAP.md](docs/ROADMAP.md) (wave-by-wave sequencing) · [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
 
 ---
 
