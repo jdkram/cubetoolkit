@@ -6,10 +6,27 @@
  * Shared site-wide rules live in static_common/css/site_custom.css.
  */
 
+/* "No adverts" notice — subdued aside, visually distinct from main copy */
 .films-start-on-time {
     font-style: italic;
-    font-size: 0.9em;
-    margin-top: 0.25em;
+    font-size: 0.85em;
+    opacity: 0.7;
+    padding-left: 0.75em;
+    border-left: 2px solid currentColor;
+    margin-top: 1.25em;
+    margin-bottom: 0;
+}
+
+/* Main event copy is the primary content — give it breathing room */
+.copy {
+    margin-top: 1.5em;
     margin-bottom: 1.5em;
-    opacity: 0.8;
+}
+
+/* Volunteer links are a staff-only footer — separate them clearly */
+.volunteer-links {
+    margin-top: 1.5em;
+    padding-top: 0.75em;
+    border-top: 1px solid rgba(0, 0, 0, 0.15);
+    font-size: 0.9em;
 }
