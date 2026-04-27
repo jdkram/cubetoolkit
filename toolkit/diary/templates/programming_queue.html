@@ -1,0 +1,219 @@
+{% extends "form_base.html" %}
+{% load static %}
+{% block title %}Programming Queue{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style type="text/css">
+.queue-card {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    margin-bottom: 1.25rem;
+}
+.queue-card .card-header {
+    background: #f8f9fa;
+    padding: 0.6rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.queue-card .card-body {
+    padding: 0.9rem 1rem;
+}
+.queue-card .event-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0;
+}
+.clash-list {
+    font-size: 0.85em;
+    color: #555;
+    margin: 0.25rem 0 0 0;
+    padding: 0;
+    list-style: none;
+}
+.clash-list .room-conflict {
+    color: #c0392b;
+    font-weight: 500;
+}
+.cost-row {
+    font-size: 0.9em;
+}
+.fc-warning {
+    font-size: 0.85em;
+    color: #856404;
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 3px;
+    padding: 0.2em 0.5em;
+    display: inline-block;
+    margin-top: 0.25rem;
+}
+.date-tbc-warning {
+    font-size: 0.85em;
+    color: #721c24;
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 3px;
+    padding: 0.2em 0.5em;
+    display: inline-block;
+}
+.queue-actions {
+    margin-top: 0.75rem;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.reject-form {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.reject-form input[type="text"] {
+    min-width: 200px;
+    max-width: 380px;
+}
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="d-flex align-items-center mb-3">
+  <h1 class="mb-0 mr-3">Programming Queue</h1>
+  {% if etiquette_url %}
+  <a href="{{ etiquette_url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">
+    Programming guide ↗
+  </a>
+  {% endif %}
+  <span class="badge badge-secondary ml-auto">{{ queue_items|length }} proposal{{ queue_items|length|pluralize }}</span>
+</div>
+
+{% include "bs_messages.html" %}
+
+{% if not queue_items %}
+<p class="text-muted">No proposals in the queue right now.</p>
+{% endif %}
+
+{% for item in queue_items %}
+{% with event=item.event %}
+<div class="queue-card">
+  <div class="card-header">
+    <h2 class="event-title">
+      {{ event.name }}
+      {% if event.outside_hire %}
+      <span class="badge badge-secondary ml-1">Outside hire</span>
+      {% elif event.private %}
+      <span class="badge badge-warning ml-1">Private</span>
+      {% endif %}
+    </h2>
+    <span class="badge badge-info">Proposed</span>
+    {% if item.has_tbc %}
+    <span class="date-tbc-warning">Date TBC — cannot approve until date is set</span>
+    {% endif %}
+  </div>
+
+  <div class="card-body">
+    {# Proposal metadata #}
+    <dl class="row mb-2" style="font-size:0.9em;">
+      <dt class="col-sm-3">Proposed by</dt>
+      <dd class="col-sm-9">
+        {% if event.proposed_by %}{{ event.proposed_by.get_full_name|default:event.proposed_by.username }}
+        {% else %}<span class="text-muted">—</span>{% endif %}
+        {% if event.created_by and event.created_by != event.proposed_by %}
+        <span class="text-muted">(added to system by {{ event.created_by.get_full_name|default:event.created_by.username }})</span>
+        {% endif %}
+      </dd>
+
+      <dt class="col-sm-3">Keyholder</dt>
+      <dd class="col-sm-9">
+        {% if event.keyholder_confirmed %}
+        <span class="text-success">&#10003; {{ event.keyholder_confirmed.get_full_name|default:event.keyholder_confirmed.username }} agreed</span>
+        {% else %}
+        <span class="text-muted">Not yet confirmed</span>
+        {% endif %}
+      </dd>
+
+      {% for showing_info in item.showing_dates %}
+      <dt class="col-sm-3">{% if forloop.first %}Date(s){% else %}&nbsp;{% endif %}</dt>
+      <dd class="col-sm-9">
+        {% if showing_info.showing.start %}
+        {{ showing_info.showing.start|date:"D j M Y, H:i" }}
+        {% if MULTIROOM_ENABLED %}<span class="text-muted">— {{ showing_info.showing.room }}</span>{% endif %}
+        {% else %}
+        <span class="text-muted">&#8987; TBC{% if showing_info.showing.date_note %}: &ldquo;{{ showing_info.showing.date_note }}&rdquo;{% endif %}</span>
+        {% endif %}
+
+        {# Clash context #}
+        {% if showing_info.same_day_events %}
+        <ul class="clash-list">
+          {% for clash in showing_info.same_day_events %}
+          <li class="{% if clash.room_conflict %}room-conflict{% endif %}">
+            {% if clash.room_conflict %}&#9888; Room conflict:{% endif %}
+            {{ clash.showing.room }} {{ clash.showing.start|date:"H:i" }}
+            &mdash; {{ clash.showing.event.name }}
+            {% if clash.showing.event.proposed_by %}
+            ({{ clash.showing.event.proposed_by.get_full_name|default:clash.showing.event.proposed_by.username }})
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </dd>
+      {% endfor %}
+
+      {% if event.meeting_notes %}
+      <dt class="col-sm-3">Meeting notes</dt>
+      <dd class="col-sm-9">{{ event.meeting_notes }}</dd>
+      {% endif %}
+    </dl>
+
+    {# Cost summary (Phase B) #}
+    {% if item.has_costs %}
+    <div class="cost-row mb-2">
+      <strong>Costs:</strong>
+      {% if event.cost_hire %}Hire £{{ event.cost_hire }}{% endif %}
+      {% if event.cost_tech %} &middot; Tech £{{ event.cost_tech }}{% endif %}
+      {% if event.cost_performer %} &middot; Performer £{{ event.cost_performer }}{% endif %}
+      {% if event.cost_accommodation %} &middot; Accommodation £{{ event.cost_accommodation }}{% endif %}
+      {% if event.cost_travel %} &middot; Travel £{{ event.cost_travel }}{% endif %}
+      {% if event.cost_food %} &middot; Food £{{ event.cost_food }}{% endif %}
+      {% if event.cost_other %} &middot; Other £{{ event.cost_other }}{% endif %}
+      &mdash; <strong>Total: £{{ event.total_cost }}</strong>
+      {% if event.revenue_expected %} &middot; Expected revenue: £{{ event.revenue_expected }}{% endif %}
+    </div>
+    {% if item.finance_collective_required %}
+    <div class="fc-warning">&#8505; Finance Collective referral required (total exceeds threshold)</div>
+    {% else %}
+    <div style="font-size:0.85em; color:#555;">Finance Collective referral not required</div>
+    {% endif %}
+    {% endif %}
+
+    {# Actions #}
+    <div class="queue-actions">
+      {% if not item.has_tbc %}
+      <form method="post" action="{% url 'approve-event' event.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-success">Approve</button>
+      </form>
+      {% endif %}
+
+      <form class="reject-form" method="post" action="{% url 'reject-event' event.pk %}">
+        {% csrf_token %}
+        <input type="text" name="rejection_reason" class="form-control form-control-sm"
+               placeholder="Rejection reason (required)" required>
+        <button type="submit" class="btn btn-sm btn-outline-danger">Reject&hellip;</button>
+      </form>
+
+      <a href="{% url 'edit-event-details-view' event.pk %}" class="btn btn-sm btn-outline-secondary">
+        View / Edit &rarr;
+      </a>
+    </div>
+  </div>
+</div>
+{% endwith %}
+{% endfor %}
+
+<p class="mt-4"><a href="{% url "cancel-edit" %}">&larr; Back to diary</a></p>
+{% endblock %}

@@ -76,9 +76,43 @@ function hideAddShowingForm() {
 
 {% block body %}
 <div>
-<h1>{{ event.name }}</h1>
+<div class="d-flex align-items-center mb-2">
+  <h1 class="mb-0 mr-3">{{ event.name }}</h1>
+  {% if event.status == "proposed" %}
+  <span class="badge badge-info">Proposed</span>
+  {% elif event.status == "approved" %}
+  <span class="badge badge-success">Approved</span>
+  {% elif event.status == "rejected" %}
+  <span class="badge badge-danger">Rejected</span>
+  {% endif %}
+</div>
 
 {% include "bs_messages.html" %}
+
+{# ── Rota deadline warning ────────────────────────────────────────────────── #}
+{% if rota_deadline_warning %}
+<div class="alert alert-warning" role="alert">
+  <strong>Rota reminder:</strong> At least one confirmed showing is within 7 days and has no rota entries filled in yet.
+  Check the <a href="{% url "rota-edit" %}" class="alert-link">rota</a> and make sure it is staffed.
+</div>
+{% endif %}
+
+{# ── Rejection / meeting notes ────────────────────────────────────────────── #}
+{% if event.rejection_reason %}
+<div class="alert alert-danger" role="alert">
+  <strong>Rejected:</strong> {{ event.rejection_reason }}
+  <form method="post" action="{% url 'reopen-event' event.pk %}" class="d-inline ml-2">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-sm btn-outline-secondary">Reopen proposal</button>
+  </form>
+</div>
+{% endif %}
+
+{% if event.meeting_notes %}
+<div class="alert alert-secondary" role="alert">
+  <strong>Meeting notes:</strong> {{ event.meeting_notes }}
+</div>
+{% endif %}
 
 {% with c=completeness %}
 {% if not c.has_copy or not c.has_copy_summary or not c.has_image or not c.terms_ok %}
@@ -97,13 +131,26 @@ function hideAddShowingForm() {
 {% endwith %}
 
 {# ── Event details ─────────────────────────────────────────────────────────── #}
-<div class="d-flex align-items-center mb-2">
+<div class="d-flex align-items-center mb-2 flex-wrap" style="gap:0.4rem;">
   <h3 class="mb-0 mr-3">Event details</h3>
   {% if not all_showings_in_past %}
-  <a href="{% url "edit-event-details" event.pk %}" class="btn btn-sm btn-outline-secondary mr-2">Edit event →</a>
+  <a href="{% url "edit-event-details" event.pk %}" class="btn btn-sm btn-outline-secondary">Edit event →</a>
   {% endif %}
   <a href="{% url 'clone-event' event.pk %}" class="btn btn-sm btn-outline-secondary"
      data-toggle="tooltip" title="Create a new event pre-loaded with this event&rsquo;s copy, summary, terms, rota, and tags. The image and ticket link are not copied.">Clone as new event →</a>
+  {% if event.status == "proposed" and not has_tbc_showings %}
+  <form method="post" action="{% url 'approve-event' event.pk %}" class="d-inline">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-sm btn-success">Approve</button>
+  </form>
+  {% endif %}
+  {% if event.status == "rejected" %}
+  <form method="post" action="{% url 'reopen-event' event.pk %}" class="d-inline">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-sm btn-outline-secondary">Reopen proposal</button>
+  </form>
+  {% endif %}
+  <a href="{% url 'edit-programming-queue' %}" class="btn btn-sm btn-outline-info">Queue →</a>
 </div>
 
 <dl class="row event-details-dl">
@@ -184,6 +231,25 @@ function hideAddShowingForm() {
   <dd class="col-sm-9">
     {% if event.notes %}{{ event.notes }}
     {% else %}<span class="text-muted">—</span>{% endif %}
+  </dd>
+
+  <dt class="col-sm-3">Proposed by</dt>
+  <dd class="col-sm-9">
+    {% if event.proposed_by %}{{ event.proposed_by.get_full_name|default:event.proposed_by.username }}
+    {% else %}<span class="text-muted">—</span>{% endif %}
+  </dd>
+
+  <dt class="col-sm-3">Added to system by</dt>
+  <dd class="col-sm-9">
+    {% if event.created_by %}{{ event.created_by.get_full_name|default:event.created_by.username }}
+    {% else %}<span class="text-muted">—</span>{% endif %}
+  </dd>
+
+  <dt class="col-sm-3">Keyholder confirmed</dt>
+  <dd class="col-sm-9">
+    {% if event.keyholder_confirmed %}
+    <span class="text-success">&#10003; {{ event.keyholder_confirmed.get_full_name|default:event.keyholder_confirmed.username }}</span>
+    {% else %}<span class="text-muted">Not yet confirmed</span>{% endif %}
   </dd>
 
   <dt class="col-sm-3">Public link
@@ -326,6 +392,20 @@ function hideAddShowingForm() {
 
 {# ── Showings ──────────────────────────────────────────────────────────────── #}
 <h3 class="mb-3">Showings</h3>
+
+{% for showing in tbc_showings %}
+<div class="card showing-card">
+  <div class="card-body">
+    <strong>Date TBC{% if showing.date_note %}: &ldquo;{{ showing.date_note }}&rdquo;{% endif %}</strong>
+    {% if MULTIROOM_ENABLED %} in {{ showing.room }}{% endif %}
+    — booked by <em>{{ showing.booked_by }}</em>
+    <span class="badge badge-secondary ml-1">Date not set</span>
+    <div class="status-actions">
+      <a href="{% url 'edit-showing' showing.id %}" class="btn btn-sm btn-outline-primary ml-1">Set date / edit rota →</a>
+    </div>
+  </div>
+</div>
+{% endfor %}
 
 {% for showing in future_showings %}
 <div class="card showing-card">

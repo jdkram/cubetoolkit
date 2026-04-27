@@ -18,6 +18,7 @@ from toolkit.diary.form_widgets import (
 import toolkit.diary.models
 from toolkit.diary.models import SiteConfiguration, get_site_config
 from collections import OrderedDict
+from django.contrib.auth.models import User
 
 from toolkit.diary.validators import validate_in_future
 
@@ -106,6 +107,16 @@ class EventForm(forms.ModelForm):
         self.helper.form_class = "form-horizontal"
         self.helper.label_class = "col-sm-2"
         self.helper.field_class = "col-sm-10"
+        programmer_qs = User.objects.filter(
+            groups__permissions__codename="write"
+        ).order_by("first_name", "last_name").distinct()
+        keyholder_qs = User.objects.filter(
+            volunteer__roles__keyholder_only=True
+        ).order_by("first_name", "last_name").distinct()
+        self.fields["proposed_by"].queryset = programmer_qs
+        self.fields["proposed_by"].required = False
+        self.fields["keyholder_confirmed"].queryset = keyholder_qs
+        self.fields["keyholder_confirmed"].required = False
 
     class Meta:
         model = toolkit.diary.models.Event
@@ -160,6 +171,13 @@ class EventForm(forms.ModelForm):
                 }
             ),
             "tags": TagPillSelect(),
+            "meeting_notes": forms.Textarea(
+                attrs={
+                    "wrap": "soft",
+                    "rows": 3,
+                    "placeholder": "Notes captured at the programming meeting",
+                }
+            ),
         }
         order = ("tags",)
         fields = (
@@ -177,6 +195,9 @@ class EventForm(forms.ModelForm):
             "copy",
             "copy_summary",
             "terms",
+            "proposed_by",
+            "keyholder_confirmed",
+            "meeting_notes",
         )
 
     def clean_copy_summary(self):
@@ -257,6 +278,9 @@ class ShowingForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if not settings.MULTIROOM_ENABLED:
             del self.fields["room"]
+        # Editing an existing showing always requires a real date, even though the
+        # model allows null start for TBC proposals created via AddShowingForm.
+        self.fields["start"].required = True
         self.helper = FormHelper()
         self.helper.form_tag = False
         self.helper.form_class = "form-horizontal"
@@ -308,6 +332,42 @@ ShowingFormSet = forms.modelformset_factory(
     extra=1,
     form=ShowingForm,
 )
+
+
+class AddShowingForm(forms.ModelForm):
+    """Used on the event hub to add a new showing. Allows a null start date for
+    date-TBC proposals; date_note holds the free-text placeholder."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not settings.MULTIROOM_ENABLED:
+            del self.fields["room"]
+        self.fields["start"].required = False
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        self.helper.form_class = "form-horizontal"
+        self.helper.label_class = "col-sm-2"
+        self.helper.field_class = "col-sm-10"
+
+    class Meta:
+        model = toolkit.diary.models.Showing
+        fields = ("room", "start", "date_note", "booked_by", "discounted")
+        widgets = {
+            "start": JQueryDateTimePicker(),
+            "date_note": forms.TextInput(
+                attrs={"placeholder": "e.g. 'a Friday in May' (leave blank if date set above)"}
+            ),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start = cleaned_data.get("start")
+        date_note = cleaned_data.get("date_note", "").strip()
+        if not start and not date_note:
+            raise forms.ValidationError(
+                "Either set a date or enter a date note (e.g. 'sometime in June')."
+            )
+        return cleaned_data
 
 
 class ShowingRotaNotesForm(forms.ModelForm):
@@ -633,6 +693,9 @@ class SiteConfigurationForm(forms.ModelForm):
             "default_training_expiry_months",
             "image_copyright_guidance_url",
             "alt_text_guidance_url",
+            "programming_etiquette_url",
+            "finance_referral_threshold_standard",
+            "finance_referral_threshold_music",
         )
         widgets = {
             "films_start_on_time_banner_text": forms.Textarea(

@@ -10,7 +10,33 @@ Add a new event
 </style>
 {% endblock %}
 
+{% block script %}
+{{ block.super }}
+{% if programming_etiquette_url %}
+<script>
+"use strict";
+document.addEventListener("DOMContentLoaded", function () {
+    if (!localStorage.getItem("sns_prog_reminder_dismissed")) {
+        document.getElementById("prog-reminder").style.display = "block";
+    }
+    document.getElementById("prog-reminder-dismiss").addEventListener("click", function () {
+        localStorage.setItem("sns_prog_reminder_dismissed", "1");
+        document.getElementById("prog-reminder").style.display = "none";
+    });
+});
+</script>
+{% endif %}
+{% endblock %}
+
 {% block body %}
+{% if programming_etiquette_url %}
+<div id="prog-reminder" class="alert alert-info" style="display:none;" role="alert">
+  Before programming your first event, have you completed around 10 volunteer shifts and attended a Monday meeting?
+  <a href="{{ programming_etiquette_url }}" target="_blank" rel="noopener" class="alert-link">Programming guide ↗</a>
+  <button type="button" id="prog-reminder-dismiss" class="close ml-3" aria-label="Dismiss">&times;</button>
+</div>
+{% endif %}
+
 <h1>New Event</h1>
 
 <form action="{% url "add-event" %}" method="post">

@@ -10,6 +10,7 @@ from django.utils.safestring import mark_safe
 from django.db.models.query import QuerySet
 from django.utils.text import slugify
 from django.conf import settings
+from django.contrib.auth.models import User
 
 from toolkit.diary.validators import validate_in_future, validate_event_link_url
 import toolkit.util.image as imagetools
@@ -273,6 +274,114 @@ class Event(models.Model):
         verbose_name="Programmer's notes",
     )
 
+    # ── Programming pipeline ─────────────────────────────────────────────────
+
+    STATUS_PROPOSED = "proposed"
+    STATUS_APPROVED = "approved"
+    STATUS_REJECTED = "rejected"
+    _STATUS_CHOICES = [
+        (STATUS_PROPOSED, "Proposed"),
+        (STATUS_APPROVED, "Approved"),
+        (STATUS_REJECTED, "Rejected"),
+    ]
+
+    status = models.CharField(
+        max_length=16,
+        choices=_STATUS_CHOICES,
+        default=STATUS_PROPOSED,
+        db_index=True,
+        help_text="Pipeline status: where this event is in the approval process.",
+    )
+
+    created_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="events_created",
+        help_text="User who created this event record. Set automatically.",
+    )
+    proposed_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="events_proposed",
+        help_text="Programmer responsible for this proposal. Defaults to who created it, but can be changed.",
+    )
+    keyholder_confirmed = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="events_keyholder",
+        help_text="Keyholder who has agreed to cover this event.",
+    )
+
+    rejection_reason = models.TextField(
+        blank=True,
+        help_text="Reason recorded when the meeting rejected this proposal.",
+    )
+    meeting_notes = models.TextField(
+        blank=True,
+        help_text="Notes recorded during the meeting discussion of this proposal.",
+    )
+
+    # ── Phase B: cost fields ──────────────────────────────────────────────────
+
+    cost_hire = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True,
+        verbose_name="Hire cost (£)",
+    )
+    cost_tech = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True,
+        verbose_name="Technical costs (£)",
+    )
+    cost_performer = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True,
+        verbose_name="Performer fee (£)",
+    )
+    cost_accommodation = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True,
+        verbose_name="Accommodation (£)",
+    )
+    cost_travel = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True,
+        verbose_name="Travel (£)",
+    )
+    cost_food = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True,
+        verbose_name="Food / hospitality (£)",
+    )
+    cost_other = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True,
+        verbose_name="Other costs (£)",
+    )
+    revenue_expected = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True,
+        verbose_name="Expected revenue (£)",
+    )
+    deal_type = models.CharField(
+        max_length=32,
+        blank=True,
+        choices=[
+            ("", "—"),
+            ("door-split", "Door split"),
+            ("flat-fee", "Flat fee"),
+            ("guarantee", "Guarantee"),
+            ("free", "Free"),
+            ("other", "Other"),
+        ],
+        verbose_name="Deal type",
+    )
+    tech_requirements = models.TextField(
+        blank=True,
+        verbose_name="Tech requirements",
+        help_text="What technical setup does this event need? (PA, projector, live mixing, etc.)",
+    )
+
+    # ─────────────────────────────────────────────────────────────────────────
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -421,6 +530,30 @@ class Event(models.Model):
     def terms_required(self):
         return not self.tags.contains_tag_to_not_need_terms()
 
+    @property
+    def total_cost(self):
+        """Sum of all itemised cost fields. Returns None if no costs entered yet."""
+        fields = [
+            self.cost_hire, self.cost_tech, self.cost_performer,
+            self.cost_accommodation, self.cost_travel, self.cost_food, self.cost_other,
+        ]
+        values = [f for f in fields if f is not None]
+        return sum(values) if values else None
+
+    def finance_collective_required(self):
+        """Return True if costs exceed the Finance Collective referral threshold."""
+        total = self.total_cost
+        if total is None:
+            return False
+        config = get_site_config()
+        tags = {t.name.lower() for t in self.tags.all()}
+        threshold = (
+            config.finance_referral_threshold_music
+            if any("music" in t for t in tags)
+            else config.finance_referral_threshold_standard
+        )
+        return total > threshold
+
 
 class Room(models.Model):
     name = models.CharField(max_length=64)
@@ -458,10 +591,11 @@ class ShowingQuerySet(QuerySet):
     def public(self):
         """
         Filters so only showings that should be visible to the general public
-        are included. (ie. exclude unconfirmed, hidden in programme)
+        are included. (ie. exclude unconfirmed, hidden in programme, or date-TBC)
         """
         return (
-            self.filter(event__private=False)
+            self.filter(start__isnull=False)
+            .filter(event__private=False)
             .filter(confirmed=True)
             .filter(hide_in_programme=False)
         )
@@ -484,7 +618,11 @@ class Showing(models.Model):
         "Room", related_name="showings", null=True, on_delete=models.SET_NULL
     )
 
-    start = FutureDateTimeField(db_index=True)
+    start = FutureDateTimeField(null=True, blank=True, db_index=True)
+
+    # Free-text placeholder used when no specific date is set yet, e.g. "a Friday in May".
+    # Must be cleared and start must be set before a showing can be confirmed or its event approved.
+    date_note = models.CharField(max_length=256, blank=True)
 
     booked_by = models.CharField(max_length=64)
 
@@ -611,11 +749,13 @@ class Showing(models.Model):
     @property
     def start_date(self):
         # Used by templates
-        return self.start.date()
+        return self.start.date() if self.start else None
 
     @property
     def end_time(self):
-        # Used by templates and calendar JSON
+        # Used by templates and calendar JSON. Returns None for date-TBC showings.
+        if self.start is None:
+            return None
         duration = self.event.duration
         if duration is None:
             # Apply default 2-hour duration for events without explicit duration
@@ -1035,6 +1175,20 @@ class SiteConfiguration(models.Model):
         default="",
         max_length=500,
         help_text="Link shown next to the alt-text field — e.g. a guide to writing good alt text.",
+    )
+    programming_etiquette_url = models.URLField(
+        blank=True,
+        default="",
+        max_length=500,
+        help_text="Link to the programming etiquette guide (e.g. a Nextcloud doc). Shown on event creation and in the programming queue.",
+    )
+    finance_referral_threshold_standard = models.PositiveSmallIntegerField(
+        default=500,
+        help_text="Cost threshold (£) above which a standard event requires Finance Collective sign-off.",
+    )
+    finance_referral_threshold_music = models.PositiveSmallIntegerField(
+        default=750,
+        help_text="Cost threshold (£) above which a music event requires Finance Collective sign-off.",
     )
 
     _CACHE_KEY = "diary.site_config.v1"

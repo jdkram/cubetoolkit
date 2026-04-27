@@ -34,17 +34,17 @@ class EditRotaViewGet(DiaryTestsMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "edit_rota.html")
 
-        # Check date range:
+        # Check date range (default_days_ahead=92, so Jun 1 + 92 days = Sep 1):
         self.assertContains(
             response,
-            r'<input type="text" name="from_date" value="1-06-2013" '
-            r'id="id_from_date" class="form-control form-control-sm" placeholder="d-m-yyyy" />',
+            r'<input type="date" name="from_date" value="2013-06-01" '
+            r'id="id_from_date" class="form-control form-control-sm" />',
             html=True,
         )
         self.assertContains(
             response,
-            r'<input type="text" name="to_date" value="1-07-2013" '
-            r'id="id_to_date" class="form-control form-control-sm" placeholder="d-m-yyyy" />',
+            r'<input type="date" name="to_date" value="2013-09-01" '
+            r'id="id_to_date" class="form-control form-control-sm" />',
             html=True,
         )
 
@@ -93,14 +93,14 @@ class EditRotaViewGet(DiaryTestsMixin, TestCase):
         # Check date range:
         self.assertContains(
             response,
-            r'<input type="text" name="from_date" value="11-06-2013" '
-            r'id="id_from_date" class="form-control form-control-sm" placeholder="d-m-yyyy" />',
+            r'<input type="date" name="from_date" value="2013-06-11" '
+            r'id="id_from_date" class="form-control form-control-sm" />',
             html=True,
         )
         self.assertContains(
             response,
-            r'<input type="text" name="to_date" value="21-06-2013" '
-            r'id="id_to_date" class="form-control form-control-sm" placeholder="d-m-yyyy" />',
+            r'<input type="date" name="to_date" value="2013-06-21" '
+            r'id="id_to_date" class="form-control form-control-sm" />',
             html=True,
         )
 

@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-04-25 (9.75 mark toggle ☆→★→☽; filterline expanded)
+**Last updated:** 2026-04-27 (9.2 programming pipeline Phase A)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -136,6 +136,7 @@
 | 9.70 | Nightly production DB backup | 🟢 XS | Infrastructure task on xtreamlab_jorn: \`.my.cnf\`, backup script, cron at 03:00, 30-day rolling retention. **Needs Marcus conversation before setting up.** See TASKS.md 9.70 |
 | ~~**9.71**~~ | ~~**Event terms and financial field change log**~~ | ✅ 2026-04-22 | See above. |
 | **9.75** | **Starred + shadowed events on the rota** | **🔵 S** | ✅ 2026-04-25 — VolunteerEventMark (one mark per event); single ☆→★→☽ toggle cycling; ☽ collapses showing to title; filterline: starred filter + beginner highlight + vacancies filter. |
+| **9.2 Phase A** | **Programming pipeline** | **🟠 L** | 🔄 In progress 2026-04-27 — Migration 0022: `Event.status/created_by/proposed_by/keyholder_confirmed/rejection_reason/meeting_notes` + cost fields + `Showing.start` nullable + `Showing.date_note`; `SiteConfiguration` gains finance thresholds + etiquette URL; data migration auto-approves events with confirmed showings; `programming_queue` view + approve/reject/reopen views; auto-populate Programmer + Keyholder rota slots; queue template + nav link; event hub: status badge, proposal metadata, rota deadline warning, TBC showings, approve/reopen buttons; pre-requisite reminder banner on add-event. Phase B (cost fields wired to JS calculator) still to do. |
 | **9.76** | **Rota date navigation and orientation** | **🔵 S** | Day-group separators (9.76.1), sticky day headers (9.76.2), Today/jump controls (9.76.3), nav rail (9.76.4), spotlight filter mode (9.76.5). See TASKS.md 9.76 |
 | **9.74** | **Permission model redesign investigation** | **🟡 M (design first)** | Programmers currently have read/write on volunteer/member PII — likely wrong. Proposed: programmers can only touch programme data; panopticon controls volunteer/member data; volunteers keep self-edit. Design questions listed in TASKS.md 9.74 — needs collective discussion before implementation. |
 | ~~9.73~~ | ~~Outside hire flag prominent on rota~~ | ✅ 2026-04-16 | Amber `Outside hire` badge in showing header on `edit_rota.html` (`.outside-hire-badge` CSS class) and `view_rota.html` (inline style in `event_head` row). No model change. |
@@ -162,7 +163,7 @@ Full specs in [TASKS.md](docs/TASKS.md). Suggested order:
 
 1. **Quick wins** (above) — independent, low risk, good for onboarding
 2. **8.1 + volunteer accounts** — foundational; unblocks self-service rota, comms, induction, wellbeing
-3. **9.2 Programming pipeline** — independent of accounts; auto-populate programmer slot pays off immediately
+3. **9.2 Programming pipeline** ✅ Phase A in progress — see below
 4. **9.7 Room booking** — independent; addresses live operational clashes
 5. **9.4 Induction + 9.5 Wellbeing** — build once accounts foundation is stable
 6. **9.14 Post-screening admin checklist** — independent; tracks rights report, invoice request/paid, DCP return per showing; replaces the manual Google Sheet columns the film programming group uses

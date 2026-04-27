@@ -20,9 +20,11 @@ from django.views.generic import View
 import django.template
 import django.db
 from django.db.models import Q
+from django.db import models as db_models
 import django.utils.timezone as timezone
 from django.contrib.auth.decorators import permission_required, user_passes_test
 from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.contrib.auth.models import User
 from django.views.decorators.http import require_POST, require_http_methods
 from django.utils.html import escape
 
@@ -349,26 +351,41 @@ def set_edit_preferences(request):
 def event_detail_view(request, event_id):
     event = get_object_or_404(Event, pk=event_id)
     now = timezone.now()
-    all_showings = list(event.showings.all().order_by("start"))
-    past_showings = [s for s in all_showings if s.start <= now]
-    future_showings = [s for s in all_showings if s.start > now]
+    # Sort: null-start (date-TBC) showings come after dated ones
+    all_showings = list(
+        event.showings.all().order_by(
+            db_models.F("start").asc(nulls_last=True)
+        )
+    )
+    past_showings = [s for s in all_showings if s.start and s.start <= now]
+    future_showings = [s for s in all_showings if s.start and s.start > now]
+    tbc_showings = [s for s in all_showings if s.start is None]
     latest_showing = all_showings[-1] if all_showings else None
 
-    add_showing_form = diary_forms.ShowingForm()
+    # Rota deadline warning: confirmed showing within 7 days with no rota entries
+    deadline_threshold = now + datetime.timedelta(days=7)
+    rota_deadline_warning = any(
+        s.confirmed and s.start and s.start <= deadline_threshold
+        and not s.rotaentry_set.exclude(name="").exists()
+        for s in all_showings
+    )
+
+    add_showing_form = diary_forms.AddShowingForm()
 
     if request.method == "POST":
-        add_showing_form = diary_forms.ShowingForm(request.POST)
+        add_showing_form = diary_forms.AddShowingForm(request.POST)
         if add_showing_form.is_valid():
             new_showing = add_showing_form.save(commit=False)
             new_showing.event_id = event_id
             new_showing.save()
             new_showing.clone_or_reset_rota(latest_showing)
-            messages.success(
-                request,
-                "Added showing on {}".format(
+            if new_showing.start:
+                msg = "Added showing on {}".format(
                     timezone.localtime(new_showing.start).strftime("%d %b %Y, %H:%M")
-                ),
-            )
+                )
+            else:
+                msg = "Added date-TBC showing ({})".format(new_showing.date_note or "no date set")
+            messages.success(request, msg)
             return HttpResponseRedirect(
                 reverse("edit-event-details-view", kwargs={"event_id": event_id})
             )
@@ -389,9 +406,13 @@ def event_detail_view(request, event_id):
             "event": event,
             "past_showings": past_showings,
             "future_showings": future_showings,
+            "tbc_showings": tbc_showings,
+            "has_tbc_showings": bool(tbc_showings),
             "add_showing_form": add_showing_form,
             "completeness": completeness,
             "all_showings_in_past": event.all_showings_in_past(),
+            "rota_deadline_warning": rota_deadline_warning,
+            "site_config": get_site_config(),
         },
     )
 
@@ -587,6 +608,9 @@ def add_event(request):
                 duration=form.cleaned_data["duration"],
                 outside_hire=form.cleaned_data["outside_hire"],
                 private=form.cleaned_data["private"],
+                created_by=request.user,
+                proposed_by=request.user,
+                status=Event.STATUS_PROPOSED,
             )
             # Set event tags to those from its template:
             new_event.save()
@@ -627,7 +651,10 @@ def add_event(request):
         else:
             # If form was not valid, re-render the form (which will highlight
             # errors)
-            context = {"form": form}
+            context = {
+                "form": form,
+                "programming_etiquette_url": get_site_config().programming_etiquette_url,
+            }
             return render(request, "form_new_event_and_showing.html", context)
 
     elif request.method == "GET":
@@ -692,7 +719,10 @@ def add_event(request):
                 "event_template": initial_template,
             }
         )
-        context = {"form": form}
+        context = {
+            "form": form,
+            "programming_etiquette_url": get_site_config().programming_etiquette_url,
+        }
         return render(request, "form_new_event_and_showing.html", context)
 
 
@@ -719,12 +749,13 @@ def edit_showing(request, showing_id=None):
             # Save rota notes (a second save on the same instance is fine)
             rota_notes_form.save()
 
+            date_str = showing.start.strftime("%H:%M on %d/%m/%y") if showing.start else "TBC"
             messages.add_message(
                 request,
                 messages.SUCCESS,
                 "Updated booking for '{}' at {}".format(
                     showing.event.name,
-                    showing.start.strftime("%H:%M on %d/%m/%y"),
+                    date_str,
                 ),
             )
             return HttpResponseRedirect(
@@ -935,10 +966,11 @@ def delete_showing(request, showing_id):
         logging.info(
             f"Deleting showing id {showing_id} (for event id {showing.event_id})"
         )
+        date_str = showing.start.strftime("%d/%m/%y") if showing.start else "TBC"
         messages.add_message(
             request,
             messages.SUCCESS,
-            f"Deleted booking for '{showing.event.name}' on {showing.start.strftime('%d/%m/%y')}",
+            f"Deleted booking for '{showing.event.name}' on {date_str}",
         )
         showing.delete()
 
@@ -1456,6 +1488,14 @@ def edit_site_configuration(request):
             "Guidance URLs",
             ["image_copyright_guidance_url", "alt_text_guidance_url"],
         ),
+        (
+            "Programming pipeline",
+            [
+                "programming_etiquette_url",
+                "finance_referral_threshold_standard",
+                "finance_referral_threshold_music",
+            ],
+        ),
     ]
 
     if request.method == "POST":
@@ -1478,3 +1518,190 @@ def edit_site_configuration(request):
         "edit_site_configuration.html",
         {"form": form, "grouped_fields": grouped_fields},
     )
+
+
+# ── Programming pipeline ───────────────────────────────────────────────────────
+
+
+@permission_required("toolkit.write")
+@require_http_methods(["GET"])
+def programming_queue(request):
+    """Programming queue — shows all proposed events for meeting review."""
+
+    site_config = get_site_config()
+    proposed_events = (
+        Event.objects.filter(status=Event.STATUS_PROPOSED)
+        .order_by("created_at")
+        .prefetch_related("showings__room", "tags")
+        .select_related("proposed_by", "created_by", "keyholder_confirmed")
+    )
+
+    # Build per-event context (clash detection, FC flag, date-TBC blocking)
+    queue_items = []
+    for event in proposed_events:
+        showings = list(event.showings.all().order_by(
+            db_models.F("start").asc(nulls_last=True)
+        ))
+        has_tbc = any(s.start is None for s in showings)
+
+        # Clash detection: for each dated showing, find other approved events on the same day
+        clashes = []
+        for showing in showings:
+            if showing.start is None:
+                continue
+            same_day = (
+                Showing.objects.filter(
+                    start__date=showing.start.date(),
+                    event__status=Event.STATUS_APPROVED,
+                )
+                .exclude(event=event)
+                .select_related("event", "room")
+                .order_by("start")
+            )
+            for clash in same_day:
+                clashes.append({
+                    "proposed_showing": showing,
+                    "clash_showing": clash,
+                    "same_room": clash.room == showing.room and showing.room is not None,
+                })
+
+        queue_items.append({
+            "event": event,
+            "showings": showings,
+            "has_tbc": has_tbc,
+            "can_approve": not has_tbc,
+            "clashes": clashes,
+            "has_room_conflict": any(c["same_room"] for c in clashes),
+            "finance_collective_required": event.finance_collective_required(),
+            "total_cost": event.total_cost,
+        })
+
+    rejected_events = (
+        Event.objects.filter(status=Event.STATUS_REJECTED)
+        .order_by("-updated_at")[:20]
+        .select_related("proposed_by", "created_by")
+    )
+
+    return render(
+        request,
+        "programming_queue.html",
+        {
+            "queue_items": queue_items,
+            "rejected_events": rejected_events,
+            "site_config": site_config,
+        },
+    )
+
+
+@permission_required("toolkit.write")
+@require_POST
+def approve_event(request, event_id):
+    """Approve a proposed event from the programming queue."""
+    event = get_object_or_404(Event, pk=event_id)
+
+    if event.status != Event.STATUS_PROPOSED:
+        messages.error(request, f"'{event.name}' is not in proposed state.")
+        return HttpResponseRedirect(reverse("edit-programming-queue"))
+
+    # Block if any showing has no start date
+    tbc_showings = event.showings.filter(start__isnull=True)
+    if tbc_showings.exists():
+        messages.error(
+            request,
+            f"Cannot approve '{event.name}' — "
+            f"{tbc_showings.count()} showing(s) have no date set yet. "
+            "Set a date for each showing before approving."
+        )
+        return HttpResponseRedirect(reverse("edit-programming-queue"))
+
+    event.status = Event.STATUS_APPROVED
+    event.save(update_fields=["status", "updated_at"])
+
+    # Auto-populate Programmer and Keyholder rota slots
+    _auto_populate_rota_slots(event)
+
+    messages.success(request, f"'{event.name}' approved.")
+    return HttpResponseRedirect(
+        request.POST.get("next") or reverse("edit-programming-queue")
+    )
+
+
+@permission_required("toolkit.write")
+@require_POST
+def reject_event(request, event_id):
+    """Reject a proposed event from the programming queue."""
+    event = get_object_or_404(Event, pk=event_id)
+
+    reason = request.POST.get("rejection_reason", "").strip()
+    if not reason:
+        messages.error(request, "Please provide a reason for rejection.")
+        return HttpResponseRedirect(reverse("edit-programming-queue"))
+
+    event.status = Event.STATUS_REJECTED
+    event.rejection_reason = reason
+    event.save(update_fields=["status", "rejection_reason", "updated_at"])
+
+    messages.success(request, f"'{event.name}' rejected.")
+    return HttpResponseRedirect(reverse("edit-programming-queue"))
+
+
+@permission_required("toolkit.write")
+@require_POST
+def reopen_event(request, event_id):
+    """Move a rejected event back to proposed state."""
+    event = get_object_or_404(Event, pk=event_id)
+
+    event.status = Event.STATUS_PROPOSED
+    event.rejection_reason = ""
+    event.save(update_fields=["status", "rejection_reason", "updated_at"])
+
+    messages.success(request, f"'{event.name}' returned to the queue.")
+    return HttpResponseRedirect(reverse("edit-programming-queue"))
+
+
+def _auto_populate_rota_slots(event):
+    """After approval, write proposer and keyholder names into their rota slots."""
+    try:
+        programmer_role = Role.objects.get(name="Programmer")
+    except Role.DoesNotExist:
+        logger.warning("Auto-populate: 'Programmer' role not found — skipping.")
+        programmer_role = None
+
+    keyholder_role = None
+    if event.keyholder_confirmed:
+        try:
+            keyholder_role = Role.objects.filter(keyholder_only=True).first()
+        except Exception:
+            pass
+
+    for showing in event.showings.all():
+        if programmer_role and event.proposed_by:
+            display_name = event.proposed_by.get_full_name() or event.proposed_by.username
+            already_filled = showing.rotaentry_set.filter(
+                role=programmer_role
+            ).exclude(name="").exists()
+            if not already_filled:
+                RotaEntry.objects.create(
+                    showing=showing,
+                    role=programmer_role,
+                    name=display_name,
+                    required=True,
+                    rank=1,
+                )
+
+        if keyholder_role:
+            display_name = (
+                event.keyholder_confirmed.get_full_name()
+                or event.keyholder_confirmed.username
+            )
+            already_filled = showing.rotaentry_set.filter(
+                role=keyholder_role
+            ).exclude(name="").exists()
+            if not already_filled:
+                RotaEntry.objects.create(
+                    showing=showing,
+                    role=keyholder_role,
+                    name=display_name,
+                    required=True,
+                    rank=1,
+                )

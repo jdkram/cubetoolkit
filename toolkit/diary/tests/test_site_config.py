@@ -90,6 +90,9 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
             ),
             "image_copyright_guidance_url": "",
             "alt_text_guidance_url": "",
+            "programming_etiquette_url": "",
+            "finance_referral_threshold_standard": "500",
+            "finance_referral_threshold_music": "750",
         }
         response = self.client.post(self.url, post_data)
         self.assertEqual(response.status_code, 302)

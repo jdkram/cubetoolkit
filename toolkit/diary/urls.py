@@ -30,6 +30,10 @@ from toolkit.diary.edit_views import (
     edit_event_links,
     edit_site_configuration,
     toggle_event_mark,
+    programming_queue,
+    approve_event,
+    reject_event,
+    reopen_event,
 )
 from toolkit.diary.public_views import (
     ArchiveIndex,
@@ -214,6 +218,23 @@ diary_urls = [
         r"^edit/showing/id/(?P<showing_id>\d+)/delete$",
         delete_showing,
         name="delete-showing",
+    ),
+    # Programming pipeline queue + approval actions
+    re_path(r"^edit/queue/$", programming_queue, name="edit-programming-queue"),
+    re_path(
+        r"^edit/event/id/(?P<event_id>\d+)/approve/$",
+        approve_event,
+        name="approve-event",
+    ),
+    re_path(
+        r"^edit/event/id/(?P<event_id>\d+)/reject/$",
+        reject_event,
+        name="reject-event",
+    ),
+    re_path(
+        r"^edit/event/id/(?P<event_id>\d+)/reopen/$",
+        reopen_event,
+        name="reopen-event",
     ),
     # Add a new event + showing
     re_path(r"^edit/event/add$", add_event, name="add-event"),
