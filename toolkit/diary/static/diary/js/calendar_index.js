@@ -81,10 +81,11 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
     }
 
     function isValidView(viewName) {
+        var valid = ['dayGridMonth', 'timeGridWeek'];
         if (resources && resources.length > 0) {
-            return ['dayGridMonth', 'resourceTimelineWeek', 'resourceTimelineMonth'].indexOf(viewName) !== -1;
+            valid.push('resourceTimelineWeek', 'resourceTimelineMonth');
         }
-        return viewName === 'dayGridMonth';
+        return valid.indexOf(viewName) !== -1;
     }
 
     function setStoredView(viewName) {
@@ -434,17 +435,33 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
 
             schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
 
+            height: 'auto',  // Prevent excessive vertical whitespace
+
             headerToolbar: hasResources
                 ? {
-                    left:   'prev,next today',
+                    left:   'prev,next today fullwidthToggle',
                     center: 'title',
-                    right:  'dayGridMonth,resourceTimelineWeek,resourceTimelineMonth'
+                    right:  'dayGridMonth,timeGridWeek,resourceTimelineWeek,resourceTimelineMonth'
                 }
                 : {
-                    left:   'prev,next today',
+                    left:   'prev,next today fullwidthToggle',
                     center: 'title',
-                    right:  'dayGridMonth'
+                    right:  'dayGridMonth,timeGridWeek'
                 },
+
+            customButtons: {
+                fullwidthToggle: {
+                    text: '⛶',
+                    hint: 'Toggle full-width layout',
+                    click: function() {
+                        var nowFull = document.body.classList.toggle('calendar-fullwidth');
+                        try { localStorage.setItem('fc6-calendar-fullwidth', nowFull ? 'true' : 'false'); } catch (e) {}
+                        var btn = document.querySelector('.fc-fullwidthToggle-button');
+                        if (btn) { btn.classList.toggle('fc-button-active', nowFull); }
+                        setTimeout(function() { if (calendar) { calendar.render(); } }, 50);
+                    }
+                }
+            },
 
             timeZone: false,
 
@@ -456,6 +473,8 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
                 minute: '2-digit',
                 hour12: false
             },
+
+            displayEventEnd: false,  // Show only start time (full range in tooltip)
 
             events: django_urls['edit-diary-data'],
 
@@ -575,30 +594,36 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
             }
         };
 
+        calendarOpts.views = {
+            timeGridWeek: {
+                buttonText: 'week'
+            }
+        };
+
         if (hasResources) {
             calendarOpts.resources = resources;
             calendarOpts.resourceAreaWidth = '15%';
 
-            calendarOpts.views = {
-                resourceTimelineWeek: {
-                    buttonText: 'week (rooms)',
-                    slotDuration: '01:00',
-                    scrollTime: '16:00:00'
-                },
-                resourceTimelineMonth: {
-                    buttonText: 'month (rooms)',
-                    slotDuration: { day: 1 },
-                    slotMinWidth: 50,
-                    slotLabelContent: function(arg) {
-                        var days = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-                        return {
-                            html: '<span style="display:block;font-weight:600;line-height:1.1">'
-                                + days[arg.date.getDay()]
-                                + '</span><span style="line-height:1.1">'
-                                + arg.date.getDate()
-                                + '</span>'
-                        };
-                    }
+            calendarOpts.views.resourceTimelineWeek = {
+                buttonText: 'week (rooms)',
+                slotDuration: '01:00',
+                scrollTime: '16:00:00',
+                contentHeight: 'auto'
+            };
+            calendarOpts.views.resourceTimelineMonth = {
+                buttonText: 'month (rooms)',
+                slotDuration: { day: 1 },
+                slotMinWidth: 120,
+                contentHeight: 'auto',
+                slotLabelContent: function(arg) {
+                    var days = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+                    return {
+                        html: '<span style="display:block;font-weight:600;line-height:1.1">'
+                            + days[arg.date.getDay()]
+                            + '</span><span style="line-height:1.1">'
+                            + arg.date.getDate()
+                            + '</span>'
+                    };
                 }
             };
         }
@@ -611,6 +636,16 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
 
         // Setup filter UI listeners
         setupFilterListeners();
+
+        // Restore full-width preference from localStorage
+        try {
+            var storedFull = localStorage.getItem('fc6-calendar-fullwidth') === 'true';
+            if (storedFull) {
+                document.body.classList.add('calendar-fullwidth');
+                var fwBtn = document.querySelector('.fc-fullwidthToggle-button');
+                if (fwBtn) { fwBtn.classList.add('fc-button-active'); }
+            }
+        } catch (e) {}
 
         var resizeTimer;
         window.addEventListener('resize', function() {

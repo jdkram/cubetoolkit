@@ -33,6 +33,28 @@
       outline: 2px dashed rgba(0, 0, 0, 0.6);
       outline-offset: -2px;
   }
+
+  /* ── Event title word wrapping (timeline month view) ─────────── */
+  /* Allow event titles to wrap to 2 lines for better readability */
+  .fc-timeline-event .fc-event-title {
+      white-space: normal !important;
+      line-height: 1.3;
+      max-height: 2.6em;  /* 2 lines × 1.3 line-height */
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+  }
+
+  /* Increase event min-height in timeline views to accommodate wrapped text */
+  .fc-timeline-event {
+      min-height: 2.8em;
+  }
+
+  /* Slightly reduce font size in month (rooms) view to fit more text */
+  .fc-resourceTimelineMonth-view .fc-event-title {
+      font-size: 0.9em;
+  }
   /* .s_confirmed — text colour set per-event via JSON textColor:
        white for dark rooms, black for light rooms (e.g. Café yellow). */
   /* .s_auxiliary_room — class still emitted for JS filter hooks (9.41),
@@ -63,10 +85,9 @@
       background: rgba(255, 235, 180, 0.45) !important;
   }
 
-  /* ── Full-viewport-width calendar ──────────────────────────── */
-  /* Override Bootstrap container max-width so the calendar fills the
-     available screen width on large monitors. Only affects this page. */
-  body > .container {
+  /* ── Full-viewport-width calendar (opt-in) ─────────────────── */
+  /* Activated by the "Expand" toggle — adds .calendar-fullwidth to body. */
+  body.calendar-fullwidth > .container {
       max-width: none;
       width: 100%;
       padding-left: 0;
@@ -86,9 +107,25 @@
       min-width: 0;   /* allow shrinking below intrinsic size */
       order: 1;
   }
-  #calendar {
-      display: block;
-  }
+   #calendar {
+       display: block;
+       /* Prevent excessive vertical whitespace in timeline views */
+       min-height: 400px;
+   }
+
+   /* FC6 timeline views: remove excessive bottom padding */
+   .fc-timeline-body {
+       min-height: auto !important;
+   }
+
+   .fc-timeline-slots {
+       min-height: auto !important;
+   }
+
+   /* Ensure the scroll container doesn't add extra space */
+   .fc-scroller-harness {
+       min-height: auto !important;
+   }
   #controls {
       flex: 0 0 185px;
       order: 2;
@@ -455,6 +492,12 @@
   /* ── Hidden event styling ─────────────────────────────────────── */
   .fc-event-hidden {
       display: none !important;
+  }
+
+  /* ── Full-width toggle button (in FC toolbar) ─────────────────── */
+  .fc-fullwidthToggle-button {
+      font-size: 1em;
+      padding: 0.25em 0.5em;
   }
 </style>
 {% endblock %}
