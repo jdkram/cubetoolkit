@@ -263,6 +263,83 @@ $(document).ready(function () {
     });
 
     $('[data-toggle="tooltip"]').tooltip();
+
+    // Poster generation AJAX
+    (function() {
+        var generateBtn = document.getElementById('generate-poster-btn');
+        var removeBtn = document.getElementById('remove-generated-btn');
+        var fileInput = document.getElementById('id_media_file');
+        var fileGroup = document.getElementById('media_file_group');
+        var previewDiv = document.getElementById('generated-preview');
+        var previewImg = document.getElementById('generated-preview-img');
+        var filenameSpan = document.getElementById('generated-filename');
+        var hiddenInput = document.getElementById('generated_media_id');
+        var colourInput = document.getElementById('poster-accent-colour');
+        var csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        function showPreview(data) {
+            hiddenInput.value = data.media_id;
+            previewImg.src = data.url;
+            filenameSpan.textContent = data.filename;
+            fileGroup.style.display = 'none';
+            previewDiv.style.display = 'flex';
+        }
+
+        function removePreview() {
+            hiddenInput.value = '';
+            previewImg.src = '';
+            filenameSpan.textContent = '';
+            previewDiv.style.display = 'none';
+            fileGroup.style.display = 'flex';
+            // Note: we don't delete the MediaItem server-side; it just won't be attached to the event
+        }
+
+        function generatePoster() {
+            var url = '{% url "generate-event-poster" event_id=event.id %}';
+            var colour = colourInput ? colourInput.value : null;
+            
+            generateBtn.disabled = true;
+            var originalText = generateBtn.innerHTML;
+            generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...';
+
+            var formData = new FormData();
+            if (colour) {
+                formData.append('colour', colour);
+            }
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+            .then(function(response) {
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+                return response.json();
+            })
+            .then(function(data) {
+                if (data.success) {
+                    showPreview(data);
+                } else {
+                    alert('Failed to generate poster: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(function(err) {
+                alert('Error generating poster: ' + err.message);
+            })
+            .finally(function() {
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = '<span aria-hidden="true">&#x1F3A8;</span> Generate poster';
+            });
+        }
+
+        if (generateBtn) generateBtn.addEventListener('click', generatePoster);
+        if (removeBtn) removeBtn.addEventListener('click', removePreview);
+    }());
 });
 </script>
 {% endblock %}
@@ -361,7 +438,79 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
         </div>
     </div>
 
-    {% crispy media_form %}
+    {# Hidden field for generated poster (set via AJAX) #}
+    <input type="hidden" name="generated_media_id" id="generated_media_id" value="">
+
+    {# Media file field with generate button #}
+    <div class="form-group row" id="media_file_group">
+        <label for="id_media_file" class="col-sm-2 col-form-label">Image file</label>
+        <div class="col-sm-10">
+            {# Existing file input or clear checkbox #}
+            {% if media_form.instance and media_form.instance.pk and media_form.instance.media_file %}
+                <div class="form-control-plaintext">
+                    Currently: <a href="{{ media_form.instance.media_file.url }}">{{ media_form.instance.media_file.name }}</a>
+                    <br>
+                    <input type="checkbox" name="media_file-clear" id="media_file-clear_id">
+                    <label for="media_file-clear_id">Clear</label>
+                </div>
+                <input type="file" name="media_file" class="form-control-file" id="id_media_file" accept="image/jpeg,image/gif,image/png" style="display:none;">
+            {% else %}
+                <div class="d-flex align-items-center gap-2">
+                    <input type="file" name="media_file" class="form-control-file" id="id_media_file" accept="image/jpeg,image/gif,image/png">
+                </div>
+                {# Colour picker and generate option #}
+                <div class="mt-2 p-2 bg-light rounded" style="border: 1px solid #e9ecef;">
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <label for="poster-accent-colour" class="mb-0" style="font-size: 0.9em;">Accent colour:</label>
+                        <input type="color" id="poster-accent-colour" class="form-control form-control-sm" style="width: 60px; height: 30px; padding: 2px;" value="{% if event.tags.first.colour %}{{ event.tags.first.colour }}{% else %}#b42828{% endif %}">
+                        <button type="button" id="generate-poster-btn" class="btn btn-outline-secondary btn-sm ml-2">
+                            <span aria-hidden="true">&#x1F3A8;</span> Generate poster
+                        </button>
+                    </div>
+                    <small class="form-text text-muted mt-1">Create a typographic poster from the event name.</small>
+                </div>
+            {% endif %}
+            {% if media_form.media_file.errors %}
+                <div class="invalid-feedback d-block">{{ media_form.media_file.errors }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# Preview area for generated image #}
+    <div class="form-group row" id="generated-preview" style="display: none;">
+        <label class="col-sm-2 col-form-label">Generated image</label>
+        <div class="col-sm-10">
+            <div class="d-flex align-items-center">
+                <img id="generated-preview-img" src="" alt="Generated poster preview" style="max-height: 150px; max-width: 300px; border: 1px solid #ddd; border-radius: 4px;">
+                <div class="ml-3">
+                    <p class="mb-1"><strong id="generated-filename"></strong></p>
+                    <button type="button" id="remove-generated-btn" class="btn btn-outline-danger btn-sm">
+                        Remove and upload a file instead
+                    </button>
+                </div>
+            </div>
+            <small class="form-text text-muted">Save the form to confirm this image.</small>
+        </div>
+    </div>
+
+    {# Rest of media form fields (alt_text, credit) #}
+    {% for field in media_form %}
+        {% if field.name != 'media_file' %}
+            <div class="form-group row{% if field.errors %} has-error{% endif %}">
+                <label for="{{ field.id_for_label }}" class="col-sm-2 col-form-label">{{ field.label }}</label>
+                <div class="col-sm-10">
+                    {{ field }}
+                    {% if field.help_text %}
+                        <small class="form-text text-muted">{{ field.help_text }}</small>
+                    {% endif %}
+                    {% if field.errors %}
+                        <div class="invalid-feedback d-block">{{ field.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    {% endfor %}
+
     <p class="help-block">
         <small>&#x26A0;&#xFE0F; Please make sure you have the right to use any image you upload.
         {% if IMAGE_COPYRIGHT_GUIDANCE_URL %}See our <a href="{{ IMAGE_COPYRIGHT_GUIDANCE_URL }}" target="_blank" rel="noopener">image copyright guidance</a> for help finding freely-licensed images.{% endif %}

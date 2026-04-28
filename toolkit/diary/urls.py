@@ -30,6 +30,7 @@ from toolkit.diary.edit_views import (
     edit_event_links,
     edit_site_configuration,
     toggle_event_mark,
+    generate_event_poster,
 )
 from toolkit.diary.public_views import (
     ArchiveIndex,
@@ -191,6 +192,12 @@ diary_urls = [
         r"^edit/event/id/(?P<event_id>\d+)/$",
         EditEventView.as_view(),
         name="edit-event-details",
+    ),
+    # Generate placeholder poster for an event
+    re_path(
+        r"^edit/event/id/(?P<event_id>\d+)/generate-poster/$",
+        generate_event_poster,
+        name="generate-event-poster",
     ),
     # Edit a showing (includes delete / add a new showing)
     re_path(
