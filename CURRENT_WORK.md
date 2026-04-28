@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-04-28 (9.77 Labs — Building Map)
+**Last updated:** 2026-04-28 (Bug W — mobile burger menu fix)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [ROADMAP.md](docs/ROADMAP.md) (wave-by-wave sequencing) · [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -13,7 +13,7 @@
 
 | # | Bug | Notes |
 |---|-----|-------|
-| **Bug W** | **Burger menu vanishes on very narrow mobile views** | Navbar toggler disappears at ~320px width. Root cause not yet confirmed — likely horizontal overflow expanding the layout viewport (pushing the right-side toggler off-screen), but attempts to fix via `overflow-x: hidden` on `html` and via flex-based date input sizing both caused side-effects and were reverted. Needs a systematic investigation: (1) open DevTools mobile emulator, (2) find which element is wider than the viewport using `document.querySelectorAll('*')` + `getBoundingClientRect`, (3) fix the overflow source directly. Date inputs (`input[type="date"]`) in `.rota-top-row` are a prime suspect — they have `width: 9.5em` which may not account for Bootstrap's `.form-control` box model on all devices. |
+| ~~**Bug W**~~ | ~~**Burger menu vanishes on very narrow mobile views**~~ | ✅ 2026-04-28 — Root cause: `.showing-meta` in `edit_rota.html` had `flex-wrap: nowrap`. On multi-room events with duration + room badge + outside-hire badge + link, the combined min-content width exceeds the ~274px available at 320px viewport, causing horizontal overflow. On iOS Safari, horizontal overflow causes the fixed navbar to appear to scroll off-screen. Fix: changed to `flex-wrap: wrap`. |
 
 ---
 

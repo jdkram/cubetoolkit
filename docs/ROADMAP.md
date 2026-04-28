@@ -6,7 +6,7 @@ status: "#ai-input"
 
 # Roadmap
 
-**Last updated:** 2026-04-27
+**Last updated:** 2026-04-28
 
 Sequencing plan for remaining Phase 2 work. Source of truth for individual
 task status remains [CURRENT_WORK.md](../CURRENT_WORK.md); design rationale
@@ -30,12 +30,11 @@ Six waves; Wave A and Wave B run concurrently.
 Independent, low-risk, parallelisable. Picks up momentum and shrinks the
 queue.
 
-- **Bug W** mobile burger menu (current blocker)
+- ~~**Bug W**~~ mobile burger menu ✅ 2026-04-28
 - **9.76** rota date nav & orientation 🔵 — biggest daily-UX win remaining
-- **9.62** mailing list view 🔵
-- **9.70** nightly DB backup 🟢
+- **9.70** nightly DB backup 🟢 — needs Marcus conversation first
 - **D.1 / D.4** infra hardening (WhiteNoise cache-busting; Docker resource limits)
-- XS sweep-ups: 9.10.6, 9.12, 9.40, 9.57, 9.31, 9.42, 9.34
+- XS sweep-ups: 9.10.6, 9.12, 9.40, 9.42, 9.34
 
 **Outcome:** site feels finished, production hardened, queue clear enough to
 focus on big features.
