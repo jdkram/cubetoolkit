@@ -225,8 +225,8 @@ function filter_events() {
 
 {% for day, time_groups in dates.items %}
   {% ifchanged day|date:"Y-m" %}
-    {% if not forloop.first %}</tbody></table>{% endif %}
-    <table class="table">
+    {% if not forloop.first %}</tbody></table></div>{% endif %}
+    <div class="table-responsive"><table class="table">
     <thead><tr>
       <th class="month-heading" colspan="2">{{ day|date:"F Y" }}</th>
       {% if multiroom_enabled %}
@@ -320,6 +320,6 @@ function filter_events() {
   {% endfor %}
   {% endwith %}{% endwith %}
 {% endfor %}
-{% if dates %}</tbody></table>{% endif %}
+{% if dates %}</tbody></table></div>{% endif %}
 
 {% endblock %}
