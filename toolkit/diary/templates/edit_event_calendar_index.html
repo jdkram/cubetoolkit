@@ -184,7 +184,9 @@
       }
       .fc-toolbar-chunk {
           display: flex;
+          flex-wrap: wrap;
           justify-content: center;
+          row-gap: 0.4rem;
       }
       .fc-toolbar-chunk:nth-child(2) {
           order: -1;
@@ -360,8 +362,9 @@
   /* Status checkboxes with visual indicators */
   .status-filter-group {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
-      gap: 0.75em;
+      gap: 0.5em 0.75em;
   }
 
   .status-filter-group .form-check {
@@ -492,6 +495,19 @@
   /* ── Hidden event styling ─────────────────────────────────────── */
   .fc-event-hidden {
       display: none !important;
+  }
+
+  /* Left toolbar chunk: make it a flex container so that when the two
+     button groups (prev/next and today/expand) wrap to separate lines
+     there is a proper row gap between them. Without display:flex the
+     groups are inline-flex siblings inside a block div and row-gap has
+     no effect. */
+  .fc .fc-toolbar-chunk:first-child {
+      display: flex;
+      flex-wrap: wrap;
+      row-gap: 0.4rem;
+      column-gap: 0.75em;
+      align-items: center;
   }
 
   /* ── Full-width toggle button (in FC toolbar) ─────────────────── */
