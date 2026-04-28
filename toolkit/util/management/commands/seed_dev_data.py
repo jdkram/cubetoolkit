@@ -326,7 +326,7 @@ class Command(BaseCommand):
             programmers_group.user_set.add(u)
 
         _DEMO_ACCOUNTS = [
-            ("admin", "Admin (Panopticon)"),
+            ("admin", "Admin"),
             ("programmer", "Demo Programmer"),
             ("programmer2", "Demo Programmer 2"),
             ("volunteer", "Demo Volunteer"),
