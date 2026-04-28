@@ -1,6 +1,6 @@
 <details class="add-to-calendar{% if date_label %} add-to-calendar--date-trigger{% endif %}">
     <summary class="add-to-calendar__trigger"
-             aria-label="Add {{ date_label|default:"" }} to calendar"
+             aria-label="Add{% if date_label %} {{ date_label }}{% endif %} to calendar"
              title="Add to calendar">
         {% if date_label %}{{ date_label }} {% endif %}<i class="fa-solid fa-calendar-plus" aria-hidden="true"></i>
     </summary>
