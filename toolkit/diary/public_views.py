@@ -275,6 +275,11 @@ def view_event(request, event_id=None, legacy_id=None, event_slug=None):
     if event.private or len(showings) == 0:
         raise Http404("Event not found")
 
+    # Only show "films start on time" banner for events with the "film" tag
+    site_config = get_site_config()
+    has_film_tag = event.tags.filter(name="film").exists()
+    show_films_banner = site_config.films_start_on_time and has_film_tag
+
     context = {
         "event": event,
         "showings": showings,
@@ -285,8 +290,8 @@ def view_event(request, event_id=None, legacy_id=None, event_slug=None):
         "media": {event.id: media},
         "media_url": settings.MEDIA_URL,
         "show_archive_images": _show_archive_images(request, showings),
-        "films_start_on_time": get_site_config().films_start_on_time,
-        "films_start_on_time_banner_text": get_site_config().films_start_on_time_banner_text,
+        "films_start_on_time": show_films_banner,
+        "films_start_on_time_banner_text": site_config.films_start_on_time_banner_text,
     }
     return render(request, "view_event.html", context)
 
