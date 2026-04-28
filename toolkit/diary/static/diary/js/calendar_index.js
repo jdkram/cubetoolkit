@@ -439,12 +439,12 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
 
             headerToolbar: hasResources
                 ? {
-                    left:   'prev,next today fullwidthToggle',
+                    left:   'prev,next today,fullwidthToggle',
                     center: 'title',
                     right:  'dayGridMonth,timeGridWeek,resourceTimelineWeek,resourceTimelineMonth'
                 }
                 : {
-                    left:   'prev,next today fullwidthToggle',
+                    left:   'prev,next today,fullwidthToggle',
                     center: 'title',
                     right:  'dayGridMonth,timeGridWeek'
                 },
