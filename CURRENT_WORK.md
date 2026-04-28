@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-04-25 (9.75 mark toggle ☆→★→☽; filterline expanded)
+**Last updated:** 2026-04-28 (9.10.4a "Add to calendar" widget)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [ROADMAP.md](docs/ROADMAP.md) (wave-by-wave sequencing) · [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -71,6 +71,7 @@
 | ~~9.9~~ | ~~Break-even calculator for programmers~~ | ✅ 2026-03-02 | Collapsible panel in event edit form beneath terms; pure JS; Finance Collective threshold warnings; fill-level table |
 | ~~9.10.2~~ | ~~Clone rota notes with event clone~~ | ✅ 2026-02-28 | `clone_rota_from_showing` now copies `rota_notes`; test added |
 | 9.10.6 | Inline warning when rota notes carry to cloned showing | 🟢 XS | Template banner in clone form; see TASKS.md 9.10.6 option 2 |
+| ~~9.10.4a~~ | ~~"Add to calendar" per-showing links (MVP)~~ | ✅ 2026-04-28 | Per-upcoming-showing links: `.ics` download (universal), Google Calendar, Outlook.com — surfaced on both public event page (`view_event.html`) and volunteer rota (`edit_rota.html`). New `toolkit/diary/calendar_links.py` (hand-rolled iCalendar, no new dep); `single-showing-ics` view on `Showing.objects.public()`; `{% calendar_links %}` inclusion tag; `_calendar_links.html` partial. Hidden for past or cancelled showings. 7 new tests. Precursor to subscribable feeds in 9.10.4. |
 | ~~9.10.7~~ | ~~Clone event as new event~~ | ✅ 2026-03-02 | "Clone as new event" button on Event Hub; copies all text/config fields (copy, terms, notes, pricing, etc.) + tags + rota from source event; new Showing created unconfirmed; ticket link intentionally left blank; 7 new tests; `devserver_settings` now silently skips `debug_toolbar` when not installed (fixes Docker test runner); `dev.txt` updated to `fixtures>=4` |
 | 9.12 | "Dormant" volunteer status | 🟢 XS | Add `status` field (active/dormant/retired) |
 | 9.3↳ | Collapse rota notes by default | 🟢 XS | Show summary, expand button |

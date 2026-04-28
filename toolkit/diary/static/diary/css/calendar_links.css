@@ -1,0 +1,109 @@
+/* human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Opus 4.7"]; status: "#ai-written" */
+/* Compact "Add to calendar" disclosure: icon trigger + popover menu.
+   Used on view_event.html and edit_rota.html. See TASKS.md 9.10.4a. */
+
+/* `details` defaults to `display: block`, which would push the trigger
+   onto its own line. Raise specificity so we beat user-agent styles even
+   when this stylesheet loads before the others. */
+details.add-to-calendar {
+    position: relative;
+    display: inline-block;
+    margin-left: 0.4em;
+    vertical-align: middle;
+    font-size: 1em;
+    line-height: 1;
+}
+
+.add-to-calendar__trigger {
+    list-style: none;          /* hide default <summary> marker */
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.4em;
+    height: 1.4em;
+    border-radius: 3px;
+    color: #6c757d;
+    background: transparent;
+    border: 1px solid transparent;
+    line-height: 1;
+    transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+.add-to-calendar__trigger::-webkit-details-marker { display: none; }
+.add-to-calendar__trigger::marker { content: ""; }
+
+.add-to-calendar__trigger:hover,
+.add-to-calendar[open] .add-to-calendar__trigger {
+    color: #0056b3;
+    background: #f0f4f8;
+    border-color: #cfd8e0;
+}
+.add-to-calendar__trigger:focus-visible {
+    outline: 2px solid #0056b3;
+    outline-offset: 1px;
+}
+
+.add-to-calendar__menu {
+    position: absolute;
+    z-index: 50;
+    top: calc(100% + 2px);
+    left: 0;
+    min-width: 10rem;
+    background: #fff;
+    border: 1px solid #cfd8e0;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    padding: 0.25em 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.add-to-calendar__item {
+    padding: 0.4em 0.85em;
+    color: #222;
+    text-decoration: none;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.55em;
+}
+.add-to-calendar__item:hover,
+.add-to-calendar__item:focus {
+    background: #f0f4f8;
+    color: #0056b3;
+    text-decoration: none;
+    outline: none;
+}
+.add-to-calendar__item .fa-solid,
+.add-to-calendar__item .fa-brands {
+    width: 1em;
+    color: #6c757d;
+}
+
+/* Right-align the menu when the trigger is near the right edge of its
+   container. Triggered by an .add-to-calendar--end modifier. */
+.add-to-calendar--end .add-to-calendar__menu {
+    left: auto;
+    right: 0;
+}
+
+/* Date-as-trigger variant: the time string IS the summary, icon follows inline. */
+.add-to-calendar--date-trigger .add-to-calendar__trigger {
+    width: auto;
+    height: auto;
+    border-radius: 2px;
+    padding: 0 0.15em;
+    gap: 0.3em;
+}
+.add-to-calendar--date-trigger .add-to-calendar__trigger .fa-calendar-plus {
+    font-size: 0.75em;
+    vertical-align: middle;
+    color: #aaa;
+}
+
+/* Let the popup escape a parent with overflow:hidden when it is open.
+   Targets the event-list grid cards on the public programme. */
+.grid-item:has(.add-to-calendar[open]) {
+    overflow: visible;
+}

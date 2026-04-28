@@ -5,7 +5,7 @@ import calendar
 from collections import OrderedDict
 
 from django.db.models import Q
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import render, redirect
 from django.conf import settings
 from django.utils.html import conditional_escape
@@ -15,6 +15,7 @@ import django.views.generic as generic
 from toolkit.diary.models import Showing, Event, PrintedProgramme, get_site_config
 from toolkit.diary.daterange import get_date_range
 from toolkit.diary.forms import SearchForm
+from toolkit.diary.calendar_links import build_ics
 from toolkit.content.models import BasicArticlePage
 
 logger = logging.getLogger(__name__)
@@ -236,6 +237,19 @@ def view_showing(request, showing_id=None):
         raise Http404("Showing not found")
 
     return view_event(request, event_id=showings[0].event_id)
+
+
+def single_showing_ics(request, showing_id=None):
+    showings = Showing.objects.public().filter(id=showing_id).select_related("event", "room")
+    if not showings:
+        raise Http404("Showing not found")
+    showing = showings[0]
+    body = build_ics(showing, request=request)
+    response = HttpResponse(body, content_type="text/calendar; charset=utf-8")
+    response["Content-Disposition"] = (
+        f'attachment; filename="showing-{showing.pk}.ics"'
+    )
+    return response
 
 
 def view_event(request, event_id=None, legacy_id=None, event_slug=None):

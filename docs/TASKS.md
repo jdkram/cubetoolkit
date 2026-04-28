@@ -1113,6 +1113,48 @@ This is a meaningful alternative to reminder emails — a volunteer who has
 their shifts in their calendar is less likely to forget them, and less
 likely to need a reminder email the day before.
 
+##### 9.10.4a "Add to calendar" per-showing links — MVP 🟢 XS (2–4h)
+
+A zero-infrastructure precursor to the subscribable feeds in 9.10.4. For
+each upcoming, non-cancelled showing, render three small "Add to calendar"
+links. Surfaces:
+
+- **Public event page** (`view_event.html`) — for audience members, so
+  they can add the showing to their personal calendar in one click.
+- **Volunteer rota page** (`edit_rota.html`) — same UI per upcoming
+  showing, so a volunteer who has just signed up for a slot can put the
+  shift straight into their own calendar without waiting on the personal
+  rota feed (9.10.4 part 2). The link adds the showing as a calendar
+  entry, not a role-specific event; the volunteer knows what they signed
+  up for.
+
+The links themselves:
+
+- **Download .ics** — a per-showing iCalendar file served from a public
+  URL (`/programme/showing/<id>/calendar.ics`). Works with Apple Calendar,
+  Outlook desktop, and anything that handles `text/calendar`. Hand-rolled
+  generation (no `icalendar` dep) — single VEVENT per file is trivial.
+- **Add to Google Calendar** — `https://calendar.google.com/calendar/render?action=TEMPLATE&...`
+  prepopulated with title, start/end (UTC), description, location, URL.
+- **Add to Outlook** — `https://outlook.live.com/calendar/0/deeplink/compose?...`
+  prepopulated equivalently. Covers Outlook.com web users.
+
+Tradeoffs vs the subscribable feed (9.10.4):
+
+- One-shot adds, not a subscription. If a showing is rescheduled or
+  cancelled, the calendar entry won't update — users would need to delete
+  and re-add. Acceptable for MVP because public-programme showings
+  rarely move once published.
+- No auth, no secret URLs, no per-volunteer plumbing. Ships in hours,
+  not days.
+- Complementary, not redundant: ships the user-facing benefit (entries
+  in personal calendars → fewer missed showings) without blocking on
+  account-linked rota work (8.1).
+
+End-time calculation reuses `Showing.end_time` (already returns
+`start + 2h` when `event.duration` is None, per the 2026-04-04 calendar
+overlap fix).
+
 #### 9.10.5 Role timing notes 🟢 XS–🔵 S (2–8h)
 
 Individual roles on a showing don't have their own start and end times —

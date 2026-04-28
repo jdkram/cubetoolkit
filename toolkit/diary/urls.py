@@ -43,6 +43,7 @@ from toolkit.diary.public_views import (
     view_diary_next_month,
     view_showing,
     view_event,
+    single_showing_ics,
 )
 
 from toolkit.diary.mailout_views import mailout, queue_mailout
@@ -78,6 +79,12 @@ programme_urls = [
         r"^showing/id/(?P<showing_id>\d+)/$",
         view_showing,
         name="single-showing-view",
+    ),
+    # Per-showing iCalendar download (.ics) — see TASKS.md 9.10.4a
+    re_path(
+        r"^showing/id/(?P<showing_id>\d+)/calendar\.ics$",
+        single_showing_ics,
+        name="single-showing-ics",
     ),
     # All showings for a given event
     re_path(
