@@ -621,7 +621,7 @@ a {
     overflow: hidden;
 }
 
-p.showings, p.info, p.tickets {
+.showings, p.info, p.tickets {
     font-size: 0.6785em;
     font-weight: 400;
     line-height: 1.6;
@@ -630,7 +630,7 @@ p.showings, p.info, p.tickets {
     padding: 0;
     margin: 0;
 }
-p.showings {
+.showings {
     margin: 40px 0;
 }
 p.info {
@@ -718,7 +718,7 @@ p.action {
     .grid-item h3 {
         font-size: 1.5714em;
     }
-    p.showings, p.info, p.tickets {
+    .showings, p.info, p.tickets {
         font-size: 0.714285714em;
     }
     .action a, .copy p {
@@ -797,7 +797,7 @@ p.action {
     .grid-item h3 {
         font-size: 1.714285714em;
     }
-    p.showings, p.info, p.tickets {
+    .showings, p.info, p.tickets {
         font-size: 0.785714286em;
     }
     .action a, .copy p {
@@ -1030,7 +1030,7 @@ p.action {
     .grid-item h3 {
         font-size: 1.5714em;
     }
-    p.showings, p.info, p.tickets {
+    .showings, p.info, p.tickets {
         font-size: 0.7142em;
     }
     .action a, .copy p {
@@ -1111,7 +1111,7 @@ p.action {
     .grid-item h3 {
         font-size: 1.5714em;
     }
-    p.showings, p.info, p.tickets {
+    .showings, p.info, p.tickets {
         font-size: 0.7142em;
     }
     .action a, .copy p {
@@ -1181,7 +1181,7 @@ p.action {
         font-size: 1.8em;
         line-height: 1.4;
     }
-    p.showings, p.info, p.tickets {
+    .showings, p.info, p.tickets {
         font-size: 0.714285714em;
     }
     .action a, .copy p {

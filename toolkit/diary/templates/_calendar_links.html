@@ -1,0 +1,27 @@
+<details class="add-to-calendar{% if date_label %} add-to-calendar--date-trigger{% endif %}">
+    <summary class="add-to-calendar__trigger"
+             aria-label="Add {{ date_label|default:"" }} to calendar"
+             title="Add to calendar">
+        {% if date_label %}{{ date_label }} {% endif %}<i class="fa-solid fa-calendar-plus" aria-hidden="true"></i>
+    </summary>
+    <div class="add-to-calendar__menu" role="menu">
+        <a role="menuitem"
+           class="add-to-calendar__item"
+           href="{{ ics_url }}"
+           title="Download .ics — Apple Calendar, Outlook desktop, others">
+           <i class="fa-solid fa-download" aria-hidden="true"></i> .ics file
+        </a>
+        <a role="menuitem"
+           class="add-to-calendar__item"
+           href="{{ google_url }}"
+           target="_blank" rel="noopener noreferrer">
+           <i class="fa-brands fa-google" aria-hidden="true"></i> Google Calendar
+        </a>
+        <a role="menuitem"
+           class="add-to-calendar__item"
+           href="{{ outlook_url }}"
+           target="_blank" rel="noopener noreferrer">
+           <i class="fa-brands fa-microsoft" aria-hidden="true"></i> Outlook.com
+        </a>
+    </div>
+</details>

@@ -1,5 +1,6 @@
 {% extends "base_public.html" %}
 {% load thumbnail_l %}
+{% load calendar_links %}
 
 {% block title %}
 {{ VENUE.name }}: {{ event.name }}
@@ -10,6 +11,12 @@
     <link rel="stylesheet" href="{{ STATIC_URL }}diary/css/event.css">
     <link rel="stylesheet" href="{{ STATIC_URL }}css/site_custom.css">
     <link rel="stylesheet" href="{{ STATIC_URL }}diary/css/event_custom.css">
+    <link rel="stylesheet" href="{{ STATIC_URL }}diary/css/calendar_links.css">
+{% endblock %}
+
+{% block script %}
+    {{ block.super }}
+    <script defer src="{{ STATIC_URL }}diary/js/calendar_links.js"></script>
 {% endblock %}
 
 {% block body %}
@@ -31,7 +38,7 @@
         {% if event.film_information %}
         <p class="info">{{ event.film_information }}</p>
         {% endif %}
-        <p class="showings">
+        <div class="showings">
         -<br>
             {% for showing in showings %}
             {% if showing.sold_out %}<span class="sold_out">{% endif %}
@@ -44,9 +51,11 @@
             {% if MULTIROOM_ENABLED %}/ {{ showing.room }}{% endif %}
             {% if showing.cancelled %}</span> (cancelled){% endif %}
             {% if showing.sold_out %}</span> (SOLD OUT){% endif %}
-            {% if showing.discounted %}<abbr class="discounted" title="* cheap night">*</abbr>{% endif %}<br>
+            {% if showing.discounted %}<abbr class="discounted" title="* cheap night">*</abbr>{% endif %}
+            {% if not showing.cancelled and not showing.in_past %}{% calendar_links showing %}{% endif %}
+            <br>
             {% endfor %}
-        </p>
+        </div>
         {% if event.pricing %}
             <p class="tickets">Tickets: {{ event.pricing }}</p>
         {% endif %}
