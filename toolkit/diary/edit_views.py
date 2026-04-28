@@ -2,6 +2,7 @@ import json
 import datetime
 import logging
 import csv
+import os
 
 from collections import OrderedDict
 
@@ -43,6 +44,7 @@ from toolkit.diary.models import (
 )
 import toolkit.diary.forms as diary_forms
 import toolkit.diary.edit_prefs as edit_prefs
+from toolkit.diary.poster import generate_event_placeholder
 from toolkit.util.image import adjust_colour
 
 # Shared utility method:
@@ -756,7 +758,7 @@ class EditEventView(PermissionRequiredMixin, View):
 
     permission_required = "toolkit.write"
 
-    def _save(self, event, media_item, form, media_form):
+    def _save(self, event, media_item, form, media_form, generated_media_id=None):
         # Some factored out code: method is passed valid event and media form,
         # and commits the data.
 
@@ -765,6 +767,21 @@ class EditEventView(PermissionRequiredMixin, View):
         event.legacy_copy = False
         # Then save the main form:
         form.save()
+
+        # Handle generated poster (from AJAX generation) - takes priority
+        if generated_media_id:
+            try:
+                generated_media = MediaItem.objects.get(pk=generated_media_id)
+                # Update alt_text from form if provided
+                alt_text = media_form.cleaned_data.get("alt_text", "")
+                if alt_text:
+                    generated_media.alt_text = alt_text
+                    generated_media.save()
+                event.set_main_mediaitem(generated_media)
+                return
+            except MediaItem.DoesNotExist:
+                pass  # Fall through to normal handling
+
         # Handle the media item form:
         if media_form.cleaned_data["media_file"] is False:
             # We get here if the "clear" checkbox was ticked.
@@ -813,7 +830,8 @@ class EditEventView(PermissionRequiredMixin, View):
         # Validate
         if form.is_valid() and media_form.is_valid():
             event._saved_by = request.user
-            self._save(event, media_item, form, media_form)
+            generated_media_id = request.POST.get("generated_media_id")
+            self._save(event, media_item, form, media_form, generated_media_id)
             messages.add_message(
                 request,
                 messages.SUCCESS,
@@ -1478,3 +1496,36 @@ def edit_site_configuration(request):
         "edit_site_configuration.html",
         {"form": form, "grouped_fields": grouped_fields},
     )
+
+
+@require_POST
+@permission_required("toolkit.write")
+def generate_event_poster(request, event_id):
+    """Generate a placeholder poster image for an event (AJAX endpoint).
+
+    Creates the MediaItem immediately and returns its ID and URL for preview.
+    The image is associated with the event on form save via generated_media_id.
+
+    POST params:
+        colour: Optional hex colour (e.g. "#FF5733") to use as the accent colour.
+                If not provided, uses the event's first tag colour or a default.
+    """
+    event = get_object_or_404(Event, pk=event_id)
+
+    # Get optional colour from POST
+    colour_hex = request.POST.get("colour", "").strip()
+
+    try:
+        media_item = generate_event_placeholder(event, colour_hex=colour_hex or None)
+        return JsonResponse({
+            "success": True,
+            "media_id": media_item.id,
+            "url": media_item.media_file.url,
+            "filename": os.path.basename(media_item.media_file.name),
+        })
+    except Exception as exc:
+        logger.exception("Failed to generate poster for event %s", event_id)
+        return JsonResponse(
+            {"success": False, "error": str(exc)},
+            status=500
+        )
