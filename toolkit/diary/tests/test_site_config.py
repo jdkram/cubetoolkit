@@ -1,7 +1,7 @@
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from toolkit.diary.models import SiteConfiguration, get_site_config
+from toolkit.diary.models import EventTag, SiteConfiguration, get_site_config
 from toolkit.diary.tests.common import DiaryTestsMixin
 
 
@@ -110,6 +110,11 @@ class FilmsStartOnTimeBannerTests(DiaryTestsMixin, TestCase):
 
         cache.delete(SiteConfiguration._CACHE_KEY)
 
+        # Create a "film" tag and add it to e2 for banner tests
+        self.film_tag = EventTag(name="film", slug="film", read_only=False)
+        self.film_tag.save()
+        self.e2.tags.add(self.film_tag)
+
     def _post_event_with_showing(self):
         # The fixture event self.e2 has at least one showing — use it
         return self.e2
@@ -143,4 +148,21 @@ class FilmsStartOnTimeBannerTests(DiaryTestsMixin, TestCase):
         self.assertEqual(
             response.context["films_start_on_time_banner_text"],
             "Punctuality matters.",
+        )
+
+    def test_banner_hidden_when_no_film_tag(self):
+        # Event without "film" tag should not show banner even when setting is on
+        # Use e4 (has showings) but clear its tags first
+        event_without_film_tag = self.e4
+        event_without_film_tag.tags.clear()
+        config = get_site_config()
+        config.films_start_on_time = True
+        config.films_start_on_time_banner_text = "Films start promptly."
+        config.save()
+
+        url = reverse("single-event-view", kwargs={"event_id": event_without_film_tag.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.context["films_start_on_time"], False
         )
