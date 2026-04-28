@@ -34,6 +34,11 @@
     <li><a href="{% url "toolkit-index" %}">Toolkit</a></li>
     <li><a href="{% url "rota-edit" %}">Rota</a></li>
     {% if perms.toolkit.read %}<li><a href="{% url "default-edit" %}">Diary</a></li>{% endif %}
+    <li><a href="#">Labs</a>
+        <ul class="sub-menu">
+            <li><a href="{% url "labs-floorplan" %}"><span>Building Map</span></a></li>
+        </ul>
+    </li>
     <li>
         <form method="post" action="{% url 'logout' %}">
             {% csrf_token %}

@@ -71,6 +71,12 @@ body {
           <li class="nav-item">
             <a class="nav-link" href="{% url "default-view" %}">Website</a>
           </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="dropdown-labs" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Labs</a>
+            <div class="dropdown-menu" aria-labelledby="dropdown-labs">
+              <a class="dropdown-item" href="{% url "labs-floorplan" %}">Building Map</a>
+            </div>
+          </li>
           {% if perms.toolkit.write %}
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" id="dropdown-meta" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Meta-programming</a>
