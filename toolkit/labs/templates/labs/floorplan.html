@@ -1,0 +1,265 @@
+{% extends "base_admin.html" %}
+{% load static %}
+
+{% block title %}Building Map — Labs{% endblock %}
+
+{% block header-navbar-extra-post %}
+<ul class="navbar-nav ml-auto">
+  <li class="nav-item active">
+    <a class="nav-link" href="{% url 'labs-floorplan' %}">Building Map <span class="sr-only">(current)</span></a>
+  </li>
+</ul>
+{% endblock %}
+
+{% block body %}
+<style>
+#floorplan-container {
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #f8f9fa;
+}
+#floorplan-container svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+#floorplan-container svg [id^="room-"] {
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+#floorplan-container svg [id^="room-"]:hover {
+  opacity: 0.75;
+}
+#floorplan-container svg [id^="room-"].selected {
+  stroke: #0d6efd;
+  stroke-width: 4px;
+}
+#note-panel {
+  display: none;
+  margin-top: 0.4rem;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 1.2rem;
+}
+#note-panel.visible {
+  display: block;
+}
+#note-panel-inner {
+  max-width: 640px;
+}
+#note-panel h3 {
+  font-size: 1rem;
+  margin-top: 0;
+  margin-bottom: 0.6rem;
+}
+#note-body {
+  width: 100%;
+  min-height: 100px;
+  resize: vertical;
+  font-size: 0.92rem;
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 3px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+#note-meta {
+  font-size: 0.78rem;
+  color: #6c757d;
+  margin-top: 0.4rem;
+  min-height: 1.2em;
+}
+#note-status.error {
+  color: #dc3545;
+}
+#floorplan-loading {
+  padding: 2rem;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+</style>
+
+<h1 class="h3 mb-3">Building Map</h1>
+<p class="text-muted" style="font-size:0.9rem;">Click a room to view or add a note. Rooms with notes have an underlined label.</p>
+
+<p class="mb-3">
+  <a href="{% url 'toolkit-index' %}" class="btn btn-sm btn-outline-secondary">&#8592; Back to Toolkit</a>
+</p>
+
+<div id="floorplan-container">
+  <div id="floorplan-loading">Loading floorplan&hellip;</div>
+</div>
+
+<div id="note-panel">
+  <div id="note-panel-inner">
+    <h3 id="note-room-title">Room</h3>
+    <label for="note-body" class="sr-only">Note</label>
+    <textarea id="note-body" placeholder="Add a note about the current state of this room&hellip;"></textarea>
+    <div id="note-meta"></div>
+    <div class="d-flex align-items-center" style="gap:0.5rem;margin-top:0.8rem;">
+      <button id="note-save-btn" class="btn btn-primary btn-sm">Save note</button>
+      <button id="note-clear-btn" class="btn btn-outline-secondary btn-sm">Clear note</button>
+      <span id="note-status" style="font-size:0.82rem;color:#198754;display:none;">Saved</span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var notes = {{ notes_json|safe }};
+  var CSRF_TOKEN = "{{ csrf_token }}";
+  var NOTE_URL_BASE = "{% url 'labs-room-note' 'ROOM_ID' %}".replace("/ROOM_ID/", "/");
+  var selectedRoomId = null;
+
+  function noteUrl(roomId) {
+    return NOTE_URL_BASE + roomId + "/";
+  }
+
+  function formatMeta(note) {
+    if (!note || !note.updated_at) return "";
+    var d = new Date(note.updated_at);
+    var who = note.updated_by ? " by " + note.updated_by : "";
+    return "Last updated " + d.toLocaleString("en-GB", {dateStyle: "medium", timeStyle: "short"}) + who;
+  }
+
+  function getRoomTitle(el) {
+    var titleEl = el.querySelector("title");
+    return titleEl ? titleEl.textContent.trim() : el.id.replace(/^room-/, "").replace(/-/g, " ");
+  }
+
+  function getLabelEl(svgDoc, roomId) {
+    return svgDoc.getElementById(roomId.replace(/^room-/, "label-"));
+  }
+
+  function underlineId(roomId) {
+    return "note-underline-" + roomId;
+  }
+
+  function addStar(svgDoc, roomId) {
+    if (svgDoc.getElementById(underlineId(roomId))) return;
+    var label = getLabelEl(svgDoc, roomId);
+    if (!label) return;
+    var bbox = label.getBBox();
+    var bar = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    bar.setAttribute("id", underlineId(roomId));
+    bar.setAttribute("x", bbox.x);
+    bar.setAttribute("y", bbox.y + bbox.height + 4);
+    bar.setAttribute("width", bbox.width);
+    bar.setAttribute("height", Math.max(3, bbox.height * 0.06));
+    bar.setAttribute("fill", "#000");
+    bar.setAttribute("pointer-events", "none");
+    label.parentNode.insertBefore(bar, label.nextSibling);
+  }
+
+  function removeStar(svgDoc, roomId) {
+    var el = svgDoc.getElementById(underlineId(roomId));
+    if (el) el.parentNode.removeChild(el);
+  }
+
+  function markNotedRooms(svgDoc) {
+    Object.keys(notes).forEach(function (roomId) {
+      if (notes[roomId].body) addStar(svgDoc, roomId);
+    });
+  }
+
+  function selectRoom(roomId, roomEl, svgDoc) {
+    if (selectedRoomId && selectedRoomId !== roomId) {
+      var prev = svgDoc.getElementById(selectedRoomId);
+      if (prev) prev.classList.remove("selected");
+    }
+    selectedRoomId = roomId;
+    roomEl.classList.add("selected");
+
+    var panel = document.getElementById("note-panel");
+    var title = document.getElementById("note-room-title");
+    var body = document.getElementById("note-body");
+    var meta = document.getElementById("note-meta");
+    var status = document.getElementById("note-status");
+
+    title.textContent = getRoomTitle(roomEl);
+    var note = notes[roomId] || {};
+    body.value = note.body || "";
+    meta.textContent = formatMeta(note);
+    status.style.display = "none";
+    status.classList.remove("error");
+    panel.classList.add("visible");
+    panel.scrollIntoView({behavior: "smooth", block: "nearest"});
+    body.focus();
+
+    function saveNote(newBody) {
+      status.style.display = "none";
+      fetch(noteUrl(roomId), {
+        method: "POST",
+        headers: {"Content-Type": "application/json", "X-CSRFToken": CSRF_TOKEN},
+        body: JSON.stringify({body: newBody})
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.error) throw new Error(data.error);
+        notes[roomId] = data;
+        meta.textContent = formatMeta(data);
+        if (newBody) {
+          addStar(svgDoc, roomId);
+        } else {
+          removeStar(svgDoc, roomId);
+        }
+        status.textContent = newBody ? "Saved" : "Cleared";
+        status.classList.remove("error");
+        status.style.display = "inline";
+        setTimeout(function () { status.style.display = "none"; }, 2500);
+      })
+      .catch(function (err) {
+        status.textContent = "Error saving";
+        status.classList.add("error");
+        status.style.display = "inline";
+      });
+    }
+
+    document.getElementById("note-save-btn").onclick = function () {
+      saveNote(body.value.trim());
+    };
+
+    document.getElementById("note-clear-btn").onclick = function () {
+      body.value = "";
+      saveNote("");
+    };
+  }
+
+  fetch("{% static 'labs/floorplan.svg' %}")
+    .then(function (r) { return r.text(); })
+    .then(function (svgText) {
+      var container = document.getElementById("floorplan-container");
+      container.innerHTML = svgText;
+      var svg = container.querySelector("svg");
+      svg.removeAttribute("width");
+      svg.removeAttribute("height");
+      svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+      markNotedRooms(svg);
+
+      svg.querySelectorAll("[id^='room-']").forEach(function (el) {
+        el.setAttribute("tabindex", "0");
+        el.setAttribute("role", "button");
+        el.setAttribute("aria-label", getRoomTitle(el));
+        el.addEventListener("click", function () { selectRoom(el.id, el, svg); });
+        el.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectRoom(el.id, el, svg); }
+        });
+      });
+
+      svg.querySelectorAll("[id^='label-']").forEach(function (labelEl) {
+        var roomId = labelEl.id.replace(/^label-/, "room-");
+        var roomEl = svg.getElementById(roomId);
+        if (!roomEl) return;
+        labelEl.style.cursor = "pointer";
+        labelEl.addEventListener("click", function () { selectRoom(roomId, roomEl, svg); });
+      });
+    })
+    .catch(function (err) {
+      document.getElementById("floorplan-loading").textContent = "Failed to load floorplan.";
+    });
+}());
+</script>
+{% endblock %}

@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-04-28 (9.10.4a "Add to calendar" widget)
+**Last updated:** 2026-04-28 (9.77 Labs — Building Map)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [ROADMAP.md](docs/ROADMAP.md) (wave-by-wave sequencing) · [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -119,7 +119,8 @@
 | 9.42 | Tests: diary edit list view | 🟢 XS | `rooms` no None sentinel; month heading in thead; empty-day blank time cell; see TASKS.md 9.42 |
 | 9.43 | Room management UI | 🔵 S | Create/edit/delete rooms from toolkit UI (not just Django admin); name, colour picker, is_primary; see TASKS.md 9.43 |
 | 9.45 | Password management in volunteer profile | 🔵 S | "Set/change password" + "send reset email" inline in Permissions card; removes Django admin detour; see TASKS.md 9.45 |
-| ~~9.57~~ | ~~Placeholder image generator for new events~~ | ✅ 2026-04-28 | "Generate" button next to file upload creates typographic poster via AJAX. Colour picker lets users choose accent colour (defaults to event tag colour). Preview shown immediately with option to remove. Form save attaches pre-generated MediaItem. Extracted `_make_poster_image` to `diary/poster.py`; AJAX endpoint accepts `colour` param; `generated_media_id` hidden field wires it to form save. |
+| ~~9.57~~ | ~~Placeholder image generator for new events~~ | ✅ 2026-04-28 |
+| ~~9.77~~ | ~~Labs: Building Map~~ | ✅ 2026-04-28 | New `toolkit/labs` Django app. `/labs/floorplan/` renders an interactive SVG floorplan of the Star and Shadow building (33 rooms). Any logged-in user can click a room to open a side panel and add/edit a note. Notes stored in `RoomNote` model (per-room, one per room). Amber highlight on rooms with notes; blue highlight on selected room. `Labs` nav entry in both Bootstrap admin nav and public sidebar nav. `@login_required` on both views. | "Generate" button next to file upload creates typographic poster via AJAX. Colour picker lets users choose accent colour (defaults to event tag colour). Preview shown immediately with option to remove. Form save attaches pre-generated MediaItem. Extracted `_make_poster_image` to `diary/poster.py`; AJAX endpoint accepts `colour` param; `generated_media_id` hidden field wires it to form save. |
 | 9.58 | Rethink recurring event display on programme | 🟡 M | Currently: one card per event, all dates stacked. Options: one card per showing, next-date-only, or a RecurringSeries model. Design question for the collective first; see TASKS.md 9.58 |
 | 9.59 | Programmer-defined crop region for index images | 🟡 M | `focal_x`/`focal_y` on `MediaItem`; JS focal-point picker in upload widget; `indexview` thumbnail uses crop mode centred on focal point; full image preserved for detail view; see TASKS.md 9.59 |
 | ~~9.60~~ | ~~Room name and colour on the rota~~ | ✅ 2026-03-27 | Added room name with coloured left-border accent to event heading row in `view_rota.html`; behind `MULTIROOM_ENABLED`; no model/view changes; will need updating once 9.7 adds multi-room bookings |

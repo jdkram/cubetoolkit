@@ -16,6 +16,7 @@ import toolkit.toolkit_auth.urls
 import toolkit.index.urls
 import toolkit.diary.urls
 import toolkit.mailer.urls
+import toolkit.labs.urls
 
 urlpatterns = [
     re_path(r"^programme/", include(toolkit.diary.urls.programme_urls)),
@@ -25,6 +26,7 @@ urlpatterns = [
     re_path(r"^auth/", include(toolkit.toolkit_auth.urls.urlpatterns)),
     re_path(r"^index/", include(toolkit.index.urls.urlpatterns)),
     re_path(r"^mailout/", include(toolkit.mailer.urls)),
+    re_path(r"^labs/", include(toolkit.labs.urls)),
     re_path(r"^$", toolkit.diary.urls.view_diary, name="default-view"),
     re_path(
         r"^id/(?P<event_id>\d+)/$",
