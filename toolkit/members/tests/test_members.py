@@ -148,8 +148,10 @@ class TestMemberModel(TestCase):
 
     @override_settings(MEMBERSHIP_EXPIRY_ENABLED=True)
     @override_settings(MEMBERSHIP_LENGTH_DAYS=100)
+    @patch("toolkit.members.models.get_site_config")
     @patch("toolkit.members.models.timezone_now")
-    def test_default_expiry_expiry_enabled(self, now_mock):
+    def test_default_expiry_expiry_enabled(self, now_mock, config_mock):
+        config_mock.return_value.membership_length_days = 100
         now_mock.return_value.date.return_value = datetime.date(
             day=1, month=1, year=2000
         )
@@ -237,8 +239,10 @@ class TestAddMemberView(MembersTestsMixin, TestCase):
 
     @override_settings(MEMBERSHIP_EXPIRY_ENABLED=True)
     @override_settings(MEMBERSHIP_LENGTH_DAYS=101)
+    @patch("toolkit.members.models.get_site_config")
     @patch("toolkit.members.models.timezone_now")
-    def test_post_form_expiry_enabled(self, now_mock):
+    def test_post_form_expiry_enabled(self, now_mock, config_mock):
+        config_mock.return_value.membership_length_days = 101
         self._test_post_form_common(now_mock, expiry_enabled=True)
 
     def test_post_minimal_submission(self):

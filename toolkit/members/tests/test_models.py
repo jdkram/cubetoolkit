@@ -66,8 +66,10 @@ class TestTrainingRecord(MembersTestsMixin, TestCase):
         record.save()
 
     @override_settings(DEFAULT_TRAINING_EXPIRY_MONTHS=6)
+    @patch("toolkit.members.models.get_site_config")
     @patch("toolkit.members.models.timezone_now")
-    def test_has_expired_true(self, now_mock):
+    def test_has_expired_true(self, now_mock, config_mock):
+        config_mock.return_value.default_training_expiry_months = 6
 
         now_mock.return_value.date.return_value = datetime.date(
             day=6, month=7, year=2010
