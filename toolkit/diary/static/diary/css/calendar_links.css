@@ -1,39 +1,28 @@
-/* human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Opus 4.7"]; status: "#ai-written" */
-/* Compact "Add to calendar" disclosure: icon trigger + popover menu.
-   Used on view_event.html and edit_rota.html. See TASKS.md 9.10.4a. */
-
-/* `details` defaults to `display: block`, which would push the trigger
-   onto its own line. Raise specificity so we beat user-agent styles even
-   when this stylesheet loads before the others. */
-details.add-to-calendar {
-    position: relative;
-    display: inline-block;
-    margin-left: 0.4em;
-    vertical-align: middle;
-    font-size: 1em;
-    line-height: 1;
-}
+/* human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Sonnet 4.6"]; status: "#ai-written" */
+/* "Add to calendar" button + fixed-position dropdown menu.
+   The button is a direct flex child — no wrapper element — so it aligns
+   naturally in any flex row. The menu is positioned via JS (getBoundingClientRect)
+   as position:fixed, decoupled from the surrounding layout. See TASKS.md 9.10.4a. */
 
 .add-to-calendar__trigger {
-    list-style: none;          /* hide default <summary> marker */
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 1.4em;
-    height: 1.4em;
+    width: 1.6rem;
+    height: 1.6rem;
     border-radius: 3px;
     color: #6c757d;
     background: transparent;
     border: 1px solid transparent;
+    padding: 0;
     line-height: 1;
+    font-size: inherit;
+    flex-shrink: 0;
     transition: background 0.1s, color 0.1s, border-color 0.1s;
 }
-.add-to-calendar__trigger::-webkit-details-marker { display: none; }
-.add-to-calendar__trigger::marker { content: ""; }
-
 .add-to-calendar__trigger:hover,
-.add-to-calendar[open] .add-to-calendar__trigger {
+.add-to-calendar__trigger[aria-expanded="true"] {
     color: #0056b3;
     background: #f0f4f8;
     border-color: #cfd8e0;
@@ -43,19 +32,57 @@ details.add-to-calendar {
     outline-offset: 1px;
 }
 
+/* Date-as-trigger: the time text is inside the button; calendar glyph is a discreet hint. */
+.add-to-calendar__trigger.add-to-calendar--date-trigger {
+    width: auto;
+    height: auto;
+    background: none;
+    border-color: transparent;
+    border-radius: 2px;
+    padding: 0 0.1em;
+    font-size: 0.9rem;
+    font-weight: normal;
+    color: #666;
+    gap: 0.25em;
+}
+.add-to-calendar__trigger.add-to-calendar--date-trigger:hover {
+    background: none;
+    border-color: transparent;
+    color: #333;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+}
+.add-to-calendar__trigger.add-to-calendar--date-trigger[aria-expanded="true"] {
+    background: #f0f4f8;
+    border-color: #cfd8e0;
+    color: #0056b3;
+    text-decoration: none;
+}
+.add-to-calendar__trigger.add-to-calendar--date-trigger .fa-calendar-plus {
+    font-size: 0.7em;
+    color: #bbb;
+    flex-shrink: 0;
+}
+.add-to-calendar__trigger.add-to-calendar--date-trigger:hover .fa-calendar-plus,
+.add-to-calendar__trigger.add-to-calendar--date-trigger[aria-expanded="true"] .fa-calendar-plus {
+    color: currentColor;
+}
+
+/* Dropdown menu — position:fixed, coordinates set by JS on open. */
 .add-to-calendar__menu {
-    position: absolute;
-    z-index: 50;
-    top: calc(100% + 2px);
-    left: 0;
+    display: none;
+    position: fixed;
+    z-index: 500;
     min-width: 10rem;
     background: #fff;
     border: 1px solid #cfd8e0;
     border-radius: 4px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     padding: 0.25em 0;
-    display: flex;
     flex-direction: column;
+}
+.add-to-calendar__menu.is-open {
+    display: flex;
 }
 
 .add-to-calendar__item {
@@ -79,31 +106,4 @@ details.add-to-calendar {
 .add-to-calendar__item .fa-brands {
     width: 1em;
     color: #6c757d;
-}
-
-/* Right-align the menu when the trigger is near the right edge of its
-   container. Triggered by an .add-to-calendar--end modifier. */
-.add-to-calendar--end .add-to-calendar__menu {
-    left: auto;
-    right: 0;
-}
-
-/* Date-as-trigger variant: the time string IS the summary, icon follows inline. */
-.add-to-calendar--date-trigger .add-to-calendar__trigger {
-    width: auto;
-    height: auto;
-    border-radius: 2px;
-    padding: 0 0.15em;
-    gap: 0.3em;
-}
-.add-to-calendar--date-trigger .add-to-calendar__trigger .fa-calendar-plus {
-    font-size: 0.75em;
-    vertical-align: middle;
-    color: #aaa;
-}
-
-/* Let the popup escape a parent with overflow:hidden when it is open.
-   Targets the event-list grid cards on the public programme. */
-.grid-item:has(.add-to-calendar[open]) {
-    overflow: visible;
 }

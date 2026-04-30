@@ -1,10 +1,10 @@
-<details class="add-to-calendar{% if date_label %} add-to-calendar--date-trigger{% endif %}">
-    <summary class="add-to-calendar__trigger"
-             aria-label="Add{% if date_label %} {{ date_label }}{% endif %} to calendar"
-             title="Add to calendar">
-        {% if date_label %}{{ date_label }} {% endif %}<i class="fa-solid fa-calendar-plus" aria-hidden="true"></i>
-    </summary>
-    <div class="add-to-calendar__menu" role="menu">
+<button type="button"
+        class="add-to-calendar__trigger{% if date_label %} add-to-calendar--date-trigger{% endif %}"
+        aria-label="Add{% if date_label %} {{ date_label }}{% endif %} to calendar"
+        aria-expanded="false"
+        aria-haspopup="menu"
+        data-cal-target="cal-{{ showing_id }}"
+        title="Add to calendar">{% if date_label %}{{ date_label }} {% endif %}<i class="fa-solid fa-calendar-plus" aria-hidden="true"></i></button><div class="add-to-calendar__menu" id="cal-{{ showing_id }}" role="menu">
         <a role="menuitem"
            class="add-to-calendar__item"
            href="{{ ics_url }}"
@@ -24,4 +24,3 @@
            <i class="fa-brands fa-microsoft" aria-hidden="true"></i> Outlook.com
         </a>
     </div>
-</details>

@@ -28,4 +28,5 @@ def calendar_links(context, showing, date_trigger=False):
         "google_url": google_calendar_url(showing, request=request),
         "outlook_url": outlook_calendar_url(showing, request=request),
         "date_label": date_label,
+        "showing_id": showing.pk,
     }
