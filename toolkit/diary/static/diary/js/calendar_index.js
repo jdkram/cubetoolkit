@@ -81,7 +81,7 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
     }
 
     function isValidView(viewName) {
-        var valid = ['dayGridMonth', 'timeGridWeek', 'timeGrid3Day'];
+        var valid = ['dayGridMonth', 'timeGridWeek', 'threeDay'];
         if (resources && resources.length > 0) {
             valid.push('resourceTimelineWeek', 'resourceTimelineMonth');
         }
@@ -424,7 +424,7 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
             initialView = 'dayGridMonth';
         }
         if (isMobile && (initialView === 'timeGridWeek' || initialView === 'dayGridMonth')) {
-            initialView = 'timeGrid3Day';
+            initialView = 'threeDay';
         }
 
         var isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
@@ -441,16 +441,16 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
                 ? {
                     left:   'prev,next today,fullwidthToggle',
                     center: 'title',
-                    right:  'dayGridMonth,timeGridWeek,timeGrid3Day,resourceTimelineWeek,resourceTimelineMonth'
+                    right:  'dayGridMonth,timeGridWeek,threeDay,resourceTimelineWeek,resourceTimelineMonth'
                 }
                 : {
                     left:   'prev,next today,fullwidthToggle',
                     center: 'title',
-                    right:  'dayGridMonth,timeGridWeek,timeGrid3Day'
+                    right:  'dayGridMonth,timeGridWeek,threeDay'
                 },
 
             views: {
-                timeGrid3Day: {
+                threeDay: {
                     type:       'timeGrid',
                     duration:   { days: 3 },
                     buttonText: '3 days'
