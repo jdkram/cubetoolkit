@@ -394,6 +394,7 @@ def event_detail_view(request, event_id):
             "add_showing_form": add_showing_form,
             "completeness": completeness,
             "all_showings_in_past": event.all_showings_in_past(),
+            "clone_source_showing": latest_showing,
         },
     )
 
