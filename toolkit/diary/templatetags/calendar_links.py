@@ -18,7 +18,7 @@ def calendar_links(context, showing, date_trigger=False):
     request = context.get("request")
     date_label = None
     if date_trigger:
-        date_label = date_filter(showing.start, "D j H:i")
+        date_label = date_filter(showing.start, "H:i")
         if showing.event.duration:
             date_label += f"–{date_filter(showing.end_time, 'H:i')}"
     return {
