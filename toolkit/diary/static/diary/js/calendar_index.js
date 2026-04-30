@@ -451,10 +451,17 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
 
             views: {
                 threeDay: {
-                    type:       'timeGrid',
-                    duration:   { days: 3 },
-                    buttonText: '3 days'
+                    type:     'timeGrid',
+                    duration: { days: 3 }
                 }
+            },
+
+            buttonText: {
+                threeDay: '3 days'
+            },
+
+            buttonHints: {
+                threeDay: '3-day view'
             },
 
             customButtons: {
