@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-04-30 (9.76.1 + meta row + Bug Y logged)
+**Last updated:** 2026-04-30 (9.76.2 ✅ free from .1; 9.76.5 not doing)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [ROADMAP.md](docs/ROADMAP.md) (wave-by-wave sequencing) · [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -139,7 +139,7 @@
 | 9.70 | Nightly production DB backup | 🟢 XS | Infrastructure task on xtreamlab_jorn: \`.my.cnf\`, backup script, cron at 03:00, 30-day rolling retention. **Needs Marcus conversation before setting up.** See TASKS.md 9.70 |
 | ~~**9.71**~~ | ~~**Event terms and financial field change log**~~ | ✅ 2026-04-22 | See above. |
 | **9.75** | **Starred + shadowed events on the rota** | **🔵 S** | ✅ 2026-04-25 — VolunteerEventMark (one mark per event); single ☆→★→☽ toggle cycling; ☽ collapses showing to title; filterline: starred filter + beginner highlight + vacancies filter. |
-| **9.76** | **Rota date navigation and orientation** | **🔵 S** | ~~9.76.1~~ ✅ 2026-04-30 — Day-group headers added to `edit_rota.html`; `.rota-day-group-header` with `position: sticky` (clears navbar at `top: 3.6rem`); `updateMonthHeaders()` extended to hide day headers when all their showings are filtered out. Remaining: 9.76.2 sticky (free, depends on .1 ✅), 9.76.3 Today/jump (depends on .1 ✅), 9.76.5 spotlight (independent), 9.76.4 nav rail (last). |
+| **9.76** | **Rota date navigation and orientation** | **🔵 S** | ~~9.76.1~~ ✅ 2026-04-30; ~~9.76.2~~ ✅ 2026-04-30 (free — sticky CSS shipped in .1); ~~9.76.3~~ not doing (rota already starts at today; date range picker covers month-jump); ~~9.76.5~~ not doing. Remaining: 9.76.4 nav rail (under evaluation). |
 | **9.74** | **Permission model redesign investigation** | **🟡 M (design first)** | Programmers currently have read/write on volunteer/member PII — likely wrong. Proposed: programmers can only touch programme data; panopticon controls volunteer/member data; volunteers keep self-edit. Design questions listed in TASKS.md 9.74 — needs collective discussion before implementation. |
 | ~~9.73~~ | ~~Outside hire flag prominent on rota~~ | ✅ 2026-04-16 | Amber `Outside hire` badge in showing header on `edit_rota.html` (`.outside-hire-badge` CSS class) and `view_rota.html` (inline style in `event_head` row). No model change. |
 | ~~9.50~~ | ~~Volunteer self-service profile edit from nav~~ | ✅ 2026-03-02 | Own name in top nav links to `edit-volunteer/<pk>`; guarded by `user.volunteer.pk`; `seed_dev_data` now creates Member+Volunteer for all demo accounts so link appears in dev |

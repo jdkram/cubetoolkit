@@ -150,10 +150,6 @@
         flex-wrap: wrap;
         min-width: 0;
     }
-    .showing-meta > * {
-        align-self: center;
-    }
-
     /* Tail group: room badge + outside-hire + ↗ stay together on wrap */
     .showing-meta-tail {
         display: inline-flex;
@@ -193,14 +189,6 @@
         color: #777;
     }
 
-    .showing-meta details.add-to-calendar {
-        margin-left: 0;
-    }
-    .showing-meta .add-to-calendar--date-trigger .add-to-calendar__trigger {
-        font-size: 0.9rem;
-        color: #666;
-        font-weight: normal;
-    }
 
     .showing-room-badge {
         font-size: 0.8rem;
@@ -388,7 +376,7 @@
         .showing-header-row {
             flex-direction: row;
             flex-wrap: wrap;
-            align-items: baseline;
+            align-items: center;
             gap: 0.5em;
         }
         .showing-meta,
@@ -420,6 +408,55 @@
         .filter-section-divider,
         .highlight-section-label { display: none; }
     }
+
+    /* ── Month navigation rail ───────────────────────────────────────── */
+    #rota-nav-rail {
+        position: fixed;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 3.2em;
+        z-index: 50;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        pointer-events: none;
+    }
+    #rota-nav-rail .rail-inner {
+        position: relative;
+        background: rgba(248, 249, 250, 0.92);
+        border: 1px solid #dee2e6;
+        border-right: none;
+        border-radius: 4px 0 0 4px;
+        padding: 0.4em 0;
+        pointer-events: auto;
+    }
+    .rail-month {
+        display: block;
+        text-align: center;
+        font-size: 0.68em;
+        color: #6c757d;
+        padding: 0.18em 0.3em;
+        cursor: pointer;
+        white-space: nowrap;
+        line-height: 1.2;
+        transition: color 0.1s, background 0.1s;
+        border-radius: 2px;
+        margin: 0 0.2em;
+    }
+    .rail-month:hover { color: #212529; background: #e9ecef; }
+    .rail-month.rail-active { color: #212529; font-weight: 600; }
+    .rail-cursor {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #6c757d;
+        border-radius: 1px;
+        pointer-events: none;
+        transition: top 0.1s linear;
+    }
+    @media (max-width: 768px) { #rota-nav-rail { display: none; } }
 
     /* ── Existing rota styles ────────────────────────────────────────── */
     .na {
@@ -787,6 +824,61 @@ edit_rota(
     });
     {% endif %}
 
+    // ── Month navigation rail ──────────────────────────────────────────────
+    function buildNavRail() {
+        var headers = $("h2.rota-month-header");
+        if (headers.length < 2) {
+            // Rail adds no value with only one month
+            $("#rota-nav-rail").hide();
+            return;
+        }
+
+        var inner   = $("#rota-nav-rail .rail-inner");
+        var cursor  = $(".rail-cursor");
+
+        // Build a label per month header
+        headers.each(function() {
+            var h      = $(this);
+            var parts  = h.text().trim().split(" ");   // ["April", "2026"]
+            var label  = parts[0].slice(0, 3) + " '" + (parts[1] || "").slice(2); // "Apr '26"
+            $('<span class="rail-month">').text(label)
+                .on("click", function() {
+                    h[0].scrollIntoView({ behavior: "smooth", block: "start" });
+                })
+                .appendTo(inner);
+        });
+
+        cursor.appendTo(inner); // keep cursor as last child in DOM
+
+        function updateRail() {
+            var scrollY     = window.scrollY;
+            var docH        = document.body.scrollHeight;
+            var winH        = window.innerHeight;
+            var scrollFrac  = docH > winH ? scrollY / (docH - winH) : 0;
+            var railH       = inner.height();
+
+            // Move scroll cursor
+            cursor.css("top", Math.round(scrollFrac * railH) + "px");
+
+            // Highlight whichever month header is nearest the top of the viewport
+            var navH    = document.querySelector(".navbar.fixed-top").offsetHeight;
+            var current = null;
+            headers.each(function() {
+                if (this.getBoundingClientRect().top <= navH + 20) {
+                    current = this;
+                }
+            });
+            inner.find(".rail-month").removeClass("rail-active");
+            if (current) {
+                var idx = headers.index(current);
+                inner.find(".rail-month").eq(idx).addClass("rail-active");
+            }
+        }
+
+        window.addEventListener("scroll", updateRail, { passive: true });
+        updateRail();
+    }
+
     function updateDayHeaderOffset() {
         var navbarHeight = document.querySelector('.navbar.fixed-top').offsetHeight;
         document.querySelectorAll('.rota-day-group-header').forEach(function(el) {
@@ -799,6 +891,7 @@ edit_rota(
     $(document).ready(function() {
         updateDayHeaderOffset();
         setupFilterToggle();
+        buildNavRail();
         buildRoleDropdown();
         buildTagFilterBar();
         injectRoleBadges();
@@ -901,6 +994,9 @@ edit_rota(
             </div>
         </div>
     </div>
+
+    <!-- ── Month navigation rail ─────────────────────────────────────── -->
+    <div id="rota-nav-rail" aria-hidden="true"><div class="rail-inner"><div class="rail-cursor"></div></div></div>
 
     <!-- ── Rota content ────────────────────────────────────────────────── -->
     {% with placeholder_text="<span class='na'>Click to edit</span>" %}

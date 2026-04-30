@@ -31,7 +31,7 @@ Independent, low-risk, parallelisable. Picks up momentum and shrinks the
 queue.
 
 - ~~**Bug W**~~ mobile burger menu ✅ 2026-04-28
-- **9.76** rota date nav & orientation 🔵 — 9.76.1 done ✅ 2026-04-30; 9.76.2/3/5 next
+- **9.76** rota date nav & orientation 🔵 — 9.76.1/2 done ✅ 2026-04-30; .3/.5 dropped; 9.76.4 nav rail under evaluation
 - **9.70** nightly DB backup 🟢 — needs Marcus conversation first
 - **D.1 / D.4** infra hardening (WhiteNoise cache-busting; Docker resource limits)
 - XS sweep-ups: 9.10.6, 9.12, 9.40, 9.42, 9.34
