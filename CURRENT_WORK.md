@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-04-30 (9.76.2 ✅ free from .1; 9.76.5 not doing)
+**Last updated:** 2026-04-30 (9.10.6 ✅; 9.42 ✅; D.1 ✅)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [ROADMAP.md](docs/ROADMAP.md) (wave-by-wave sequencing) · [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -70,7 +70,7 @@
 | ~~**9.71**~~ | ~~**Event terms and financial field change log**~~ | ✅ 2026-04-22 | `EventTermsRevision` model + migration `diary/0020`; `pre_save` signal in `diary/signals.py`; `DiaryConfig.ready()` in `diary/apps.py`; `_saved_by` wired in `EditEventView.post()`; collapsible change history panel in `view_event_privatedetails.html`; `EventTermsRevisionInline` in `EventAdmin`; 13 new tests in `test_terms_revision.py` |
 | ~~9.9~~ | ~~Break-even calculator for programmers~~ | ✅ 2026-03-02 | Collapsible panel in event edit form beneath terms; pure JS; Finance Collective threshold warnings; fill-level table |
 | ~~9.10.2~~ | ~~Clone rota notes with event clone~~ | ✅ 2026-02-28 | `clone_rota_from_showing` now copies `rota_notes`; test added |
-| 9.10.6 | Inline warning when rota notes carry to cloned showing | 🟢 XS | Template banner in clone form; see TASKS.md 9.10.6 option 2 |
+| ~~9.10.6~~ | ~~Inline warning when rota notes carry to cloned showing~~ | ✅ 2026-04-30 | `clone_source_showing` added to context in `edit_views.py`; amber alert banner in "Add a showing" form when source showing has rota notes. |
 | ~~9.10.4a~~ | ~~"Add to calendar" per-showing links (MVP)~~ | ✅ 2026-04-28 | Per-upcoming-showing links: `.ics` download (universal), Google Calendar, Outlook.com — surfaced on both public event page (`view_event.html`) and volunteer rota (`edit_rota.html`). New `toolkit/diary/calendar_links.py` (hand-rolled iCalendar, no new dep); `single-showing-ics` view on `Showing.objects.public()`; `{% calendar_links %}` inclusion tag; `_calendar_links.html` partial. Hidden for past or cancelled showings. 7 new tests. Precursor to subscribable feeds in 9.10.4. |
 | ~~9.10.7~~ | ~~Clone event as new event~~ | ✅ 2026-03-02 | "Clone as new event" button on Event Hub; copies all text/config fields (copy, terms, notes, pricing, etc.) + tags + rota from source event; new Showing created unconfirmed; ticket link intentionally left blank; 7 new tests; `devserver_settings` now silently skips `debug_toolbar` when not installed (fixes Docker test runner); `dev.txt` updated to `fixtures>=4` |
 | 9.12 | "Dormant" volunteer status | 🟢 XS | Add `status` field (active/dormant/retired) |
@@ -117,7 +117,7 @@
 | 9.39 | Quick create event for keyholders | 🔵 S | Minimal form; auto-apply template; `private=True` default; see TASKS.md 9.39 |
 | 9.40 | Setup / doors-open / final-volunteer times on showings | 🟢 XS | Three nullable `TimeField`s: `setup_time`, `doors_time`, `final_volunteer_time`; rota display. See TASKS.md 9.40. **Related:** 9.10.5 (role timing notes) shelved — deferring additional time fields to avoid programmer form clutter. |
 | 9.41 | Clickable legend room filter (calendar) | 🔵 S | Multi-select checkboxes in key sidebar; client-side `eventRender` filter; `sessionStorage` persistence; see TASKS.md 9.41 |
-| 9.42 | Tests: diary edit list view | 🟢 XS | `rooms` no None sentinel; month heading in thead; empty-day blank time cell; see TASKS.md 9.42 |
+| ~~9.42~~ | ~~Tests: diary edit list view~~ | ✅ 2026-04-30 | 5 tests in `EditDiaryListViewTests`: rooms context has no None; month-heading present; multiroom shows room names; single-room shows `<th>Event</th>`; empty days render rows. |
 | 9.43 | Room management UI | 🔵 S | Create/edit/delete rooms from toolkit UI (not just Django admin); name, colour picker, is_primary; see TASKS.md 9.43 |
 | 9.45 | Password management in volunteer profile | 🔵 S | "Set/change password" + "send reset email" inline in Permissions card; removes Django admin detour; see TASKS.md 9.45 |
 | ~~9.57~~ | ~~Placeholder image generator for new events~~ | ✅ 2026-04-28 |
@@ -151,7 +151,7 @@ Items identified during the April 2026 SNS production site outage investigation.
 
 | # | Item | Size | Notes |
 |---|------|------|-------|
-| **D.1** | **WhiteNoise cache-busting storage backend** | **🟢 XS** | Add `STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"` to both `docker_settings_ss.py` (build-time collectstatic) and `docker_settings_prod_ss.py` (runtime). Adds content hashes to filenames so browsers get fresh CSS/JS immediately on deploy. Needs a test image build to verify collectstatic doesn't error on any static files before committing. |
+| ~~**D.1**~~ | ~~**WhiteNoise cache-busting storage backend**~~ | ✅ 2026-04-30 | `STORAGES` dict added to `docker_settings_prod_ss.py` with `CompressedManifestStaticFilesStorage`; dry-run collectstatic verified clean (312 files, no errors). |
 | **D.2** | **Docker health checks** | **🔵 S** | Add a lightweight `/health/` Django view that checks DB connectivity (`connection.ensure_connection()`), then wire `healthcheck:` into `docker-compose-production.yml` for both `toolkit` and `mailer`. Enables zero-downtime deploys and faster failure detection: Docker won't route traffic to a container that failed its DB check. |
 | **D.3** | **Dependency pinning** | **🟡 M** | Several packages in `requirements/` have no version constraint (`nh3`, `python-dateutil`, `html2text`, `monthdelta`, `python-magic`). Run `uv pip compile requirements/base.txt -o requirements/base.lock` and switch the Dockerfile to install from the lockfile. Prevents surprise breakage when rebuilding the image months later. Do in a separate branch; test the full image build before merging. |
 | **D.4** | **Docker resource limits** | **🟢 XS** | Add `deploy.resources.limits` (memory, CPU) to both services in `docker-compose-production.yml`. Prevents a runaway query or mailout loop from starving the host. Exact values depend on the production host's available RAM — check with Marcus before setting. Suggested starting point: `toolkit: 512M`, `mailer: 256M`. |

@@ -32,6 +32,16 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 # strips SCRIPT_NAME, so it correctly serves requests at /static/*.
 STATIC_URL = "/static/"
 
+# Content-hashed filenames so browsers pick up fresh CSS/JS immediately on deploy.
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
 # Insert whitenoise after SecurityMiddleware so it serves static files.
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

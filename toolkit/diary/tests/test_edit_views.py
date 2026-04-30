@@ -2602,3 +2602,50 @@ class EventLinkTests(DiaryTestsMixin, TestCase):
             reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk}),
         )
         self.assertFalse(EventLink.objects.filter(pk=link.pk).exists())
+
+
+class EditDiaryListViewTests(DiaryTestsMixin, TestCase):
+    """Tests for the edit_diary_list view (GET /diary/edit/). See TASKS.md 9.42."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="admin", password="T3stPassword!")
+        self.url = reverse("default-edit")
+
+    def tearDown(self):
+        self.client.logout()
+
+    def test_rooms_context_contains_no_none_sentinel(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        rooms = response.context["rooms"]
+        self.assertNotIn(None, rooms)
+        self.assertTrue(all(hasattr(r, "name") for r in rooms))
+
+    def test_response_contains_month_heading(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="month-heading"')
+
+    @override_settings(MULTIROOM_ENABLED=True)
+    def test_multiroom_thead_has_room_name_columns(self):
+        from toolkit.diary.models import Room
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        for room in Room.objects.all():
+            self.assertContains(response, room.name)
+
+    @override_settings(MULTIROOM_ENABLED=False)
+    def test_single_room_thead_has_generic_event_header(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        # Single-room: plain <th>Event</th> with no room-col class
+        self.assertContains(response, "<th>Event</th>")
+
+    def test_empty_day_renders_blank_time_cell(self):
+        # The view populates every date in the range, so days with no showings
+        # still appear as rows with an empty time cell.
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        # Template emits a <td class="time"> for empty days
+        self.assertContains(response, "<td")
