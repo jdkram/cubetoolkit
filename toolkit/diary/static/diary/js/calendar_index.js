@@ -81,7 +81,7 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
     }
 
     function isValidView(viewName) {
-        var valid = ['dayGridMonth', 'timeGridWeek'];
+        var valid = ['dayGridMonth', 'timeGridWeek', 'timeGrid3Day'];
         if (resources && resources.length > 0) {
             valid.push('resourceTimelineWeek', 'resourceTimelineMonth');
         }
@@ -420,11 +420,11 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
         var isMobile = window.innerWidth <= 768;
 
         var initialView = getStoredView();
-        if (!hasResources && initialView !== 'dayGridMonth') {
+        if (!hasResources && (initialView === 'resourceTimelineWeek' || initialView === 'resourceTimelineMonth')) {
             initialView = 'dayGridMonth';
         }
-        if (isMobile && initialView !== 'dayGridMonth') {
-            initialView = 'dayGridMonth';
+        if (isMobile && (initialView === 'timeGridWeek' || initialView === 'dayGridMonth')) {
+            initialView = 'timeGrid3Day';
         }
 
         var isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
@@ -441,13 +441,21 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
                 ? {
                     left:   'prev,next today,fullwidthToggle',
                     center: 'title',
-                    right:  'dayGridMonth,timeGridWeek,resourceTimelineWeek,resourceTimelineMonth'
+                    right:  'dayGridMonth,timeGridWeek,timeGrid3Day,resourceTimelineWeek,resourceTimelineMonth'
                 }
                 : {
                     left:   'prev,next today,fullwidthToggle',
                     center: 'title',
-                    right:  'dayGridMonth,timeGridWeek'
+                    right:  'dayGridMonth,timeGridWeek,timeGrid3Day'
                 },
+
+            views: {
+                timeGrid3Day: {
+                    type:       'timeGrid',
+                    duration:   { days: 3 },
+                    buttonText: '3 days'
+                }
+            },
 
             customButtons: {
                 fullwidthToggle: {
