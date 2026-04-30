@@ -60,7 +60,10 @@ def _summary(showing):
 
 
 def _description(showing, public_url=None):
-    bits = []
+    bits = [
+        "⚠ This entry uses the event's public start time, not your shift time. "
+        "Please check the rota notes and update this calendar entry to match your actual shift."
+    ]
     summary = (showing.event.copy_summary or "").strip()
     if summary:
         bits.append(summary)
