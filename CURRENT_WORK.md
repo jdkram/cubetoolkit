@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-04-28 (Bug W — mobile burger menu fix)
+**Last updated:** 2026-04-30 (9.76.1 + meta row + Bug Y logged)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [ROADMAP.md](docs/ROADMAP.md) (wave-by-wave sequencing) · [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -96,6 +96,7 @@
 | ~~9.28~~ | ~~Volunteer role tier labelling + GDPR danger indicators~~ | ✅ 2026-03-02 | "Panopticon access" label; Programmer BooleanField; red `danger-zone` card with ⓘ GDPR tooltips on Programmer + Panopticon fields |
 | ~~**Bug K**~~ | ~~Rota `&amp;` display glitch + security audit of loaddata decode~~ | ✅ 2026-03-02 | Fixed in `edit_rota.js`: use jeditable's `data` option (value-transform callback), not `loaddata` (which is POST params for `loadurl` AJAX — never fired here). Regex decode of Django's 6 escape sequences. Server returns unescaped plain text — do NOT call `escape()` there, browser re-encodes on innerHTML read. See TASKS.md Bug K for full jeditable encoding archaeology. |
 | **Bug L** | Wheelchair strikethrough too subtle | 🟢 XS | Strikethrough approach kept as-is (♿ + red CSS line-through); further change needs collective sign-off on whether role badges should exist at all — see TASKS.md Bug L |
+| **Bug Y** | Rota meta row: time string and calendar icon misaligned on mobile | 🟢 XS | The time "HH:MM–HH:MM" and the calendar-plus icon sit at slightly different vertical positions on narrow viewports. Root cause suspected: `<details>/<summary>` element baseline interacting oddly with mixed flex-child types (button, inline-flex span) under `align-items: center`. Attempted fixes: `align-items: baseline`, `align-self: center` on children — marginal improvement but not resolved. Deferred. |
 | ~~9.16~~ | ~~Alt text fields for event images~~ | ✅ 2026-03-02 | `MediaItem.alt_text` field + migration `diary/0012`; `MediaItemForm` gains field with optional guidance URL; `MediaItemAdmin`; `ALT_TEXT_GUIDANCE_URL` setting + context; all 7 image `<img>` tags updated to use `alt_text` with fallback; Hub shows Alt text row above Image credit; seed data sets `alt_text` to "Poster for {event.name}" |
 | ~~9.18.1~~ | ~~Supercharge EventTemplate~~ | ✅ 2026-03-02 | `EventTemplate` gains `copy`, `copy_summary`, `terms`, `film_information`, `private`, `outside_hire`, `rota_notes`. `EventTemplateRole` through model adds per-role `count` field — e.g. "5 × Cleaner". Applied to new events in `Event.__init__` and `reset_rota_to_default()`. Template edit UI replaced: list page + per-template detail/edit page with inline role formset + JS "add row". Migrations `diary/0013` + `0014`. Seed data updated. |
 | 9.47 | Rota role display order | 🔵 S | Design decision needed (global vs per-template); see TASKS.md 9.47 |
@@ -138,7 +139,7 @@
 | 9.70 | Nightly production DB backup | 🟢 XS | Infrastructure task on xtreamlab_jorn: \`.my.cnf\`, backup script, cron at 03:00, 30-day rolling retention. **Needs Marcus conversation before setting up.** See TASKS.md 9.70 |
 | ~~**9.71**~~ | ~~**Event terms and financial field change log**~~ | ✅ 2026-04-22 | See above. |
 | **9.75** | **Starred + shadowed events on the rota** | **🔵 S** | ✅ 2026-04-25 — VolunteerEventMark (one mark per event); single ☆→★→☽ toggle cycling; ☽ collapses showing to title; filterline: starred filter + beginner highlight + vacancies filter. |
-| **9.76** | **Rota date navigation and orientation** | **🔵 S** | Day-group separators (9.76.1), sticky day headers (9.76.2), Today/jump controls (9.76.3), nav rail (9.76.4), spotlight filter mode (9.76.5). See TASKS.md 9.76 |
+| **9.76** | **Rota date navigation and orientation** | **🔵 S** | ~~9.76.1~~ ✅ 2026-04-30 — Day-group headers added to `edit_rota.html`; `.rota-day-group-header` with `position: sticky` (clears navbar at `top: 3.6rem`); `updateMonthHeaders()` extended to hide day headers when all their showings are filtered out. Remaining: 9.76.2 sticky (free, depends on .1 ✅), 9.76.3 Today/jump (depends on .1 ✅), 9.76.5 spotlight (independent), 9.76.4 nav rail (last). |
 | **9.74** | **Permission model redesign investigation** | **🟡 M (design first)** | Programmers currently have read/write on volunteer/member PII — likely wrong. Proposed: programmers can only touch programme data; panopticon controls volunteer/member data; volunteers keep self-edit. Design questions listed in TASKS.md 9.74 — needs collective discussion before implementation. |
 | ~~9.73~~ | ~~Outside hire flag prominent on rota~~ | ✅ 2026-04-16 | Amber `Outside hire` badge in showing header on `edit_rota.html` (`.outside-hire-badge` CSS class) and `view_rota.html` (inline style in `event_head` row). No model change. |
 | ~~9.50~~ | ~~Volunteer self-service profile edit from nav~~ | ✅ 2026-03-02 | Own name in top nav links to `edit-volunteer/<pk>`; guarded by `user.volunteer.pk`; `seed_dev_data` now creates Member+Volunteer for all demo accounts so link appears in dev |

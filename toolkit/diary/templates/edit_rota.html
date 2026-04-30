@@ -150,6 +150,17 @@
         flex-wrap: wrap;
         min-width: 0;
     }
+    .showing-meta > * {
+        align-self: center;
+    }
+
+    /* Tail group: room badge + outside-hire + ↗ stay together on wrap */
+    .showing-meta-tail {
+        display: inline-flex;
+        align-items: center;
+        flex-wrap: nowrap;
+        gap: 0.4em;
+    }
 
     /* Title row: event name + optional tags */
     .showing-title-line {
@@ -182,6 +193,9 @@
         color: #777;
     }
 
+    .showing-meta details.add-to-calendar {
+        margin-left: 0;
+    }
     .showing-meta .add-to-calendar--date-trigger .add-to-calendar__trigger {
         font-size: 0.9rem;
         color: #666;
@@ -191,9 +205,18 @@
     .showing-room-badge {
         font-size: 0.8rem;
         color: #444;
-        padding: 0.05em 0.45em 0.05em 0.5em;
-        border-left: 3px solid #ccc;
         white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25em;
+    }
+    .showing-room-badge .room-colour-dot {
+        display: inline-block;
+        width: 0.5em;
+        height: 0.5em;
+        border-radius: 50%;
+        flex-shrink: 0;
+        align-self: center;
     }
 
     /* Tags sit inline to the right of the event name, visually quiet */
@@ -277,6 +300,35 @@
         border-radius: 3px;
     }
 
+    /* ── Day-group separator (9.76.1) ───────────────────────────────── */
+    .rota-day-group-header {
+        font-size: 1rem;
+        font-weight: 700;
+        font-variant: small-caps;
+        color: #212529;
+        border-top: 2px solid #212529;
+        padding: 0.6em 0 0.25em;
+        margin-top: 1.2em;
+        position: sticky;
+        top: 3.6rem; /* overridden at runtime by updateDayHeaderOffset() */
+        background: white;
+        z-index: 10;
+    }
+    .rota-day-anchor {
+        color: inherit;
+        text-decoration: none;
+    }
+    .rota-day-anchor::after {
+        content: ' #';
+        opacity: 0;
+        font-variant: normal;
+        font-size: 0.8em;
+        transition: opacity 0.15s;
+    }
+    .rota-day-group-header:hover .rota-day-anchor::after {
+        opacity: 0.4;
+    }
+
     /* ── Event mark toggle (☆ → ★ → ☽ → ☆) ─────────────────────────── */
     .rota-showing {
         position: relative;
@@ -340,6 +392,7 @@
             gap: 0.5em;
         }
         .showing-meta,
+        .showing-meta-tail,
         .showing-title-line {
             display: contents;
         }
@@ -603,6 +656,10 @@ edit_rota(
             var showingsInMonth = $(this).nextUntil("h2.rota-month-header", ".rota-showing");
             $(this).toggle(showingsInMonth.filter(":visible").length > 0);
         });
+        $(".rota-day-group-header").each(function() {
+            var showingsInDay = $(this).nextUntil(".rota-day-group-header, h2.rota-month-header", ".rota-showing");
+            $(this).toggle(showingsInDay.filter(":visible").length > 0);
+        });
     }
 
     // ── Highlight empty slots ──────────────────────────────────────────────
@@ -730,7 +787,17 @@ edit_rota(
     });
     {% endif %}
 
+    function updateDayHeaderOffset() {
+        var navbarHeight = document.querySelector('.navbar.fixed-top').offsetHeight;
+        document.querySelectorAll('.rota-day-group-header').forEach(function(el) {
+            el.style.top = navbarHeight + 'px';
+            el.style.scrollMarginTop = navbarHeight + 'px';
+        });
+    }
+    window.addEventListener('resize', updateDayHeaderOffset);
+
     $(document).ready(function() {
+        updateDayHeaderOffset();
         setupFilterToggle();
         buildRoleDropdown();
         buildTagFilterBar();
@@ -841,6 +908,9 @@ edit_rota(
         {% ifchanged showing.start|date:"F Y" %}
         <h2 class="rota-month-header">{{ showing.start|date:"F Y" }}</h2>
         {% endifchanged %}
+        {% ifchanged showing.start|date:"j M Y" %}
+        <div class="rota-day-group-header" id="day-{{ showing.start|date:'Y-m-d' }}" data-date="{{ showing.start|date:'Y-m-d' }}"><a class="rota-day-anchor" href="#day-{{ showing.start|date:'Y-m-d' }}">{{ showing.start|date:"l j F" }}</a></div>
+        {% endifchanged %}
 
         {# Build comma-separated tag slugs for JS filtering #}
         {% with tag_slugs=showing.event.tags.all %}
@@ -854,12 +924,14 @@ edit_rota(
                     {# Meta row: toggle (inline on mobile, gutter on desktop), date, room, public link #}
                     <span class="showing-meta">
                         {% if can_mark_events %}<button class="rota-mark-toggle" data-event-id="{{ showing.event.pk }}" data-mark="" title="Click to bookmark this event" aria-label="Cycle event mark">☆</button>{% endif %}
-                        {% if not showing.in_past and not showing.cancelled %}{% calendar_links showing date_trigger=True %}{% else %}<span class="showing-date">{{ showing.start|date:"D j H:i" }}{% if showing.event.duration %}–{{ showing.end_time|date:"H:i" }}{% endif %}</span>{% endif %}
-                        {% if MULTIROOM_ENABLED and showing.room %}<span class="showing-room-badge" style="border-left-color: {{ showing.room.colour }};">{{ showing.room.name }}</span>{% endif %}
+                        {% if not showing.in_past and not showing.cancelled %}{% calendar_links showing date_trigger=True %}{% else %}<span class="showing-date">{{ showing.start|date:"H:i" }}{% if showing.event.duration %}–{{ showing.end_time|date:"H:i" }}{% endif %}</span>{% endif %}
+                        <span class="showing-meta-tail">
+                        {% if MULTIROOM_ENABLED and showing.room %}<span class="showing-room-badge"><span class="room-colour-dot" style="background-color: {{ showing.room.colour }};"></span>{{ showing.room.name }}</span>{% endif %}
                         {% if showing.event.outside_hire %}<span class="outside-hire-badge">Outside hire</span>{% endif %}
                         <a class="showing-public-link"
                            href="{% noprefix_url 'single-showing-view' showing.pk %}"
                            title="Public programme view">↗</a>
+                        </span>
                     </span>
                     {# Title row: event name (links to edit or public view) + optional tags #}
                     <span class="showing-title-line">
