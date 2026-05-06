@@ -4017,3 +4017,176 @@ Empty state: "Nothing starred/shadowed in this date range. Click ☆ or ☽ on a
 5. 9.76.4 (navigation rail) — highest effort; only needed if 1–4 are insufficient
 
 **Related:** 9.32 (rota past-date navigation), 9.75 (starred events), 9.37/9.41 (calendar filtering for comparison)
+
+---
+
+### 9.78 — Donation specifier: what we do and don't need 🔵 S (6–12h)
+
+**Context:** S+S is vulnerable to well-meaning donations of items it doesn't need. Without a clear, up-to-date signal of what's actually wanted, the default is either constant vigilance from a handful of volunteers or a slow accumulation of unwanted stuff that has to be disposed of. A structured, public-facing page that gives donors an at-a-glance status per item category would reduce friction on both sides: volunteers don't have to field every enquiry, and donors know before they load up the car.
+
+**Goals:**
+- Public page at a stable URL (linkable from social media, the website, physical signage)
+- Each item has a clear status: not needed / check first / actively wanted
+- Status drives visual design (traffic-light colour coding) — not just a text label
+- Notes field per item for nuance (e.g. "We have 3, could use 5 more if in good condition")
+- Manageable by toolkit write-permission users without touching code or Wagtail
+
+**Data model:** New `DonationItem` model in a new `toolkit.operations` app (or added to `toolkit.index`):
+
+| Field | Type | Notes |
+|---|---|---|
+| `name` | CharField(128) | e.g. "Bar stools", "Coffee machine" |
+| `category` | CharField(64, blank) | Optional grouping: Furniture, Electronics, Kitchen, etc. |
+| `status` | CharField choices | `not_needed` / `check_first` / `wanted` |
+| `notes` | TextField(blank) | Nuance, quantity, condition requirements |
+| `contact` | CharField(128, blank) | Override contact for this item; falls back to a site-wide setting |
+| `display_order` | IntegerField(default=0) | Manual sort within category |
+| `active` | BooleanField(default=True) | Hide seasonal or paused items without deleting |
+
+**Views:**
+- **Public `/donate/` or `/donations/`** — No login required. Groups items by category if set. Each item rendered as a card with a coloured status badge (🟢 Wanted / 🟡 Check first / 🔴 Not needed). Contact route shown for `check_first` items. Page-level intro text pulled from a site setting or hardcoded. Mobile-first card grid.
+- **Toolkit admin CRUD** — Standard Django admin or a lightweight toolkit-style list + edit form. Write-permission users can add/edit/reorder items and toggle active.
+
+**Design notes:**
+- Status badge should be visually dominant — the whole point is at-a-glance readability.
+- Notes should be optional and collapsible/small on mobile to keep the overview clean.
+- A page-level "last reviewed" date (editable from admin) gives donors confidence the page is current.
+- Consider a short default intro: "Before donating, please check what we actually need."
+
+**Sizing:**
+
+| Component | Est. |
+|---|---|
+| `DonationItem` model + migration | 1h |
+| Django admin registration | 30m |
+| Public view + template (card grid, colour coding) | 3–4h |
+| URL + site nav link | 30m |
+| Tests | 1–2h |
+| **Total** | **~6–8h** |
+
+**Minimum viable increment:** model + admin + barebones list view (~3h). Design polish is a follow-up.
+
+---
+
+### 9.79 — Tool library: community lending catalogue 🔵 S (8–16h)
+
+**Context:** S+S has tools used collectively at the venue (not for lending) and tools that individual volunteers would be happy to share with other volunteers for personal projects. At the moment there is no way to know what's available, who to ask, or whether a tool is currently out on loan. A simple catalogue with availability status would reduce the "do you know if anyone has a..." messages and make the collective's shared resources actually discoverable.
+
+**Scope:** MVP is a catalogue with a contact-to-borrow model — no checkout tracking system. Phase 2 can add a `ToolLoan` model if the catalogue proves useful enough to justify it.
+
+**Data model:** `LibraryTool` model:
+
+| Field | Type | Notes |
+|---|---|---|
+| `name` | CharField(128) | e.g. "DeWalt cordless drill", "Stand mixer" |
+| `description` | TextField(blank) | What it is, what jobs it's useful for |
+| `category` | CharField choices | Power tools / Hand tools / Kitchen / AV & tech / Garden / Other |
+| `condition` | CharField choices | New / Good / Fair / Needs attention |
+| `owner_type` | CharField choices | `collective` (S+S property) / `volunteer` (personal loan) |
+| `owner_volunteer` | FK(Volunteer, null, SET_NULL) | Populated when owner_type=volunteer |
+| `location_notes` | CharField(256, blank) | e.g. "Ask at the bar", "Green cupboard near stage" |
+| `status` | CharField choices | `available` / `on_loan` / `unavailable` |
+| `notes` | TextField(blank) | Quirks, usage notes — e.g. "Battery needs overnight charge" |
+| `image` | ImageField(null) | Optional photo |
+| `active` | BooleanField(default=True) | Soft-delete |
+
+**Views:**
+- **Toolkit tool list** (login required) — Filterable by category and status. Each tool shows name, category, condition, status badge, location notes, and how to borrow (contact the owner volunteer if volunteer-owned, otherwise a shared enquiries route).
+- **Toolkit tool detail** — Full description, notes, image if present.
+- **CRUD** — Write-permission users can add, edit, retire tools. Volunteer-owned tools: the owner volunteer gets a link from their profile to their lending tools.
+
+**Phase 2 — `ToolLoan` model:**
+- `tool` FK, `borrowed_by` FK(Volunteer), `borrowed_on`, `due_back`, `returned_on`(null), `notes`
+- Overdue highlighting on the list view
+- Email reminder to borrower when approaching due date
+
+**Design notes:**
+- Volunteer-owned tools should not show the owner's personal contact details publicly — route enquiries through the toolkit messaging or a shared inbox.
+- The `owner_volunteer` field should only be visible to logged-in users (not on any public-facing view).
+- Condition and status should be self-service updatable by write-perm users, not just admins.
+
+**Sizing (MVP catalogue only):**
+
+| Component | Est. |
+|---|---|
+| `LibraryTool` model + migration | 1h |
+| Django admin registration | 30m |
+| Toolkit list view + template (filterable cards) | 4–6h |
+| Detail view | 1–2h |
+| CRUD form (add/edit) | 2–3h |
+| Tests | 1–2h |
+| **Total** | **~9–14h** |
+
+---
+
+### 9.80 — Non-rota jobs and maintenance schedule 🟡 M (20–35h)
+
+**Context:** S+S currently tracks recurring maintenance obligations, contractor visits, compliance renewals, and venue upkeep tasks in a spreadsheet (`Dates for Renewals and Maintenance RH.xlsx`, in the Nextcloud). The spreadsheet has evolved over several years and contains around 40 recurring tasks, and already uses conditional formatting for colour-coded due-date highlighting. It does its job, but has real limitations: it requires Excel or Libreoffice to edit, doesn't reflow for mobile, is invisible unless you know where to find it, and has nowhere to store the embedded knowledge a volunteer would need to actually do a task — what skills are required, whether it needs a keyholder, how long it takes.
+
+The key improvement over the spreadsheet is not the colour coding (it already does that) but **progressive disclosure**: a compact overview table for anyone who wants to know what's coming due, with expandable task details for anyone who might volunteer to take one on.
+
+**Goals:**
+- Replace the spreadsheet as the canonical source of truth for maintenance scheduling
+- Any logged-in volunteer can see what's coming due at a glance
+- Expanding a task reveals the full spec: skills, keyholder requirement, time commitment, contractor details, linked documentation
+- Write-permission users can add records and mark tasks complete
+- Mobile-friendly: the collapsed view is usable on a phone; expanded detail is readable without horizontal scrolling
+
+**Data model:** Two new models (new `toolkit.operations` app, or `toolkit.diary` if preferred):
+
+`MaintenanceTask`:
+
+| Field | Type | Notes |
+|---|---|---|
+| `name` | CharField(128) | e.g. "Fire alarm annual service" |
+| `category` | CharField choices | Security & Fire / HVAC / Compliance & Legal / Utilities / Property / Digital & AV / Other |
+| `frequency` | CharField choices | `monthly` / `quarterly` / `biannual` / `annual` / `three_yearly` / `bespoke` |
+| `frequency_notes` | CharField(128, blank) | For bespoke or unusual patterns |
+| `contractor` | CharField(128, blank) | Name of service provider if external; blank for volunteer-delivered tasks |
+| `keyholder_required` | BooleanField(default=False) | Whether doing this task requires keyholder status |
+| `skills_required` | TextField(blank) | Free text: what you need to know or be trained in |
+| `time_commitment` | CharField(128, blank) | e.g. "~2 hours", "Half a day including travel" |
+| `nextcloud_link` | URLField(blank) | Link to related documents, previous reports, contracts |
+| `notes` | TextField(blank) | Context, caveats, embedded knowledge currently buried in spreadsheet cells |
+| `active` | BooleanField(default=True) | Retire tasks without losing history |
+
+`MaintenanceRecord`:
+
+| Field | Type | Notes |
+|---|---|---|
+| `task` | FK(MaintenanceTask, CASCADE) | |
+| `completed_date` | DateField | |
+| `completed_by` | FK(Volunteer, null, SET_NULL) | |
+| `completed_by_name` | CharField(128, blank) | For contractor completions or cases where no toolkit account exists |
+| `notes` | TextField(blank) | Issues found, follow-up required, anything the next person should know |
+| `next_due_override` | DateField(null) | Manual override of calculated next-due date |
+
+Calculated `next_due` property: most recent `MaintenanceRecord` + frequency period, or `next_due_override` if set.
+
+**Views:**
+- **Main schedule view** (login required) — Compact table or card list sorted by `next_due`, colour-coded (overdue / due within 4 weeks / ok). Collapsed view shows: task name, category, last done, next due. Each row is expandable (e.g. `<details>`) to reveal: skills required, keyholder flag, time commitment, contractor, notes, nextcloud link, and full completion history. "Mark done" button in the expanded panel opens a short inline form (date, who, notes). Grouped by category as an option.
+- **Add/edit task** — Write-permission users only. Full field set.
+- **Mark done** — Write-permission users only; quick form with pre-filled today's date.
+
+**Import:** A one-off script to import the current spreadsheet is worth doing at launch. Around 40 tasks; manual entry is viable but tedious. The new fields (`skills_required`, `keyholder_required`, `time_commitment`) would need to be filled in manually regardless — they don't exist in the spreadsheet.
+
+**Design notes:**
+- The `<details>`/`<summary>` expand pattern works well here: the summary row is the at-a-glance view; the detail panel is the full task spec. No JavaScript needed; degrades gracefully.
+- Keyholder flag should render as a visible badge (🔑) in the collapsed view — important for volunteers scanning for tasks they can take on.
+- `completed_by_name` text field matters: many tasks are done by contractors who don't have toolkit accounts.
+- Phase 2: email/notification when tasks come within N weeks of due date. Phase 2: assign a task owner per upcoming period (mirroring the spreadsheet's task owner columns).
+
+**Sizing:**
+
+| Component | Est. |
+|---|---|
+| `MaintenanceTask` + `MaintenanceRecord` models + migrations | 2h |
+| Django admin registration | 1h |
+| Main schedule view + template (collapsed rows, expand on click, colour coding) | 6–8h |
+| Add/edit task form | 3h |
+| "Mark done" inline form | 2–3h |
+| Tests | 3–4h |
+| Optional: spreadsheet import script | 3–4h |
+| **Total** | **~17–21h** (without import script) |
+
+**Minimum viable increment:** models + admin registration + read-only schedule view (~8h). "Mark done" action is the next step; full CRUD follows.
