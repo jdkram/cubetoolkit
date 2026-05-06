@@ -62,6 +62,34 @@
     margin-bottom: 0;
     font-weight: normal;
   }
+
+  .archived-section {
+    margin-top: 2rem;
+  }
+
+  .archived-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .archived-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.35rem 0.75rem;
+    border-bottom: 1px solid #dee2e6;
+    color: #6c757d;
+  }
+
+  .archived-list li:last-child {
+    border-bottom: none;
+  }
+
+  .archived-name {
+    flex: 1;
+    font-style: italic;
+  }
 </style>
 {% endblock %}
 
@@ -85,9 +113,6 @@ $(document).ready(function() {
 });
 
 function processInputFields(fn) {
-    /* call supplied function with all input tags (other than those in the
-     * "new tag" form).
-     */
     var list_items = document.getElementById("sortable")
                              .getElementsByTagName("li");
     var i, j;
@@ -96,7 +121,6 @@ function processInputFields(fn) {
         if(!list_items[i].classList.contains("new_tag")) {
             input_fields = list_items[i].getElementsByTagName("input");
             for(j = 0; j < input_fields.length; j++) {
-                /* Pass current <input>, current <li> and index in form list */
                 fn(input_fields[j], list_items[i], i);
             }
         }
@@ -104,9 +128,6 @@ function processInputFields(fn) {
 }
 
 function updateSortable() {
-    /* Ensure that 'promoted' style is only applied to items where the box is
-     * checked
-     */
     processInputFields(function(input, parent_list_item) {
         if(input.name.endsWith("-promoted")) {
             if(input.checked) {
@@ -121,10 +142,6 @@ function updateSortable() {
 }
 
 function updateOrdering() {
-    /* Update the (hidden) sort_order field, on all items except for
-     * the "new" form. (Even on items that aren't promoted... which I think
-     * is intentional.)
-     */
     processInputFields(function(input, parent_list_item, index) {
         if(input.name.endsWith("sort_order")) {
             input.value = index;
@@ -137,17 +154,13 @@ function updateOrdering() {
 {% block body %}
 <div class="container-fluid mt-3">
 
-  <div class="alert alert-warning">
-    <strong>Warning:</strong> Deleting tags cannot be undone, please take care.
-  </div>
-
   {% include "messages.html" %}
 
   <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
       <h4 class="mb-0">Event Tags</h4>
       <small class="text-muted">
-        <strong>Programme nav</strong> tags appear as filter links under "Programme" in the public website navigation. Non-nav tags are saved but not shown there.
+        <strong>Programme nav</strong> tags appear as filter links under "Programme" in the public website navigation.
       </small>
     </div>
     <div class="card-body p-0" style="overflow-x: auto;">
@@ -168,7 +181,7 @@ function updateOrdering() {
 
             {% if form.errors %}
               <span class="text-danger">
-                Error: {{ form.name.errors.as_text }} | {{ form.standard.errors.as_text }} | {{ form.DELETE.errors.as_text }}
+                Error: {{ form.name.errors.as_text }} | {{ form.standard.errors.as_text }}
               </span>
             {% endif %}
 
@@ -186,12 +199,9 @@ function updateOrdering() {
                 <label title="Show this tag as a filter link under 'Programme' in the public website navigation">
                   {{ form.promoted }} Programme nav
                 </label>
-              {% endif %}
-
-              {% if form.instance.read_only or not form.id.value %}
-                {{ form.id }}
-              {% else %}
-                <span class="text-danger">{{ form.DELETE.as_field_group }} {{ form.id }}</span>
+                {% if not form.instance.read_only %}
+                  {{ form.id }}
+                {% endif %}
               {% endif %}
             </span>
 
@@ -202,12 +212,58 @@ function updateOrdering() {
         </ul>
 
         <div class="card-footer d-flex justify-content-between align-items-center">
-          <small class="text-muted">Tick <strong>Programme nav</strong> to show a tag as a filter link under "Programme" in the public website nav. Drag any row to set its order.</small>
+          <small class="text-muted">Tick <strong>Programme nav</strong> to show a tag as a filter link. Drag any row to set its order.</small>
           <button type="submit" class="btn btn-primary">Save all changes</button>
         </div>
       </form>
     </div>
   </div>
+
+  {# Archive buttons — each is its own small form so they don't interfere with the main formset #}
+  <div class="card mt-3">
+    <div class="card-header"><h5 class="mb-0">Archive a tag</h5></div>
+    <div class="card-body p-0">
+      <ul class="list-group list-group-flush">
+        {% for form in formset %}
+          {% if form.id.value and not form.instance.read_only %}
+            <li class="list-group-item d-flex align-items-center justify-content-between py-2">
+              <span>{{ form.instance.name }}</span>
+              <form method="post" style="display:inline;" onsubmit="return confirm('Archive tag \'{{ form.instance.name }}\'? It will be hidden but not deleted. Tags used on past events cannot be permanently deleted.')">
+                {% csrf_token %}
+                <input type="hidden" name="_action" value="archive">
+                <input type="hidden" name="tag_id" value="{{ form.instance.pk }}">
+                <button type="submit" class="btn btn-sm btn-outline-warning">Archive</button>
+              </form>
+            </li>
+          {% endif %}
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  {% if archived_tags %}
+  <div class="card mt-3 archived-section">
+    <div class="card-header d-flex align-items-center">
+      <h5 class="mb-0">Archived tags</h5>
+      <small class="text-muted ms-2">Hidden from normal use. Restore to make active again.</small>
+    </div>
+    <div class="card-body p-0">
+      <ul class="archived-list">
+        {% for tag in archived_tags %}
+          <li>
+            <span class="archived-name">{{ tag.name }}</span>
+            <form method="post" style="display:inline;">
+              {% csrf_token %}
+              <input type="hidden" name="_action" value="restore">
+              <input type="hidden" name="tag_id" value="{{ tag.pk }}">
+              <button type="submit" class="btn btn-sm btn-outline-success">Restore</button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endif %}
 
 </div>
 {% endblock %}

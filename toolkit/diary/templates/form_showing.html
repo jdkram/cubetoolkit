@@ -91,9 +91,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 <form action="{% url "edit-showing" showing_id=showing.id %}" method="post">
   {% csrf_token %}
-  <table class="table">
   {% crispy form %}
-  </table>
   <p>
   <input class="btn btn-primary" type="submit" value="Update" />
   </p>

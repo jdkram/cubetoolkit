@@ -46,6 +46,12 @@ class Role(models.Model):
         "accessibility notes, links to guides, training requirements, etc.",
     )
 
+    archived = models.BooleanField(
+        default=False,
+        help_text="Archived roles are hidden from normal use. "
+        "Roles used in past rota entries cannot be permanently deleted.",
+    )
+
     beginner_friendly = models.BooleanField(
         default=False,
         help_text="Show the 🌱 good-first-role badge on the rota — "
@@ -90,12 +96,15 @@ class Role(models.Model):
             return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        # Don't allow read_only roles to be deleted
         if self.pk and self.read_only:
             logger.error(f"Tried to delete read-only role {self.name}")
             return False
-        else:
-            return super().delete(*args, **kwargs)
+        # Archive instead of delete if this role appears in any rota entries.
+        if self.pk and RotaEntry.objects.filter(role=self).exists():
+            self.archived = True
+            self.save()
+            return (0, {})
+        return super().delete(*args, **kwargs)
 
 
 class MediaItem(models.Model):
@@ -177,6 +186,11 @@ class EventTag(models.Model):
     read_only = models.BooleanField(default=False, editable=False)
     promoted = models.BooleanField(default=False)
     sort_order = models.IntegerField(null=True, blank=True, editable=True)
+    archived = models.BooleanField(
+        default=False,
+        help_text="Archived tags are hidden from normal use. "
+        "Tags used on past events cannot be permanently deleted.",
+    )
 
     objects = EventTagQuerySet.as_manager()
 
@@ -214,8 +228,12 @@ class EventTag(models.Model):
     def delete(self, *args, **kwargs):
         if self.pk and self.read_only:
             return False
-        else:
-            return super().delete(*args, **kwargs)
+        # Archive instead of delete if this tag has been used on any event.
+        if self.pk and Event.objects.filter(tags=self).exists():
+            self.archived = True
+            self.save()
+            return (0, {})
+        return super().delete(*args, **kwargs)
 
 
 class Event(models.Model):
@@ -507,6 +525,10 @@ class Showing(models.Model):
     # Free text rota field for this showing
     rota_notes = models.TextField(max_length=4096, blank=True)
 
+    setup_time = models.TimeField(null=True, blank=True)
+    doors_time = models.TimeField(null=True, blank=True)
+    final_volunteer_time = models.TimeField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -788,7 +810,7 @@ class EventTemplateRole(models.Model):
 
 class RotaEntry(models.Model):
 
-    role = models.ForeignKey(Role, on_delete=models.CASCADE)
+    role = models.ForeignKey(Role, on_delete=models.PROTECT)
     showing = models.ForeignKey(Showing, on_delete=models.CASCADE)
 
     required = models.BooleanField(default=True)

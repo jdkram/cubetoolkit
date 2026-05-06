@@ -1105,30 +1105,53 @@ def edit_event_template_detail(request, template_id=None):
 
 @permission_required("toolkit.write")
 def edit_event_tags(request):
+    active_qs = EventTag.objects.filter(archived=False)
+    archived_qs = EventTag.objects.filter(archived=True)
+
     event_tag_formset = modelformset_factory(
-        EventTag, fields=("name", "promoted", "sort_order"), can_delete=True
+        EventTag, fields=("name", "promoted", "sort_order"), can_delete=False
     )
 
     if request.method == "POST":
-        formset = event_tag_formset(request.POST)
-        if formset.is_valid():
-            logger.info("Event tags updated")
-            formset.save()
-            # Reset formset, so get another blank one at the
-            # end, deleted ones disappear, etc.
-            formset = event_tag_formset()
-            messages.add_message(request, messages.SUCCESS, "Event tags updated")
+        action = request.POST.get("_action")
+        if action == "archive":
+            tag_id = request.POST.get("tag_id")
+            try:
+                tag = EventTag.objects.get(pk=tag_id)
+                tag.delete()  # model.delete() archives if used, deletes if unused
+                messages.add_message(request, messages.SUCCESS, f"Tag '{tag.name}' archived.")
+            except EventTag.DoesNotExist:
+                pass
+            return HttpResponseRedirect(reverse("edit_event_tags"))
+        elif action == "restore":
+            tag_id = request.POST.get("tag_id")
+            try:
+                tag = EventTag.objects.get(pk=tag_id)
+                tag.archived = False
+                tag.save()
+                messages.add_message(request, messages.SUCCESS, f"Tag '{tag.name}' restored.")
+            except EventTag.DoesNotExist:
+                pass
+            return HttpResponseRedirect(reverse("edit_event_tags"))
+        else:
+            formset = event_tag_formset(request.POST, queryset=active_qs)
+            if formset.is_valid():
+                logger.info("Event tags updated")
+                formset.save()
+                messages.add_message(request, messages.SUCCESS, "Event tags updated")
+                return HttpResponseRedirect(reverse("edit_event_tags"))
     else:
-        formset = event_tag_formset()
-    context = {"formset": formset}
+        formset = event_tag_formset(queryset=active_qs)
+
+    context = {"formset": formset, "archived_tags": archived_qs}
     return render(request, "edit_event_tags.html", context)
 
 
 @user_passes_test(lambda u: u.is_superuser)
 def edit_roles(request):
-    # This is pretty slow,but it's not a commonly used bit of the UI...
-    # (To be precise, save involves >120 queries. This is because I've been
-    # lazy and used the formset save method)
+    # This is pretty slow, but it's not a commonly used bit of the UI.
+    active_qs = Role.objects.filter(archived=False)
+    archived_qs = Role.objects.filter(archived=True)
 
     RoleFormset = modelformset_factory(
         Role,
@@ -1141,22 +1164,44 @@ def edit_roles(request):
             "not_wheelchair_accessible",
             "keyholder_only",
         ),
-        can_delete=True,
+        can_delete=False,
     )
 
     if request.method == "POST":
-        formset = RoleFormset(request.POST)
-        if formset.is_valid():
-            logger.info("Roles updated")
-            formset.save()
-            # Reset formset, so get another blank one at the
-            # end, deleted ones disappear, etc.
-            formset = RoleFormset()
-            messages.add_message(request, messages.SUCCESS, "Roles updated")
+        action = request.POST.get("_action")
+        if action == "archive":
+            role_id = request.POST.get("role_id")
+            try:
+                role = Role.objects.get(pk=role_id)
+                role.delete()  # model.delete() archives if used, deletes if unused
+                messages.add_message(request, messages.SUCCESS, f"Role '{role.name}' archived.")
+            except Role.DoesNotExist:
+                pass
+            return HttpResponseRedirect(reverse("edit_roles"))
+        elif action == "restore":
+            role_id = request.POST.get("role_id")
+            try:
+                role = Role.objects.get(pk=role_id)
+                role.archived = False
+                role.save()
+                messages.add_message(request, messages.SUCCESS, f"Role '{role.name}' restored.")
+            except Role.DoesNotExist:
+                pass
+            return HttpResponseRedirect(reverse("edit_roles"))
+        else:
+            formset = RoleFormset(request.POST, queryset=active_qs)
+            if formset.is_valid():
+                logger.info("Roles updated")
+                formset.save()
+                messages.add_message(request, messages.SUCCESS, "Roles updated")
+                return HttpResponseRedirect(reverse("edit_roles"))
     else:
-        formset = RoleFormset()
+        formset = RoleFormset(queryset=active_qs)
 
-    return render(request, "form_edit_roles.html", {"formset": formset})
+    return render(request, "form_edit_roles.html", {
+        "formset": formset,
+        "archived_roles": archived_qs,
+    })
 
 
 @permission_required("toolkit.write")
