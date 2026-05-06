@@ -153,6 +153,11 @@
                 {% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-outline-primary">Claim</button>
               </form>
+            {% elif job.claimed_by == request.user or perms.toolkit.write %}
+              <form method="post" action="{% url "labs-job-unclaim" job.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-secondary">Unclaim</button>
+              </form>
             {% endif %}
             <form method="post" action="{% url "labs-job-resolve" job.pk %}">
               {% csrf_token %}
@@ -194,7 +199,7 @@
                 <br><span class="text-muted-sm">{{ job.plan_status|truncatechars:80 }}</span>
               {% endif %}
             </td>
-            <td class="text-muted-sm">{{ job.claimed_by.get_full_name|default:job.claimed_by.username|default:"" }}</td>
+            <td class="text-muted-sm">{% if job.claimed_by %}{{ job.claimed_by.get_full_name|default:job.claimed_by.username }}{% endif %}</td>
           </tr>
           {% endfor %}
         </tbody>
