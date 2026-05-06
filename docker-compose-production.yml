@@ -19,6 +19,11 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1.0"
     volumes:
       - type: bind
         source: /home/toolkit/site/media/
@@ -45,6 +50,11 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 192m
+          cpus: "0.5"
     volumes:
       - type: bind
         source: /var/run/mysqld/mysqld.sock

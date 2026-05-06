@@ -13,6 +13,6 @@ class DonationItemAdmin(admin.ModelAdmin):
 
 @admin.register(Job)
 class JobAdmin(admin.ModelAdmin):
-    list_display = ("title", "urgency", "done", "posted_by", "claimed_by", "posted_at")
-    list_filter = ("urgency", "done", "keyholder_required")
-    ordering = ("done", "urgency", "-posted_at")
+    list_display = ("title", "area", "urgency", "safety_risk", "skill_needed", "resolved", "posted_by", "claimed_by", "posted_at")
+    list_filter = ("urgency", "resolved", "safety_risk", "skill_needed", "keyholder_required", "location_type")
+    ordering = ("resolved", "urgency", "-posted_at")

@@ -37,6 +37,7 @@ from toolkit.diary.models import (
 )
 from toolkit.index.models import IndexCategory, IndexLink
 from toolkit.members.models import Member, Volunteer
+from toolkit.labs.models import DonationItem, Job
 
 from toolkit.util.management.commands.seed_data import (
     ROLES,
@@ -204,6 +205,8 @@ class Command(BaseCommand):
             User.objects.filter(username__startswith="voltest_").delete()
             IndexLink.objects.all().delete()
             IndexCategory.objects.all().delete()
+            DonationItem.objects.all().delete()
+            Job.objects.all().delete()
             if WAGTAIL_AVAILABLE:
                 for slug in ("about", "get-involved", "important-info"):
                     for page in Page.objects.filter(slug=slug):
@@ -224,6 +227,8 @@ class Command(BaseCommand):
             "event_links": 0,
             "cms_pages": 0,
             "index_links": 0,
+            "donation_items": 0,
+            "jobs": 0,
         }
 
         # Roles
@@ -537,6 +542,10 @@ class Command(BaseCommand):
         # Toolkit index links
         counts["index_links"] = self._seed_index_links()
 
+        # Labs: donations wishlist and jobs board
+        counts["donation_items"] = self._seed_donations()
+        counts["jobs"] = self._seed_jobs()
+
         # Bulk test volunteers (performance testing only)
         if options["bulk_volunteers"] > 0:
             counts["volunteers"] += self._seed_bulk_volunteers(
@@ -557,8 +566,135 @@ class Command(BaseCommand):
                 f"  Event links:     {counts['event_links']} new\n"
                 f"  CMS pages:       {counts['cms_pages']} new\n"
                 f"  Index links:     {counts['index_links']} new\n"
+                f"  Donation items:  {counts['donation_items']} new\n"
+                f"  Jobs:            {counts['jobs']} new\n"
             )
         )
+
+    def _seed_donations(self):
+        items = [
+            # Electronics
+            {"name": "Small CRT monitor (for retro gaming events)", "category": "Electronics", "status": DonationItem.STATUS_WANTED, "notes": "Needs to have composite or S-Video input. Any size from 12–21 inches.", "internal_notes": "For use with Starcade collective — they run retro gaming nights monthly.", "display_order": 10},
+            {"name": "Projector (any resolution)", "category": "Electronics", "status": DonationItem.STATUS_CHECK_FIRST, "notes": "We may already have enough. Please contact us before bringing one.", "internal_notes": "We have 3 projectors currently. Only accept if it's significantly better than what we have.", "display_order": 20},
+            {"name": "HDMI cables (2m+)", "category": "Electronics", "status": DonationItem.STATUS_WANTED, "notes": "Always useful for tech events and screenings.", "display_order": 30},
+            {"name": "Laptop (functional, any age)", "category": "Electronics", "status": DonationItem.STATUS_CHECK_FIRST, "notes": "Depends on specs — contact us first.", "internal_notes": "Need at least 4GB RAM and working battery. Check with Tech collective.", "display_order": 40},
+            {"name": "Desktop PC tower", "category": "Electronics", "status": DonationItem.STATUS_NOT_NEEDED, "notes": "We have more than we can use right now.", "display_order": 50},
+            # Furniture
+            {"name": "Foldable tables (sturdy)", "category": "Furniture", "status": DonationItem.STATUS_WANTED, "notes": "Rectangular folding tables for events. Must be in good condition.", "internal_notes": "Storage is tight — confirm with Events collective before accepting.", "display_order": 10},
+            {"name": "Stackable chairs", "category": "Furniture", "status": DonationItem.STATUS_CHECK_FIRST, "notes": "We have some but can always use more for large events. Contact us.", "display_order": 20},
+            {"name": "Sofas / armchairs", "category": "Furniture", "status": DonationItem.STATUS_NOT_NEEDED, "notes": "We don't have space for more soft seating right now.", "display_order": 30},
+            # Kitchen
+            {"name": "Catering-size mixing bowls", "category": "Kitchen", "status": DonationItem.STATUS_WANTED, "notes": "Stainless steel preferred, at least 5 litre.", "display_order": 10},
+            {"name": "Cafetiere (large, 8+ cup)", "category": "Kitchen", "status": DonationItem.STATUS_WANTED, "notes": "For Community Kitchen events.", "display_order": 20},
+            {"name": "Microwave", "category": "Kitchen", "status": DonationItem.STATUS_NOT_NEEDED, "notes": "We already have one.", "display_order": 30},
+            # Tools
+            {"name": "Power drill (cordless)", "category": "Tools", "status": DonationItem.STATUS_WANTED, "notes": "Good condition only. Must include at least one battery.", "display_order": 10},
+            {"name": "Step ladder (1.5–2m)", "category": "Tools", "status": DonationItem.STATUS_CHECK_FIRST, "notes": "Contact us — we may have enough.", "display_order": 20},
+        ]
+        created = 0
+        for data in items:
+            _, made = DonationItem.objects.get_or_create(name=data["name"], defaults=data)
+            if made:
+                created += 1
+        return created
+
+    def _seed_jobs(self):
+        import datetime as dt
+        admin_user = User.objects.filter(is_superuser=True).first()
+        items = [
+            {
+                "title": "Soap dispenser over handwash sink is out of use",
+                "area": "Kitchen",
+                "description": "The soap dispenser mounted above the handwash sink is leaking from the bottom and has been taken out of service. Needs either repair or replacement.",
+                "plan_status": "A replacement unit has been sourced — just needs fitting.",
+                "safety_risk": False,
+                "skill_needed": False,
+                "keyholder_required": True,
+                "urgency": Job.URGENCY_MEDIUM,
+                "location_type": Job.LOCATION_BUILDING,
+                "reporter_name": "Alex",
+                "posted_by": admin_user,
+                "resolved": False,
+            },
+            {
+                "title": "Internet contract renewal due",
+                "area": "Office",
+                "description": "Current broadband contract with Virgin expires. Need to either renew or switch provider. See Nextcloud for current contract details.",
+                "plan_status": "Contacted Virgin — waiting on renewal quote.",
+                "safety_risk": False,
+                "skill_needed": False,
+                "keyholder_required": False,
+                "urgency": Job.URGENCY_HIGH,
+                "location_type": Job.LOCATION_REMOTE,
+                "reporter_name": "Marcus",
+                "posted_by": admin_user,
+                "resolved": False,
+            },
+            {
+                "title": "Leak from roof above projection room",
+                "area": "Projection room",
+                "description": "Water ingress visible on the ceiling above the projector during heavy rain. Currently managed with a bucket. Needs a roofer to assess.",
+                "plan_status": "Awaiting quote from roofing contractor. Jonny to follow up.",
+                "safety_risk": True,
+                "skill_needed": True,
+                "keyholder_required": True,
+                "urgency": Job.URGENCY_HIGH,
+                "location_type": Job.LOCATION_BUILDING,
+                "reporter_name": "Jonny",
+                "posted_by": admin_user,
+                "resolved": False,
+            },
+            {
+                "title": "Toilet door handle loose in accessible toilet",
+                "area": "Accessible toilet",
+                "description": "The internal handle is not gripping properly — you have to apply pressure to the side to get it to latch. Easy fix with a screwdriver.",
+                "plan_status": "",
+                "safety_risk": False,
+                "skill_needed": False,
+                "keyholder_required": True,
+                "urgency": Job.URGENCY_LOW,
+                "location_type": Job.LOCATION_BUILDING,
+                "reporter_name": "Sam",
+                "posted_by": admin_user,
+                "resolved": False,
+            },
+            {
+                "title": "Update volunteer handbook on Nextcloud",
+                "area": "Anywhere",
+                "description": "The volunteer handbook hasn't been updated since the rota system changed. Needs the new rota process documented and old screenshots replaced.",
+                "plan_status": "Assigned to induction collective — no progress yet.",
+                "safety_risk": False,
+                "skill_needed": False,
+                "keyholder_required": False,
+                "urgency": Job.URGENCY_LOW,
+                "location_type": Job.LOCATION_REMOTE,
+                "reporter_name": "Jamie",
+                "posted_by": admin_user,
+                "resolved": False,
+            },
+            {
+                "title": "Repair broken cable trunking in main hall",
+                "area": "Main hall",
+                "description": "The cable trunking along the east wall has snapped in two places. Cables are currently taped down — trip hazard during events.",
+                "plan_status": "Resolved by Olly and Beth. Used adhesive-back trunking from screwfix.",
+                "safety_risk": True,
+                "skill_needed": False,
+                "keyholder_required": True,
+                "urgency": Job.URGENCY_HIGH,
+                "location_type": Job.LOCATION_BUILDING,
+                "reporter_name": "Beth",
+                "posted_by": admin_user,
+                "resolved": True,
+                "resolved_at": timezone.now() - dt.timedelta(days=14),
+            },
+        ]
+        created = 0
+        for data in items:
+            resolved_at = data.pop("resolved_at", None)
+            _, made = Job.objects.get_or_create(title=data["title"], defaults={**data, "resolved_at": resolved_at})
+            if made:
+                created += 1
+        return created
 
     def _seed_recurring_events(self, rooms_dict, vol_list, counts, anchor):
         today = timezone.now().date()
