@@ -1,0 +1,109 @@
+{% extends "base_public.html" %}
+
+{% block title %}What we need — {{ VENUE.name }}{% endblock %}
+
+{% block body %}
+<style>
+  .donation-intro {
+    max-width: 42rem;
+    margin: 1.5rem auto 2rem;
+    padding: 0 1rem;
+    font-size: 1.05rem;
+  }
+  .category-section {
+    max-width: 52rem;
+    margin: 0 auto 2rem;
+    padding: 0 1rem;
+  }
+  .category-section h2 {
+    font-size: 1.1rem;
+    font-weight: bold;
+    border-bottom: 2px solid #333;
+    padding-bottom: 0.3rem;
+    margin-bottom: 1rem;
+  }
+  .item-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    gap: 1rem;
+  }
+  .item-card {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 0.9rem 1rem 0.75rem;
+    background: #fff;
+  }
+  .item-name {
+    font-weight: bold;
+    font-size: 1rem;
+    margin-bottom: 0.4rem;
+  }
+  .item-status {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 3px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+  }
+  .status-wanted {
+    background: #198754;
+    color: #fff;
+  }
+  .status-check_first {
+    background: #ffc107;
+    color: #333;
+  }
+  .status-not_needed {
+    background: #dc3545;
+    color: #fff;
+  }
+  .item-notes {
+    font-size: 0.88rem;
+    color: #555;
+    margin-top: 0.4rem;
+  }
+  .item-contact {
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+    color: #333;
+  }
+</style>
+
+<div class="donation-intro">
+  <h1>What {{ VENUE.name }} needs</h1>
+  <p>Before donating, please check the status below. Items marked <strong>Check first</strong> may be appreciated — contact us before bringing anything. Items marked <strong>Not needed</strong> are something we already have plenty of, or can't use.</p>
+</div>
+
+{% if not categories %}
+  <div class="donation-intro">
+    <p><em>No items listed yet. Check back soon.</em></p>
+  </div>
+{% endif %}
+
+{% for category, items in categories.items %}
+  <div class="category-section">
+    <h2>{{ category }}</h2>
+    <div class="item-grid">
+      {% for item in items %}
+        <div class="item-card">
+          <div class="item-name">{{ item.name }}</div>
+          <span class="item-status status-{{ item.status }}">
+            {% if item.status == STATUS_WANTED %}Wanted
+            {% elif item.status == STATUS_CHECK_FIRST %}Check first
+            {% else %}Not needed
+            {% endif %}
+          </span>
+          {% if item.notes %}
+            <div class="item-notes">{{ item.notes }}</div>
+          {% endif %}
+          {% if item.contact and item.status == STATUS_CHECK_FIRST %}
+            <div class="item-contact">Contact: {{ item.contact }}</div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+{% endfor %}
+
+{% endblock %}

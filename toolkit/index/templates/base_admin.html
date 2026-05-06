@@ -75,6 +75,8 @@ body {
             <a class="nav-link dropdown-toggle" href="#" id="dropdown-labs" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Labs</a>
             <div class="dropdown-menu" aria-labelledby="dropdown-labs">
               <a class="dropdown-item" href="{% url "labs-floorplan" %}">Building Map</a>
+              <a class="dropdown-item" href="{% url "labs-jobs" %}">Jobs board</a>
+              <a class="dropdown-item" href="{% url "labs-donations" %}">Donations wishlist</a>
             </div>
           </li>
           {% if perms.toolkit.write %}
