@@ -22,46 +22,23 @@
     white-space: nowrap;
     margin-right: 0.75rem;
   }
+  .archived-role-row td {
+    color: #6c757d;
+    font-style: italic;
+    background: #f8f9fa;
+  }
 </style>
-{% endblock %}
-
-{% block script %}
-{{ block.super }}
-<script type="text/javascript">
-"use strict";
-document.addEventListener("DOMContentLoaded", function() {
-    document.getElementById("roles").addEventListener("submit", function(e) {
-        var toDelete = [];
-        document.querySelectorAll("#roles input[name$='-DELETE']:checked").forEach(function(checkbox) {
-            var prefix = checkbox.name.replace("-DELETE", "");
-            var nameInput = document.querySelector("#roles input[name='" + prefix + "-name']");
-            if (nameInput) {
-                toDelete.push(nameInput.value || nameInput.defaultValue);
-            }
-        });
-        if (toDelete.length === 0) return;
-        var msg = "Permanently delete " + toDelete.length + " role" + (toDelete.length > 1 ? "s" : "") + "?\n\n"
-                + toDelete.map(function(n) { return "  \u2022 " + n; }).join("\n")
-                + "\n\nThis will remove the role from every rota assignment and event template. There is no undo.";
-        if (!confirm(msg)) {
-            e.preventDefault();
-        }
-    });
-});
-</script>
 {% endblock %}
 
 {% block body %}
 <div class="container-fluid mt-3">
 
-  <div class="alert alert-danger">
+  <div class="alert alert-info">
     <strong>Panopticon-only page.</strong>
     <ul class="mb-0">
-      <li><strong>Deleting a role is permanent.</strong>
-        It will immediately and irreversibly remove that role from every rota assignment
-        across all past and future showings, and from every event template.
-        You will be asked to confirm before the deletion takes effect, but there is no undo after that.</li>
-      <li>Roles marked <em>read-only</em> are protected and cannot be deleted here.</li>
+      <li><strong>Archiving a role</strong> hides it from rota dropdowns and volunteer profiles. Past rota entries are preserved.
+        Roles used in past rota entries are automatically archived rather than deleted.</li>
+      <li>Roles marked <em>read-only</em> are protected and cannot be archived or deleted here.</li>
       <li><strong>Renaming a role is safe.</strong>
         The name is stored once and referenced everywhere relationally,
         so a rename takes effect immediately across all showings, templates, and volunteer profiles.</li>
@@ -72,7 +49,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   <div class="card">
     <div class="card-header d-flex flex-wrap align-items-center" style="gap:0.5rem">
-      <h4 class="mb-0 card-header-title">Roles</h4>
+      <h4 class="mb-0 card-header-title">Active Roles</h4>
       <small class="text-muted">Standard event roles appear at the top of the role selection list. New rows are highlighted yellow.</small>
     </div>
     <div class="card-body p-0">
@@ -86,10 +63,10 @@ document.addEventListener("DOMContentLoaded", function() {
               <th>Role name</th>
               <th class="text-center" style="width:90px">Standard</th>
               <th>Description</th>
-              <th class="text-center" style="width:50px" title="🌱 Good first role — show green leaf badge on rota">🌱</th>
-              <th class="text-center" style="width:50px" title="♿✗ Not wheelchair-accessible — show strikethrough wheelchair badge on rota">♿✗</th>
-              <th class="text-center" style="width:50px" title="🔑 Keyholder slot — show key badge on rota">🔑</th>
-              <th class="text-center" style="width:60px">Delete</th>
+              <th class="text-center" style="width:50px" title="🌱 Good first role">🌱</th>
+              <th class="text-center" style="width:50px" title="♿✗ Not wheelchair-accessible">♿✗</th>
+              <th class="text-center" style="width:50px" title="🔑 Keyholder slot">🔑</th>
+              <th class="text-center" style="width:70px">Archive</th>
             </tr>
           </thead>
           <tbody>
@@ -101,14 +78,13 @@ document.addEventListener("DOMContentLoaded", function() {
                 {{ form.name.errors.as_text }}
                 {{ form.standard.errors.as_text }}
                 {{ form.description.errors.as_text }}
-                {{ form.DELETE.errors.as_text }}
               </td>
             </tr>
             {% endif %}
             <tr{% if not form.id.value %} class="new-role-row"{% endif %}>
               {% if form.instance.read_only %}
                 <td>{{ form.name.as_hidden }}{{ form.name.value }} <span class="badge badge-secondary">read-only</span></td>
-                {# Model on the back end enforces the read_only flag, so no integrity/security worries about the hidden field #}
+                {# Model on the back end enforces the read_only flag — no integrity worries about the hidden field #}
                 <td class="text-center">{{ form.standard }}</td>
                 <td>{{ form.description }}</td>
                 <td class="text-center">{{ form.beginner_friendly }}</td>
@@ -116,13 +92,19 @@ document.addEventListener("DOMContentLoaded", function() {
                 <td class="text-center">{{ form.keyholder_only }}</td>
                 <td>{{ form.id }}</td>
               {% else %}
-                <td>{{ form.name }}</td>
+                <td>{{ form.name }}{{ form.id }}</td>
                 <td class="text-center">{{ form.standard }}</td>
                 <td>{{ form.description }}</td>
                 <td class="text-center">{{ form.beginner_friendly }}</td>
                 <td class="text-center">{{ form.not_wheelchair_accessible }}</td>
                 <td class="text-center">{{ form.keyholder_only }}</td>
-                <td class="text-center">{{ form.DELETE }}{{ form.id }}</td>
+                <td class="text-center">
+                  {% if form.id.value %}
+                    <button type="button" class="btn btn-sm btn-outline-warning archive-btn"
+                            data-role-id="{{ form.instance.pk }}"
+                            data-role-name="{{ form.instance.name }}">Archive</button>
+                  {% endif %}
+                </td>
               {% endif %}
             </tr>
           {% endfor %}
@@ -137,5 +119,74 @@ document.addEventListener("DOMContentLoaded", function() {
     </div>
   </div>
 
+  {# Hidden archive action form — submitted by JS when Archive button clicked #}
+  <form id="archive-form" method="post" style="display:none;">
+    {% csrf_token %}
+    <input type="hidden" name="_action" value="archive">
+    <input type="hidden" name="role_id" id="archive-role-id">
+  </form>
+
+  {% if archived_roles %}
+  <div class="card mt-3">
+    <div class="card-header d-flex align-items-center">
+      <h5 class="mb-0">Archived roles</h5>
+      <small class="text-muted ms-2">Hidden from rota and volunteer profiles. Past rota entries are preserved.</small>
+    </div>
+    <div class="card-body p-0">
+      <div style="overflow-x: auto;">
+      <table class="table table-sm table-bordered mb-0">
+        <thead class="thead-light">
+          <tr>
+            <th>Role name</th>
+            <th class="text-center" style="width:90px">Standard</th>
+            <th>Description</th>
+            <th class="text-center" style="width:70px">Restore</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for role in archived_roles %}
+            <tr class="archived-role-row">
+              <td>{{ role.name }}</td>
+              <td class="text-center">{% if role.standard %}&#10003;{% endif %}</td>
+              <td>{{ role.description|default:"" }}</td>
+              <td class="text-center">
+                <form method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="_action" value="restore">
+                  <input type="hidden" name="role_id" value="{{ role.pk }}">
+                  <button type="submit" class="btn btn-sm btn-outline-success">Restore</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
 </div>
+{% endblock %}
+
+{% block script %}
+{{ block.super }}
+<script type="text/javascript">
+"use strict";
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll(".archive-btn").forEach(function(btn) {
+        btn.addEventListener("click", function() {
+            var name = btn.dataset.roleName;
+            var id = btn.dataset.roleId;
+            var msg = "Archive role '" + name + "'?\n\n"
+                + "It will be hidden from rota dropdowns and volunteer profiles.\n"
+                + "Past rota entries are preserved.\n"
+                + "If the role has been used, it will be archived. If unused, it will be deleted.";
+            if (!confirm(msg)) return;
+            document.getElementById("archive-role-id").value = id;
+            document.getElementById("archive-form").submit();
+        });
+    });
+});
+</script>
 {% endblock %}

@@ -473,6 +473,12 @@
     .showing_title a:hover {
         text-decoration: underline;
     }
+    .showing-times {
+        font-size: 0.82em;
+        color: #555;
+        margin: 0.1em 0 0.3em 3em;
+        padding: 0;
+    }
     .showing_rota_notes, .past_showing_rota_notes {
         border-top: thin dashed lightgray;
         border-bottom: thin solid lightgray;
@@ -1044,6 +1050,9 @@ edit_rota(
                     </span>
                 </span>
             </h3>
+            {% if showing.setup_time or showing.doors_time or showing.final_volunteer_time %}
+            <p class="showing-times">{% if showing.setup_time %}Setup {{ showing.setup_time|time:"H:i" }}{% endif %}{% if showing.doors_time %}{% if showing.setup_time %} · {% endif %}Doors {{ showing.doors_time|time:"H:i" }}{% endif %}{% if showing.final_volunteer_time %}{% if showing.setup_time or showing.doors_time %} · {% endif %}Finish ~{{ showing.final_volunteer_time|time:"H:i" }}{% endif %}</p>
+            {% endif %}
 
             <ul class="rota">
             {% for rota_entry in showing.rotaentry_set.all %}

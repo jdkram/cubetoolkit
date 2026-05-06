@@ -274,6 +274,9 @@ class ShowingForm(forms.ModelForm):
             "cancelled",
             "sold_out",
             "discounted",
+            "setup_time",
+            "doors_time",
+            "final_volunteer_time",
         )
 
         widgets = {
