@@ -1,0 +1,218 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Manage donations wishlist{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+  .donations-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.87rem;
+  }
+  .donations-table th {
+    background: #343a40;
+    color: #fff;
+    padding: 0.45rem 0.6rem;
+    text-align: left;
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .donations-table td {
+    padding: 0.4rem 0.6rem;
+    vertical-align: top;
+    border-bottom: 1px solid #dee2e6;
+  }
+  .donations-table tbody tr:hover {
+    background: #f8f9fa;
+  }
+  .donations-table input[type="text"],
+  .donations-table input[type="number"],
+  .donations-table select {
+    width: 100%;
+    padding: 0.2rem 0.35rem;
+    font-size: 0.85rem;
+    border: 1px solid #ced4da;
+    border-radius: 3px;
+  }
+  .donations-table textarea {
+    width: 100%;
+    padding: 0.2rem 0.35rem;
+    font-size: 0.85rem;
+    border: 1px solid #ced4da;
+    border-radius: 3px;
+    resize: vertical;
+  }
+  .donations-table .col-order { width: 4rem; }
+  .donations-table .col-status { width: 9rem; }
+  .donations-table .col-active { width: 4rem; text-align: center; }
+  .donations-table .col-notes { min-width: 14rem; }
+  .donations-table .col-internal { min-width: 14rem; }
+  .donations-table .col-meta { min-width: 9rem; font-size: 0.78rem; color: #6c757d; white-space: nowrap; }
+  .donations-table .col-actions { white-space: nowrap; }
+  .status-badge {
+    display: inline-block;
+    padding: 0.1rem 0.45rem;
+    border-radius: 3px;
+    font-size: 0.8rem;
+    font-weight: bold;
+  }
+  .status-wanted { background: #198754; color: #fff; }
+  .status-check_first { background: #ffc107; color: #333; }
+  .status-not_needed { background: #dc3545; color: #fff; }
+  .table-scroll { overflow-x: auto; }
+  .add-row-card { margin-top: 2rem; }
+</style>
+{% endblock %}
+
+{% block body %}
+<h2>Manage donations wishlist</h2>
+<p>
+  <a href="{% url "labs-donations" %}" class="btn btn-sm btn-outline-secondary">View public page</a>
+</p>
+{% include "messages.html" %}
+
+<div class="table-scroll">
+  <table class="donations-table">
+    <thead>
+      <tr>
+        <th class="col-order">Order</th>
+        <th>Name</th>
+        <th>Category</th>
+        <th class="col-status">Status</th>
+        <th class="col-active">Active</th>
+        <th class="col-notes">Public notes</th>
+        <th class="col-internal">Internal notes</th>
+        <th>Contact</th>
+        <th class="col-meta">Last edited</th>
+        <th class="col-actions">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <form method="post" id="edit-form-{{ item.pk }}">
+          {% csrf_token %}
+          <input type="hidden" name="_action" value="edit">
+          <input type="hidden" name="item_id" value="{{ item.pk }}">
+          <td class="col-order">
+            <input type="number" name="display_order" value="{{ item.display_order }}" min="0">
+          </td>
+          <td>
+            <input type="text" name="name" value="{{ item.name }}" maxlength="128" required>
+          </td>
+          <td>
+            <input type="text" name="category" value="{{ item.category }}" maxlength="64">
+          </td>
+          <td class="col-status">
+            <select name="status">
+              {% for val, label in STATUS_CHOICES %}
+                <option value="{{ val }}"{% if item.status == val %} selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </td>
+          <td class="col-active">
+            <input type="checkbox" name="active"{% if item.active %} checked{% endif %}>
+          </td>
+          <td class="col-notes">
+            <textarea name="notes" rows="3">{{ item.notes }}</textarea>
+          </td>
+          <td class="col-internal">
+            <textarea name="internal_notes" rows="3">{{ item.internal_notes }}</textarea>
+          </td>
+          <td>
+            <input type="text" name="contact" value="{{ item.contact }}" maxlength="128">
+          </td>
+          <td class="col-meta">
+            {% if item.last_edited_by %}
+              {{ item.last_edited_by.get_full_name|default:item.last_edited_by.username }}
+              <br>{{ item.updated_at|date:"d M Y" }}
+            {% else %}
+              <em>—</em>
+            {% endif %}
+          </td>
+          <td class="col-actions">
+            <button type="submit" class="btn btn-sm btn-primary">Save</button>
+        </form>
+        <form method="post" style="display: inline;" onsubmit="return confirm('Delete {{ item.name }}?')">
+          {% csrf_token %}
+          <input type="hidden" name="_action" value="delete">
+          <input type="hidden" name="item_id" value="{{ item.pk }}">
+          <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+        </form>
+          </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="10"><em>No items yet. Add one below.</em></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card add-row-card">
+  <div class="card-header"><strong>Add item</strong></div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="_action" value="add">
+      <div class="row">
+        <div class="col-md-3">
+          <label class="form-label">Name <span class="text-danger">*</span></label>
+          <input type="text" class="form-control form-control-sm" name="name" maxlength="128" required
+            value="{{ add_form.name.value|default_if_none:'' }}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Category</label>
+          <input type="text" class="form-control form-control-sm" name="category" maxlength="64"
+            value="{{ add_form.category.value|default_if_none:'' }}"
+            list="existing-categories">
+          <datalist id="existing-categories">
+            {% for item in items %}<option value="{{ item.category }}">{% endfor %}
+          </datalist>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Status</label>
+          <select class="form-control form-control-sm" name="status">
+            {% for val, label in STATUS_CHOICES %}
+              <option value="{{ val }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-1">
+          <label class="form-label">Order</label>
+          <input type="number" class="form-control form-control-sm" name="display_order" value="0" min="0">
+        </div>
+        <div class="col-md-1 d-flex align-items-end">
+          <div class="form-check mb-2">
+            <input type="checkbox" class="form-check-input" name="active" id="add-active" checked>
+            <label class="form-check-label" for="add-active">Active</label>
+          </div>
+        </div>
+      </div>
+      <div class="row mt-2">
+        <div class="col-md-4">
+          <label class="form-label">Public notes</label>
+          <textarea class="form-control form-control-sm" name="notes" rows="3">{{ add_form.notes.value|default_if_none:'' }}</textarea>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Internal notes</label>
+          <textarea class="form-control form-control-sm" name="internal_notes" rows="3">{{ add_form.internal_notes.value|default_if_none:'' }}</textarea>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Contact</label>
+          <input type="text" class="form-control form-control-sm" name="contact" maxlength="128"
+            value="{{ add_form.contact.value|default_if_none:'' }}">
+          <small class="text-muted">Shown on the public page when status is "Check first".</small>
+        </div>
+      </div>
+      <div class="mt-2">
+        <button type="submit" class="btn btn-success">Add item</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

@@ -5,78 +5,77 @@
 {% block css %}
 {{ block.super }}
 <style>
-  .job-card {
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    margin-bottom: 0.75rem;
-    background: #fff;
+  .jobs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
   }
-  .job-card summary {
-    padding: 0.65rem 1rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    flex-wrap: wrap;
-    user-select: none;
+  .jobs-table th {
+    background: #343a40;
+    color: #fff;
+    padding: 0.5rem 0.6rem;
+    text-align: left;
+    white-space: nowrap;
+    font-weight: 600;
+    font-size: 0.82rem;
   }
-  .job-card summary::-webkit-details-marker { display: none; }
-  .job-title {
-    font-weight: bold;
-    flex: 1;
+  .jobs-table td {
+    padding: 0.45rem 0.6rem;
+    vertical-align: top;
+    border-bottom: 1px solid #dee2e6;
+  }
+  .jobs-table tbody tr:hover {
+    background: #f8f9fa;
+  }
+  .jobs-table .col-flags {
+    white-space: nowrap;
+    font-size: 1rem;
+    letter-spacing: 0.1em;
+  }
+  .jobs-table .col-desc {
+    max-width: 22rem;
+  }
+  .jobs-table .col-plan {
+    max-width: 16rem;
   }
   .urgency-badge {
     display: inline-block;
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     font-weight: bold;
-    padding: 0.1rem 0.45rem;
+    padding: 0.1rem 0.4rem;
     border-radius: 3px;
+    white-space: nowrap;
   }
   .urgency-high { background: #dc3545; color: #fff; }
   .urgency-medium { background: #ffc107; color: #333; }
   .urgency-low { background: #6c757d; color: #fff; }
-  .job-meta {
-    font-size: 0.82rem;
-    color: #6c757d;
-    flex-shrink: 0;
-  }
-  .job-body {
-    padding: 0.75rem 1rem 1rem;
-    border-top: 1px solid #dee2e6;
-  }
-  .job-body dl {
-    margin: 0;
-  }
-  .job-body dt {
-    font-weight: bold;
-    font-size: 0.85rem;
-    color: #555;
-    margin-top: 0.5rem;
-  }
-  .job-body dd {
-    margin-left: 0;
-    font-size: 0.9rem;
-  }
-  .job-actions {
-    margin-top: 0.75rem;
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
-  .done-section {
-    margin-top: 2rem;
-    opacity: 0.7;
-  }
-  .done-section .job-title {
-    text-decoration: line-through;
-    font-weight: normal;
-  }
-  .claimed-badge {
-    font-size: 0.78rem;
-    padding: 0.1rem 0.45rem;
+  .claimed-pill {
+    display: inline-block;
+    font-size: 0.75rem;
+    padding: 0.1rem 0.4rem;
     border-radius: 3px;
     background: #0d6efd;
     color: #fff;
+  }
+  .done-section {
+    margin-top: 2.5rem;
+    opacity: 0.75;
+  }
+  .done-section h4 {
+    margin-bottom: 0.75rem;
+  }
+  .text-muted-sm {
+    font-size: 0.8rem;
+    color: #6c757d;
+  }
+  .table-scroll {
+    overflow-x: auto;
+  }
+  .job-actions {
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+    align-items: flex-start;
   }
 </style>
 {% endblock %}
@@ -87,79 +86,120 @@
 
 <p>
   {% if perms.toolkit.write %}
-    <a href="{% url "labs-job-add" %}" class="btn btn-primary btn-sm">+ Add job</a>
+    <a href="{% url "labs-job-add" %}" class="btn btn-primary btn-sm">+ Log a job</a>
   {% endif %}
 </p>
 
 {% if not open_jobs %}
   <p><em>No open jobs right now.</em></p>
+{% else %}
+<div class="table-scroll">
+  <table class="jobs-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Area</th>
+        <th>Description</th>
+        <th title="⚠️ Safety risk  🔧 Skill needed  🔑 Keyholder required  🏠 In building  🏡 Remote  🔀 Both">Flags</th>
+        <th>Reporter</th>
+        <th>Plan / Status</th>
+        <th>Claimed</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for job in open_jobs %}
+      <tr>
+        <td class="text-muted-sm" style="white-space: nowrap;">
+          {{ job.posted_at|date:"d M Y" }}
+          <br>
+          <span class="urgency-badge urgency-{{ job.urgency }}">{{ job.get_urgency_display }}</span>
+        </td>
+        <td>{{ job.area }}</td>
+        <td class="col-desc">
+          <strong>{{ job.title }}</strong>
+          {% if job.description %}
+            <br><span class="text-muted-sm">{{ job.description|truncatechars:120 }}</span>
+          {% endif %}
+        </td>
+        <td class="col-flags">
+          {% if job.safety_risk %}<span title="Safety risk">⚠️</span>{% endif %}
+          {% if job.skill_needed %}<span title="Skill or trade needed">🔧</span>{% endif %}
+          {% if job.keyholder_required %}<span title="Keyholder required">🔑</span>{% endif %}
+          {% if job.location_type == LOCATION_BUILDING %}<span title="Must be done in the building">🏠</span>
+          {% elif job.location_type == LOCATION_REMOTE %}<span title="Can be done remotely">🏡</span>
+          {% else %}<span title="In building and remotely">🔀</span>{% endif %}
+        </td>
+        <td class="text-muted-sm">
+          {% if job.reporter_name %}{{ job.reporter_name }}{% endif %}
+          {% if job.posted_by %}
+            {% if job.reporter_name %}
+              <br><em>Logged by {{ job.posted_by.get_full_name|default:job.posted_by.username }}</em>
+            {% else %}
+              {{ job.posted_by.get_full_name|default:job.posted_by.username }}
+            {% endif %}
+          {% endif %}
+        </td>
+        <td class="col-plan text-muted-sm">{{ job.plan_status|linebreaksbr }}</td>
+        <td>
+          {% if job.claimed_by %}
+            <span class="claimed-pill">{{ job.claimed_by.get_full_name|default:job.claimed_by.username }}</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="job-actions">
+            {% if not job.claimed_by %}
+              <form method="post" action="{% url "labs-job-claim" job.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-primary">Claim</button>
+              </form>
+            {% endif %}
+            <form method="post" action="{% url "labs-job-resolve" job.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-success">Resolved</button>
+            </form>
+            {% if perms.toolkit.write %}
+              <a href="{% url "labs-job-edit" job.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endif %}
-
-{% for job in open_jobs %}
-  <details class="job-card">
-    <summary>
-      <span class="urgency-badge urgency-{{ job.urgency }}">{{ job.get_urgency_display }}</span>
-      <span class="job-title">{{ job.title }}</span>
-      {% if job.claimed_by %}
-        <span class="claimed-badge">Claimed by {{ job.claimed_by.get_full_name|default:job.claimed_by.username }}</span>
-      {% endif %}
-      {% if job.keyholder_required %}
-        <span class="job-meta" title="Keyholder required">🔑</span>
-      {% endif %}
-      {% if job.location %}
-        <span class="job-meta">{{ job.location }}</span>
-      {% endif %}
-    </summary>
-    <div class="job-body">
-      <dl>
-        {% if job.description %}
-          <dt>What needs doing</dt>
-          <dd>{{ job.description|linebreaksbr }}</dd>
-        {% endif %}
-        {% if job.skills %}
-          <dt>Skills / tools needed</dt>
-          <dd>{{ job.skills|linebreaksbr }}</dd>
-        {% endif %}
-        {% if job.keyholder_required %}
-          <dt>Keyholder</dt>
-          <dd>🔑 This job requires a venue keyholder.</dd>
-        {% endif %}
-        <dt>Posted</dt>
-        <dd>{{ job.posted_at|date:"d M Y" }}{% if job.posted_by %} by {{ job.posted_by.get_full_name|default:job.posted_by.username }}{% endif %}</dd>
-      </dl>
-      <div class="job-actions">
-        {% if not job.claimed_by %}
-          <form method="post" action="{% url "labs-job-claim" job.pk %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-sm btn-outline-primary">Claim this job</button>
-          </form>
-        {% endif %}
-        <form method="post" action="{% url "labs-job-done" job.pk %}">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-sm btn-success">Mark done</button>
-        </form>
-        {% if perms.toolkit.write %}
-          <a href="{% url "labs-job-edit" job.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
-        {% endif %}
-      </div>
-    </div>
-  </details>
-{% endfor %}
 
 {% if done_jobs %}
   <div class="done-section">
-    <h4>Recently done</h4>
-    {% for job in done_jobs %}
-      <details class="job-card">
-        <summary>
-          <span class="job-title">{{ job.title }}</span>
-          <span class="job-meta">Done {{ job.done_at|date:"d M Y"|default:"" }}</span>
-        </summary>
-        <div class="job-body">
-          {% if job.description %}<p>{{ job.description }}</p>{% endif %}
-        </div>
-      </details>
-    {% endfor %}
+    <h4>Recently resolved</h4>
+    <div class="table-scroll">
+      <table class="jobs-table">
+        <thead>
+          <tr>
+            <th>Resolved</th>
+            <th>Area</th>
+            <th>Description / Notes</th>
+            <th>Claimed by</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for job in done_jobs %}
+          <tr>
+            <td class="text-muted-sm" style="white-space: nowrap;">{{ job.resolved_at|date:"d M Y"|default:"" }}</td>
+            <td class="text-muted-sm">{{ job.area }}</td>
+            <td>
+              <s>{{ job.title }}</s>
+              {% if job.plan_status %}
+                <br><span class="text-muted-sm">{{ job.plan_status|truncatechars:80 }}</span>
+              {% endif %}
+            </td>
+            <td class="text-muted-sm">{{ job.claimed_by.get_full_name|default:job.claimed_by.username|default:"" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 {% endif %}
 

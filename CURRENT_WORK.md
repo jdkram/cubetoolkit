@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-05-06 (archival pattern for roles + tags ✅; volunteer summary status ✅; showing time fields fix ✅; donations wishlist + jobs board labs features ✅; D.2 Docker health checks ✅)
+**Last updated:** 2026-05-06 (archival pattern for roles + tags ✅; volunteer summary status ✅; showing time fields fix ✅; donations wishlist + jobs board labs features ✅; D.2 Docker health checks ✅; jobs board overhaul, donations manage page, seed data, Docker resource limits ✅)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [ROADMAP.md](docs/ROADMAP.md) (wave-by-wave sequencing) · [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -80,9 +80,10 @@
 | ~~9.17↳~~ | ~~`Role` badge flags: beginner-friendly, wheelchair-inaccessible, keyholder-only~~ | ✅ 2026-03-03 | `beginner_friendly`, `not_wheelchair_accessible`, `keyholder_only` BooleanFields on `Role`; migrations 0016+0017; editable in roles page (🌱/♿✗/🔑 columns); rota `<li>` emits `data-*` attributes; JS ROLE_BADGES switches from name-matching to attribute-driven; seed data sets flags on correct roles |
 | ~~9.10.5~~ | ~~Role timing notes field~~ | Shelved | Merged with 9.40 — both add time fields to rota. Deferred: may add visual clutter and more fields for programmers to fill. Revisit if needed. |
 | 13.5 | Collectives directory (CMS-managed) | 🔵 S | Wagtail page with directory listing |
-| ~~9.78~~ | ~~Donation specifier~~ | ✅ 2026-05-06 | Public `/labs/donations/` page; traffic-light status badges (Wanted/Check first/Not needed); items grouped by category; Django admin CRUD via `DonationItemAdmin`; no login required. |
+| ~~9.78~~ | ~~Donation specifier~~ | ✅ 2026-05-06 | Public `/labs/donations/` page (no login) + internal `/labs/donations/manage/` (login required). Traffic-light status badges; items grouped by category. Manage page: table with inline per-row save, public + internal notes columns, last-edited-by tracking. `DonationItem` gains `internal_notes`, `last_edited_by`, `updated_at`. Seed data: 13 sample items across 4 categories. |
 | 9.79 | Tool library | 🔵 S | Lending catalogue for volunteer/collective tools; availability status; contact-to-borrow MVP; see TASKS.md 9.79 |
-| ~~9.80~~ | ~~Non-rota jobs / maintenance schedule~~ | ✅ 2026-05-06 | `/labs/jobs/` jobs board; expandable `<details>` cards sorted by urgency; Claim / Mark done / Edit actions; write-perm gating on add/edit; any volunteer can claim or mark done; recent done jobs at bottom. `Job` model with urgency, keyholder_required, posted_by, claimed_by. |
+| ~~9.80~~ | ~~Non-rota jobs / maintenance schedule~~ | ✅ 2026-05-06 | `/labs/jobs/` table-format jobs board matching the existing spreadsheet. Fields: date, area, description, safety risk ⚠️, skill needed 🔧, keyholder required 🔑, location type (building/remote/both) 🏠/🏡/🔀, reporter name, plan/status, claimed by. Urgency sorted semantically (high→medium→low). `Job` model overhauled: `location`+`skills` removed; `area`, `safety_risk`, `skill_needed`, `location_type`, `reporter_name`, `plan_status`, `resolved`/`resolved_at` added. Seed data: 6 jobs including one resolved example. |
+| 9.81 | Building maintenance & annual jobs checklist | 🟡 M | Table of recurring core jobs (contract renewals, annual inspections, etc.); sign-up slots; links to Nextcloud instructions; historical log of who did them. Design spec needed first. |
 | ~~9.20.1~~ | ~~Test: datetime-local POST format end-to-end~~ | ✅ 2026-03-07 | T-format POST test in `EditShowing`; 3 widget unit tests for `JQueryDateTimePicker.value_from_datadict` |
 | ~~9.20.2~~ | ~~Test: `ROTA_CLEAR_EMAIL_PROMPT_ENABLED` in context~~ | ✅ 2026-03-07 | Two `@override_settings` tests in `EditRotaViewGet` |
 | ~~9.20.3~~ | ~~Test: volunteer programme view (logged-in vs anonymous)~~ | ✅ 2026-03-07 | `VolunteerProgrammeView` class in `test_public_views.py`; 3 tests covering anon vs authenticated and `is_volunteer` context flag |
@@ -143,7 +144,7 @@
 | 9.67 | Room scratchpad/notes | 🟢 XS | Free-text `scratchpad` field on `Room` model. Any user can edit. Visible on rota and room pages. Photos later. **Status:** Needs spec by Jonny+Claude |
 | 9.68 | Collectives directory + membership | 🟡 M | Collectives page with descriptions + key links (Nextcloud folders, WhatsApp groups). Users select membership for prioritised view. Toolkit-only (no mailing list sync yet). Related to 9.51. **Status:** Needs spec by Jonny+Claude |
 | 9.69 | Event detail showing date UX improvements | 🟡 M | On event detail pages, the full list of showing dates creates cognitive overhead. Users must scroll through past or distant future dates to find the next occurrence. Design solution needed: hide past dates, bold next upcoming, or restructure how multi-date events are presented. See TASKS.md 9.69 |
-| 9.70 | Nightly production DB backup | 🟢 XS | Infrastructure task on xtreamlab_jorn: \`.my.cnf\`, backup script, cron at 03:00, 30-day rolling retention. **Needs Marcus conversation before setting up.** See TASKS.md 9.70 |
+| ~~9.70~~ | ~~Nightly production DB backup~~ | Shelved | Production team has their own backup process. |
 | ~~**9.71**~~ | ~~**Event terms and financial field change log**~~ | ✅ 2026-04-22 | See above. |
 | **9.75** | **Starred + shadowed events on the rota** | **🔵 S** | ✅ 2026-04-25 — VolunteerEventMark (one mark per event); single ☆→★→☽ toggle cycling; ☽ collapses showing to title; filterline: starred filter + beginner highlight + vacancies filter. |
 | **9.76** | **Rota date navigation and orientation** | **🔵 S** | ~~9.76.1~~ ✅ 2026-04-30; ~~9.76.2~~ ✅ 2026-04-30 (free — sticky CSS shipped in .1); ~~9.76.3~~ not doing (rota already starts at today; date range picker covers month-jump); ~~9.76.5~~ not doing. Remaining: 9.76.4 nav rail (under evaluation). |
@@ -161,7 +162,7 @@ Items identified during the April 2026 SNS production site outage investigation.
 | ~~**D.1**~~ | ~~**WhiteNoise cache-busting storage backend**~~ | ✅ 2026-04-30 | `STORAGES` dict added to `docker_settings_prod_ss.py` with `CompressedManifestStaticFilesStorage`; dry-run collectstatic verified clean (312 files, no errors). |
 | ~~**D.2**~~ | ~~**Docker health checks**~~ | ✅ 2026-05-06 | `/health/` view in `toolkit/index/views.py` — calls `connection.ensure_connection()`, returns 200 `ok` or 503 `db unavailable`. Wired into `docker-compose-production.yml`: `toolkit` service uses HTTP check; `mailer` uses `pgrep -f mailerd`. Both: 30s interval, 3 retries, 60s/30s start_period. |
 | **D.3** | **Dependency pinning** | **🟡 M** | Several packages in `requirements/` have no version constraint (`nh3`, `python-dateutil`, `html2text`, `monthdelta`, `python-magic`). Run `uv pip compile requirements/base.txt -o requirements/base.lock` and switch the Dockerfile to install from the lockfile. Prevents surprise breakage when rebuilding the image months later. Do in a separate branch; test the full image build before merging. |
-| **D.4** | **Docker resource limits** | **🟢 XS** | Add `deploy.resources.limits` (memory, CPU) to both services in `docker-compose-production.yml`. Prevents a runaway query or mailout loop from starving the host. Exact values depend on the production host's available RAM — check with Marcus before setting. Suggested starting point: `toolkit: 512M`, `mailer: 256M`. |
+| ~~**D.4**~~ | ~~**Docker resource limits**~~ | ✅ 2026-05-06 | `toolkit: 512m / 1.0 CPU`, `mailer: 192m / 0.5 CPU`. Production is 2GB total; leaves ~1.3GB for OS + MySQL. |
 | ~~**D.5**~~ | ~~**Console email backend in dev settings**~~ | ✅ 2026-04-21 | `EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'` already in `devserver_settings.py` (line 55). |
 
 ---

@@ -31,7 +31,16 @@ class DonationItem(models.Model):
     name = models.CharField(max_length=128)
     category = models.CharField(max_length=64, blank=True, default="")
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_WANTED)
-    notes = models.TextField(blank=True, default="")
+    notes = models.TextField(
+        blank=True,
+        default="",
+        help_text="Public-facing notes shown on the donations page.",
+    )
+    internal_notes = models.TextField(
+        blank=True,
+        default="",
+        help_text="Internal notes visible only to volunteers (e.g. storage location, condition requirements).",
+    )
     contact = models.CharField(
         max_length=128,
         blank=True,
@@ -40,6 +49,14 @@ class DonationItem(models.Model):
     )
     display_order = models.IntegerField(default=0)
     active = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_edited_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
 
     class Meta:
         db_table = "labs_donation_items"
@@ -59,25 +76,48 @@ class Job(models.Model):
         (URGENCY_LOW, "Whenever"),
     ]
 
+    LOCATION_BUILDING = "building"
+    LOCATION_REMOTE = "remote"
+    LOCATION_BOTH = "both"
+    LOCATION_CHOICES = [
+        (LOCATION_BUILDING, "In building"),
+        (LOCATION_REMOTE, "Remote"),
+        (LOCATION_BOTH, "Both"),
+    ]
+
+    # What and where
     title = models.CharField(max_length=128)
-    description = models.TextField(blank=True, default="")
-    location = models.CharField(
+    area = models.CharField(
         max_length=128,
         blank=True,
         default="",
-        help_text="Where the job needs to happen, e.g. 'Main hall', 'Kitchen'.",
+        help_text="Area or location, e.g. 'Kitchen', 'Roof', 'Anywhere'.",
     )
-    skills = models.TextField(
-        blank=True,
-        default="",
-        help_text="What skills or tools are needed.",
-    )
+    description = models.TextField(blank=True, default="", help_text="Full description of the issue or task.")
+    plan_status = models.TextField(blank=True, default="", help_text="Current plan or status update.")
+
+    # Flags
+    safety_risk = models.BooleanField(default=False, help_text="Is there an immediate safety risk?")
+    skill_needed = models.BooleanField(default=False, help_text="Does this require a specific skill or trade?")
     keyholder_required = models.BooleanField(default=False)
     urgency = models.CharField(max_length=16, choices=URGENCY_CHOICES, default=URGENCY_LOW)
+    location_type = models.CharField(
+        max_length=16,
+        choices=LOCATION_CHOICES,
+        default=LOCATION_BUILDING,
+        help_text="Can this be done remotely, or does it require being in the building?",
+    )
+
+    # People
     posted_by = models.ForeignKey(
         User, null=True, blank=True, on_delete=models.SET_NULL, related_name="posted_jobs"
     )
-    posted_at = models.DateTimeField(auto_now_add=True)
+    reporter_name = models.CharField(
+        max_length=128,
+        blank=True,
+        default="",
+        help_text="Name of the person who reported the issue and can provide more detail.",
+    )
     claimed_by = models.ForeignKey(
         User,
         null=True,
@@ -85,12 +125,16 @@ class Job(models.Model):
         on_delete=models.SET_NULL,
         related_name="claimed_jobs",
     )
-    done = models.BooleanField(default=False)
-    done_at = models.DateTimeField(null=True, blank=True)
+
+    # Dates
+    posted_at = models.DateTimeField(auto_now_add=True)
+
+    # Resolution
+    resolved = models.BooleanField(default=False)
+    resolved_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = "labs_jobs"
-        ordering = ["-done", "urgency", "-posted_at"]
 
     def __str__(self):
         return self.title
