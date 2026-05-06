@@ -1,0 +1,148 @@
+{% extends 'base_admin.html' %}
+
+{% block title %}Anonymise volunteer: {{ member.name }}{% endblock title %}
+
+{% block body %}
+<style>
+  .anon-warning {
+    background: #fff3cd;
+    border: 2px solid #ffc107;
+    border-radius: 4px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  .anon-warning h2 {
+    color: #856404;
+    margin-top: 0;
+    font-size: 1.1rem;
+  }
+  .anon-table th {
+    width: 11rem;
+    font-weight: normal;
+    color: #555;
+    vertical-align: top;
+    padding: 0.2rem 0.5rem 0.2rem 0;
+  }
+  .anon-table td {
+    padding: 0.2rem 0;
+  }
+  .rota-sample {
+    font-size: 0.85rem;
+    color: #555;
+    margin: 0.5rem 0 0 1rem;
+  }
+  .confirm-block {
+    margin-top: 1.5rem;
+    padding: 1rem 1.25rem;
+    background: #f8d7da;
+    border: 2px solid #f5c6cb;
+    border-radius: 4px;
+  }
+  .confirm-block label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-weight: bold;
+    color: #721c24;
+  }
+  .confirm-block input[type="text"] {
+    width: 20rem;
+    max-width: 100%;
+    padding: 0.3rem 0.5rem;
+    font-size: 1rem;
+    border: 1px solid #aaa;
+    border-radius: 3px;
+  }
+</style>
+
+<h1>Anonymise volunteer: {{ member.name }}</h1>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+  {% endfor %}
+{% endif %}
+
+<div class="anon-warning">
+  <h2>⚠ This is irreversible</h2>
+  <p>This action permanently removes all personally identifiable information for this volunteer. It cannot be undone. Use only in response to a verified GDPR right-to-erasure request.</p>
+</div>
+
+<h3>What will be changed</h3>
+
+<table class="anon-table">
+  <tr>
+    <th>Name</th>
+    <td><strong>{{ member.name }}</strong> → <em>Anonymised volunteer {{ volunteer.pk }}</em></td>
+  </tr>
+  <tr>
+    <th>Email</th>
+    <td>{{ member.email|default:"(blank)" }} → <em>anon-{{ volunteer.pk }}@deleted.invalid</em></td>
+  </tr>
+  <tr>
+    <th>Phone / address</th>
+    <td>Cleared</td>
+  </tr>
+  <tr>
+    <th>Notes / pronouns</th>
+    <td>Cleared</td>
+  </tr>
+  <tr>
+    <th>Portrait</th>
+    <td>{% if volunteer.portrait %}Deleted{% else %}(none){% endif %}</td>
+  </tr>
+  <tr>
+    <th>Login account</th>
+    <td>Deactivated, username anonymised, password invalidated</td>
+  </tr>
+  <tr>
+    <th>Permissions</th>
+    <td>Panopticon and programmer access revoked</td>
+  </tr>
+  <tr>
+    <th>Training records</th>
+    <td>Deleted</td>
+  </tr>
+  <tr>
+    <th>Starred / shadowed events</th>
+    <td>Deleted</td>
+  </tr>
+  <tr>
+    <th>Rota history</th>
+    <td>
+      {% if rota_match_count == 0 %}
+        No entries found matching this name — none will be changed.
+      {% elif rota_match_count == 1 %}
+        1 rota entry matching <strong>{{ member.name }}</strong> will be blanked.
+      {% else %}
+        {{ rota_match_count }} rota entries matching <strong>{{ member.name }}</strong> will be blanked.
+      {% endif %}
+      {% if rota_match_count > 0 %}
+        <div class="rota-sample">
+          Note: entries using a nickname or alternative spelling will not be found.
+          {% if rota_sample %}
+            <br>Sample matches:
+            <ul>
+              {% for entry in rota_sample %}
+                <li>{{ entry.showing.event.name }} ({{ entry.showing.start|date:"d M Y" }}) — role: {{ entry.role }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+      {% endif %}
+    </td>
+  </tr>
+</table>
+
+<form method="post">
+  {% csrf_token %}
+  <div class="confirm-block">
+    <label for="confirm_name">Type <strong>{{ member.name }}</strong> to confirm:</label>
+    <input type="text" id="confirm_name" name="confirm_name" autocomplete="off">
+    <div style="margin-top: 0.8rem;">
+      <button type="submit" class="btn btn-danger">Permanently anonymise this volunteer</button>
+      <a href="{% url 'edit-volunteer' volunteer.pk %}" class="btn btn-secondary" style="margin-left: 0.5rem;">Cancel</a>
+    </div>
+  </div>
+</form>
+
+{% endblock body %}

@@ -139,7 +139,7 @@ class MembersTestsMixin:
         self.vol_3.save()
 
         self.vol_4 = Volunteer(
-            member=self.mem_7, user=u_vol4, active=False, notes="Subliminal, superluminous"
+            member=self.mem_7, user=u_vol4, status="retired", notes="Subliminal, superluminous"
         )
         self.vol_4.save()
         self.vol_4.roles.set([r3])

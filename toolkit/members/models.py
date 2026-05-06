@@ -206,8 +206,22 @@ class Volunteer(models.Model):
         "Member", related_name="volunteer", on_delete=models.CASCADE
     )
 
+    STATUS_ACTIVE = "active"
+    STATUS_DORMANT = "dormant"
+    STATUS_RETIRED = "retired"
+    STATUS_CHOICES = [
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_DORMANT, "Dormant"),
+        (STATUS_RETIRED, "Retired"),
+    ]
+
     notes = models.TextField(blank=True)
     active = models.BooleanField(default=True)
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default=STATUS_ACTIVE,
+    )
 
     portrait = models.ImageField(
         upload_to=settings.VOLUNTEER_PORTRAIT_DIR,
@@ -228,7 +242,8 @@ class Volunteer(models.Model):
         db_table = "Volunteers"
 
     def save(self, *args, **kwargs):
-        # Save the model.
+        # Keep `active` in sync with `status` — `status` is the source of truth.
+        self.active = self.status == self.STATUS_ACTIVE
         try:
             current_portrait_file = self.portrait.file.name
         except (OSError, ValueError):
@@ -347,3 +362,19 @@ class TrainingRecord(models.Model):
             expiry_age = get_site_config().default_training_expiry_months
         threshold = timezone_now().date() - monthdelta(expiry_age)
         return self.training_date and self.training_date < threshold
+
+
+class AnonymisationLog(models.Model):
+    # Audit trail for GDPR right-to-erasure actions. Stores no PII — only
+    # enough to demonstrate that a request was acted on and when.
+    volunteer_pk = models.IntegerField()
+    performed_by = models.ForeignKey(
+        User, null=True, on_delete=models.SET_NULL
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "AnonymisationLog"
+
+    def __str__(self):
+        return f"Anonymisation of volunteer pk={self.volunteer_pk} at {self.created_at}"

@@ -11,7 +11,7 @@ from django.test.utils import override_settings
 
 import django.contrib.auth.models as auth_models
 
-from toolkit.members.models import Member
+from toolkit.members.models import Member, Volunteer
 import toolkit.members.member_views as member_views
 
 from .common import MembersTestsMixin
@@ -621,7 +621,7 @@ class TestDeleteMemberViewNotLoggedIn(MembersTestsMixin, TestCase):
         self.assertTrue(Member.objects.filter(id=mem.id).exists())
 
         # Retire:
-        self.vol_1.active = False
+        self.vol_1.status = Volunteer.STATUS_RETIRED
         self.vol_1.save()
 
         url = reverse("delete-member", kwargs={"member_id": mem.id})

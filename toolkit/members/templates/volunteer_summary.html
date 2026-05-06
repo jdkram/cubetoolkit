@@ -44,7 +44,7 @@
 <a href="{% url "view-volunteer-role-report" %}" title="volunteer role report">volunteer role report</a> &#xb7;
 <a href="{% url "view-volunteer-training-report" %}" title="volunteer training report">volunteer training report</a>
 <br>
-Active {{ VENUE.name }} volunteers: {{ active_count }}</p>
+Active {{ VENUE.name }} volunteers: {{ active_count }}{% if dormant_count %} &nbsp;·&nbsp; Dormant: {{ dormant_count }}{% endif %}</p>
 
 <table id="volunteer-table" class="table table-sm table-striped">
     <thead>
@@ -63,6 +63,9 @@ Active {{ VENUE.name }} volunteers: {{ active_count }}</p>
                 <abbr title="Can edit the diary but not access details of volunteers and members">Programmer</abbr> <span class="sort-ind" aria-hidden="true"></span>
             </th>
         {% endif %}
+        <th data-sortable>
+            Status <span class="sort-ind" aria-hidden="true"></span>
+        </th>
         <th>
             Email
         </th>
@@ -95,6 +98,9 @@ Active {{ VENUE.name }} volunteers: {{ active_count }}</p>
                         {% if volunteer.is_programmer %}&#10003;{% endif %}
                     </td>
                 {% endif %}
+                <td data-value="{{ volunteer.status }}">
+                    {% if volunteer.status == "dormant" %}<em class="text-muted">Dormant</em>{% else %}Active{% endif %}
+                </td>
                 <td>
                     {{ member.email|urlize|default:"<em>Request email address</em>" }}
                 </td>
