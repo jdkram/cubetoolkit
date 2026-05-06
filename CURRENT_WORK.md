@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-05-06 (archival pattern for roles + tags ✅; volunteer summary status ✅; showing time fields fix ✅; donations wishlist + jobs board labs features ✅; D.2 Docker health checks ✅; jobs board overhaul, donations manage page, seed data, Docker resource limits ✅; jobs unclaim + None crash fix ✅; sidebar CSS fix ✅; event tags archive UX ✅; donations manage expandable row redesign ✅)
+**Last updated:** 2026-05-06 (archival pattern for roles + tags ✅; volunteer summary status ✅; showing time fields fix ✅; donations wishlist + jobs board labs features ✅; D.2 Docker health checks ✅; jobs board overhaul, donations manage page, seed data, Docker resource limits ✅; jobs unclaim + None crash fix ✅; sidebar CSS fix ✅; event tags archive UX ✅; donations manage expandable row redesign ✅; CSS architecture refactor — layout.css extracted, programme.css and event.css stripped of duplicate normalize/nav rules ✅)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [ROADMAP.md](docs/ROADMAP.md) (wave-by-wave sequencing) · [TASKS.md](docs/TASKS.md) (design rationale & feature specs)

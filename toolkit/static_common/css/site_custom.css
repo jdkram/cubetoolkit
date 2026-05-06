@@ -148,6 +148,14 @@ a {
     list-style: none;
 }
 
+/* Nav link font size — set here so it's consistent on all public views
+ * regardless of which layout CSS (programme.css / static_pages.css / event.css)
+ * is loaded. The layout CSS files also set this to 0.7857em; this rule
+ * ensures pages that don't load a layout CSS get the same size. */
+#site-nav ul li a {
+    font-size: 0.7857em;
+}
+
 /* Sign-out button in the sidebar nav: match <a> link appearance exactly */
 #site-nav ul li form {
     margin: 0;

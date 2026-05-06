@@ -5,15 +5,11 @@
 {% block body %}
 <style>
   .donation-intro {
-    max-width: 42rem;
-    margin: 1.5rem auto 2rem;
-    padding: 0 1rem;
+    margin: 1.5rem 1rem 2rem;
     font-size: 1.05rem;
   }
   .category-section {
-    max-width: 52rem;
-    margin: 0 auto 2rem;
-    padding: 0 1rem;
+    margin: 0 1rem 2rem;
   }
   .category-section h2 {
     font-size: 1.1rem;
@@ -24,8 +20,14 @@
   }
   .item-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    grid-template-columns: repeat(4, 1fr);
     gap: 1rem;
+  }
+  @media (max-width: 900px) {
+    .item-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 500px) {
+    .item-grid { grid-template-columns: 1fr; }
   }
   .item-card {
     border: 1px solid #ddd;
@@ -72,7 +74,9 @@
 
 <div class="donation-intro">
   <h1>What {{ VENUE.name }} needs</h1>
-  <p>Before donating, please check the status below. Items marked <strong>Check first</strong> may be appreciated — contact us before bringing anything. Items marked <strong>Not needed</strong> are something we already have plenty of, or can't use.</p>
+  <p>The most valuable things you can give us are your time and energy. If you want to get involved, the best place to start is by volunteering at events or joining one of our working groups.</p>
+  <p>That said, we do sometimes need physical things too, and this page lists what's currently useful. Before bringing anything, please check the status: <strong>Wanted</strong> means yes please; <strong>Check first</strong> means it might work but talk to us first; <strong>Not needed</strong> means we're already well supplied or can't use it.</p>
+  <p>One of our most precious resources as a DIY space is space itself. We share the building across a lot of different groups and uses, and it's much easier to add things than to remove them. Please don't drop anything off without checking first, even if it seems obviously useful.</p>
 </div>
 
 {% if not categories %}
