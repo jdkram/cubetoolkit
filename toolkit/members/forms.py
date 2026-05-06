@@ -120,10 +120,11 @@ class VolunteerForm(forms.ModelForm):
 
     class Meta:
         model = toolkit.members.models.Volunteer
-        fields = ("portrait", "notes", "roles")
+        fields = ("portrait", "notes", "roles", "status")
         widgets = {
             "notes": forms.Textarea(attrs={"wrap": "soft"}),
             "roles": forms.CheckboxSelectMultiple(),
+            "status": forms.RadioSelect(),
         }
 
     def _parse_data_uri(self, image_data):

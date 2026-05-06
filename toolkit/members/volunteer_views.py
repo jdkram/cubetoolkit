@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 
 from django.contrib.auth.models import User
+from django.db import transaction
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
@@ -23,8 +24,8 @@ from toolkit.members.forms import (
     TrainingRecordForm,
     GroupTrainingForm,
 )
-from toolkit.members.models import Member, Volunteer, TrainingRecord
-from toolkit.diary.models import Role
+from toolkit.members.models import AnonymisationLog, Member, Volunteer, TrainingRecord
+from toolkit.diary.models import Role, RotaEntry, VolunteerEventMark
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -34,6 +35,7 @@ logger.setLevel(logging.DEBUG)
 @require_safe
 def view_volunteer_list(request):
     show_retired = request.GET.get("show-retired", None) is not None
+    show_dormant = request.GET.get("show-dormant", None) is not None
     # Get all volunteers, sorted by name:
     qs = TrainingRecord.objects.filter(
         training_type=TrainingRecord.GENERAL_TRAINING
@@ -51,13 +53,18 @@ def view_volunteer_list(request):
         )
     )
 
-    if not show_retired:
-        volunteers = volunteers.filter(active=True)
+    if show_retired:
+        pass  # show everything
+    elif show_dormant:
+        volunteers = volunteers.filter(status__in=[Volunteer.STATUS_ACTIVE, Volunteer.STATUS_DORMANT])
+    else:
+        volunteers = volunteers.filter(status=Volunteer.STATUS_ACTIVE)
     active_count = sum(1 for v in volunteers if v.active)
     context = {
         "volunteers": volunteers,
         "default_mugshot": settings.DEFAULT_MUGSHOT,
         "retired_data_included": show_retired,
+        "dormant_data_included": show_dormant,
         "active_count": active_count,
         "general_training_desc": TrainingRecord.GENERAL_TRAINING_DESC,
     }
@@ -119,7 +126,7 @@ def view_volunteer_summary(request):
     order = request.GET.get("order", "name")
 
     base_qs = (
-        Volunteer.objects.filter(active=True)
+        Volunteer.objects.exclude(status=Volunteer.STATUS_RETIRED)
         .select_related("member", "user")
         .annotate(
             is_programmer=Exists(
@@ -141,10 +148,12 @@ def view_volunteer_summary(request):
         volunteers = base_qs.order_by("-member__created_at")
         sort_type = "induction date"
 
-    active_count = volunteers.count()
+    active_count = volunteers.filter(status=Volunteer.STATUS_ACTIVE).count()
+    dormant_count = volunteers.filter(status=Volunteer.STATUS_DORMANT).count()
     context = {
         "volunteers": volunteers,
         "active_count": active_count,
+        "dormant_count": dormant_count,
         "sort_type": sort_type,
         "dawn_of_toolkit": settings.DAWN_OF_TOOLKIT,
     }
@@ -226,11 +235,11 @@ def activate_volunteer(request, set_active=True):
     vol = get_object_or_404(Volunteer, id=vol_pk)
 
     assert isinstance(set_active, bool)
-    vol.active = set_active
+    vol.status = Volunteer.STATUS_ACTIVE if set_active else Volunteer.STATUS_RETIRED
     vol.save()
 
     logger.info(
-        f"{request.user.last_name} set active to {str(set_active)} for volunteer {vol.member.name}"
+        f"{request.user.last_name} set status to {vol.status} for volunteer {vol.member.name}"
     )
     messages.add_message(
         request,
@@ -567,3 +576,100 @@ def add_volunteer_training_group_record(request):
         "form": form,
     }
     return render(request, "form_group_training.html", context)
+
+
+def anonymise_volunteer(request, volunteer_id):
+    if not request.user.is_superuser:
+        raise PermissionDenied
+
+    volunteer = get_object_or_404(Volunteer, pk=volunteer_id)
+    member = volunteer.member
+    volunteer_name = member.name
+
+    rota_matches = RotaEntry.objects.filter(name__iexact=volunteer_name)
+    rota_match_count = rota_matches.count()
+    rota_sample = list(
+        rota_matches.select_related("showing__event")[:5]
+    )
+
+    if request.method == "POST":
+        confirm_name = request.POST.get("confirm_name", "").strip()
+        if confirm_name != volunteer_name:
+            messages.error(
+                request,
+                "Name did not match — no changes were made.",
+            )
+            return HttpResponseRedirect(
+                reverse("anonymise-volunteer", kwargs={"volunteer_id": volunteer_id})
+            )
+
+        with transaction.atomic():
+            anon_label = f"Anonymised volunteer {volunteer.pk}"
+
+            # Blank name from rota history by text match
+            rota_matches.update(name="")
+
+            # Anonymise the Member record
+            member.name = anon_label
+            member.email = f"anon-{volunteer.pk}@deleted.invalid"
+            member.address = ""
+            member.posttown = ""
+            member.postcode = ""
+            member.country = ""
+            member.phone = ""
+            member.altphone = ""
+            member.personal_pronouns = ""
+            member.notes = ""
+            member.website = ""
+            member.mailout = False
+            member.save()
+
+            # Anonymise the Volunteer record
+            volunteer.notes = ""
+            if volunteer.portrait:
+                volunteer.portrait.delete(save=False)
+                volunteer.portrait = None
+            volunteer.status = Volunteer.STATUS_RETIRED
+            volunteer.roles.clear()
+            volunteer.save()
+
+            # Anonymise the Django User account
+            user = volunteer.user
+            user.username = f"anon-{volunteer.pk}"
+            user.first_name = ""
+            user.last_name = ""
+            user.email = ""
+            user.is_active = False
+            user.is_superuser = False
+            user.set_unusable_password()
+            user.save()
+
+            # Remove personal-preference data
+            VolunteerEventMark.objects.filter(volunteer=volunteer).delete()
+            TrainingRecord.objects.filter(volunteer=volunteer).delete()
+
+            AnonymisationLog.objects.create(
+                volunteer_pk=volunteer.pk,
+                performed_by=request.user,
+            )
+
+        logger.info(
+            f"Volunteer pk={volunteer.pk} anonymised by {request.user.username}"
+        )
+        messages.success(
+            request,
+            f"Volunteer record anonymised. {rota_match_count} rota "
+            f"{'entry' if rota_match_count == 1 else 'entries'} cleared.",
+        )
+        return HttpResponseRedirect(reverse("search-members"))
+
+    return render(
+        request,
+        "anonymise_volunteer.html",
+        {
+            "volunteer": volunteer,
+            "member": member,
+            "rota_match_count": rota_match_count,
+            "rota_sample": rota_sample,
+        },
+    )

@@ -92,6 +92,12 @@ Active {{ VENUE.name }} volunteers: {{ active_count }}</p>
 {% else %}
 <a href="{% url "view-volunteer-list" %}?show-retired=true">Show retired</a>
 {% endif %}
+&nbsp;·&nbsp;
+{% if dormant_data_included %}
+<em>Dormant volunteers included</em>
+{% else %}
+<a href="{% url "view-volunteer-list" %}?show-dormant=true">Show dormant</a>
+{% endif %}
 </p>
 <div class="row">
     {% for volunteer in volunteers %}
@@ -117,7 +123,7 @@ Active {{ VENUE.name }} volunteers: {{ active_count }}</p>
                     {% endif %}
                 </div>
                 <div class="col-8">
-                    <p class="name">{{ member.name }}{% if not volunteer.active %} (retired){% endif %}</p>
+                    <p class="name">{{ member.name }}{% if volunteer.status == "dormant" %} <em>(dormant)</em>{% elif volunteer.status == "retired" %} (retired){% endif %}</p>
                     {% if volunteer.member.gdpr_opt_in %}
                        <p><b>GDPR opt in:</b> {{ volunteer.member.gdpr_opt_in|date:"d/m/Y" }}</p>
                     {% else %}

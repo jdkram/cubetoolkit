@@ -12,6 +12,7 @@ from toolkit.members.volunteer_views import (
     add_volunteer_training_group_record,
     view_volunteer_training_records,
     delete_volunteer_training_record,
+    anonymise_volunteer,
 )
 
 from toolkit.members.member_views import (
@@ -89,6 +90,11 @@ volunteer_urls = [
     ),
     re_path(
         r"^(?P<volunteer_id>\d+)/edit$", edit_volunteer, name="edit-volunteer"
+    ),
+    re_path(
+        r"^(?P<volunteer_id>\d+)/anonymise$",
+        anonymise_volunteer,
+        name="anonymise-volunteer",
     ),
     re_path(r"^unretire$", activate_volunteer, name="activate-volunteer"),
     re_path(

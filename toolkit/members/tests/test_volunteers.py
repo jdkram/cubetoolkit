@@ -3,14 +3,15 @@ import os.path
 import tempfile
 import binascii
 import datetime
+import zoneinfo
 
 from django.test import TestCase
 from django.test.utils import override_settings
 from django.urls import reverse
 from django.conf import settings
 
-from toolkit.members.models import Member, Volunteer, TrainingRecord
-from toolkit.diary.models import Role
+from toolkit.members.models import AnonymisationLog, Member, Volunteer, TrainingRecord
+from toolkit.diary.models import Role, RotaEntry, Showing, Event
 
 from .common import MembersTestsMixin
 
@@ -90,7 +91,7 @@ class TestVolunteerEditViews(MembersTestsMixin, TestCase):
 
     def test_unretire(self):
         v = Volunteer.objects.get(id=1)
-        v.active = False
+        v.status = Volunteer.STATUS_RETIRED
         v.save()
 
         url = reverse("activate-volunteer")
@@ -257,6 +258,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
             data={
                 "mem-name": "New Volunteer, called \u0187hri\u01a8topher",
                 "mem-email": "newvol@test.example",
+                "vol-status": "active",
             },
             follow=True,
         )
@@ -302,6 +304,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
                 "vol-notes": "plays the balalaika really badly",
                 "vol-personal_pronouns": "xe/xem",
                 "vol-roles": [2, 3],
+                "vol-status": "active",
             },
             follow=True,
         )
@@ -367,7 +370,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
         url = reverse("edit-volunteer", kwargs={"volunteer_id": 1})
         response = self.client.post(
             url,
-            data={"mem-name": "Renam\u018fd Vol", "mem-email": "volon@cube.test"},
+            data={"mem-name": "Renam\u018fd Vol", "mem-email": "volon@cube.test", "vol-status": "active"},
             follow=True,
         )
         self.assertRedirects(response, reverse("view-volunteer-summary"))
@@ -433,6 +436,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
                 "vol-notes": "plays the balalaika really badly",
                 "vol-personal_pronouns": "xe/xem",
                 "vol-roles": [2, 3],
+                "vol-status": "active",
             },
             follow=True,
         )
@@ -525,6 +529,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
                 "mem-name": "Pictureless Person",
                 "mem-email": "volon@cube.test",
                 "vol-portrait-clear": "t",
+                "vol-status": "active",
             },
         )
         self.assertRedirects(response, reverse("view-volunteer-summary"))
@@ -575,6 +580,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
                     "mem-name": "Pictureless Person",
                     "mem-email": "volon@cube.test",
                     "vol-portrait": new_jpg_file,
+                    "vol-status": "active",
                 },
             )
 
@@ -621,6 +627,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
                 "vol-image_data": (
                     f"data:image/png;base64,{TINY_VALID_BASE64_PNG}"
                 ),
+                "vol-status": "active",
             },
         )
 
@@ -882,7 +889,7 @@ class TestDeleteTraining(MembersTestsMixin, TestCase):
         )
         record.save()
 
-        vol.active = False
+        vol.status = Volunteer.STATUS_RETIRED
         vol.save()
 
         url = reverse(
@@ -969,7 +976,7 @@ class TestAddGroupTraining(MembersTestsMixin, TestCase):
 
         volunteers = Volunteer.objects.filter(active=True)[:3]
         self.assertEqual(len(volunteers), 3)
-        volunteers[1].active = False
+        volunteers[1].status = Volunteer.STATUS_RETIRED
         volunteers[1].save()
 
         response = self.client.post(
@@ -1124,7 +1131,7 @@ class TestViewVolunteerTraining(MembersTestsMixin, TestCase):
         new_record.save()
 
         # Make vol[1] inactive
-        volunteers[1].active = False
+        volunteers[1].status = Volunteer.STATUS_RETIRED
         volunteers[1].save()
 
         # Make vol[2] not have the role:
@@ -1184,3 +1191,132 @@ class TestViewVolunteerTraining(MembersTestsMixin, TestCase):
         url = reverse("view-volunteer-training-report")
         response = self.client.post(url)
         self.assertEqual(response.status_code, 405)
+
+
+class TestAnonymiseVolunteer(MembersTestsMixin, TestCase):
+    def setUp(self):
+        super().setUp()
+        # Grant superuser status to the shared admin test account
+        from django.contrib.auth.models import User as AuthUser
+        AuthUser.objects.filter(username="admin").update(is_superuser=True)
+        self.assertTrue(
+            self.client.login(username="admin", password="T3stPassword!")
+        )
+        self.url = reverse("anonymise-volunteer", kwargs={"volunteer_id": self.vol_1.pk})
+
+    def tearDown(self):
+        self.client.logout()
+
+    def _post_confirm(self, volunteer=None, name=None):
+        vol = volunteer or self.vol_1
+        url = reverse("anonymise-volunteer", kwargs={"volunteer_id": vol.pk})
+        confirm_name = name if name is not None else vol.member.name
+        return self.client.post(url, {"confirm_name": confirm_name})
+
+    def test_get_requires_superuser(self):
+        self.client.logout()
+        self.client.login(username="no_perm", password="T3stPassword!2")
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_post_requires_superuser(self):
+        self.client.logout()
+        self.client.login(username="no_perm", password="T3stPassword!2")
+        response = self._post_confirm()
+        self.assertEqual(response.status_code, 403)
+
+    def test_get_shows_preview(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Volunteer One")
+        self.assertTemplateUsed(response, "anonymise_volunteer.html")
+
+    def test_wrong_name_aborts(self):
+        response = self._post_confirm(name="Wrong Name")
+        self.assertEqual(response.status_code, 302)
+        self.vol_1.member.refresh_from_db()
+        self.assertEqual(self.vol_1.member.name, "Volunteer One")
+
+    def test_anonymise_clears_member_pii(self):
+        self._post_confirm()
+        self.vol_1.member.refresh_from_db()
+        member = self.vol_1.member
+        self.assertIn("Anonymised", member.name)
+        self.assertIn("deleted.invalid", member.email)
+        self.assertEqual(member.address, "")
+        self.assertEqual(member.phone, "")
+        self.assertEqual(member.notes, "")
+
+    def test_anonymise_deactivates_user(self):
+        self._post_confirm()
+        self.vol_1.user.refresh_from_db()
+        self.assertFalse(self.vol_1.user.is_active)
+        self.assertFalse(self.vol_1.user.is_superuser)
+        self.assertIn("anon-", self.vol_1.user.username)
+
+    def test_anonymise_deactivates_volunteer(self):
+        self._post_confirm()
+        self.vol_1.refresh_from_db()
+        self.assertFalse(self.vol_1.active)
+        self.assertEqual(self.vol_1.notes, "")
+
+    def test_anonymise_clears_roles(self):
+        self._post_confirm()
+        self.vol_1.refresh_from_db()
+        self.assertEqual(self.vol_1.roles.count(), 0)
+
+    def test_anonymise_deletes_training_records(self):
+        role = Role.objects.first()
+        TrainingRecord.objects.create(
+            volunteer=self.vol_1,
+            role=role,
+            training_type=TrainingRecord.ROLE_TRAINING,
+            training_date=datetime.date(2024, 1, 1),
+        )
+        self.assertEqual(TrainingRecord.objects.filter(volunteer=self.vol_1).count(), 1)
+        self._post_confirm()
+        self.assertEqual(TrainingRecord.objects.filter(volunteer=self.vol_1).count(), 0)
+
+    def _make_rota_entry(self, name, event_name="Test Event"):
+        event = Event(
+            name=event_name,
+            copy="copy",
+            copy_summary="summary",
+            duration=None,
+            outside_hire=False,
+            private=False,
+        )
+        event.save()
+        showing = Showing(
+            event=event,
+            start=datetime.datetime(2030, 6, 1, 19, 0, tzinfo=zoneinfo.ZoneInfo("UTC")),
+            confirmed=True,
+        )
+        showing.save()
+        role = Role.objects.first()
+        return RotaEntry.objects.create(
+            showing=showing,
+            role=role,
+            name=name,
+            rank=1,
+        )
+
+    def test_anonymise_blanks_rota_entries_by_name(self):
+        entry = self._make_rota_entry("Volunteer One")
+        self._post_confirm()
+        entry.refresh_from_db()
+        self.assertEqual(entry.name, "")
+
+    def test_rota_entries_with_different_name_preserved(self):
+        entry = self._make_rota_entry("Someone Else", event_name="Other Event")
+        self._post_confirm()
+        entry.refresh_from_db()
+        self.assertEqual(entry.name, "Someone Else")
+
+    def test_anonymise_creates_audit_log(self):
+        self.assertEqual(AnonymisationLog.objects.count(), 0)
+        self._post_confirm()
+        self.assertEqual(AnonymisationLog.objects.count(), 1)
+        log = AnonymisationLog.objects.first()
+        self.assertEqual(log.volunteer_pk, self.vol_1.pk)
+        self.assertIsNotNone(log.performed_by)

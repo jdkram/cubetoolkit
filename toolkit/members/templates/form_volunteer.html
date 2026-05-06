@@ -226,6 +226,16 @@ $(document).ready(function() {
       </table>
     </div>
 
+    {% if request.user.is_superuser %}
+    <div class="vol-section danger-zone" style="margin-top:0.75rem;">
+      <h4>GDPR right to erasure</h4>
+      <p style="font-size:0.88em; color:#555; margin:0.25rem 0 0.6rem;">
+        Permanently remove all personal data for this volunteer. Irreversible — use only in response to a verified erasure request.
+      </p>
+      <a href="{% url 'anonymise-volunteer' volunteer.id %}" class="btn btn-sm btn-outline-danger">Anonymise this volunteer…</a>
+    </div>
+    {% endif %}
+
     {% if VENUE.show_user_management and user_form %}
     <div class="vol-section danger-zone">
       <h4>Permissions</h4>
@@ -261,6 +271,19 @@ $(document).ready(function() {
   </div><!-- #vol-right -->
 
 </div><!-- #vol-grid -->
+
+<!-- ── Status ──────────────────────────────────────────────────── -->
+<div class="vol-section" id="vol-status">
+  <h4>Volunteer status</h4>
+  <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 0.3rem;">
+    {% for radio in vol_form.status %}
+    <label style="font-weight: normal; cursor: pointer;">
+      {{ radio.tag }} {{ radio.choice_label }}
+    </label>
+    {% endfor %}
+  </div>
+  <small class="text-muted">Dormant volunteers are hidden from the rota and mailing lists but remain in the system.</small>
+</div>
 
 <!-- ── Notes (full width) ──────────────────────────────────────── -->
 <div class="vol-section" id="vol-notes">
