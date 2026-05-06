@@ -5,7 +5,7 @@ import django.views.static
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 
-from toolkit.index.views import ToolkitIndexView
+from toolkit.index.views import ToolkitIndexView, health
 
 from wagtail.admin import urls as wagtailadmin_urls
 from wagtail.documents import urls as wagtaildocs_urls
@@ -19,6 +19,7 @@ import toolkit.mailer.urls
 import toolkit.labs.urls
 
 urlpatterns = [
+    re_path(r"^health/$", health, name="health"),
     re_path(r"^programme/", include(toolkit.diary.urls.programme_urls)),
     re_path(r"^diary/", include(toolkit.diary.urls.diary_urls)),
     re_path(r"^members/", include(toolkit.members.urls.member_urls)),

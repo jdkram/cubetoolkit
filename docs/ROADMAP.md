@@ -33,7 +33,7 @@ queue.
 - ~~**Bug W**~~ mobile burger menu ✅ 2026-04-28
 - **9.76** rota date nav & orientation 🔵 — 9.76.1/2 done ✅ 2026-04-30; .3/.5 dropped; 9.76.4 nav rail under evaluation
 - **9.70** nightly DB backup 🟢 — needs Marcus conversation first
-- **D.1 / D.4** infra hardening (WhiteNoise cache-busting; Docker resource limits)
+- ~~**D.1**~~ WhiteNoise cache-busting ✅ 2026-04-30; ~~**D.2**~~ Docker health checks ✅ 2026-05-06; **D.4** Docker resource limits (needs Marcus)
 - XS sweep-ups: 9.10.6, 9.12, 9.40, 9.42, 9.34
 
 **Outcome:** site feels finished, production hardened, queue clear enough to

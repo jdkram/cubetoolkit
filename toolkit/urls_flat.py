@@ -19,8 +19,10 @@ import toolkit.mailer.urls
 import toolkit.labs.urls
 
 from toolkit.index.models import IndexLink
+from toolkit.index.views import health
 
 urlpatterns = [
+    re_path(r"^health/$", health, name="health"),
     re_path(r"^toolkit/admin/", admin.site.urls),
     re_path(r"^programme/", include(toolkit.diary.urls.programme_urls)),
     re_path(r"^diary/", include(toolkit.diary.urls.diary_urls)),
