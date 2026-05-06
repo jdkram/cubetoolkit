@@ -13,6 +13,12 @@ services:
     restart: on-failure
     ports:
       - "127.0.0.1:7191:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health/')\" || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     volumes:
       - type: bind
         source: /home/toolkit/site/media/
@@ -33,6 +39,12 @@ services:
     # Give mailerd time to finish sending in-progress emails before Docker
     # kills it. Default is 10s, which is too short for a large mailout.
     stop_grace_period: 5m
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f mailerd || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     volumes:
       - type: bind
         source: /var/run/mysqld/mysqld.sock
