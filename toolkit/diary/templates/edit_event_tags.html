@@ -110,6 +110,16 @@ $(document).ready(function() {
     $("#sortable li input[type='checkbox']").change(updateSortable);
     updateSortable();
     updateOrdering();
+
+    $(".archive-btn").on("click", function() {
+        var tagId = $(this).data("tag-id");
+        var tagName = $(this).data("tag-name");
+        if (!confirm("Archive tag '" + tagName + "'?\n\nIt will be hidden from use but not deleted. Tags used on past events are preserved.")) {
+            return;
+        }
+        $("#archive-tag-id").val(tagId);
+        $("#archive-form").submit();
+    });
 });
 
 function processInputFields(fn) {
@@ -201,6 +211,11 @@ function updateOrdering() {
                 </label>
                 {% if not form.instance.read_only %}
                   {{ form.id }}
+                  <button type="button" class="btn btn-sm btn-outline-warning archive-btn"
+                          data-tag-id="{{ form.instance.pk }}"
+                          data-tag-name="{{ form.instance.name }}">Archive</button>
+                {% else %}
+                  {{ form.id }}
                 {% endif %}
               {% endif %}
             </span>
@@ -219,27 +234,12 @@ function updateOrdering() {
     </div>
   </div>
 
-  {# Archive buttons — each is its own small form so they don't interfere with the main formset #}
-  <div class="card mt-3">
-    <div class="card-header"><h5 class="mb-0">Archive a tag</h5></div>
-    <div class="card-body p-0">
-      <ul class="list-group list-group-flush">
-        {% for form in formset %}
-          {% if form.id.value and not form.instance.read_only %}
-            <li class="list-group-item d-flex align-items-center justify-content-between py-2">
-              <span>{{ form.instance.name }}</span>
-              <form method="post" style="display:inline;" onsubmit="return confirm('Archive tag \'{{ form.instance.name }}\'? It will be hidden but not deleted. Tags used on past events cannot be permanently deleted.')">
-                {% csrf_token %}
-                <input type="hidden" name="_action" value="archive">
-                <input type="hidden" name="tag_id" value="{{ form.instance.pk }}">
-                <button type="submit" class="btn btn-sm btn-outline-warning">Archive</button>
-              </form>
-            </li>
-          {% endif %}
-        {% endfor %}
-      </ul>
-    </div>
-  </div>
+  {# Hidden archive action form — submitted by JS when Archive button clicked #}
+  <form id="archive-form" method="post" style="display:none;">
+    {% csrf_token %}
+    <input type="hidden" name="_action" value="archive">
+    <input type="hidden" name="tag_id" id="archive-tag-id">
+  </form>
 
   {% if archived_tags %}
   <div class="card mt-3 archived-section">

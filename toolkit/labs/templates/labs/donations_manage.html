@@ -5,65 +5,106 @@
 {% block css %}
 {{ block.super }}
 <style>
-  .donations-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.87rem;
-  }
-  .donations-table th {
-    background: #343a40;
-    color: #fff;
-    padding: 0.45rem 0.6rem;
-    text-align: left;
-    font-size: 0.82rem;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-  .donations-table td {
-    padding: 0.4rem 0.6rem;
-    vertical-align: top;
+  .donation-row {
     border-bottom: 1px solid #dee2e6;
   }
-  .donations-table tbody tr:hover {
+  .donation-row:last-child {
+    border-bottom: none;
+  }
+  .donation-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 0.75rem;
+    cursor: pointer;
+    user-select: none;
+  }
+  .donation-summary:hover {
     background: #f8f9fa;
   }
-  .donations-table input[type="text"],
-  .donations-table input[type="number"],
-  .donations-table select {
-    width: 100%;
-    padding: 0.2rem 0.35rem;
-    font-size: 0.85rem;
-    border: 1px solid #ced4da;
-    border-radius: 3px;
+  .donation-summary .item-name {
+    font-weight: 600;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  .donations-table textarea {
-    width: 100%;
-    padding: 0.2rem 0.35rem;
-    font-size: 0.85rem;
-    border: 1px solid #ced4da;
-    border-radius: 3px;
-    resize: vertical;
+  .donation-summary .item-category {
+    font-size: 0.82rem;
+    color: #6c757d;
+    white-space: nowrap;
   }
-  .donations-table .col-order { width: 4rem; }
-  .donations-table .col-status { width: 9rem; }
-  .donations-table .col-active { width: 4rem; text-align: center; }
-  .donations-table .col-notes { min-width: 14rem; }
-  .donations-table .col-internal { min-width: 14rem; }
-  .donations-table .col-meta { min-width: 9rem; font-size: 0.78rem; color: #6c757d; white-space: nowrap; }
-  .donations-table .col-actions { white-space: nowrap; }
-  .status-badge {
+  .donation-summary .item-status {
     display: inline-block;
-    padding: 0.1rem 0.45rem;
+    padding: 0.1rem 0.5rem;
     border-radius: 3px;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: bold;
+    white-space: nowrap;
   }
   .status-wanted { background: #198754; color: #fff; }
   .status-check_first { background: #ffc107; color: #333; }
   .status-not_needed { background: #dc3545; color: #fff; }
-  .table-scroll { overflow-x: auto; }
-  .add-row-card { margin-top: 2rem; }
+  .item-inactive {
+    opacity: 0.55;
+  }
+  .item-inactive .item-name {
+    text-decoration: line-through;
+    font-weight: normal;
+  }
+  .edit-panel {
+    display: none;
+    padding: 1rem 1rem 1rem 2rem;
+    background: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+  }
+  .edit-panel.open {
+    display: block;
+  }
+  .meta-line {
+    font-size: 0.8rem;
+    color: #6c757d;
+    white-space: nowrap;
+  }
+  .expand-arrow {
+    font-size: 0.75rem;
+    color: #adb5bd;
+    transition: transform 0.15s;
+    flex-shrink: 0;
+  }
+  .donation-row.expanded .expand-arrow {
+    transform: rotate(90deg);
+  }
+  .add-card {
+    margin-top: 2rem;
+  }
 </style>
+{% endblock %}
+
+{% block script %}
+{{ block.super }}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll(".donation-summary").forEach(function(summary) {
+        summary.addEventListener("click", function() {
+            var row = this.closest(".donation-row");
+            var panel = row.querySelector(".edit-panel");
+            var isOpen = row.classList.contains("expanded");
+            // Close all others
+            document.querySelectorAll(".donation-row.expanded").forEach(function(r) {
+                r.classList.remove("expanded");
+                r.querySelector(".edit-panel").classList.remove("open");
+            });
+            if (!isOpen) {
+                row.classList.add("expanded");
+                panel.classList.add("open");
+                panel.querySelector("input[name='name']").focus();
+            }
+        });
+    });
+});
+</script>
 {% endblock %}
 
 {% block body %}
@@ -73,108 +114,122 @@
 </p>
 {% include "messages.html" %}
 
-<div class="table-scroll">
-  <table class="donations-table">
-    <thead>
-      <tr>
-        <th class="col-order">Order</th>
-        <th>Name</th>
-        <th>Category</th>
-        <th class="col-status">Status</th>
-        <th class="col-active">Active</th>
-        <th class="col-notes">Public notes</th>
-        <th class="col-internal">Internal notes</th>
-        <th>Contact</th>
-        <th class="col-meta">Last edited</th>
-        <th class="col-actions">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in items %}
-      <tr>
-        <form method="post" id="edit-form-{{ item.pk }}">
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <strong>{{ items|length }} item{% if items|length != 1 %}s{% endif %}</strong>
+    <small class="text-muted">Click any row to edit details. Inactive items are shown faded.</small>
+  </div>
+  <div class="card-body p-0">
+    {% for item in items %}
+    <div class="donation-row{% if not item.active %} item-inactive{% endif %}">
+      <div class="donation-summary">
+        <span class="expand-arrow">&#9658;</span>
+        <span class="item-name" title="{{ item.name }}">{{ item.name }}</span>
+        <span class="item-category">{{ item.category }}</span>
+        <span class="item-status status-{{ item.status }}">{{ item.get_status_display }}</span>
+        <span class="meta-line">
+          {% if item.last_edited_by %}
+            {{ item.last_edited_by.get_full_name|default:item.last_edited_by.username }},
+            {{ item.updated_at|date:"d M Y" }}
+          {% else %}
+            &mdash;
+          {% endif %}
+        </span>
+      </div>
+
+      <div class="edit-panel">
+        <form method="post">
           {% csrf_token %}
           <input type="hidden" name="_action" value="edit">
           <input type="hidden" name="item_id" value="{{ item.pk }}">
-          <td class="col-order">
-            <input type="number" name="display_order" value="{{ item.display_order }}" min="0">
-          </td>
-          <td>
-            <input type="text" name="name" value="{{ item.name }}" maxlength="128" required>
-          </td>
-          <td>
-            <input type="text" name="category" value="{{ item.category }}" maxlength="64">
-          </td>
-          <td class="col-status">
-            <select name="status">
-              {% for val, label in STATUS_CHOICES %}
-                <option value="{{ val }}"{% if item.status == val %} selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          </td>
-          <td class="col-active">
-            <input type="checkbox" name="active"{% if item.active %} checked{% endif %}>
-          </td>
-          <td class="col-notes">
-            <textarea name="notes" rows="3">{{ item.notes }}</textarea>
-          </td>
-          <td class="col-internal">
-            <textarea name="internal_notes" rows="3">{{ item.internal_notes }}</textarea>
-          </td>
-          <td>
-            <input type="text" name="contact" value="{{ item.contact }}" maxlength="128">
-          </td>
-          <td class="col-meta">
-            {% if item.last_edited_by %}
-              {{ item.last_edited_by.get_full_name|default:item.last_edited_by.username }}
-              <br>{{ item.updated_at|date:"d M Y" }}
-            {% else %}
-              <em>—</em>
-            {% endif %}
-          </td>
-          <td class="col-actions">
+          <div class="row g-2">
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Name</label>
+              <input type="text" class="form-control form-control-sm" name="name" value="{{ item.name }}" maxlength="128" required>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label fw-bold">Category</label>
+              <input type="text" class="form-control form-control-sm" name="category" value="{{ item.category }}" maxlength="64" list="existing-categories">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label fw-bold">Status</label>
+              <select class="form-control form-control-sm" name="status">
+                {% for val, label in STATUS_CHOICES %}
+                  <option value="{{ val }}"{% if item.status == val %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-1">
+              <label class="form-label fw-bold">Order</label>
+              <input type="number" class="form-control form-control-sm" name="display_order" value="{{ item.display_order }}" min="0">
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+              <div class="form-check mb-2">
+                <input type="checkbox" class="form-check-input" name="active" id="active-{{ item.pk }}"{% if item.active %} checked{% endif %}>
+                <label class="form-check-label" for="active-{{ item.pk }}">Active</label>
+              </div>
+            </div>
+          </div>
+          <div class="row g-2 mt-1">
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Public notes</label>
+              <textarea class="form-control form-control-sm" name="notes" rows="4">{{ item.notes }}</textarea>
+              <small class="text-muted">Shown on the donations page visible to the public.</small>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Internal notes</label>
+              <textarea class="form-control form-control-sm" name="internal_notes" rows="4">{{ item.internal_notes }}</textarea>
+              <small class="text-muted">Visible to volunteers only (storage location, condition requirements, etc.).</small>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Contact</label>
+              <input type="text" class="form-control form-control-sm" name="contact" value="{{ item.contact }}" maxlength="128">
+              <small class="text-muted">Shown when status is "Check first".</small>
+            </div>
+          </div>
+          <div class="mt-2 d-flex gap-2">
             <button type="submit" class="btn btn-sm btn-primary">Save</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="this.closest('.donation-row').classList.remove('expanded'); this.closest('.edit-panel').classList.remove('open');">Cancel</button>
+          </div>
         </form>
-        <form method="post" style="display: inline;" onsubmit="return confirm('Delete {{ item.name }}?')">
+        <form method="post" class="mt-2" onsubmit="return confirm('Delete \'{{ item.name }}\'?')">
           {% csrf_token %}
           <input type="hidden" name="_action" value="delete">
           <input type="hidden" name="item_id" value="{{ item.pk }}">
           <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
         </form>
-          </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="10"><em>No items yet. Add one below.</em></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+      </div>
+    </div>
+    {% empty %}
+    <div class="p-3 text-muted"><em>No items yet. Add one below.</em></div>
+    {% endfor %}
+  </div>
 </div>
 
-<div class="card add-row-card">
+<datalist id="existing-categories">
+  {% for item in items %}<option value="{{ item.category }}">{% endfor %}
+</datalist>
+
+<div class="card add-card">
   <div class="card-header"><strong>Add item</strong></div>
   <div class="card-body">
     <form method="post">
       {% csrf_token %}
       <input type="hidden" name="_action" value="add">
-      <div class="row">
-        <div class="col-md-3">
-          <label class="form-label">Name <span class="text-danger">*</span></label>
+      <div class="row g-2">
+        <div class="col-md-4">
+          <label class="form-label fw-bold">Name <span class="text-danger">*</span></label>
           <input type="text" class="form-control form-control-sm" name="name" maxlength="128" required
             value="{{ add_form.name.value|default_if_none:'' }}">
         </div>
         <div class="col-md-2">
-          <label class="form-label">Category</label>
+          <label class="form-label fw-bold">Category</label>
           <input type="text" class="form-control form-control-sm" name="category" maxlength="64"
             value="{{ add_form.category.value|default_if_none:'' }}"
             list="existing-categories">
-          <datalist id="existing-categories">
-            {% for item in items %}<option value="{{ item.category }}">{% endfor %}
-          </datalist>
         </div>
         <div class="col-md-2">
-          <label class="form-label">Status</label>
+          <label class="form-label fw-bold">Status</label>
           <select class="form-control form-control-sm" name="status">
             {% for val, label in STATUS_CHOICES %}
               <option value="{{ val }}">{{ label }}</option>
@@ -182,7 +237,7 @@
           </select>
         </div>
         <div class="col-md-1">
-          <label class="form-label">Order</label>
+          <label class="form-label fw-bold">Order</label>
           <input type="number" class="form-control form-control-sm" name="display_order" value="0" min="0">
         </div>
         <div class="col-md-1 d-flex align-items-end">
@@ -192,20 +247,19 @@
           </div>
         </div>
       </div>
-      <div class="row mt-2">
+      <div class="row g-2 mt-1">
         <div class="col-md-4">
-          <label class="form-label">Public notes</label>
+          <label class="form-label fw-bold">Public notes</label>
           <textarea class="form-control form-control-sm" name="notes" rows="3">{{ add_form.notes.value|default_if_none:'' }}</textarea>
         </div>
         <div class="col-md-4">
-          <label class="form-label">Internal notes</label>
+          <label class="form-label fw-bold">Internal notes</label>
           <textarea class="form-control form-control-sm" name="internal_notes" rows="3">{{ add_form.internal_notes.value|default_if_none:'' }}</textarea>
         </div>
         <div class="col-md-4">
-          <label class="form-label">Contact</label>
+          <label class="form-label fw-bold">Contact</label>
           <input type="text" class="form-control form-control-sm" name="contact" maxlength="128"
             value="{{ add_form.contact.value|default_if_none:'' }}">
-          <small class="text-muted">Shown on the public page when status is "Check first".</small>
         </div>
       </div>
       <div class="mt-2">

@@ -113,6 +113,10 @@ a {
         left: 0 !important;
         transition: none;
     }
+    /* Push page content past the fixed sidebar (static_pages.css not loaded on all views). */
+    .grid {
+        margin-left: 170px;
+    }
 }
 
 #site-nav {

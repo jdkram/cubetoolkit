@@ -197,6 +197,17 @@ def job_claim(request, job_id):
 
 @login_required
 @require_POST
+def job_unclaim(request, job_id):
+    job = get_object_or_404(Job, pk=job_id)
+    if job.claimed_by == request.user or request.user.has_perm("toolkit.write"):
+        job.claimed_by = None
+        job.save()
+        messages.success(request, f"'{job.title}' unclaimed.")
+    return redirect("labs-jobs")
+
+
+@login_required
+@require_POST
 def job_resolve(request, job_id):
     job = get_object_or_404(Job, pk=job_id)
     job.resolved = True

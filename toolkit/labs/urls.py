@@ -12,5 +12,6 @@ urlpatterns = [
     re_path(r"^jobs/add/$", views.job_add, name="labs-job-add"),
     re_path(r"^jobs/(?P<job_id>\d+)/edit/$", views.job_edit, name="labs-job-edit"),
     re_path(r"^jobs/(?P<job_id>\d+)/claim/$", views.job_claim, name="labs-job-claim"),
+    re_path(r"^jobs/(?P<job_id>\d+)/unclaim/$", views.job_unclaim, name="labs-job-unclaim"),
     re_path(r"^jobs/(?P<job_id>\d+)/resolve/$", views.job_resolve, name="labs-job-resolve"),
 ]
