@@ -365,6 +365,10 @@
         background: #e8f5e9;
         border-radius: 3px;
     }
+    /* Badge visibility toggles — applied via wrapper classes set by user prefs */
+    .rota-hide-beginner .role-badge--beginner { display: none; }
+    .rota-hide-wheelchair .role-badge--inaccessible { display: none; }
+    .rota-hide-keyholder .role-badge--keyholder { display: none; }
     @media (min-width: 800px) {
         .rota-wrapper {
             padding-left: 2.5rem;
@@ -601,7 +605,7 @@ edit_rota(
         },
         {
             attr: "keyholder",
-            html: '<span class="role-badge" title="Keyholder slot — must be filled by a trained venue keyholder">🔑</span>'
+            html: '<span class="role-badge role-badge--keyholder" title="Keyholder slot — must be filled by a trained venue keyholder">🔑</span>'
         }
     ];
 
@@ -885,6 +889,33 @@ edit_rota(
         updateRail();
     }
 
+    // ── Role badge visibility preferences ─────────────────────────────────
+    // Three toggles (beginner, wheelchair, keyholder) persisted in localStorage.
+    // Each pref key: "rota_badge_<name>" = "0" (hidden) or "1" (visible, default).
+    var BADGE_PREFS = [
+        { key: "rota_badge_beginner",    cls: "rota-hide-beginner",    id: "badge-pref-beginner" },
+        { key: "rota_badge_wheelchair",  cls: "rota-hide-wheelchair",  id: "badge-pref-wheelchair" },
+        { key: "rota_badge_keyholder",   cls: "rota-hide-keyholder",   id: "badge-pref-keyholder" }
+    ];
+
+    function initBadgeToggles() {
+        var wrapper = $(".rota-wrapper");
+        $.each(BADGE_PREFS, function(i, pref) {
+            var stored = localStorage.getItem(pref.key);
+            var show = stored !== "0";  // default visible
+            if (!show) { wrapper.addClass(pref.cls); }
+            var cb = document.getElementById(pref.id);
+            if (cb) {
+                cb.checked = show;
+                $(cb).on("change", function() {
+                    var visible = this.checked;
+                    wrapper.toggleClass(pref.cls, !visible);
+                    localStorage.setItem(pref.key, visible ? "1" : "0");
+                });
+            }
+        });
+    }
+
     function updateDayHeaderOffset() {
         var navbarHeight = document.querySelector('.navbar.fixed-top').offsetHeight;
         document.querySelectorAll('.rota-day-group-header').forEach(function(el) {
@@ -901,6 +932,7 @@ edit_rota(
         buildRoleDropdown();
         buildTagFilterBar();
         injectRoleBadges();
+        initBadgeToggles();
         {% if can_mark_events %}initMarkButtons();{% endif %}
 
         // Clicking a tag badge on any showing activates that tag in the
@@ -990,6 +1022,20 @@ edit_rota(
                 <div class="form-check form-check--highlight">
                     <input class="form-check-input" type="checkbox" id="rota-filter-beginner">
                     <label class="form-check-label" for="rota-filter-beginner">Good first role 🌱</label>
+                </div>
+                <span class="filter-section-divider" aria-hidden="true"></span>
+                <span class="highlight-section-label">Badges:</span>
+                <div class="form-check form-check--highlight">
+                    <input class="form-check-input" type="checkbox" id="badge-pref-beginner" checked>
+                    <label class="form-check-label" for="badge-pref-beginner">🌱 Beginner-friendly</label>
+                </div>
+                <div class="form-check form-check--highlight">
+                    <input class="form-check-input" type="checkbox" id="badge-pref-wheelchair" checked>
+                    <label class="form-check-label" for="badge-pref-wheelchair">♿ Wheelchair access</label>
+                </div>
+                <div class="form-check form-check--highlight">
+                    <input class="form-check-input" type="checkbox" id="badge-pref-keyholder" checked>
+                    <label class="form-check-label" for="badge-pref-keyholder">🔑 Keyholder only</label>
                 </div>
             </div>
 
