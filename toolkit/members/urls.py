@@ -13,6 +13,8 @@ from toolkit.members.volunteer_views import (
     view_volunteer_training_records,
     delete_volunteer_training_record,
     anonymise_volunteer,
+    set_volunteer_password,
+    send_volunteer_password_reset,
 )
 
 from toolkit.members.member_views import (
@@ -95,6 +97,16 @@ volunteer_urls = [
         r"^(?P<volunteer_id>\d+)/anonymise$",
         anonymise_volunteer,
         name="anonymise-volunteer",
+    ),
+    re_path(
+        r"^(?P<volunteer_id>\d+)/set-password$",
+        set_volunteer_password,
+        name="set-volunteer-password",
+    ),
+    re_path(
+        r"^(?P<volunteer_id>\d+)/send-password-reset$",
+        send_volunteer_password_reset,
+        name="send-volunteer-password-reset",
     ),
     re_path(r"^unretire$", activate_volunteer, name="activate-volunteer"),
     re_path(
