@@ -92,6 +92,7 @@
         <ul class="card-links">
           <li><a href="{% url "edit_event_tags" %}">Edit available event tags</a></li>
           <li><a href="{% url "edit_event_templates" %}">Edit available event templates</a></li>
+          <li><a href="{% url "edit_rooms" %}">Edit rooms</a></li>
           {% if user.is_superuser %}
           <li><a href="{% url "edit_roles" %}">Edit volunteer/event roles</a> <small class="text-muted">(Panopticon only)</small></li>
           {% endif %}

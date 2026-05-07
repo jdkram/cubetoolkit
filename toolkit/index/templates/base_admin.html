@@ -86,6 +86,7 @@ body {
             <div class="dropdown-menu" aria-labelledby="dropdown-meta">
               <a class="dropdown-item" href="{% url "edit_event_tags" %}">Tags</a>
               <a class="dropdown-item" href="{% url "edit_event_templates" %}">Templates</a>
+              <a class="dropdown-item" href="{% url "edit_rooms" %}">Rooms</a>
               {% if user.is_superuser %}
               <div class="dropdown-divider"></div>
               <a class="dropdown-item" href="{% url "edit_roles" %}">Roles</a>
