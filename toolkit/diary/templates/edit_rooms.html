@@ -1,0 +1,113 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% block title %}Rooms{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/messages.css">
+<style>
+  .room-swatch {
+    display: inline-block;
+    width: 1.2em;
+    height: 1.2em;
+    border-radius: 3px;
+    border: 1px solid rgba(0,0,0,0.15);
+    vertical-align: middle;
+    margin-right: 0.4em;
+  }
+  .rooms-table th, .rooms-table td {
+    padding: 0.4rem 0.75rem;
+    vertical-align: middle;
+  }
+  .rooms-table td:last-child { white-space: nowrap; }
+  .create-form {
+    max-width: 500px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 1rem 1.25rem;
+    margin-top: 1.5rem;
+  }
+  .create-form h3 {
+    font-size: 1rem;
+    margin: 0 0 0.75rem;
+    font-weight: 600;
+  }
+  .form-row-inline {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    margin-bottom: 0.5rem;
+  }
+  .form-row-inline .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .form-row-inline label { font-size: 0.85em; color: #555; }
+</style>
+{% endblock %}
+
+{% block body %}
+<h1>Rooms</h1>
+<p class="text-muted">Rooms used for event bookings. Primary rooms appear in full colour on the calendar; secondary rooms are desaturated.</p>
+
+{% include "messages.html" %}
+
+{% if rooms %}
+<table class="table table-sm rooms-table">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Colour</th>
+      <th>Primary</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for room in rooms %}
+    <tr>
+      <td>
+        <span class="room-swatch" style="background: {{ room.colour }};"></span>
+        {{ room.name }}
+      </td>
+      <td><code>{{ room.colour }}</code></td>
+      <td>{% if room.is_primary %}Yes{% else %}—{% endif %}</td>
+      <td>
+        <a href="{% url 'edit_room_detail' room.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="text-muted">No rooms yet.</p>
+{% endif %}
+
+<div class="create-form">
+  <h3>Add a room</h3>
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-row-inline">
+      <div class="field-group">
+        <label for="{{ form.name.id_for_label }}">Name</label>
+        {{ form.name }}
+        {% if form.name.errors %}<div class="text-danger small">{{ form.name.errors }}</div>{% endif %}
+      </div>
+      <div class="field-group">
+        <label for="{{ form.colour.id_for_label }}">Colour</label>
+        {{ form.colour }}
+        {% if form.colour.errors %}<div class="text-danger small">{{ form.colour.errors }}</div>{% endif %}
+      </div>
+      <div class="field-group" style="justify-content: flex-end; padding-bottom: 0.15rem;">
+        <div class="form-check" style="margin: 0;">
+          {{ form.is_primary }}
+          <label class="form-check-label small" for="{{ form.is_primary.id_for_label }}">Primary</label>
+        </div>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-sm btn-primary mt-1">Add room</button>
+  </form>
+</div>
+{% endblock %}
