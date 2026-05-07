@@ -265,6 +265,44 @@ $(document).ready(function() {
           {{ user_form.username.errors }}{{ user_form.username }}
         </div>
       </div>
+
+      {% if request.user.is_superuser %}
+      <hr style="margin:0.6rem 0 0.4rem;">
+      <div style="font-size:0.85em;">
+        <strong>Password</strong>
+        <div style="margin-top:0.4rem; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+          <form method="post" action="{% url 'send-volunteer-password-reset' volunteer.pk %}" style="margin:0;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-secondary"
+                    onclick="return confirm('Send a password reset email to {{ volunteer.member.name }}?')">
+              Send reset email
+            </button>
+          </form>
+          <a href="#set-password-form" class="btn btn-sm btn-outline-secondary"
+             onclick="document.getElementById('set-password-form').style.display='block'; this.style.display='none'; return false;">
+            Set password directly…
+          </a>
+        </div>
+        <div id="set-password-form" style="display:none; margin-top:0.75rem;">
+          <form method="post" action="{% url 'set-volunteer-password' volunteer.pk %}">
+            {% csrf_token %}
+            <div style="margin-bottom:0.4rem;">
+              <label style="display:block; font-weight:500; margin-bottom:0.2rem;" for="id_new_password1">New password</label>
+              <input type="password" name="new_password1" id="id_new_password1" class="form-control form-control-sm" style="max-width:260px;" autocomplete="new-password">
+            </div>
+            <div style="margin-bottom:0.5rem;">
+              <label style="display:block; font-weight:500; margin-bottom:0.2rem;" for="id_new_password2">Confirm password</label>
+              <input type="password" name="new_password2" id="id_new_password2" class="form-control form-control-sm" style="max-width:260px;" autocomplete="new-password">
+            </div>
+            <button type="submit" class="btn btn-sm btn-warning">Set password</button>
+            <a href="#" class="btn btn-sm btn-link"
+               onclick="document.getElementById('set-password-form').style.display='none'; document.querySelector('[href=\'#set-password-form\']').style.display=''; return false;">
+              Cancel
+            </a>
+          </form>
+        </div>
+      </div>
+      {% endif %}
     </div>
     {% endif %}
 

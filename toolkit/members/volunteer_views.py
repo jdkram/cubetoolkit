@@ -2,6 +2,8 @@ import logging
 from datetime import datetime
 
 from django.contrib.auth.models import User
+from django.contrib.auth.forms import SetPasswordForm
+from django.contrib.auth.tokens import default_token_generator
 from django.db import transaction
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, render
@@ -673,3 +675,70 @@ def anonymise_volunteer(request, volunteer_id):
             "rota_sample": rota_sample,
         },
     )
+
+
+@require_POST
+def set_volunteer_password(request, volunteer_id):
+    """Set a volunteer's password directly (Panopticon only)."""
+    if not request.user.is_superuser:
+        raise PermissionDenied
+
+    volunteer = get_object_or_404(Volunteer, pk=volunteer_id)
+    user = volunteer.user
+    if user is None:
+        messages.error(request, "This volunteer has no linked user account.")
+        return HttpResponseRedirect(reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id}))
+
+    form = SetPasswordForm(user, request.POST)
+    if form.is_valid():
+        form.save()
+        logger.info(
+            "Password set for volunteer pk=%s by %s", volunteer_id, request.user.username
+        )
+        messages.success(request, f"Password updated for {volunteer.member.name}.")
+    else:
+        for field_errors in form.errors.values():
+            for error in field_errors:
+                messages.error(request, error)
+
+    return HttpResponseRedirect(reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id}))
+
+
+@require_POST
+def send_volunteer_password_reset(request, volunteer_id):
+    """Send a password reset email to a volunteer (Panopticon only)."""
+    if not request.user.is_superuser:
+        raise PermissionDenied
+
+    volunteer = get_object_or_404(Volunteer, pk=volunteer_id)
+    user = volunteer.user
+    if user is None or not user.email:
+        messages.error(request, "This volunteer has no linked user account or no email address.")
+        return HttpResponseRedirect(reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id}))
+
+    from django.utils.encoding import force_bytes
+    from django.utils.http import urlsafe_base64_encode
+    token = default_token_generator.make_token(user)
+    uid_b64 = urlsafe_base64_encode(force_bytes(user.pk))
+    reset_url = request.build_absolute_uri(
+        reverse("password_reset_confirm", kwargs={"uidb64": uid_b64, "token": token})
+    )
+
+    send_mail(
+        subject=f"[{settings.VENUE['longname']}] Set your password",
+        message=(
+            f"Hi {user.first_name or user.username},\n\n"
+            f"A Panopticon user has requested a password reset for your account.\n\n"
+            f"Click the link below to set your password (valid for 24 hours):\n\n"
+            f"{reset_url}\n\n"
+            f"If you weren't expecting this, you can ignore this email."
+        ),
+        from_email=settings.VENUE.get("mailout_from_address") or settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        fail_silently=False,
+    )
+    logger.info(
+        "Password reset email sent to volunteer pk=%s by %s", volunteer_id, request.user.username
+    )
+    messages.success(request, f"Password reset email sent to {user.email}.")
+    return HttpResponseRedirect(reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id}))
