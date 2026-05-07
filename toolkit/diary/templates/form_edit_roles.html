@@ -64,7 +64,7 @@
               <th class="text-center" style="width:90px">Standard</th>
               <th>Description</th>
               <th class="text-center" style="width:50px" title="🌱 Good first role">🌱</th>
-              <th class="text-center" style="width:50px" title="♿✗ Not wheelchair-accessible">♿✗</th>
+              <th class="text-center" style="width:50px" title="♿ Confirmed wheelchair-accessible">♿</th>
               <th class="text-center" style="width:50px" title="🔑 Keyholder slot">🔑</th>
               <th class="text-center" style="width:70px">Archive</th>
             </tr>
@@ -88,7 +88,7 @@
                 <td class="text-center">{{ form.standard }}</td>
                 <td>{{ form.description }}</td>
                 <td class="text-center">{{ form.beginner_friendly }}</td>
-                <td class="text-center">{{ form.not_wheelchair_accessible }}</td>
+                <td class="text-center">{{ form.wheelchair_accessible }}</td>
                 <td class="text-center">{{ form.keyholder_only }}</td>
                 <td>{{ form.id }}</td>
               {% else %}
@@ -96,7 +96,7 @@
                 <td class="text-center">{{ form.standard }}</td>
                 <td>{{ form.description }}</td>
                 <td class="text-center">{{ form.beginner_friendly }}</td>
-                <td class="text-center">{{ form.not_wheelchair_accessible }}</td>
+                <td class="text-center">{{ form.wheelchair_accessible }}</td>
                 <td class="text-center">{{ form.keyholder_only }}</td>
                 <td class="text-center">
                   {% if form.id.value %}
@@ -112,7 +112,7 @@
         </table>
         </div>
         <div class="card-footer d-flex justify-content-between align-items-center">
-          <small class="text-muted">New roles are added at the bottom of the list. 🌱 = good first role &nbsp;·&nbsp; ♿✗ = not wheelchair-accessible &nbsp;·&nbsp; 🔑 = keyholder slot.</small>
+          <small class="text-muted">New roles are added at the bottom of the list. 🌱 = good first role &nbsp;·&nbsp; ♿ = confirmed wheelchair-accessible &nbsp;·&nbsp; 🔑 = keyholder slot.</small>
           <button type="submit" class="btn btn-primary">Save changes</button>
         </div>
       </form>

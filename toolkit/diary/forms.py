@@ -30,7 +30,7 @@ class RoleForm(forms.ModelForm):
             "standard",
             "description",
             "beginner_friendly",
-            "not_wheelchair_accessible",
+            "wheelchair_accessible",
             "keyholder_only",
         )
 
@@ -671,6 +671,7 @@ class SiteConfigurationForm(forms.ModelForm):
             "mailout_listings_days_ahead",
             "membership_length_days",
             "default_training_expiry_months",
+            "volunteer_dormancy_months",
             "image_copyright_guidance_url",
             "alt_text_guidance_url",
         )

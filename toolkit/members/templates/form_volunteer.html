@@ -63,6 +63,31 @@ input[type="text"], input[type="tel"], input[type="email"], textarea {
     width: auto;
     margin: 0;
 }
+
+/* ── Danger zone pair at bottom of page ───────────────────────── */
+#vol-danger {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-top: 0;
+}
+#vol-danger .vol-section {
+    flex: 1 1 300px;
+    min-width: 0;
+    margin-bottom: 0;
+}
+
+/* ── Volunteer status ──────────────────────────────────────────── */
+.status-option {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+.status-desc {
+    font-size: 0.82em;
+    color: #666;
+    padding-left: 1.4em;
+}
 .field-tip {
     display: inline-block;
     width: 1.1em; height: 1.1em;
@@ -147,6 +172,22 @@ $(document).ready(function() {
 {% block body %}
 <h3>{{ pagetitle }} {{ volunteer.member.name }}</h3>
 {% if message %}<h3>{{ message }}</h3>{% endif %}
+
+{% if volunteer.login_inactive %}
+<div style="background:#fff3cd; border-left:4px solid #ffc107; padding:0.6rem 1rem; margin-bottom:1rem; font-size:0.9em;">
+  <strong>Login inactivity notice:</strong> This volunteer has not logged in for
+  {{ site_config.volunteer_dormancy_months }} months or more. This is a soft flag only —
+  their access is unchanged. Once you have made contact or confirmed their situation,
+  clear the flag below.
+  {% if perms.toolkit.write %}
+  <form method="post" action="{% url 'clear-login-inactive' volunteer.pk %}" style="display:inline; margin:0;">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-sm btn-outline-warning" style="margin-left:0.5rem;">Clear flag</button>
+  </form>
+  {% endif %}
+</div>
+{% endif %}
+
 <form id="main_form" action="" method="POST" enctype="multipart/form-data">
 {% csrf_token %}
 <p><input type="submit" value="Save changes"> <a href="{% url "view-volunteer-list" %}">Cancel</a></p>
@@ -223,88 +264,14 @@ $(document).ready(function() {
           <td>Last updated:</td>
           <td>{{ volunteer.updated_at|date:"d/m/Y" }}</td>
         </tr>
+        {% if volunteer.user %}
+        <tr>
+          <td>Last login:</td>
+          <td>{{ volunteer.user.last_login|date:"d/m/Y"|default:"Never" }}</td>
+        </tr>
+        {% endif %}
       </table>
     </div>
-
-    {% if request.user.is_superuser %}
-    <div class="vol-section danger-zone" style="margin-top:0.75rem;">
-      <h4>GDPR right to erasure</h4>
-      <p style="font-size:0.88em; color:#555; margin:0.25rem 0 0.6rem;">
-        Permanently remove all personal data for this volunteer. Irreversible — use only in response to a verified erasure request.
-      </p>
-      <a href="{% url 'anonymise-volunteer' volunteer.id %}" class="btn btn-sm btn-outline-danger">Anonymise this volunteer…</a>
-    </div>
-    {% endif %}
-
-    {% if VENUE.show_user_management and user_form %}
-    <div class="vol-section danger-zone">
-      <h4>Permissions</h4>
-      <div class="danger-row">
-        {{ user_form.is_active }}
-        <label for="{{ user_form.is_active.id_for_label }}">Active</label>
-        <span class="field-tip" data-toggle="tooltip" data-placement="right"
-          title="Inactive accounts cannot log in. Use this instead of deleting the account.">ⓘ</span>
-      </div>
-      <div class="danger-row">
-        {{ user_form.programmer }}
-        <label for="{{ user_form.programmer.id_for_label }}">Programmer</label>
-        <span class="field-tip" data-toggle="tooltip" data-placement="right"
-          title="Can create and edit events, showings, roles, and tags. Cannot access volunteer or member personal data.">ⓘ</span>
-      </div>
-      <div class="danger-row">
-        {{ user_form.is_superuser }}
-        <label for="{{ user_form.is_superuser.id_for_label }}">Panopticon access</label>
-        <span class="field-tip" data-toggle="tooltip" data-placement="right"
-          title="Full access: CMS editing, all volunteer and member personal data (names, emails, addresses, notes), mailout sending. Assign with care.">ⓘ</span>
-      </div>
-      <hr style="margin:0.6rem 0 0.4rem;">
-      <div style="font-size:0.85em; color:#666;">
-        Username: <strong>{{ user_form.instance.username|default:"—" }}</strong>
-        &nbsp;<a href="#" onclick="this.closest('.danger-zone').querySelector('.username-row').style.display='block'; this.style.display='none'; return false;">change</a>
-        <div class="username-row" style="display:none; margin-top:0.3rem;">
-          {{ user_form.username.errors }}{{ user_form.username }}
-        </div>
-      </div>
-
-      {% if request.user.is_superuser %}
-      <hr style="margin:0.6rem 0 0.4rem;">
-      <div style="font-size:0.85em;">
-        <strong>Password</strong>
-        <div style="margin-top:0.4rem; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-          <form method="post" action="{% url 'send-volunteer-password-reset' volunteer.pk %}" style="margin:0;">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-sm btn-outline-secondary"
-                    onclick="return confirm('Send a password reset email to {{ volunteer.member.name }}?')">
-              Send reset email
-            </button>
-          </form>
-          <a href="#set-password-form" class="btn btn-sm btn-outline-secondary"
-             onclick="document.getElementById('set-password-form').style.display='block'; this.style.display='none'; return false;">
-            Set password directly…
-          </a>
-        </div>
-        <div id="set-password-form" style="display:none; margin-top:0.75rem;">
-          <form method="post" action="{% url 'set-volunteer-password' volunteer.pk %}">
-            {% csrf_token %}
-            <div style="margin-bottom:0.4rem;">
-              <label style="display:block; font-weight:500; margin-bottom:0.2rem;" for="id_new_password1">New password</label>
-              <input type="password" name="new_password1" id="id_new_password1" class="form-control form-control-sm" style="max-width:260px;" autocomplete="new-password">
-            </div>
-            <div style="margin-bottom:0.5rem;">
-              <label style="display:block; font-weight:500; margin-bottom:0.2rem;" for="id_new_password2">Confirm password</label>
-              <input type="password" name="new_password2" id="id_new_password2" class="form-control form-control-sm" style="max-width:260px;" autocomplete="new-password">
-            </div>
-            <button type="submit" class="btn btn-sm btn-warning">Set password</button>
-            <a href="#" class="btn btn-sm btn-link"
-               onclick="document.getElementById('set-password-form').style.display='none'; document.querySelector('[href=\'#set-password-form\']').style.display=''; return false;">
-              Cancel
-            </a>
-          </form>
-        </div>
-      </div>
-      {% endif %}
-    </div>
-    {% endif %}
 
   </div><!-- #vol-right -->
 
@@ -312,15 +279,36 @@ $(document).ready(function() {
 
 <!-- ── Status ──────────────────────────────────────────────────── -->
 <div class="vol-section" id="vol-status">
-  <h4>Volunteer status</h4>
+  <h4>Volunteer status
+    <span class="field-tip" data-toggle="tooltip" data-placement="right"
+      title="Status controls whether this person appears on the rota and receives mailouts. It does not affect login access — use the Permissions section for that.">ⓘ</span>
+  </h4>
   <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 0.3rem;">
     {% for radio in vol_form.status %}
-    <label style="font-weight: normal; cursor: pointer;">
-      {{ radio.tag }} {{ radio.choice_label }}
-    </label>
+    <div class="status-option">
+      <label style="font-weight: normal; cursor: pointer;">
+        {{ radio.tag }} {{ radio.choice_label }}
+        {% if radio.choice_value == "active" %}
+          <span class="field-tip" data-toggle="tooltip" data-placement="right"
+            title="Appears on the rota, receives mailouts. Down the line, programming events will require a sustained track record of volunteering — Active is the baseline that makes that visible.">ⓘ</span>
+        {% elif radio.choice_value == "dormant" %}
+          <span class="field-tip" data-toggle="tooltip" data-placement="right"
+            title="Taking a break or lapsed. Hidden from the rota and mailouts but stays in the system. Useful for GDPR housekeeping — people we still have data on but who are no longer engaged. Can be reactivated if they return.">ⓘ</span>
+        {% elif radio.choice_value == "retired" %}
+          <span class="field-tip" data-toggle="tooltip" data-placement="right"
+            title="Has permanently left the volunteer team. Hidden from the rota and mailouts. For GDPR purposes, consider whether their data still needs to be held, or whether anonymisation is appropriate.">ⓘ</span>
+        {% endif %}
+      </label>
+      {% if radio.choice_value == "active" %}
+        <span class="status-desc">On the rota, receives mailouts.</span>
+      {% elif radio.choice_value == "dormant" %}
+        <span class="status-desc">Taking a break — hidden from the rota and mailouts but remains in the system. Can be reactivated.</span>
+      {% elif radio.choice_value == "retired" %}
+        <span class="status-desc">Has left the volunteer team — hidden from the rota and mailouts.</span>
+      {% endif %}
+    </div>
     {% endfor %}
   </div>
-  <small class="text-muted">Dormant volunteers are hidden from the rota and mailing lists but remain in the system.</small>
 </div>
 
 <!-- ── Notes (full width) ──────────────────────────────────────── -->
@@ -337,7 +325,7 @@ $(document).ready(function() {
       {% if not forloop.first %}</ul>{% endif %}
       <h4>{{ c.standard|yesno:"Event roles,Other roles" }}</h4>
       {% if c.standard %}
-      <p class="role-section-note">Shown on the rota for each event. <em>Programmer</em> here is a scheduling label — diary edit access is set separately in the Permissions section above.</p>
+      <p class="role-section-note">Shown on the rota for each event. <em>Programmer</em> here is a scheduling label — diary edit access is set separately in the Permissions section at the bottom of this page.</p>
       {% endif %}
       <ul>
     {% endifchanged %}
@@ -409,5 +397,91 @@ $(document).ready(function() {
   </table>
   </form>
 </div>
+{% endif %}
+
+<!-- ── Panopticon danger zones (GDPR + permissions) ────────────── -->
+{% if request.user.is_superuser or VENUE.show_user_management and user_form %}
+<div id="vol-danger">
+
+  {% if request.user.is_superuser %}
+  <div class="vol-section danger-zone">
+    <h4>GDPR right to erasure</h4>
+    <p style="font-size:0.88em; color:#555; margin:0.25rem 0 0.6rem;">
+      Permanently remove all personal data for this volunteer. Irreversible — use only in response to a verified erasure request.
+    </p>
+    <a href="{% url 'anonymise-volunteer' volunteer.id %}" class="btn btn-sm btn-outline-danger">Anonymise this volunteer…</a>
+  </div>
+  {% endif %}
+
+  {% if VENUE.show_user_management and user_form %}
+  <div class="vol-section danger-zone">
+    <h4>Permissions</h4>
+    <div class="danger-row">
+      {{ user_form.is_active }}
+      <label for="{{ user_form.is_active.id_for_label }}">Login enabled</label>
+      <span class="field-tip" data-toggle="tooltip" data-placement="right"
+        title="Controls whether this volunteer can log into the toolkit. Disable rather than deleting the account.">ⓘ</span>
+    </div>
+    <div class="danger-row">
+      {{ user_form.programmer }}
+      <label for="{{ user_form.programmer.id_for_label }}">Programmer</label>
+      <span class="field-tip" data-toggle="tooltip" data-placement="right"
+        title="Can create and edit events, showings, roles, and tags. Cannot access volunteer or member personal data.">ⓘ</span>
+    </div>
+    <div class="danger-row">
+      {{ user_form.is_superuser }}
+      <label for="{{ user_form.is_superuser.id_for_label }}">Panopticon access</label>
+      <span class="field-tip" data-toggle="tooltip" data-placement="right"
+        title="Full access: CMS editing, all volunteer and member personal data (names, emails, addresses, notes), mailout sending. Assign with care.">ⓘ</span>
+    </div>
+    <hr style="margin:0.6rem 0 0.4rem;">
+    <div style="font-size:0.85em; color:#666;">
+      Username: <strong>{{ user_form.instance.username|default:"—" }}</strong>
+      &nbsp;<a href="#" onclick="this.closest('.danger-zone').querySelector('.username-row').style.display='block'; this.style.display='none'; return false;">change</a>
+      <div class="username-row" style="display:none; margin-top:0.3rem;">
+        {{ user_form.username.errors }}{{ user_form.username }}
+      </div>
+    </div>
+    {% if request.user.is_superuser %}
+    <hr style="margin:0.6rem 0 0.4rem;">
+    <div style="font-size:0.85em;">
+      <strong>Password</strong>
+      <div style="margin-top:0.4rem; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+        <form method="post" action="{% url 'send-volunteer-password-reset' volunteer.pk %}" style="margin:0;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-outline-secondary"
+                  onclick="return confirm('Send a password reset email to {{ volunteer.member.name }}?')">
+            Send reset email
+          </button>
+        </form>
+        <a href="#set-password-form" class="btn btn-sm btn-outline-secondary"
+           onclick="document.getElementById('set-password-form').style.display='block'; this.style.display='none'; return false;">
+          Set password directly…
+        </a>
+      </div>
+      <div id="set-password-form" style="display:none; margin-top:0.75rem;">
+        <form method="post" action="{% url 'set-volunteer-password' volunteer.pk %}">
+          {% csrf_token %}
+          <div style="margin-bottom:0.4rem;">
+            <label style="display:block; font-weight:500; margin-bottom:0.2rem;" for="id_new_password1">New password</label>
+            <input type="password" name="new_password1" id="id_new_password1" class="form-control form-control-sm" style="max-width:260px;" autocomplete="new-password">
+          </div>
+          <div style="margin-bottom:0.5rem;">
+            <label style="display:block; font-weight:500; margin-bottom:0.2rem;" for="id_new_password2">Confirm password</label>
+            <input type="password" name="new_password2" id="id_new_password2" class="form-control form-control-sm" style="max-width:260px;" autocomplete="new-password">
+          </div>
+          <button type="submit" class="btn btn-sm btn-warning">Set password</button>
+          <a href="#" class="btn btn-sm btn-link"
+             onclick="document.getElementById('set-password-form').style.display='none'; document.querySelector('[href=\'#set-password-form\']').style.display=''; return false;">
+            Cancel
+          </a>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div><!-- #vol-danger -->
 {% endif %}
 {% endblock %}

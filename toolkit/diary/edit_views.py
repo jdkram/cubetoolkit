@@ -1177,7 +1177,7 @@ def edit_roles(request):
             "standard",
             "description",
             "beginner_friendly",
-            "not_wheelchair_accessible",
+            "wheelchair_accessible",
             "keyholder_only",
         ),
         can_delete=False,
@@ -1529,8 +1529,12 @@ def edit_site_configuration(request):
             ["mailout_details_days_ahead", "mailout_listings_days_ahead"],
         ),
         (
-            "Membership",
-            ["membership_length_days", "default_training_expiry_months"],
+            "Membership & volunteers",
+            [
+                "membership_length_days",
+                "default_training_expiry_months",
+                "volunteer_dormancy_months",
+            ],
         ),
         (
             "Guidance URLs",

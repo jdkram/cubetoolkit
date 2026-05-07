@@ -15,6 +15,7 @@ from toolkit.members.volunteer_views import (
     anonymise_volunteer,
     set_volunteer_password,
     send_volunteer_password_reset,
+    clear_login_inactive,
 )
 
 from toolkit.members.member_views import (
@@ -107,6 +108,11 @@ volunteer_urls = [
         r"^(?P<volunteer_id>\d+)/send-password-reset$",
         send_volunteer_password_reset,
         name="send-volunteer-password-reset",
+    ),
+    re_path(
+        r"^(?P<volunteer_id>\d+)/clear-login-inactive$",
+        clear_login_inactive,
+        name="clear-login-inactive",
     ),
     re_path(r"^unretire$", activate_volunteer, name="activate-volunteer"),
     re_path(

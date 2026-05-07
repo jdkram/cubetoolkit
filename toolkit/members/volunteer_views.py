@@ -27,7 +27,7 @@ from toolkit.members.forms import (
     GroupTrainingForm,
 )
 from toolkit.members.models import AnonymisationLog, Member, Volunteer, TrainingRecord
-from toolkit.diary.models import Role, RotaEntry, VolunteerEventMark
+from toolkit.diary.models import Role, RotaEntry, VolunteerEventMark, get_site_config
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -401,6 +401,7 @@ def edit_volunteer(request, volunteer_id, create_new=False):
         "mem_form": mem_form,
         "training_record_form": training_record_form,
         "dawn_of_toolkit": settings.DAWN_OF_TOOLKIT,
+        "site_config": get_site_config(),
     }
     return render(request, "form_volunteer.html", context)
 
@@ -741,4 +742,20 @@ def send_volunteer_password_reset(request, volunteer_id):
         "Password reset email sent to volunteer pk=%s by %s", volunteer_id, request.user.username
     )
     messages.success(request, f"Password reset email sent to {user.email}.")
+    return HttpResponseRedirect(reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id}))
+
+
+@require_POST
+@permission_required("toolkit.write")
+def clear_login_inactive(request, volunteer_id):
+    """Clear the login-inactive flag after a panopticon user has followed up."""
+    volunteer = get_object_or_404(Volunteer, pk=volunteer_id)
+    volunteer.login_inactive = False
+    volunteer.save(update_fields=["login_inactive"])
+    logger.info(
+        "login_inactive flag cleared for volunteer pk=%s by %s",
+        volunteer_id,
+        request.user.username,
+    )
+    messages.success(request, f"Inactivity flag cleared for {volunteer.member.name}.")
     return HttpResponseRedirect(reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id}))
