@@ -927,6 +927,34 @@ class EventLink(models.Model):
         return f"{self.label} ({self.event_id})"
 
 
+class EventTemplateLink(models.Model):
+    """A named resource link attached to an event template (max 3 per template).
+
+    When a new event is created from this template the links are copied across
+    as EventLink records on the new event, saving programmers from re-entering
+    them every time.
+    """
+
+    template = models.ForeignKey(
+        EventTemplate,
+        on_delete=models.CASCADE,
+        related_name="links",
+    )
+    label = models.CharField(max_length=80)
+    url = models.URLField(
+        max_length=500,
+        validators=[validate_event_link_url],
+    )
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        db_table = "EventTemplateLinks"
+        ordering = ["order", "pk"]
+
+    def __str__(self):
+        return f"{self.label} ({self.template_id})"
+
+
 class EventTermsRevision(models.Model):
     """Snapshot of audited financial fields on an Event, captured on each change.
 

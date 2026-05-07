@@ -12,25 +12,57 @@
   /* Add-role row: clone the empty extra form, update indices, show it. */
   document.addEventListener("DOMContentLoaded", function () {
     var addBtn = document.getElementById("add-role-row");
-    if (!addBtn) { return; }
+    if (addBtn) {
+      addBtn.addEventListener("click", function () {
+        var tbody = document.getElementById("role-rows");
+        var totalInput = document.getElementById("id_role_slots-TOTAL_FORMS");
+        var total = parseInt(totalInput.value, 10);
+        var emptyRow = document.getElementById("empty-role-row");
+        var newRow = emptyRow.cloneNode(true);
+        newRow.id = "";
+        newRow.style.display = "";
+        newRow.innerHTML = newRow.innerHTML.replace(/__prefix__/g, total);
+        tbody.appendChild(newRow);
+        totalInput.value = total + 1;
+      });
+    }
 
-    addBtn.addEventListener("click", function () {
-      var tbody = document.getElementById("role-rows");
-      var totalInput = document.getElementById("id_role_slots-TOTAL_FORMS");
-      var total = parseInt(totalInput.value, 10);
-
-      /* Clone the hidden empty form row */
-      var emptyRow = document.getElementById("empty-role-row");
-      var newRow = emptyRow.cloneNode(true);
-      newRow.id = "";
-      newRow.style.display = "";
-
-      /* Replace __prefix__ with current index */
-      newRow.innerHTML = newRow.innerHTML.replace(/__prefix__/g, total);
-
-      tbody.appendChild(newRow);
-      totalInput.value = total + 1;
-    });
+    /* Progressive reveal for link rows (same pattern as edit_event_links.html) */
+    function linkRowIsEmpty(row) {
+      var inputs = row.querySelectorAll('input[type="text"], input[type="url"]');
+      for (var i = 0; i < inputs.length; i++) {
+        if (inputs[i].value.trim() !== "") { return false; }
+      }
+      return true;
+    }
+    function firstHiddenLinkRow() {
+      var rows = document.querySelectorAll(".link-row");
+      for (var i = 0; i < rows.length; i++) {
+        if (rows[i].classList.contains("link-row--hidden")) { return rows[i]; }
+      }
+      return null;
+    }
+    function updateAddLinkBtn() {
+      var btn = document.getElementById("add-link-btn");
+      if (btn) { btn.style.display = firstHiddenLinkRow() ? "" : "none"; }
+    }
+    var linkRows = document.querySelectorAll(".link-row");
+    for (var i = 1; i < linkRows.length; i++) {
+      if (linkRowIsEmpty(linkRows[i])) { linkRows[i].classList.add("link-row--hidden"); }
+    }
+    updateAddLinkBtn();
+    var addLinkBtn = document.getElementById("add-link-btn");
+    if (addLinkBtn) {
+      addLinkBtn.addEventListener("click", function () {
+        var row = firstHiddenLinkRow();
+        if (row) {
+          row.classList.remove("link-row--hidden");
+          var first = row.querySelector('input[type="text"], input[type="url"]');
+          if (first) { first.focus(); }
+        }
+        updateAddLinkBtn();
+      });
+    }
   });
 })();
 </script>
@@ -87,6 +119,17 @@
       color: #dc3545;
       margin-top: 0;
   }
+  .link-row--hidden { display: none; }
+  .link-row {
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      padding: 0.6rem 1rem;
+      margin-bottom: 0.5rem;
+      background: #fff;
+  }
+  .link-delete-label { font-size: 0.85em; color: #dc3545; }
+  .allowed-domains { font-size: 0.82em; color: #6c757d; }
+  .allowed-domains code { background: #f1f3f5; padding: 0.1em 0.3em; border-radius: 3px; }
 </style>
 {% endblock %}
 
@@ -170,6 +213,54 @@
         </div>
         {% if form.rota_notes.errors %}<div class="col-sm-10 offset-sm-2 text-danger">{{ form.rota_notes.errors }}</div>{% endif %}
       </div>
+    </div>
+
+    {# ---- Resource links ---- #}
+    <div class="field-section">
+      <h3>Resource links</h3>
+      <p class="text-muted" style="font-size:0.88em; margin-bottom:0.5rem;">
+        Up to 3 links copied to every new event created from this template. Appear as chip buttons on the rota — internal only, not on the public site.
+      </p>
+      <p class="allowed-domains mb-2">
+        Allowed: <code>*.riseup.net</code>, <code>*.nextcloud.com</code>, <code>*.nextcloud.org</code>,
+        <code>chat.whatsapp.com</code>, <code>linktr.ee</code>.
+        Extra domains via <code>EVENTLINK_EXTRA_ALLOWED_DOMAINS</code>.
+      </p>
+
+      {{ links_formset.management_form }}
+      {% if links_formset.non_form_errors %}
+        <div class="text-danger mb-2">{{ links_formset.non_form_errors }}</div>
+      {% endif %}
+
+      {% for lform in links_formset %}
+      <div class="link-row">
+        {% if lform.non_field_errors %}<div class="text-danger small mb-1">{{ lform.non_field_errors }}</div>{% endif %}
+        <div class="form-row align-items-start">
+          <div class="form-group col-md-4 mb-1">
+            <label class="small font-weight-bold" for="{{ lform.label.id_for_label }}">Link name</label>
+            {{ lform.label }}
+            {% if lform.label.errors %}<div class="text-danger small">{{ lform.label.errors }}</div>{% endif %}
+          </div>
+          <div class="form-group col-md-7 mb-1">
+            <label class="small font-weight-bold" for="{{ lform.url.id_for_label }}">URL</label>
+            {{ lform.url }}
+            {% if lform.url.errors %}<div class="text-danger small">{{ lform.url.errors }}</div>{% endif %}
+          </div>
+          {% if lform.instance.pk %}
+          <div class="form-group col-md-1 mb-1 pt-4">
+            <label class="link-delete-label" for="{{ lform.DELETE.id_for_label }}">
+              {{ lform.DELETE }} Delete
+            </label>
+          </div>
+          {% endif %}
+        </div>
+        {% for hidden in lform.hidden_fields %}{{ hidden }}{% endfor %}
+      </div>
+      {% endfor %}
+
+      <button id="add-link-btn" type="button" class="btn btn-sm btn-outline-secondary mb-2">
+        + Add another link
+      </button>
     </div>
 
     {# ---- Event details ---- #}

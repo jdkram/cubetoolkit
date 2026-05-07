@@ -31,6 +31,8 @@ from toolkit.diary.edit_views import (
     edit_site_configuration,
     toggle_event_mark,
     generate_event_poster,
+    edit_rooms,
+    edit_room_detail,
 )
 from toolkit.diary.public_views import (
     ArchiveIndex,
@@ -250,6 +252,8 @@ diary_urls = [
     re_path(r"^edit/eventtags/", edit_event_tags, name="edit_event_tags"),
     # Edit event roles
     re_path(r"^edit/roles/", edit_roles, name="edit_roles"),
+    re_path(r"^edit/rooms/$", edit_rooms, name="edit_rooms"),
+    re_path(r"^edit/rooms/(?P<room_id>\d+)/$", edit_room_detail, name="edit_room_detail"),
     # Site configuration (Panopticon only)
     re_path(
         r"^edit/site-config/?$",

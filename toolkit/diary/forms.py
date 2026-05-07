@@ -469,6 +469,43 @@ EventLinkFormSet = inlineformset_factory(
 )
 
 
+class EventTemplateLinkForm(forms.ModelForm):
+    """Single resource link attached to an event template."""
+
+    class Meta:
+        model = toolkit.diary.models.EventTemplateLink
+        fields = ("label", "url")
+        widgets = {
+            "label": forms.TextInput(
+                attrs={"placeholder": "e.g. Event folder, Crew chat…", "class": "form-control form-control-sm"}
+            ),
+            "url": forms.URLInput(
+                attrs={"placeholder": "https://…", "class": "form-control form-control-sm"}
+            ),
+        }
+
+
+EventTemplateLinkFormSet = inlineformset_factory(
+    toolkit.diary.models.EventTemplate,
+    toolkit.diary.models.EventTemplateLink,
+    form=EventTemplateLinkForm,
+    extra=3,
+    max_num=3,
+    validate_max=True,
+    can_delete=True,
+)
+
+
+class RoomForm(forms.ModelForm):
+    class Meta:
+        model = toolkit.diary.models.Room
+        fields = ("name", "colour", "is_primary")
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control form-control-sm"}),
+            "colour": forms.TextInput(attrs={"type": "color", "class": "form-control form-control-sm", "style": "max-width: 80px; padding: 2px 4px;"}),
+        }
+
+
 class NewEventForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
