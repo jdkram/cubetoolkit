@@ -31,6 +31,7 @@ from toolkit.diary.models import (
     Showing,
     Event,
     EventLink,
+    EventTemplateLink,
     DiaryIdea,
     MediaItem,
     EventTemplate,
@@ -591,9 +592,17 @@ def add_event(request):
                 outside_hire=form.cleaned_data["outside_hire"],
                 private=form.cleaned_data["private"],
             )
-            # Set event tags to those from its template:
+            # Set event tags and template links from its template:
             new_event.save()
             new_event.reset_tags_to_default()
+            if form.cleaned_data["event_template"]:
+                for tl in form.cleaned_data["event_template"].links.all():
+                    EventLink.objects.create(
+                        event=new_event,
+                        label=tl.label,
+                        url=tl.url,
+                        order=tl.order,
+                    )
             # create number_of_bookings showings, each offset by one more from
             # the date/time given in start parameter, and each with rota roles
             # from the template
@@ -1081,11 +1090,16 @@ def edit_event_template_detail(request, template_id=None):
         roles_formset = diary_forms.EventTemplateRoleFormSet(
             request.POST, instance=event_template or EventTemplate()
         )
+        links_formset = diary_forms.EventTemplateLinkFormSet(
+            request.POST, instance=event_template or EventTemplate()
+        )
 
-        if form.is_valid() and roles_formset.is_valid():
+        if form.is_valid() and roles_formset.is_valid() and links_formset.is_valid():
             saved = form.save()
             roles_formset.instance = saved
             roles_formset.save()
+            links_formset.instance = saved
+            links_formset.save()
             logger.info("Event template '%s' saved", saved.name)
             messages.add_message(
                 request, messages.SUCCESS, f"Saved template '{saved.name}'"
@@ -1094,10 +1108,12 @@ def edit_event_template_detail(request, template_id=None):
     else:
         form = diary_forms.EventTemplateForm(instance=event_template)
         roles_formset = diary_forms.EventTemplateRoleFormSet(instance=event_template)
+        links_formset = diary_forms.EventTemplateLinkFormSet(instance=event_template)
 
     context = {
         "form": form,
         "roles_formset": roles_formset,
+        "links_formset": links_formset,
         "event_template": event_template,
     }
     return render(request, "edit_event_template_detail.html", context)
@@ -1575,3 +1591,53 @@ def generate_event_poster(request, event_id):
             {"success": False, "error": str(exc)},
             status=500
         )
+
+
+@permission_required("toolkit.write")
+@require_http_methods(["GET", "POST"])
+def edit_rooms(request):
+    """List all rooms; handle create-new-room POST."""
+    if request.method == "POST":
+        form = diary_forms.RoomForm(request.POST)
+        if form.is_valid():
+            room = form.save()
+            logger.info("Room '%s' created", room.name)
+            messages.success(request, f"Room '{room.name}' created.")
+            return HttpResponseRedirect(reverse("edit_rooms"))
+    else:
+        form = diary_forms.RoomForm()
+
+    rooms = Room.objects.all().order_by("-is_primary", "name")
+    return render(request, "edit_rooms.html", {"rooms": rooms, "form": form})
+
+
+@permission_required("toolkit.write")
+@require_http_methods(["GET", "POST"])
+def edit_room_detail(request, room_id):
+    """Edit or delete a single room."""
+    room = get_object_or_404(Room, pk=room_id)
+
+    if request.method == "POST":
+        if "delete" in request.POST:
+            if room.showing_set.exists():
+                messages.error(
+                    request,
+                    f"Cannot delete '{room.name}' — it is still used by one or more showings.",
+                )
+                return HttpResponseRedirect(reverse("edit_rooms"))
+            name = room.name
+            room.delete()
+            logger.info("Room '%s' deleted", name)
+            messages.success(request, f"Room '{name}' deleted.")
+            return HttpResponseRedirect(reverse("edit_rooms"))
+
+        form = diary_forms.RoomForm(request.POST, instance=room)
+        if form.is_valid():
+            form.save()
+            logger.info("Room '%s' updated", room.name)
+            messages.success(request, f"Room '{room.name}' updated.")
+            return HttpResponseRedirect(reverse("edit_rooms"))
+    else:
+        form = diary_forms.RoomForm(instance=room)
+
+    return render(request, "edit_room_detail.html", {"room": room, "form": form})
