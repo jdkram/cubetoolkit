@@ -230,6 +230,14 @@ class Volunteer(models.Model):
         blank=True,
     )
 
+    # Set automatically by the auto_dormancy management command when last_login
+    # exceeds volunteer_dormancy_months in SiteConfiguration. Does not restrict
+    # access — purely informational. Clear it once you've made contact.
+    login_inactive = models.BooleanField(
+        default=False,
+        help_text="Flagged by the auto-dormancy check: this volunteer has not logged in recently. Cleared manually after follow-up.",
+    )
+
     # Roles
     roles = models.ManyToManyField(
         Role, db_table="Volunteer_Roles", blank=True

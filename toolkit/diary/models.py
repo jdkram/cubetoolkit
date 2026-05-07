@@ -58,10 +58,10 @@ class Role(models.Model):
         "great for new volunteers.",
     )
 
-    not_wheelchair_accessible = models.BooleanField(
+    wheelchair_accessible = models.BooleanField(
         default=False,
-        help_text="Show the ♿ inaccessible badge on the rota — "
-        "role may not be suitable for wheelchair users.",
+        help_text="Show the ♿ accessible badge on the rota — "
+        "someone has specifically reviewed this role and confirmed it is suitable for wheelchair users.",
     )
 
     keyholder_only = models.BooleanField(
@@ -1071,6 +1071,16 @@ class SiteConfiguration(models.Model):
     default_training_expiry_months = models.PositiveSmallIntegerField(
         default=12,
         help_text="Months after which volunteer training records are considered expired.",
+    )
+
+    # --- Volunteers ---
+    volunteer_dormancy_months = models.PositiveSmallIntegerField(
+        default=24,
+        help_text=(
+            "Mark active volunteers as Dormant if they have not logged in for this many months. "
+            "Set to 0 to never auto-enforce dormancy. "
+            "Run the 'auto_dormancy' management command periodically (e.g. via cron) to apply this rule."
+        ),
     )
 
     # --- Guidance URLs ---

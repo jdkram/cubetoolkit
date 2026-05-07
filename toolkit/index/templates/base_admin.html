@@ -119,6 +119,9 @@ body {
                  <a class="dropdown-item" href="{% url "view-volunteer-training-report" %}">Volunteer training report</a>
                </div>
              </li>
+             <li class="nav-item">
+               <a class="nav-link" href="{% url "edit-site-configuration" %}">Site settings</a>
+             </li>
           {% endif %}
           {% if user.volunteer.pk %}
           <li class="nav-item">

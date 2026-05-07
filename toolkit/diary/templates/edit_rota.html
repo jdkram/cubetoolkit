@@ -262,11 +262,8 @@
         margin-left: 0.25em;
     }
 
-    .role-badge--inaccessible {
-        text-decoration: line-through;
-        text-decoration-thickness: 2px;
-        text-decoration-color: #c00;
-        opacity: 0.7;
+    .role-badge--accessible {
+        /* No special styling needed — the ♿ symbol speaks for itself */
     }
 
     /* ── Outside hire badge ──────────────────────────────────────────── */
@@ -367,7 +364,7 @@
     }
     /* Badge visibility toggles — applied via wrapper classes set by user prefs */
     .rota-hide-beginner .role-badge--beginner { display: none; }
-    .rota-hide-wheelchair .role-badge--inaccessible { display: none; }
+    .rota-hide-wheelchair .role-badge--accessible { display: none; }
     .rota-hide-keyholder .role-badge--keyholder { display: none; }
     @media (min-width: 800px) {
         .rota-wrapper {
@@ -600,8 +597,8 @@ edit_rota(
             html: '<span class="role-badge role-badge--beginner" title="Good first role — great for new volunteers">🌱</span>'
         },
         {
-            attr: "no-wheelchair",
-            html: '<span class="role-badge role-badge--inaccessible" title="Not wheelchair-accessible — please check before signing up">♿</span>'
+            attr: "wheelchair",
+            html: '<span class="role-badge role-badge--accessible" title="Confirmed wheelchair-accessible">♿</span>'
         },
         {
             attr: "keyholder",
@@ -890,19 +887,19 @@ edit_rota(
     }
 
     // ── Role badge visibility preferences ─────────────────────────────────
-    // Three toggles (beginner, wheelchair, keyholder) persisted in localStorage.
-    // Each pref key: "rota_badge_<name>" = "0" (hidden) or "1" (visible, default).
+    // Three toggles persisted in localStorage.
+    // defaultVisible: beginner = true (shown by default); wheelchair/keyholder = false (opt-in).
     var BADGE_PREFS = [
-        { key: "rota_badge_beginner",    cls: "rota-hide-beginner",    id: "badge-pref-beginner" },
-        { key: "rota_badge_wheelchair",  cls: "rota-hide-wheelchair",  id: "badge-pref-wheelchair" },
-        { key: "rota_badge_keyholder",   cls: "rota-hide-keyholder",   id: "badge-pref-keyholder" }
+        { key: "rota_badge_beginner",    cls: "rota-hide-beginner",    id: "badge-pref-beginner",    defaultVisible: true  },
+        { key: "rota_badge_wheelchair",  cls: "rota-hide-wheelchair",  id: "badge-pref-wheelchair",  defaultVisible: false },
+        { key: "rota_badge_keyholder",   cls: "rota-hide-keyholder",   id: "badge-pref-keyholder",   defaultVisible: false }
     ];
 
     function initBadgeToggles() {
         var wrapper = $(".rota-wrapper");
         $.each(BADGE_PREFS, function(i, pref) {
             var stored = localStorage.getItem(pref.key);
-            var show = stored !== "0";  // default visible
+            var show = stored !== null ? (stored === "1") : pref.defaultVisible;
             if (!show) { wrapper.addClass(pref.cls); }
             var cb = document.getElementById(pref.id);
             if (cb) {
@@ -1024,18 +1021,21 @@ edit_rota(
                     <label class="form-check-label" for="rota-filter-beginner">Good first role 🌱</label>
                 </div>
                 <span class="filter-section-divider" aria-hidden="true"></span>
-                <span class="highlight-section-label">Badges:</span>
-                <div class="form-check form-check--highlight">
-                    <input class="form-check-input" type="checkbox" id="badge-pref-beginner" checked>
-                    <label class="form-check-label" for="badge-pref-beginner">🌱 Beginner-friendly</label>
-                </div>
-                <div class="form-check form-check--highlight">
-                    <input class="form-check-input" type="checkbox" id="badge-pref-wheelchair" checked>
-                    <label class="form-check-label" for="badge-pref-wheelchair">♿ Wheelchair access</label>
-                </div>
-                <div class="form-check form-check--highlight">
-                    <input class="form-check-input" type="checkbox" id="badge-pref-keyholder" checked>
-                    <label class="form-check-label" for="badge-pref-keyholder">🔑 Keyholder only</label>
+                {# Badge group: wrapped so "Badges:" label never splits from its checkboxes #}
+                <div style="display:inline-flex; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+                    <span class="highlight-section-label">Badges:</span>
+                    <div class="form-check form-check--highlight">
+                        <input class="form-check-input" type="checkbox" id="badge-pref-beginner" checked>
+                        <label class="form-check-label" for="badge-pref-beginner">🌱 Beginner-friendly</label>
+                    </div>
+                    <div class="form-check form-check--highlight">
+                        <input class="form-check-input" type="checkbox" id="badge-pref-wheelchair">
+                        <label class="form-check-label" for="badge-pref-wheelchair">♿ Wheelchair-accessible</label>
+                    </div>
+                    <div class="form-check form-check--highlight">
+                        <input class="form-check-input" type="checkbox" id="badge-pref-keyholder">
+                        <label class="form-check-label" for="badge-pref-keyholder">🔑 Keyholder only</label>
+                    </div>
                 </div>
             </div>
 
@@ -1104,7 +1104,7 @@ edit_rota(
             {% for rota_entry in showing.rotaentry_set.all %}
                 <li data-role-name="{{ rota_entry.role.name }}"
                     data-beginner="{{ rota_entry.role.beginner_friendly|yesno:'1,0' }}"
-                    data-no-wheelchair="{{ rota_entry.role.not_wheelchair_accessible|yesno:'1,0' }}"
+                    data-wheelchair="{{ rota_entry.role.wheelchair_accessible|yesno:'1,0' }}"
                     data-keyholder="{{ rota_entry.role.keyholder_only|yesno:'1,0' }}">
                 <span class="rota_role{% if rota_entry.role.description %} rota_role--described{% endif %}"{% if rota_entry.role.description %} title="{{ rota_entry.role.description }}"{% endif %}>{{ rota_entry.role.name }}-{{ rota_entry.rank }}</span>
                 &nbsp;

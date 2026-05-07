@@ -240,15 +240,13 @@ class Command(BaseCommand):
             if created:
                 counts["roles"] += 1
             role.beginner_friendly = role_data.get("beginner_friendly", False)
-            role.not_wheelchair_accessible = role_data.get(
-                "not_wheelchair_accessible", False
-            )
+            role.wheelchair_accessible = role_data.get("wheelchair_accessible", False)
             role.keyholder_only = role_data.get("keyholder_only", False)
             role.description = role_data.get("description", "")
             role.save(
                 update_fields=[
                     "beginner_friendly",
-                    "not_wheelchair_accessible",
+                    "wheelchair_accessible",
                     "keyholder_only",
                     "description",
                 ]

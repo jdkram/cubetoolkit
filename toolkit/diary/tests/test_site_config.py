@@ -88,6 +88,7 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
             "default_training_expiry_months": str(
                 config.default_training_expiry_months
             ),
+            "volunteer_dormancy_months": str(config.volunteer_dormancy_months),
             "image_copyright_guidance_url": "",
             "alt_text_guidance_url": "",
         }
