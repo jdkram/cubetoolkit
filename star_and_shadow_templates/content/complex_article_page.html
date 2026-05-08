@@ -1,11 +1,6 @@
 {% extends "base_wagtail.html" %}
 {% load wagtailcore_tags wagtailimages_tags %}
 
-{% block css %}
-    {{ block.super }}
-    <link rel="stylesheet" href="{{ STATIC_URL }}css/static_pages_custom.css">
-{% endblock %}
-
 {% block body %}
 {{ block.super }}
 <div class="programme copy">

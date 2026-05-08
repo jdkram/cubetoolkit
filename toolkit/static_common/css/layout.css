@@ -1,14 +1,28 @@
 
 /* layout.css
  * Shared layout foundation for all public-facing pages.
- * Loaded by base_public.html before site_custom.css.
- * Page-specific rules (programme.css, event.css) load on top via
- * their templates' {% block css %} blocks.
+ * Loaded by base_public.html. Page-specific rules (programme.css, event.css)
+ * load on top via their templates' {% block css %} blocks.
  *
- * Extracted from the identical normalize/base/sidebar/nav sections
- * that were previously duplicated across programme.css, event.css,
- * and static_pages.css.
+ * This file is the single source of truth for site-wide layout, colours,
+ * fonts, and sidebar/nav behaviour. Previously these concerns were split
+ * across layout.css + site_custom.css, with magic widths duplicated in both;
+ * that drift is what caused the long-running "nav clips programme" bug.
  */
+
+/* Single source of truth for sidebar geometry. Anything that depends on
+ * sidebar width (the sidebar itself, nav inner widths, the content offset
+ * `.grid { margin-left: ... }`) must read from this variable so they
+ * cannot drift out of sync across breakpoints. */
+:root {
+    --sidebar-width: 240px;     /* mobile drawer width */
+}
+@media screen and (min-width: 1000px) {
+    :root { --sidebar-width: 170px; }
+}
+@media screen and (min-width: 1600px) {
+    :root { --sidebar-width: 192px; }
+}
 
 /* Normalise
 -------------------------------------------------------------------------------*/
@@ -20,7 +34,7 @@ audio:not([controls]) { display: none; }
 html { font-size: 100%; overflow-y: scroll; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
 figure { margin: 10% 0; }
 figcaption { text-align: center; }
-img { border: 0; -ms-interpolation-mode: bicubic;}
+img { border: 0; max-width: 100%; height: auto; -ms-interpolation-mode: bicubic; }
 a:hover, a:active, a:focus { outline: none; -moz-outline-style: none;}
 input {-webkit-border-radius:0; border-radius:0;}
 ::-webkit-input-placeholder {color: rgba(255, 255, 255, .66);}
@@ -247,7 +261,7 @@ a {
 }
 .black_overlay.active-search-bg {
     opacity: .85;
-    left: 240px;
+    left: var(--sidebar-width);
     width: 100%;
     -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=85)";
     filter: alpha(opacity=85);
@@ -260,14 +274,14 @@ a {
     left: 0px;
     top: 0px;
     min-height: 100%;
-    width: 240px;
+    width: var(--sidebar-width);
     margin: 0;
     padding: 0;
     background-color: #fff;
     overflow-y: auto;
 }
 .grid.open-sidebar {
-    left: 240px;
+    left: var(--sidebar-width);
 }
 #site-nav {
     display: block;
@@ -460,7 +474,7 @@ a {
         left: 0px;
         top: 0px;
         min-height: 100%;
-        width: 170px;
+        width: var(--sidebar-width);
         margin: 0;
         padding: 0;
         background-color: #fff;
@@ -470,7 +484,7 @@ a {
         position: relative;
         left: 0;
         top: 0;
-        width: 170px;
+        width: var(--sidebar-width);
         background: transparent;
         border-top-width: 0px;
         border-right-width: 0px;
@@ -485,7 +499,7 @@ a {
     .nav-wrap {
         position: relative;
         left: 0;
-        width: 170px;
+        width: var(--sidebar-width);
         border-top-width: 0px;
         border-right-width: 0px;
         border-bottom-width: 0px;
@@ -578,36 +592,203 @@ a {
     }
 }
 
-/* 1600px — sidebar widens slightly */
+/* 1600px — sidebar widens (via --sidebar-width); only padding changes here. */
 @media screen and (min-width: 1600px) {
-    #sidebar {
-        width: 192px;
-    }
     #site-nav {
-        width: 192px;
         padding-bottom: 20px;
         padding-left: 27px;
     }
     .nav-wrap {
-        width: 192px;
         padding-top: 42px;
         padding-left: 27px;
     }
 }
 
-/* 1900px */
+/* 1900px — slightly more inner padding. */
 @media screen and (min-width: 1900px) {
-    #sidebar {
-        width: 192px;
-    }
     #site-nav {
-        width: 192px;
         padding-bottom: 20px;
         padding-left: 30px;
     }
     .nav-wrap {
-        width: 192px;
         padding-top: 42px;
         padding-left: 30px;
     }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * Site-wide tokens, colours, and sidebar runtime behaviour.
+ * Apply to every public view (programme, events, articles, login).
+ * ───────────────────────────────────────────────────────────────────── */
+
+
+/* --- Font family --- */
+
+code, kbd, pre, samp,
+textarea, body, html, button, input, select,
+#site-nav, #site-nav ul li a, .copy p {
+    font-family: 'Source Code Pro', monospace;
+    font-weight: 500;
+}
+
+
+/* --- Overall font size --- */
+
+body {
+    font-size: 1.15em;
+    font-weight: 500;
+}
+
+
+/* --- Text and background colours --- */
+
+html, body, #sidebar, .grid-item, .grid, .black_overlay, .showing:nth-child(7n+3) {
+    color: #082080;
+    background-color: #e3cae3;
+}
+
+mark {
+    background: #ff0;
+    color: #082080;
+}
+
+a {
+    color: #082080;
+}
+
+#mobile-menu-btn:before {
+    color: #082080;
+}
+
+.site-description h4 {
+    color: #082080;
+}
+
+.action a:hover {
+    color: #082080 !important;
+}
+
+.copy p {
+    color: #082080;
+}
+
+.copy p > a {
+    color: #082080;
+    border-bottom: 0px dotted #082080;
+    text-decoration: underline;
+}
+
+.copy p > a:visited {
+    color: #082080;
+}
+
+.action a {
+    color: black !important;
+    background: #e3cae3 !important;
+    border: 0.1em solid black;
+    border-radius: 0 !important;
+}
+
+
+/* --- Sidebar runtime behaviour ---
+ * Bug I fix: sidebar must be a proper scroll container.
+ * Bug R fix: on mobile the sidebar should be off-screen until the hamburger
+ * is tapped. position:fixed with negative left hides it; the .sidebar-open
+ * class (toggled by site-common.js) slides it in. On desktop (>=1000px)
+ * the sidebar is always visible so left:0 and transition:none.
+ * top:0 is explicit because the base #sidebar rule above uses
+ * position:absolute on the non-responsive viewport, which could
+ * otherwise leave top:auto when this rule activates.
+ *
+ * Width and content offset both come from --sidebar-width (declared at
+ * the top of this file) so they cannot drift apart across breakpoints. */
+#sidebar {
+    position: fixed !important;
+    top: 0;
+    left: calc(var(--sidebar-width) * -1);
+    z-index: 500;
+    height: 100vh;
+    overflow-y: auto;
+    transition: left 0.3s ease;
+}
+
+#sidebar.sidebar-open {
+    left: 0 !important;
+}
+
+@media screen and (min-width: 1000px) {
+    #sidebar {
+        left: 0 !important;
+        transition: none;
+    }
+    /* Push page content past the fixed sidebar. */
+    .grid {
+        margin-left: var(--sidebar-width);
+    }
+}
+
+#site-nav {
+    position: relative;
+    top: auto;
+}
+
+#site-nav ul li a {
+    text-decoration: none;
+}
+
+.nav-wrap {
+    position: relative;
+    left: 0;
+    width: var(--sidebar-width);
+    border-top-width: 0px;
+    border-right-width: 0px;
+    border-bottom-width: 0px;
+    border-left-width: 0px;
+    border-spacing: 0px;
+    padding-top: 30px;
+}
+
+/* Volunteer section divider in the sidebar nav — horizontal rule only */
+.nav-vol-divider {
+    margin: 0.6em 0 0;
+    padding: 0;
+    border-top: 1px solid #aaa;
+    list-style: none;
+}
+
+/* Nav link font size — explicit so it's the same across all public views,
+ * regardless of which page-specific CSS (programme/event) loads on top. */
+#site-nav ul li a {
+    font-size: 0.7857em;
+}
+
+/* Sign-out button in the sidebar nav: match <a> link appearance exactly */
+#site-nav ul li form {
+    margin: 0;
+    padding: 0;
+}
+#site-nav ul li form button {
+    display: block;
+    font-size: 0.7857em;
+    font-weight: 400;
+    line-height: 1.4;
+    padding: 3.5px 0 14px;
+    background: none;
+    border: none;
+    margin: 0;
+    cursor: pointer;
+    color: inherit;
+    font-family: inherit;
+}
+#site-nav ul li form button:hover {
+    text-decoration: underline;
+}
+
+/* Volunteer session info rendered in fragment_navmenu.html — needs to be
+ * available on all public views, not just the programme page. */
+.volunteer-signed-in {
+    opacity: 0.7;
+    font-size: 0.9em;
+    cursor: default;
 }
