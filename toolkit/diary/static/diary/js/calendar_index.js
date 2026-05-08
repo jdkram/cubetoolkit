@@ -603,10 +603,8 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
             }
         };
 
-        calendarOpts.views = {
-            timeGridWeek: {
-                buttonText: 'week'
-            }
+        calendarOpts.views.timeGridWeek = {
+            buttonText: 'week'
         };
 
         if (hasResources) {

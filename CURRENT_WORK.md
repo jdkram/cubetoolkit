@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-05-07 (9.26.1 EventLink templates ✅; 9.43 room management UI ✅; 9.45 password management in volunteer profile ✅; rota badge visibility toggles ✅)
+**Last updated:** 2026-05-08 (CSS refactor: single sidebar-width source, custom-overlay files folded ✅; Bug X 3-day view regressed and re-fixed ✅; Bug AA nav-bar-clips-content fixed ✅; Bug AB event poster behind sidebar fixed ✅)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [ROADMAP.md](docs/ROADMAP.md) (wave-by-wave sequencing) · [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -14,7 +14,10 @@
 | # | Bug | Notes |
 |---|-----|-------|
 | ~~**Bug W**~~ | ~~**Burger menu vanishes on very narrow mobile views**~~ | ✅ 2026-04-28 — Root cause: `.showing-meta` in `edit_rota.html` had `flex-wrap: nowrap`. On multi-room events with duration + room badge + outside-hire badge + link, the combined min-content width exceeds the ~274px available at 320px viewport, causing horizontal overflow. On iOS Safari, horizontal overflow causes the fixed navbar to appear to scroll off-screen. Fix: changed to `flex-wrap: wrap`. |
-| ~~**Bug X**~~ | ~~**3-day calendar view button renders blank**~~ | ✅ 2026-05-05 — `buttonText` and `buttonHint` moved inside the `threeDay` view definition in `calendar_index.js`; top-level `buttonText`/`buttonHints` objects removed (unreliable with FC6 scheduler bundle). |
+| ~~**Bug X**~~ | ~~**3-day calendar view button renders blank**~~ | ✅ 2026-05-05 — `buttonText` and `buttonHint` moved inside the `threeDay` view definition in `calendar_index.js`; top-level `buttonText`/`buttonHints` objects removed (unreliable with FC6 scheduler bundle). **Regressed and re-fixed 2026-05-08:** the `views` config object was being defined once with `threeDay`, then reassigned a few lines later to `{ timeGridWeek: {...} }`, wiping the `threeDay` definition. Changed reassignment to a merge (`calendarOpts.views.timeGridWeek = {...}`). |
+| ~~**Bug AA**~~ | ~~**Sidebar clips programme/event content on wide screens**~~ | ✅ 2026-05-08 — `layout.css` widened sidebar from 170px → 192px at the 1600px breakpoint, but `site_custom.css`'s `.grid { margin-left: 170px }` content-offset was hard-coded with no matching breakpoint. Fixed by promoting sidebar width to a CSS custom property (`--sidebar-width`) defined once on `:root` with breakpoint overrides; sidebar geometry and `.grid` margin-left now both consume it, so they cannot drift. |
+| ~~**Bug AB**~~ | ~~**Event detail page: poster image hidden behind sidebar**~~ | ✅ 2026-05-08 — `event.css`'s 1000px breakpoint had `.grid { margin: 0px 5px 48px }` — a 4-arg shorthand that silently reset `margin-left` to 5px, clobbering layout.css's `var(--sidebar-width)` offset. Content sat at viewport-left + 5px and the left ~50% of the poster was painted over by the fixed nav. Fixed by splitting the shorthand into `margin-top` / `margin-bottom` so layout.css's margin-left wins. Same shorthand trap also lurked in `static_pages.css` (article pages); fixed there too. |
+| ~~**Bug AC**~~ | ~~**Event detail page: white card background instead of pink**~~ | ✅ 2026-05-08 — Latent regression from commit `d6310ff5` (Feb 2026): the SnS pink override on `.grid-item` lived in `event_custom.css` (which used to load *after* `event.css` and win), but that commit moved it into `site_custom.css` which loads *before* event.css, so event.css's `background-color: #fff` started winning. Unnoticed for months because the event detail page is rarely viewed in dev. Fixed at source: `event.css` now sets `.grid-item { background-color: transparent }` to match the rest of SnS. |
 
 ---
 
