@@ -127,6 +127,7 @@ class EventForm(forms.ModelForm):
                     "placeholder": "Programmer's notes - not visible to public",
                 }
             ),
+            "approved_at_meeting_date": forms.DateInput(attrs={"type": "date"}),
             "pricing": forms.TextInput(
                 attrs={
                     "placeholder": (
@@ -171,6 +172,10 @@ class EventForm(forms.ModelForm):
             "pre_title",
             "post_title",
             "notes",
+            "approval_type",
+            "approved_at_meeting_date",
+            "meeting_name",
+            "meeting_minutes_url",
             "duration",
             "outside_hire",
             "private",
@@ -191,6 +196,12 @@ class EventForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        if cleaned_data.get("approval_type") == toolkit.diary.models.Event.APPROVAL_MEETING:
+            if not cleaned_data.get("approved_at_meeting_date"):
+                self.add_error(
+                    "approved_at_meeting_date",
+                    "Please enter the date of the meeting at which this was approved.",
+                )
         if self.instance.all_showings_confirmed():
             terms = cleaned_data.get("terms", "")
             terms_word_count = len(terms.split())
