@@ -37,7 +37,7 @@ from toolkit.diary.models import (
 )
 from toolkit.index.models import IndexCategory, IndexLink
 from toolkit.members.models import Member, Volunteer
-from toolkit.labs.models import DonationItem, Job
+from toolkit.labs.models import DonationItem, Job, RoomNote
 
 from toolkit.util.management.commands.seed_data import (
     ROLES,
@@ -540,9 +540,10 @@ class Command(BaseCommand):
         # Toolkit index links
         counts["index_links"] = self._seed_index_links()
 
-        # Labs: donations wishlist and jobs board
+        # Labs: donations wishlist, jobs board, and room notes
         counts["donation_items"] = self._seed_donations()
         counts["jobs"] = self._seed_jobs()
+        counts["room_notes"] = self._seed_room_notes()
 
         # Bulk test volunteers (performance testing only)
         if options["bulk_volunteers"] > 0:
@@ -566,6 +567,7 @@ class Command(BaseCommand):
                 f"  Index links:     {counts['index_links']} new\n"
                 f"  Donation items:  {counts['donation_items']} new\n"
                 f"  Jobs:            {counts['jobs']} new\n"
+                f"  Room notes:      {counts['room_notes']} new\n"
             )
         )
 
@@ -690,6 +692,50 @@ class Command(BaseCommand):
         for data in items:
             resolved_at = data.pop("resolved_at", None)
             _, made = Job.objects.get_or_create(title=data["title"], defaults={**data, "resolved_at": resolved_at})
+            if made:
+                created += 1
+        return created
+
+    def _seed_room_notes(self):
+        # Only creates notes for rooms that don't already have one — won't overwrite volunteer-written notes.
+        notes = [
+            ("room-cinema",
+             "We show films in here. Who'd a thunk it"),
+            ("room-venue",
+             "Projector temporarily taken down for the gig - in the venue stores, will be restored "
+             "when we finish tear down the day after."),
+            ("room-bar",
+             "Almasty is playing up - keg might need a while to settle (2026.05.09). "),
+            ("room-cafe",
+             "We're out of coffee pots, somehow. New ones arriving Tues "),
+            ("room-workshop",
+             "New drill press! Hooray! Please attend training to use it safely."),
+            ("room-screen-printing-room",
+             "Riso has had fresh drums - 2026.05.09 "),
+            ("room-dark-room",
+             "Please note the fix is getting stale - only a couple more uses left in it"),
+            ("room-meeting-room",
+             "Ants, again. No thanks, ants. Nothants."),
+            ("room-green-room",
+             "The screens are all fair game - nab them if you want. Specs here: sample.link"),
+            ("room-projection-booth",
+             "HDMI switcher is playing up, new one arriving next week."),
+            ("room-volunteer-kitchen",
+             "Fridge is for volunteers. Label anything you want to keep; anything unlabelled after "
+             "a week is fair game. The milk situation is eternal and ongoing."),
+            ("room-venue-store-tech",
+             "Audio cables go in the labelled bins."),
+            ("room-back-corridor",
+             "Wood being very temporarily stored here before shifting to the workshop, please watch the rota "
+             "and sign up if you'd like to help us sort this out"),
+            ("room-kitchen",
+             "What's with all the pizza cutters, are they multiplying overnight?"),
+            ("room-middle-corridor",
+             "Current exhibition to be taken down 2026.06.11"),
+        ]
+        created = 0
+        for room_id, body in notes:
+            _, made = RoomNote.objects.get_or_create(room_id=room_id, defaults={"body": body})
             if made:
                 created += 1
         return created

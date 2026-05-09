@@ -13,6 +13,51 @@ from .models import RoomNote, DonationItem, Job
 from . import forms as lab_forms
 
 
+_FLOORPLAN_ROOMS = [
+    # (room_id, display_name, category)
+    # category: "primary" | "secondary" | "circulation"
+    ("room-cinema", "Cinema", "primary"),
+    ("room-venue", "Venue", "primary"),
+    ("room-bar", "Bar", "primary"),
+    ("room-cafe", "Café", "primary"),
+    ("room-workshop", "Workshop", "primary"),
+    ("room-screen-printing-room", "Screen Printing Room", "primary"),
+    ("room-dark-room", "Dark Room", "primary"),
+    ("room-meeting-room", "Meeting Room", "primary"),
+    ("room-green-room", "Green Room", "primary"),
+    ("room-projection-booth", "Projection Booth", "secondary"),
+    ("room-cinema-stores", "Cinema Stores", "secondary"),
+    ("room-kitchen", "Kitchen", "secondary"),
+    ("room-volunteer-kitchen", "Volunteer Kitchen", "secondary"),
+    ("room-venue-store-tech", "Venue Tech Store", "secondary"),
+    ("room-snug", "Snug", "secondary"),
+    ("room-balcony", "Balcony", "secondary"),
+    ("room-cinema-entrance", "Cinema Entrance", "secondary"),
+    ("room-venue-front-entrance", "Venue Front Entrance", "secondary"),
+    ("room-venue-back-entrance", "Venue Back Entrance", "secondary"),
+    ("room-it-cupboard", "IT Cupboard", "secondary"),
+    ("room-store-cupboard", "Store Cupboard", "secondary"),
+    ("room-projection-booth-entrance", "Projection Booth Entrance", "secondary"),
+    ("room-front-corridor", "Front Corridor", "circulation"),
+    ("room-middle-corridor", "Middle Corridor", "circulation"),
+    ("room-back-corridor", "Back Corridor", "circulation"),
+    ("room-entry-ramp", "Entry Ramp", "circulation"),
+    ("room-toilet-block-1", "Toilet Block 1", "circulation"),
+    ("room-toilet-block-2-urinals", "Toilet Block 2 (Urinals)", "circulation"),
+    ("room-toiler-block-3", "Toilet Block 3", "circulation"),  # typo preserved from SVG id
+    ("room-changing-places-toilet", "Changing Places Toilet", "circulation"),
+    ("room-accessible-toilet", "Accessible Toilet", "circulation"),
+    ("room-cleaning-cupboard", "Cleaning Cupboard", "circulation"),
+    ("room-electrical-cupboard", "Electrical Cupboard", "circulation"),
+]
+
+_ROOM_SECTIONS = [
+    {"key": "primary", "label": "Primary Spaces"},
+    {"key": "secondary", "label": "Secondary Spaces"},
+    {"key": "circulation", "label": "Corridors & Toilets"},
+]
+
+
 @login_required
 def floorplan(request):
     notes = {
@@ -23,7 +68,20 @@ def floorplan(request):
         }
         for n in RoomNote.objects.select_related("updated_by").exclude(body="")
     }
-    return render(request, "labs/floorplan.html", {"notes_json": json.dumps(notes)})
+
+    rooms_by_category: dict[str, list] = {s["key"]: [] for s in _ROOM_SECTIONS}
+    for room_id, display_name, category in _FLOORPLAN_ROOMS:
+        rooms_by_category[category].append({"id": room_id, "name": display_name})
+
+    room_sections = [
+        {**s, "rooms": rooms_by_category[s["key"]]}
+        for s in _ROOM_SECTIONS
+    ]
+
+    return render(request, "labs/floorplan.html", {
+        "notes_json": json.dumps(notes),
+        "room_sections": room_sections,
+    })
 
 
 @login_required
