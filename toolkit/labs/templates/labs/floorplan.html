@@ -13,11 +13,13 @@
 
 {% block body %}
 <style>
+/* ── Layout ──────────────────────────────────────────────── */
 #floorplan-container {
   border: 1px solid #dee2e6;
   border-radius: 4px;
   overflow: hidden;
   background: #f8f9fa;
+  max-width: 900px;
 }
 #floorplan-container svg {
   width: 100%;
@@ -26,63 +28,121 @@
 }
 #floorplan-container svg [id^="room-"] {
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: opacity 0.12s;
 }
 #floorplan-container svg [id^="room-"]:hover {
   opacity: 0.75;
 }
-#floorplan-container svg [id^="room-"].selected {
+#floorplan-container svg [id^="room-"].map-selected {
   stroke: #0d6efd;
   stroke-width: 4px;
-}
-#note-panel {
-  display: none;
-  margin-top: 0.4rem;
-  background: #fff;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  padding: 1.2rem;
-}
-#note-panel.visible {
-  display: block;
-}
-#note-panel-inner {
-  max-width: 640px;
-}
-#note-panel h3 {
-  font-size: 1rem;
-  margin-top: 0;
-  margin-bottom: 0.6rem;
-}
-#note-body {
-  width: 100%;
-  min-height: 100px;
-  resize: vertical;
-  font-size: 0.92rem;
-  padding: 0.5rem;
-  border: 1px solid #ced4da;
-  border-radius: 3px;
-  font-family: inherit;
-  box-sizing: border-box;
-}
-#note-meta {
-  font-size: 0.78rem;
-  color: #6c757d;
-  margin-top: 0.4rem;
-  min-height: 1.2em;
-}
-#note-status.error {
-  color: #dc3545;
 }
 #floorplan-loading {
   padding: 2rem;
   color: #6c757d;
   font-size: 0.9rem;
 }
+
+/* ── Section headings ────────────────────────────────────── */
+.rooms-section-heading {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6c757d;
+  border-bottom: 1px solid #dee2e6;
+  padding-bottom: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+.rooms-section-heading .section-note-count {
+  font-size: 0.7rem;
+  vertical-align: middle;
+}
+
+/* ── Room cards ──────────────────────────────────────────── */
+.room-card {
+  transition: border-color 0.15s, box-shadow 0.15s;
+  height: 100%;
+}
+.room-card.room-selected {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 2px rgba(13,110,253,0.2);
+}
+.room-card.editing {
+  border-color: #0d6efd;
+}
+.room-card-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+  color: #212529;
+}
+.room-note-text {
+  font-size: 0.82rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.45;
+  margin-bottom: 0.4rem;
+  flex: 1;
+}
+.room-note-text.empty {
+  color: #adb5bd;
+  font-style: italic;
+}
+.room-note-meta {
+  font-size: 0.72rem;
+  color: #adb5bd;
+  margin-top: auto;
+}
+.room-card-view {
+  display: flex;
+  flex-direction: column;
+  padding: 0.65rem 0.75rem;
+  min-height: 90px;
+}
+.room-card-view .room-edit-btn {
+  align-self: flex-end;
+  margin-top: 0.4rem;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.45rem;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+.room-card:hover .room-edit-btn,
+.room-card.room-selected .room-edit-btn {
+  opacity: 1;
+}
+.room-card-editor {
+  display: none;
+  padding: 0.65rem 0.75rem;
+}
+.room-card.editing .room-card-view {
+  display: none;
+}
+.room-card.editing .room-card-editor {
+  display: block;
+}
+.room-note-input {
+  font-size: 0.85rem;
+  resize: vertical;
+}
+.room-save-status {
+  font-size: 0.8rem;
+}
+.room-save-status.success { color: #198754; }
+.room-save-status.error   { color: #dc3545; }
+
+/* ── Summary bar ─────────────────────────────────────────── */
+#rooms-summary {
+  font-size: 0.82rem;
+  color: #6c757d;
+  margin-bottom: 1rem;
+}
+
+/* ── No-JS fallback: show edit buttons always ────────────── */
 </style>
 
 <h1 class="h3 mb-3">Building Map</h1>
-<p class="text-muted" style="font-size:0.9rem;">Click a room to view or add a note. Rooms with notes have an underlined label.</p>
 
 <p class="mb-3">
   <a href="{% url 'toolkit-index' %}" class="btn btn-sm btn-outline-secondary">&#8592; Back to Toolkit</a>
@@ -91,55 +151,209 @@
 <div id="floorplan-container">
   <div id="floorplan-loading">Loading floorplan&hellip;</div>
 </div>
+<p class="text-muted mt-2 mb-0" style="font-size:0.82rem;">
+  Click a room on the map to jump to its note card. Underlined labels have notes.
+</p>
 
-<div id="note-panel">
-  <div id="note-panel-inner">
-    <h3 id="note-room-title">Room</h3>
-    <label for="note-body" class="sr-only">Note</label>
-    <textarea id="note-body" placeholder="Add a note about the current state of this room&hellip;"></textarea>
-    <div id="note-meta"></div>
-    <div class="d-flex align-items-center" style="gap:0.5rem;margin-top:0.8rem;">
-      <button id="note-save-btn" class="btn btn-primary btn-sm">Save note</button>
-      <button id="note-clear-btn" class="btn btn-outline-secondary btn-sm">Clear note</button>
-      <span id="note-status" style="font-size:0.82rem;color:#198754;display:none;">Saved</span>
+<hr class="my-4">
+
+<p id="rooms-summary"></p>
+
+{% for section in room_sections %}
+<h2 class="rooms-section-heading">
+  {{ section.label }}
+  <span class="section-note-count badge bg-secondary ms-1" data-section="{{ section.key }}"></span>
+</h2>
+<div class="row g-2 mb-4">
+  {% for room in section.rooms %}
+  <div class="col-sm-6 col-md-4 col-xl-3 d-flex">
+    <div class="room-card card w-100" data-room-id="{{ room.id }}" data-section="{{ section.key }}">
+
+      {# View mode #}
+      <div class="room-card-view">
+        <div class="room-card-name">{{ room.name }}</div>
+        {# Future: room photo thumbnail goes here #}
+        <div class="room-note-text empty" aria-label="Note for {{ room.name }}">No note yet</div>
+        <div class="room-note-meta"></div>
+        <button class="btn btn-sm btn-outline-secondary room-edit-btn"
+                aria-label="Edit note for {{ room.name }}">Edit</button>
+      </div>
+
+      {# Edit mode #}
+      <div class="room-card-editor">
+        <div class="room-card-name">{{ room.name }}</div>
+        <label for="note-{{ room.id }}" class="sr-only">Note for {{ room.name }}</label>
+        <textarea id="note-{{ room.id }}" class="form-control room-note-input mt-1"
+                  rows="4" placeholder="Add a note about this room&hellip;"></textarea>
+        <div class="room-note-meta-edit text-muted mt-1" style="font-size:0.72rem;"></div>
+        <div class="d-flex align-items-center mt-2" style="gap:0.4rem; flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm room-save-btn">Save</button>
+          <button class="btn btn-outline-secondary btn-sm room-clear-btn">Clear</button>
+          <button class="btn btn-link btn-sm room-cancel-btn p-0" style="font-size:0.82rem;">Cancel</button>
+          <span class="room-save-status" style="display:none;"></span>
+        </div>
+      </div>
+
     </div>
   </div>
+  {% endfor %}
 </div>
+{% endfor %}
 
 <script>
 (function () {
   var notes = {{ notes_json|safe }};
-  var CSRF_TOKEN = "{{ csrf_token }}";
+  var CSRF = "{{ csrf_token }}";
   var NOTE_URL_BASE = "{% url 'labs-room-note' 'ROOM_ID' %}".replace("/ROOM_ID/", "/");
-  var selectedRoomId = null;
+  var svgEl = null;
+  var selectedMapRoomId = null;
+  var activeCardRoomId = null;
 
-  function noteUrl(roomId) {
-    return NOTE_URL_BASE + roomId + "/";
-  }
+  function noteUrl(id) { return NOTE_URL_BASE + id + "/"; }
 
   function formatMeta(note) {
     if (!note || !note.updated_at) return "";
     var d = new Date(note.updated_at);
     var who = note.updated_by ? " by " + note.updated_by : "";
-    return "Last updated " + d.toLocaleString("en-GB", {dateStyle: "medium", timeStyle: "short"}) + who;
+    return "Updated " + d.toLocaleString("en-GB", {dateStyle: "medium", timeStyle: "short"}) + who;
   }
 
-  function getRoomTitle(el) {
-    var titleEl = el.querySelector("title");
-    return titleEl ? titleEl.textContent.trim() : el.id.replace(/^room-/, "").replace(/-/g, " ");
+  /* ── Card population ──────────────────────────────────── */
+  function populateCard(card) {
+    var roomId = card.dataset.roomId;
+    var note = notes[roomId];
+    var noteText = card.querySelector(".room-note-text");
+    var meta = card.querySelector(".room-note-meta");
+    if (note && note.body) {
+      noteText.textContent = note.body;
+      noteText.classList.remove("empty");
+      meta.textContent = formatMeta(note);
+    } else {
+      noteText.textContent = "No note yet";
+      noteText.classList.add("empty");
+      meta.textContent = "";
+    }
   }
 
-  function getLabelEl(svgDoc, roomId) {
-    return svgDoc.getElementById(roomId.replace(/^room-/, "label-"));
+  function populateAll() {
+    document.querySelectorAll(".room-card").forEach(populateCard);
+    updateSectionCounts();
+    updateSummary();
   }
 
-  function underlineId(roomId) {
-    return "note-underline-" + roomId;
+  function updateSectionCounts() {
+    document.querySelectorAll(".section-note-count").forEach(function (badge) {
+      var section = badge.dataset.section;
+      var cards = document.querySelectorAll('.room-card[data-section="' + section + '"]');
+      var count = 0;
+      cards.forEach(function (c) {
+        if (notes[c.dataset.roomId] && notes[c.dataset.roomId].body) count++;
+      });
+      var total = cards.length;
+      badge.textContent = count + "/" + total;
+      badge.style.display = count > 0 ? "" : "none";
+    });
   }
 
-  function addStar(svgDoc, roomId) {
-    if (svgDoc.getElementById(underlineId(roomId))) return;
-    var label = getLabelEl(svgDoc, roomId);
+  function updateSummary() {
+    var total = document.querySelectorAll(".room-card").length;
+    var noted = Object.keys(notes).filter(function (k) { return notes[k].body; }).length;
+    var el = document.getElementById("rooms-summary");
+    if (noted === 0) {
+      el.textContent = "No rooms have notes yet. Click Edit on any card to add one.";
+    } else {
+      el.textContent = noted + " of " + total + " rooms have notes.";
+    }
+  }
+
+  /* ── Card editing ─────────────────────────────────────── */
+  function openCard(card) {
+    if (activeCardRoomId && activeCardRoomId !== card.dataset.roomId) {
+      var prev = document.querySelector('.room-card[data-room-id="' + activeCardRoomId + '"]');
+      if (prev) closeCard(prev);
+    }
+    var roomId = card.dataset.roomId;
+    activeCardRoomId = roomId;
+    var note = notes[roomId] || {};
+    card.querySelector(".room-note-input").value = note.body || "";
+    card.querySelector(".room-note-meta-edit").textContent = formatMeta(note);
+    card.querySelector(".room-save-status").style.display = "none";
+    card.classList.add("editing");
+    card.querySelector(".room-note-input").focus();
+  }
+
+  function closeCard(card) {
+    card.classList.remove("editing");
+    if (activeCardRoomId === card.dataset.roomId) activeCardRoomId = null;
+  }
+
+  function saveCard(card, body) {
+    var roomId = card.dataset.roomId;
+    var status = card.querySelector(".room-save-status");
+    status.style.display = "none";
+    fetch(noteUrl(roomId), {
+      method: "POST",
+      headers: {"Content-Type": "application/json", "X-CSRFToken": CSRF},
+      body: JSON.stringify({body: body})
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.error) throw new Error(data.error);
+      notes[roomId] = data;
+      populateCard(card);
+      card.querySelector(".room-note-meta-edit").textContent = formatMeta(data);
+      updateSectionCounts();
+      updateSummary();
+      if (svgEl) {
+        body ? addStar(svgEl, roomId) : removeStar(svgEl, roomId);
+      }
+      status.textContent = body ? "Saved" : "Cleared";
+      status.className = "room-save-status " + (body ? "success" : "success");
+      status.style.display = "inline";
+      setTimeout(function () { status.style.display = "none"; }, 2500);
+      if (!body) closeCard(card);
+    })
+    .catch(function () {
+      status.textContent = "Error saving";
+      status.className = "room-save-status error";
+      status.style.display = "inline";
+    });
+  }
+
+  /* ── Wire up card buttons ─────────────────────────────── */
+  document.querySelectorAll(".room-card").forEach(function (card) {
+    card.querySelector(".room-edit-btn").addEventListener("click", function (e) {
+      e.stopPropagation();
+      openCard(card);
+      highlightMapRoom(card.dataset.roomId);
+    });
+    card.querySelector(".room-save-btn").addEventListener("click", function () {
+      saveCard(card, card.querySelector(".room-note-input").value.trim());
+    });
+    card.querySelector(".room-clear-btn").addEventListener("click", function () {
+      if (confirm("Clear the note for this room?")) saveCard(card, "");
+    });
+    card.querySelector(".room-cancel-btn").addEventListener("click", function () {
+      closeCard(card);
+    });
+    card.querySelector(".room-note-input").addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        saveCard(card, card.querySelector(".room-note-input").value.trim());
+      }
+      if (e.key === "Escape") closeCard(card);
+    });
+  });
+
+  /* ── SVG helpers ──────────────────────────────────────── */
+  function getLabelEl(roomId) {
+    return svgEl ? svgEl.getElementById(roomId.replace(/^room-/, "label-")) : null;
+  }
+
+  function underlineId(roomId) { return "note-ul-" + roomId; }
+
+  function addStar(svg, roomId) {
+    if (svg.getElementById(underlineId(roomId))) return;
+    var label = getLabelEl(roomId);
     if (!label) return;
     var bbox = label.getBBox();
     var bar = document.createElementNS("http://www.w3.org/2000/svg", "rect");
@@ -153,113 +367,82 @@
     label.parentNode.insertBefore(bar, label.nextSibling);
   }
 
-  function removeStar(svgDoc, roomId) {
-    var el = svgDoc.getElementById(underlineId(roomId));
+  function removeStar(svg, roomId) {
+    var el = svg.getElementById(underlineId(roomId));
     if (el) el.parentNode.removeChild(el);
   }
 
-  function markNotedRooms(svgDoc) {
-    Object.keys(notes).forEach(function (roomId) {
-      if (notes[roomId].body) addStar(svgDoc, roomId);
+  function highlightMapRoom(roomId) {
+    if (!svgEl) return;
+    if (selectedMapRoomId) {
+      var prev = svgEl.getElementById(selectedMapRoomId);
+      if (prev) prev.classList.remove("map-selected");
+    }
+    selectedMapRoomId = roomId;
+    var el = svgEl.getElementById(roomId);
+    if (el) el.classList.add("map-selected");
+  }
+
+  /* ── Map room click → scroll to card ─────────────────── */
+  function selectFromMap(roomId, roomEl) {
+    highlightMapRoom(roomId);
+    var card = document.querySelector('.room-card[data-room-id="' + roomId + '"]');
+    if (!card) return;
+
+    /* Mark card as selected even before editing */
+    document.querySelectorAll(".room-card").forEach(function (c) {
+      c.classList.remove("room-selected");
     });
+    card.classList.add("room-selected");
+    card.scrollIntoView({behavior: "smooth", block: "center"});
+    openCard(card);
   }
 
-  function selectRoom(roomId, roomEl, svgDoc) {
-    if (selectedRoomId && selectedRoomId !== roomId) {
-      var prev = svgDoc.getElementById(selectedRoomId);
-      if (prev) prev.classList.remove("selected");
-    }
-    selectedRoomId = roomId;
-    roomEl.classList.add("selected");
-
-    var panel = document.getElementById("note-panel");
-    var title = document.getElementById("note-room-title");
-    var body = document.getElementById("note-body");
-    var meta = document.getElementById("note-meta");
-    var status = document.getElementById("note-status");
-
-    title.textContent = getRoomTitle(roomEl);
-    var note = notes[roomId] || {};
-    body.value = note.body || "";
-    meta.textContent = formatMeta(note);
-    status.style.display = "none";
-    status.classList.remove("error");
-    panel.classList.add("visible");
-    panel.scrollIntoView({behavior: "smooth", block: "nearest"});
-    body.focus();
-
-    function saveNote(newBody) {
-      status.style.display = "none";
-      fetch(noteUrl(roomId), {
-        method: "POST",
-        headers: {"Content-Type": "application/json", "X-CSRFToken": CSRF_TOKEN},
-        body: JSON.stringify({body: newBody})
-      })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        if (data.error) throw new Error(data.error);
-        notes[roomId] = data;
-        meta.textContent = formatMeta(data);
-        if (newBody) {
-          addStar(svgDoc, roomId);
-        } else {
-          removeStar(svgDoc, roomId);
-        }
-        status.textContent = newBody ? "Saved" : "Cleared";
-        status.classList.remove("error");
-        status.style.display = "inline";
-        setTimeout(function () { status.style.display = "none"; }, 2500);
-      })
-      .catch(function (err) {
-        status.textContent = "Error saving";
-        status.classList.add("error");
-        status.style.display = "inline";
-      });
-    }
-
-    document.getElementById("note-save-btn").onclick = function () {
-      saveNote(body.value.trim());
-    };
-
-    document.getElementById("note-clear-btn").onclick = function () {
-      body.value = "";
-      saveNote("");
-    };
-  }
-
+  /* ── Load SVG ─────────────────────────────────────────── */
   fetch("{% static 'labs/floorplan.svg' %}")
     .then(function (r) { return r.text(); })
     .then(function (svgText) {
       var container = document.getElementById("floorplan-container");
       container.innerHTML = svgText;
-      var svg = container.querySelector("svg");
-      svg.removeAttribute("width");
-      svg.removeAttribute("height");
-      svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+      svgEl = container.querySelector("svg");
+      svgEl.removeAttribute("width");
+      svgEl.removeAttribute("height");
+      svgEl.setAttribute("preserveAspectRatio", "xMidYMid meet");
 
-      markNotedRooms(svg);
+      Object.keys(notes).forEach(function (roomId) {
+        if (notes[roomId].body) addStar(svgEl, roomId);
+      });
 
-      svg.querySelectorAll("[id^='room-']").forEach(function (el) {
+      function getRoomTitle(el) {
+        var t = el.querySelector("title");
+        return t ? t.textContent.trim() : el.id.replace(/^room-/, "").replace(/-/g, " ");
+      }
+
+      svgEl.querySelectorAll("[id^='room-']").forEach(function (el) {
         el.setAttribute("tabindex", "0");
         el.setAttribute("role", "button");
         el.setAttribute("aria-label", getRoomTitle(el));
-        el.addEventListener("click", function () { selectRoom(el.id, el, svg); });
+        el.addEventListener("click", function () { selectFromMap(el.id, el); });
         el.addEventListener("keydown", function (e) {
-          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectRoom(el.id, el, svg); }
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectFromMap(el.id, el); }
         });
       });
 
-      svg.querySelectorAll("[id^='label-']").forEach(function (labelEl) {
+      svgEl.querySelectorAll("[id^='label-']").forEach(function (labelEl) {
         var roomId = labelEl.id.replace(/^label-/, "room-");
-        var roomEl = svg.getElementById(roomId);
+        var roomEl = svgEl.getElementById(roomId);
         if (!roomEl) return;
         labelEl.style.cursor = "pointer";
-        labelEl.addEventListener("click", function () { selectRoom(roomId, roomEl, svg); });
+        labelEl.addEventListener("click", function () { selectFromMap(roomId, roomEl); });
       });
     })
-    .catch(function (err) {
+    .catch(function () {
       document.getElementById("floorplan-loading").textContent = "Failed to load floorplan.";
     });
+
+  /* ── Initialise cards ─────────────────────────────────── */
+  populateAll();
+
 }());
 </script>
 {% endblock %}
