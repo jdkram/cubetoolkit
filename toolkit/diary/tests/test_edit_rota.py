@@ -108,6 +108,29 @@ class EditRotaViewGet(DiaryTestsMixin, TestCase):
         self.assertNotContains(response, "EVENT FOUR TITL\u0112")
         self.assertNotContains(response, "Some notes about the Rota!")
 
+    @patch("django.utils.timezone.now")
+    def test_rota_name_pronouns_tooltip(self, now_patch):
+        """When a rota entry's name matches a volunteer with pronouns set,
+        the rendered <span> gets a title attribute with the pronouns."""
+        now_patch.return_value = self._fake_now
+
+        # Set pronouns on Volunteer One (m3) and assign their name to a confirmed
+        # rota entry that falls within the default date window.
+        from toolkit.members.models import Member
+        m = Member.objects.get(name="Volunteer One")
+        m.personal_pronouns = "they/them"
+        m.save()
+
+        entry = RotaEntry.objects.filter(showing=self.e4s3).first()
+        entry.name = "Volunteer One"
+        entry.save()
+
+        response = self.client.get(reverse("rota-edit"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'title="they/them"')
+        # And no tooltip is rendered for entries whose name doesn't match anyone:
+        self.assertNotContains(response, 'title=""')
+
 
 class EditRotaViewPost(DiaryTestsMixin, TestCase):
     """Test of rota edit posting"""

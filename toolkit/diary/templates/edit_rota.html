@@ -1109,9 +1109,9 @@ edit_rota(
                 <span class="rota_role{% if rota_entry.role.description %} rota_role--described{% endif %}"{% if rota_entry.role.description %} title="{{ rota_entry.role.description }}"{% endif %}>{{ rota_entry.role.name }}-{{ rota_entry.rank }}</span>
                 &nbsp;
                 {% if showing.in_past %}
-                    {{ rota_entry.name }}
+                    <span{% if rota_entry.pronouns %} class="rota_name--with-pronouns" title="{{ rota_entry.pronouns }}"{% endif %}>{{ rota_entry.name }}</span>
                 {% else %}
-                    <span class="rota_name" id="{{ rota_entry.pk }}">{{ rota_entry.name|default:placeholder_text }}</span>
+                    <span class="rota_name{% if rota_entry.pronouns %} rota_name--with-pronouns{% endif %}" id="{{ rota_entry.pk }}"{% if rota_entry.pronouns %} title="{{ rota_entry.pronouns }}"{% endif %}>{{ rota_entry.name|default:placeholder_text }}</span>
                 {% endif %}
                 </li>
             {% endfor %}

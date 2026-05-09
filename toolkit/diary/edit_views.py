@@ -1369,6 +1369,23 @@ class EditRotaView(PermissionRequiredMixin, View):
         except Exception:
             pass
 
+        # Pronouns tooltip on rota names: build a lookup from active volunteers
+        # whose Member record has personal_pronouns set, then attach a `pronouns`
+        # attribute to each prefetched rota entry. Match on case-insensitive
+        # full name. (Not visible to the public — this view is permission-gated.)
+        from toolkit.members.models import Volunteer as _Volunteer
+        pronouns_by_name: dict[str, str] = {}
+        for v in _Volunteer.objects.filter(active=True).select_related("member"):
+            if v.member.personal_pronouns:
+                key = v.member.name.strip().lower()
+                if key:
+                    pronouns_by_name[key] = v.member.personal_pronouns
+        for showing in showings:
+            for entry in showing.rotaentry_set.all():
+                entry.pronouns = pronouns_by_name.get(
+                    (entry.name or "").strip().lower(), ""
+                )
+
         context = {
             "start_date": start_date,
             "end_date": end_date,
