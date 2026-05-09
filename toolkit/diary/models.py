@@ -1049,7 +1049,7 @@ class SiteConfiguration(models.Model):
     )
     rota_clear_email_prompt_enabled = models.BooleanField(
         default=True,
-        help_text="When clearing a rota slot, prompt the user to email the volunteer.",
+        help_text="When clearing a rota slot, prompt the user to email the volunteers list.",
     )
     show_archive_images = models.BooleanField(
         default=True,
