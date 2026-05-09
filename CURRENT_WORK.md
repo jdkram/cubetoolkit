@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-05-09 (9.2↳ Programming pipeline — approval metadata fields ✅)
+**Last updated:** 2026-05-09 (9.2↳ approval metadata ✅; 9.24 pronouns on rota hover ✅)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [ROADMAP.md](docs/ROADMAP.md) (wave-by-wave sequencing) · [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -98,7 +98,7 @@
 | 9.54 | Structured event cost terms | 🟡 M | `cost_type` dropdown + conditional structured fields (distributor, fee, split, MG) on `Event`/`EventTemplate`; replaces free-text `terms` as primary cost data source; see TASKS.md 9.54. **Min viable increment:** `cost_type` field + form dropdown (~5–6h) |
 | 9.22 | External hire free-text field on rota | 🟢 XS | `RotaEntry.external_name` field; visible on rota view |
 | ~~9.23~~ | ~~"Films start on time" banner~~ | ✅ 2026-04-16 (updated 2026-04-28) | `FILMS_START_ON_TIME` setting (`False` in common, `True` in `settings_ss.py`); `films_start_on_time` context var in `view_event`; conditional `<p class="films-start-on-time">` in S+S template; subtle italic styling in `event_custom.css`. **Updated:** Now only shows for events with the "film" tag — `public_views.py` checks `event.tags.filter(name="film").exists()` |
-| 9.24 | Pronouns on hover for rota names | 🔵 S | `Volunteer.pronouns` field; tooltip on rota view/edit |
+| ~~9.24~~ | ~~Pronouns on hover for rota names~~ | ✅ 2026-05-09 | Reused existing `Member.personal_pronouns` (no new model field). `EditRotaView` builds a name→pronouns lookup from active volunteers and attaches `pronouns` to each prefetched rota entry; `edit_rota.html` renders `title="…"` on the rota name span when set. Public/printable `view_rota.html` deliberately left unchanged (PII per spec note). Seed data: 10 of 20 demo volunteers given pronouns; toml gains optional `pronouns =` per entry. Test: `test_rota_name_pronouns_tooltip`. |
 | 9.21 | Recurring events / clone-to-dates | 🟡 M | Multi-date batch clone UI; builds on 9.10.7; one Showing per date; see TASKS.md 9.21 |
 | 9.25 | Tap to sign up on rota (mobile) | 🔵 S | Self-service slot claim for logged-in volunteers; see TASKS.md 9.25 |
 | ~~9.26~~ | ~~Event resource links (generalised rota links)~~ | ✅ 2026-03-02 | `EventLink` model + migration `diary/0015`; `validate_event_link_url` domain whitelist (`riseup.net`, `nextcloud.com/org`, `chat.whatsapp.com`, `linktr.ee`; `EVENTLINK_EXTRA_ALLOWED_DOMAINS` setting); inline formset with progressive reveal (1 row visible, "+ add" up to 3); chip display on rota + event hub; admin inline; seed data (50/30/15/5% link distribution); `fixtures>=4` added to `requirements/docker.txt` |

@@ -5,18 +5,22 @@
 [[volunteers]]
 name = "Cleo Marchetti"
 email = "cleo.marchetti@example.com"
+pronouns = "she/her"
 
 [[volunteers]]
 name = "Elia Silveira"
 email = "elia.silveira@example.com"
+pronouns = "they/them"
 
 [[volunteers]]
 name = "Marta Voss"
 email = "marta.voss@example.com"
+pronouns = "she/her"
 
 [[volunteers]]
 name = "Rex Hollis"
 email = "rex.hollis@example.com"
+pronouns = "he/him"
 
 [[volunteers]]
 name = "Phoebe Lund"
@@ -25,6 +29,7 @@ email = "phoebe.lund@example.com"
 [[volunteers]]
 name = "Kalani Horita"
 email = "kalani.horita@example.com"
+pronouns = "they/them"
 
 [[volunteers]]
 name = "Vera Deschamps"
@@ -33,10 +38,12 @@ email = "vera.deschamps@example.com"
 [[volunteers]]
 name = "Remy Okafor"
 email = "remy.okafor@example.com"
+pronouns = "he/they"
 
 [[volunteers]]
 name = "Jules Travers"
 email = "jules.travers@example.com"
+pronouns = "they/them"
 
 [[volunteers]]
 name = "Lena Barrow"
@@ -45,10 +52,12 @@ email = "lena.barrow@example.com"
 [[volunteers]]
 name = "Sasha Pryce"
 email = "sasha.pryce@example.com"
+pronouns = "she/they"
 
 [[volunteers]]
 name = "Tomás Ferreira"
 email = "tomas.ferreira@example.com"
+pronouns = "he/him"
 
 [[volunteers]]
 name = "Nell Arundel"
@@ -61,6 +70,7 @@ email = "ivan.solis@example.com"
 [[volunteers]]
 name = "Ana Fonseca"
 email = "ana.fonseca@example.com"
+pronouns = "she/her"
 
 # Single-name volunteers
 
@@ -71,6 +81,7 @@ email = "beef@example.com"
 [[volunteers]]
 name = "Sparks"
 email = "sparks@example.com"
+pronouns = "ze/zir"
 
 [[volunteers]]
 name = "Cheddar"
@@ -79,6 +90,7 @@ email = "cheddar@example.com"
 [[volunteers]]
 name = "Moth"
 email = "moth@example.com"
+pronouns = "they/them"
 
 [[volunteers]]
 name = "Fig"

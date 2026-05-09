@@ -302,6 +302,12 @@ class Command(BaseCommand):
             )
             if created:
                 counts["volunteers"] += 1
+            # Pronouns may be added/changed in the toml without re-seeding from
+            # scratch; sync them on every run for existing members too.
+            pronouns = vol_data.get("pronouns", "")
+            if pronouns and member.personal_pronouns != pronouns:
+                member.personal_pronouns = pronouns
+                member.save(update_fields=["personal_pronouns"])
 
             username = vol_data["email"].split("@")[0]
             user, _ = User.objects.get_or_create(
