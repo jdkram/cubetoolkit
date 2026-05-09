@@ -291,6 +291,40 @@ class Event(models.Model):
         verbose_name="Programmer's notes",
     )
 
+    APPROVAL_MEETING = "meeting"
+    APPROVAL_STANDING = "standing"
+    APPROVAL_CHOICES = [
+        ("", "Not recorded"),
+        ("meeting", "Approved at programming meeting"),
+        ("standing", "Standing / regular event — no meeting needed"),
+    ]
+    approval_type = models.CharField(
+        max_length=16,
+        blank=True,
+        choices=APPROVAL_CHOICES,
+        default="",
+        verbose_name="Approval status",
+        help_text="How this event entered the programme.",
+    )
+    approved_at_meeting_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Meeting date",
+        help_text="Date of the programming meeting at which this was approved.",
+    )
+    meeting_name = models.CharField(
+        max_length=128,
+        blank=True,
+        verbose_name="Meeting name",
+        help_text="Optional identifier, e.g. 'Monday meeting'.",
+    )
+    meeting_minutes_url = models.URLField(
+        blank=True,
+        max_length=500,
+        verbose_name="Minutes link",
+        help_text="Optional link to the meeting minutes.",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
