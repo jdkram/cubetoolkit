@@ -9,7 +9,7 @@ from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.decorators.http import require_http_methods, require_POST
 
-from .models import RoomNote, DonationItem, Job
+from .models import Collective, RoomNote, DonationItem, Job
 from . import forms as lab_forms
 
 
@@ -56,6 +56,35 @@ _ROOM_SECTIONS = [
     {"key": "secondary", "label": "Secondary Spaces"},
     {"key": "circulation", "label": "Corridors & Toilets"},
 ]
+
+
+@login_required
+def collectives(request):
+    items = Collective.objects.filter(active=True).select_related("updated_by")
+    return render(request, "labs/collectives.html", {"collectives": items})
+
+
+@login_required
+def collectives_print(request):
+    items = Collective.objects.filter(active=True)
+    return render(request, "labs/collectives_print.html", {"collectives": items})
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def collective_edit(request, slug):
+    collective = get_object_or_404(Collective, slug=slug, active=True)
+    if request.method == "POST":
+        form = lab_forms.CollectiveForm(request.POST, instance=collective)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            obj.updated_by = request.user
+            obj.save()
+            messages.success(request, f"'{collective.name}' updated.")
+            return redirect("labs-collectives")
+    else:
+        form = lab_forms.CollectiveForm(instance=collective)
+    return render(request, "labs/collective_edit.html", {"collective": collective, "form": form})
 
 
 @login_required

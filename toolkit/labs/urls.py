@@ -4,6 +4,9 @@ from django.urls import re_path
 from . import views
 
 urlpatterns = [
+    re_path(r"^collectives/$", views.collectives, name="labs-collectives"),
+    re_path(r"^collectives/(?P<slug>[\w-]+)/edit/$", views.collective_edit, name="labs-collective-edit"),
+    re_path(r"^collectives/print/$", views.collectives_print, name="labs-collectives-print"),
     re_path(r"^floorplan/$", views.floorplan, name="labs-floorplan"),
     re_path(r"^note/(?P<room_id>[\w-]+)/$", views.room_note, name="labs-room-note"),
     re_path(r"^donations/$", views.donation_list, name="labs-donations"),

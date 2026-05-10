@@ -1,0 +1,97 @@
+# Donation items wanted/not-wanted list for dev seed.
+# status: "wanted" | "check_first" | "not_needed"
+
+[[donations]]
+name = "Small CRT monitor (for retro gaming events)"
+category = "Electronics"
+status = "wanted"
+notes = "Needs to have composite or S-Video input. Any size from 12–21 inches."
+internal_notes = "For use with Starcade collective — they run retro gaming nights monthly."
+display_order = 10
+
+[[donations]]
+name = "Projector (any resolution)"
+category = "Electronics"
+status = "check_first"
+notes = "We may already have enough. Please contact us before bringing one."
+internal_notes = "We have 3 projectors currently. Only accept if it's significantly better than what we have."
+display_order = 20
+
+[[donations]]
+name = "HDMI cables (2m+)"
+category = "Electronics"
+status = "wanted"
+notes = "Always useful for tech events and screenings."
+display_order = 30
+
+[[donations]]
+name = "Laptop (functional, any age)"
+category = "Electronics"
+status = "check_first"
+notes = "Depends on specs — contact us first."
+internal_notes = "Need at least 4GB RAM and working battery. Check with Tech collective."
+display_order = 40
+
+[[donations]]
+name = "Desktop PC tower"
+category = "Electronics"
+status = "not_needed"
+notes = "We have more than we can use right now."
+display_order = 50
+
+[[donations]]
+name = "Foldable tables (sturdy)"
+category = "Furniture"
+status = "wanted"
+notes = "Rectangular folding tables for events. Must be in good condition."
+internal_notes = "Storage is tight — confirm with Events collective before accepting."
+display_order = 10
+
+[[donations]]
+name = "Stackable chairs"
+category = "Furniture"
+status = "check_first"
+notes = "We have some but can always use more for large events. Contact us."
+display_order = 20
+
+[[donations]]
+name = "Sofas / armchairs"
+category = "Furniture"
+status = "not_needed"
+notes = "We don't have space for more soft seating right now."
+display_order = 30
+
+[[donations]]
+name = "Catering-size mixing bowls"
+category = "Kitchen"
+status = "wanted"
+notes = "Stainless steel preferred, at least 5 litre."
+display_order = 10
+
+[[donations]]
+name = "Cafetiere (large, 8+ cup)"
+category = "Kitchen"
+status = "wanted"
+notes = "For Community Kitchen events."
+display_order = 20
+
+[[donations]]
+name = "Microwave"
+category = "Kitchen"
+status = "not_needed"
+notes = "We already have one."
+display_order = 30
+
+[[donations]]
+name = "Power drill (cordless)"
+category = "Tools"
+status = "wanted"
+notes = "Good condition only. Must include at least one battery."
+display_order = 10
+
+[[donations]]
+name = "Step ladder (1.5–2m)"
+category = "Tools"
+status = "check_first"
+notes = "Contact us — we may have enough."
+display_order = 20

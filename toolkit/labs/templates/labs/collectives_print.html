@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{% load static %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Collectives — Star and Shadow</title>
+<style>
+/* ── Base ─────────────────────────────────────────────────── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11pt;
+  color: #1a1a1a;
+  background: #fff;
+}
+
+/* ── Screen view ─────────────────────────────────────────── */
+@media screen {
+  body {
+    background: #e0e0e0;
+    padding: 2rem 1rem;
+  }
+  .print-controls {
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+  .print-controls button {
+    font-family: Arial, sans-serif;
+    font-size: 1rem;
+    padding: 0.5rem 1.5rem;
+    background: #343a40;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 0.5rem;
+  }
+  .print-controls a {
+    font-family: Arial, sans-serif;
+    font-size: 0.9rem;
+    color: #343a40;
+    text-decoration: underline;
+  }
+  .print-controls button:hover { background: #495057; }
+  .page {
+    background: #fff;
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto 2rem;
+    padding: 20mm 18mm 16mm;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+  }
+}
+
+/* ── Print ───────────────────────────────────────────────── */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 20mm 18mm 16mm;
+  }
+  .print-controls { display: none; }
+  .page {
+    page-break-after: always;
+    width: 100%;
+    padding: 0;
+  }
+  .page:last-child { page-break-after: avoid; }
+}
+
+/* ── Page layout ─────────────────────────────────────────── */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 3px solid var(--accent, #b45f06);
+  padding-bottom: 0.75rem;
+}
+.page-header-logo {
+  width: 52pt;
+  height: auto;
+  flex-shrink: 0;
+}
+.page-header-text {
+  flex: 1;
+}
+.venue-name {
+  font-size: 8.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #666;
+  margin-bottom: 0.15rem;
+}
+.collective-title {
+  font-size: 28pt;
+  font-weight: bold;
+  color: var(--accent, #b45f06);
+  line-height: 1.1;
+}
+/* ── Q&A sections ────────────────────────────────────────── */
+.sections {
+  margin-top: 0.9rem;
+}
+.section {
+  margin-bottom: 0.75rem;
+}
+.section-heading {
+  font-size: 11pt;
+  font-weight: bold;
+  color: #1a1a1a;
+  margin-bottom: 0.2rem;
+}
+.section-body {
+  font-size: 10.5pt;
+  line-height: 1.45;
+  color: #222;
+}
+
+/* ── Footer ──────────────────────────────────────────────── */
+.page-footer {
+  margin-top: 1.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #ccc;
+  font-size: 8pt;
+  color: #888;
+}
+.contact-line {
+  margin-top: 0.6rem;
+  font-size: 10pt;
+  color: #333;
+}
+.contact-line strong { color: #b45f06; }
+</style>
+</head>
+<body>
+
+<div class="print-controls">
+  <button onclick="window.print()">Print / Save as PDF</button>
+  <a href="{% url 'labs-collectives' %}">&#8592; Back to Collectives</a>
+  <p style="margin-top: 0.75rem; font-size: 0.85rem; color: #555;">
+    Tip: in the print dialog, uncheck <em>Headers and footers</em> for a cleaner result.
+    (This is a browser setting we can't control from here.)
+  </p>
+</div>
+
+{% for c in collectives %}
+<div class="page" style="--accent: {{ c.colour }};">
+  <div class="page-header">
+    <img class="page-header-logo" src="{% static 'content/star_and_shadow_100_82.png' %}" alt="Star and Shadow">
+    <div class="page-header-text">
+      <div class="venue-name">Star and Shadow Cinema &mdash; Collectives</div>
+      <div class="collective-title">{{ c.name }}</div>
+    </div>
+  </div>
+
+  <div class="sections">
+    {% if c.about %}
+    <div class="section">
+      <div class="section-heading">What is this collective all about?</div>
+      <div class="section-body">{{ c.about }}</div>
+    </div>
+    {% endif %}
+
+    {% if c.roles %}
+    <div class="section">
+      <div class="section-heading">What are the roles and tasks within your collective?</div>
+      <div class="section-body">{{ c.roles }}</div>
+    </div>
+    {% endif %}
+
+    {% if c.organising %}
+    <div class="section">
+      <div class="section-heading">How do you meet and organise as a collective?</div>
+      <div class="section-body">{{ c.organising }}</div>
+    </div>
+    {% endif %}
+
+    {% if c.proud_of %}
+    <div class="section">
+      <div class="section-heading">In your collective, what are you most proud of?</div>
+      <div class="section-body">{{ c.proud_of }}</div>
+    </div>
+    {% endif %}
+
+    {% if c.get_involved %}
+    <div class="section">
+      <div class="section-heading">How can volunteers get involved?</div>
+      <div class="section-body">{{ c.get_involved }}</div>
+    </div>
+    {% endif %}
+
+    {% if c.contact %}
+    <div class="contact-line">
+      <strong>Contact:</strong> {{ c.contact }}
+    </div>
+    {% endif %}
+
+    {% if c.volunteer_count %}
+    <div class="section">
+      <div class="section-heading">Volunteer count</div>
+      <div class="section-body">{{ c.volunteer_count }}</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="page-footer">
+    <div>Printed {% now "j N Y" %}. To update this information, visit the volunteer toolkit at starandshadow.org.uk/toolkit and go to Labs &rarr; Collectives.</div>
+  </div>
+</div>
+{% endfor %}
+
+</body>
+</html>

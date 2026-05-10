@@ -1,0 +1,83 @@
+# Maintenance jobs for dev seed.
+# urgency: "low" | "medium" | "high"
+# location_type: "building" | "remote" | "both"
+# resolved_days_ago: omit or 0 for unresolved; positive int = resolved N days before seed run
+
+[[jobs]]
+title = "Soap dispenser over handwash sink is out of use"
+area = "Kitchen"
+description = "The soap dispenser mounted above the handwash sink is leaking from the bottom and has been taken out of service. Needs either repair or replacement."
+plan_status = "A replacement unit has been sourced — just needs fitting."
+safety_risk = false
+skill_needed = false
+keyholder_required = true
+urgency = "medium"
+location_type = "building"
+reporter_name = "Alex"
+resolved = false
+
+[[jobs]]
+title = "Internet contract renewal due"
+area = "Office"
+description = "Current broadband contract with Virgin expires. Need to either renew or switch provider. See Nextcloud for current contract details."
+plan_status = "Contacted Virgin — waiting on renewal quote."
+safety_risk = false
+skill_needed = false
+keyholder_required = false
+urgency = "high"
+location_type = "remote"
+reporter_name = "Marcus"
+resolved = false
+
+[[jobs]]
+title = "Leak from roof above projection room"
+area = "Projection room"
+description = "Water ingress visible on the ceiling above the projector during heavy rain. Currently managed with a bucket. Needs a roofer to assess."
+plan_status = "Awaiting quote from roofing contractor. Jonny to follow up."
+safety_risk = true
+skill_needed = true
+keyholder_required = true
+urgency = "high"
+location_type = "building"
+reporter_name = "Jonny"
+resolved = false
+
+[[jobs]]
+title = "Toilet door handle loose in accessible toilet"
+area = "Accessible toilet"
+description = "The internal handle is not gripping properly — you have to apply pressure to the side to get it to latch. Easy fix with a screwdriver."
+plan_status = ""
+safety_risk = false
+skill_needed = false
+keyholder_required = true
+urgency = "low"
+location_type = "building"
+reporter_name = "Sam"
+resolved = false
+
+[[jobs]]
+title = "Update volunteer handbook on Nextcloud"
+area = "Anywhere"
+description = "The volunteer handbook hasn't been updated since the rota system changed. Needs the new rota process documented and old screenshots replaced."
+plan_status = "Assigned to induction collective — no progress yet."
+safety_risk = false
+skill_needed = false
+keyholder_required = false
+urgency = "low"
+location_type = "remote"
+reporter_name = "Jamie"
+resolved = false
+
+[[jobs]]
+title = "Repair broken cable trunking in main hall"
+area = "Main hall"
+description = "The cable trunking along the east wall has snapped in two places. Cables are currently taped down — trip hazard during events."
+plan_status = "Resolved by Olly and Beth. Used adhesive-back trunking from screwfix."
+safety_risk = true
+skill_needed = false
+keyholder_required = true
+urgency = "high"
+location_type = "building"
+reporter_name = "Beth"
+resolved = true
+resolved_days_ago = 14

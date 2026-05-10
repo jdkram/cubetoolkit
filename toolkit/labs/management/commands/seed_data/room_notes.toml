@@ -1,0 +1,62 @@
+# Room note seed data — one note per room slug.
+# Won't overwrite notes already in the database (get_or_create by room_id).
+
+[[room_notes]]
+room_id = "room-cinema"
+body = "We show films in here. Who'd a thunk it"
+
+[[room_notes]]
+room_id = "room-venue"
+body = "Projector temporarily taken down for the gig - in the venue stores, will be restored when we finish tear down the day after."
+
+[[room_notes]]
+room_id = "room-bar"
+body = "Almasty is playing up - keg might need a while to settle (2026.05.09)."
+
+[[room_notes]]
+room_id = "room-cafe"
+body = "We're out of coffee pots, somehow. New ones arriving Tues"
+
+[[room_notes]]
+room_id = "room-workshop"
+body = "New drill press! Hooray! Please attend training to use it safely."
+
+[[room_notes]]
+room_id = "room-screen-printing-room"
+body = "Riso has had fresh drums - 2026.05.09"
+
+[[room_notes]]
+room_id = "room-dark-room"
+body = "Please note the fix is getting stale - only a couple more uses left in it"
+
+[[room_notes]]
+room_id = "room-meeting-room"
+body = "Ants, again. No thanks, ants. Nothants."
+
+[[room_notes]]
+room_id = "room-green-room"
+body = "The screens are all fair game - nab them if you want. Specs here: sample.link"
+
+[[room_notes]]
+room_id = "room-projection-booth"
+body = "HDMI switcher is playing up, new one arriving next week."
+
+[[room_notes]]
+room_id = "room-volunteer-kitchen"
+body = "Fridge is for volunteers. Label anything you want to keep; anything unlabelled after a week is fair game. The milk situation is eternal and ongoing."
+
+[[room_notes]]
+room_id = "room-venue-store-tech"
+body = "Audio cables go in the labelled bins."
+
+[[room_notes]]
+room_id = "room-back-corridor"
+body = "Wood being very temporarily stored here before shifting to the workshop, please watch the rota and sign up if you'd like to help us sort this out"
+
+[[room_notes]]
+room_id = "room-kitchen"
+body = "What's with all the pizza cutters, are they multiplying overnight?"
+
+[[room_notes]]
+room_id = "room-middle-corridor"
+body = "Current exhibition to be taken down 2026.06.11"
