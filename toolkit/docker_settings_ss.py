@@ -33,6 +33,18 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "insecure-dev-secret-key-change-in-pro
 
 # Print emails to the container logs instead of attempting SMTP delivery.
 # Change to smtp.EmailBackend and set EMAIL_HOST/PORT/etc. in production.
+# Use whitenoise's manifest storage so the collectstatic run baked into the
+# Docker image generates a manifest that matches what docker_settings_prod_ss
+# uses at runtime. The dev runserver doesn't use STORAGES for static files.
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 # Fail fast on SMTP connection attempts rather than hanging a worker.
 # Django's default has no timeout. Only takes effect with smtp.EmailBackend.
