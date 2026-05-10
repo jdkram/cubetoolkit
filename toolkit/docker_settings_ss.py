@@ -46,6 +46,16 @@ from django.contrib.staticfiles.storage import ManifestStaticFilesStorage  # noq
 class _PermissiveManifestStorage(ManifestStaticFilesStorage):
     manifest_strict = False
 
+    def hashed_name(self, name, content=None, filename=None):
+        # During collectstatic post-processing, hashed_name() raises ValueError
+        # for referenced files that don't exist in the static tree (e.g. source
+        # maps that bootstrap ships references to but doesn't include). Return
+        # the name unchanged so the build doesn't abort.
+        try:
+            return super().hashed_name(name, content=content, filename=filename)
+        except ValueError:
+            return name
+
 
 STORAGES = {
     "default": {
