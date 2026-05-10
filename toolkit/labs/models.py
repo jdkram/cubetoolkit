@@ -2,6 +2,44 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+COLLECTIVE_PALETTE = [
+    # Blues & navies
+    ("#0d2b45", "Deep Navy"),
+    ("#1a3a5c", "Navy"),
+    ("#1a3a6b", "Cobalt"),
+    ("#2d3a7a", "Indigo"),
+    # Teals
+    ("#0d4f4f", "Dark Teal"),
+    ("#1a5c72", "Teal"),
+    ("#2a5a5a", "Petrol"),
+    ("#1a6b5a", "Emerald"),
+    # Greens
+    ("#1a4a3a", "Spruce"),
+    ("#1a5c48", "Jade"),
+    ("#2d5a2a", "Forest"),
+    ("#3a5a1a", "Fern"),
+    ("#4a5a20", "Olive"),
+    # Purples & violets
+    ("#3d1f6e", "Deep Purple"),
+    ("#4a2060", "Aubergine"),
+    ("#523070", "Plum"),
+    ("#6b3070", "Violet"),
+    # Reds & crimsons
+    ("#5a1a3a", "Burgundy"),
+    ("#6b1a2a", "Claret"),
+    ("#7a2a4a", "Crimson"),
+    ("#8b2020", "Deep Red"),
+    # Browns & ambers
+    ("#4a2a0d", "Dark Brown"),
+    ("#5a3a1a", "Chestnut"),
+    ("#6b4428", "Umber"),
+    ("#7a3a2a", "Rust"),
+    ("#7a4a1a", "Ochre"),
+    # Neutrals
+    ("#2a3540", "Dark Slate"),
+    ("#343a40", "Slate"),
+]
+
 
 class RoomNote(models.Model):
     room_id = models.CharField(max_length=100, unique=True)
@@ -61,6 +99,38 @@ class DonationItem(models.Model):
     class Meta:
         db_table = "labs_donation_items"
         ordering = ["category", "display_order", "name"]
+
+    def __str__(self):
+        return self.name
+
+
+class Collective(models.Model):
+    name = models.CharField(max_length=128)
+    slug = models.SlugField(max_length=64, unique=True)
+    colour = models.CharField(max_length=7, default="#343a40")
+    display_order = models.IntegerField(default=0, help_text="Lower numbers appear first.")
+    active = models.BooleanField(default=True)
+    volunteer_count = models.CharField(
+        max_length=256, blank=True, default="",
+        help_text="Descriptive volunteer count shown on the collectives page.",
+    )
+    about = models.TextField(blank=True, default="")
+    roles = models.TextField(blank=True, default="", verbose_name="Roles and tasks")
+    organising = models.TextField(blank=True, default="", verbose_name="How they meet and organise")
+    proud_of = models.TextField(blank=True, default="", verbose_name="What they're most proud of")
+    get_involved = models.TextField(blank=True, default="", verbose_name="How to get involved")
+    contact = models.CharField(
+        max_length=256, blank=True, default="",
+        help_text="Contact email or address shown at the bottom of the card.",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+
+    class Meta:
+        db_table = "labs_collectives"
+        ordering = ["display_order", "name"]
 
     def __str__(self):
         return self.name

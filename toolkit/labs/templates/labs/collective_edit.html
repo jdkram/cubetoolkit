@@ -1,0 +1,34 @@
+{% extends "base_admin.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Edit — {{ collective.name }}{% endblock %}
+
+{% block body %}
+<div class="container-fluid" style="max-width: 52rem;">
+  <nav aria-label="breadcrumb" style="margin-bottom: 1rem;">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'labs-collectives' %}">Collectives</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Edit {{ collective.name }}</li>
+    </ol>
+  </nav>
+
+  <h1 style="font-size: 1.4rem; margin-bottom: 0.25rem;">Edit: {{ collective.name }}</h1>
+  {% if collective.updated_by %}
+  <p class="text-muted" style="font-size: 0.82rem; margin-bottom: 1.5rem;">
+    Last edited by {{ collective.updated_by.get_full_name|default:collective.updated_by.username }}
+    on {{ collective.updated_at|date:"j N Y, H:i" }}
+  </p>
+  {% else %}
+  <p style="margin-bottom: 1.5rem;"></p>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    {% crispy form %}
+    <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem; align-items: center;">
+      <button type="submit" class="btn btn-primary">Save changes</button>
+      <a href="{% url 'labs-collectives' %}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

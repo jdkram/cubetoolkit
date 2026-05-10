@@ -1,6 +1,19 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]; status: "#ai-written"
 from django.contrib import admin
-from .models import DonationItem, Job
+from .models import Collective, DonationItem, Job
+
+
+@admin.register(Collective)
+class CollectiveAdmin(admin.ModelAdmin):
+    list_display = ("name", "active", "display_order", "contact")
+    list_filter = ("active",)
+    list_editable = ("active", "display_order")
+    prepopulated_fields = {"slug": ("name",)}
+    ordering = ("display_order", "name")
+    fieldsets = (
+        (None, {"fields": ("name", "slug", "colour", "display_order", "active")}),
+        ("Content", {"fields": ("volunteer_count", "about", "roles", "organising", "proud_of", "get_involved", "contact")}),
+    )
 
 
 @admin.register(DonationItem)

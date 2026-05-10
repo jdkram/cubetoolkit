@@ -1,0 +1,179 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Collectives — Labs{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+.collectives-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(28rem, 1fr));
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+}
+.collective-card {
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  background: #fff;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.collective-card-header {
+  color: #fff;
+  padding: 0.7rem 1rem;
+}
+.collective-card-header h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.collective-card-body {
+  padding: 1rem;
+  font-size: 0.875rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.collective-card-body dl {
+  flex: 1;
+}
+.collective-card-body dt {
+  font-weight: 600;
+  color: #495057;
+  margin-top: 0.75rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.collective-card-body dt:first-child {
+  margin-top: 0;
+}
+.collective-card-body dd {
+  margin: 0.2rem 0 0 0;
+  color: #212529;
+  line-height: 1.55;
+}
+.card-footer-bar {
+  margin-top: 0.75rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid #dee2e6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  color: #6c757d;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.card-footer-bar .edit-btn {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.6rem;
+  white-space: nowrap;
+}
+.contact-link {
+  font-size: 0.82rem;
+  margin-top: 0.5rem;
+}
+.action-bar {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+.help-box {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+  color: #495057;
+}
+.help-box strong {
+  color: #212529;
+}
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
+    <h1 style="margin-bottom: 0;">Collectives at the Star and Shadow</h1>
+    <div class="action-bar">
+      <a href="{% url 'labs-collectives-print' %}" class="btn btn-outline-secondary btn-sm" target="_blank">Print all leaflets</a>
+      {% if user.is_superuser %}
+      <a href="/toolkit/admin/labs/collective/add/" class="btn btn-primary btn-sm">Add collective</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="help-box">
+    <strong>Editing:</strong> use the <em>Edit</em> button on any card to update its text — any volunteer can do this.
+    {% if user.is_superuser %}
+    To add or remove a collective, or change its ordering, use the
+    <a href="/toolkit/admin/labs/collective/">Django admin</a>.
+    {% else %}
+    To add a new collective or change ordering, ask a superuser to use the admin panel.
+    {% endif %}
+  </div>
+
+  <div class="collectives-grid">
+    {% for c in collectives %}
+    <div class="collective-card">
+      <div class="collective-card-header" style="background: {{ c.colour }};">
+        <h2>{{ c.name }}</h2>
+      </div>
+      <div class="collective-card-body">
+        <dl>
+          {% if c.about %}
+          <dt>What this collective does</dt>
+          <dd>{{ c.about }}</dd>
+          {% endif %}
+
+          {% if c.roles %}
+          <dt>Roles and tasks</dt>
+          <dd>{{ c.roles }}</dd>
+          {% endif %}
+
+          {% if c.organising %}
+          <dt>How they meet and organise</dt>
+          <dd>{{ c.organising }}</dd>
+          {% endif %}
+
+          {% if c.proud_of %}
+          <dt>What they're most proud of</dt>
+          <dd>{{ c.proud_of }}</dd>
+          {% endif %}
+
+          {% if c.get_involved %}
+          <dt>How to get involved</dt>
+          <dd>{{ c.get_involved }}</dd>
+          {% endif %}
+
+          {% if c.volunteer_count %}
+          <dt>Volunteer count</dt>
+          <dd>{{ c.volunteer_count }}</dd>
+          {% endif %}
+        </dl>
+        {% if c.contact %}
+        <div class="contact-link">
+          Contact: <a href="mailto:{{ c.contact }}">{{ c.contact }}</a>
+        </div>
+        {% endif %}
+        <div class="card-footer-bar">
+          <span>
+            {% if c.updated_by %}
+            Last edited by {{ c.updated_by.get_full_name|default:c.updated_by.username }}
+            &middot; {{ c.updated_at|date:"j N Y" }}
+            {% endif %}
+          </span>
+          <a href="{% url 'labs-collective-edit' c.slug %}" class="btn btn-outline-secondary btn-sm edit-btn">Edit</a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

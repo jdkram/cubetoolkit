@@ -1,0 +1,146 @@
+# Collectives seed data for dev. Sanitised — no personal names or contact emails.
+# Edit via the Collectives admin or edit UI once the site is running.
+
+[[collectives]]
+name = "Art Club"
+slug = "art-club"
+display_order = 10
+volunteer_count = ""
+about = "Art Club is a relaxed, once-a-week social gathering where people can take a break from their daily routines and connect with supportive, like-minded creatives. It's a safe, welcoming space to explore ideas, experiment with different mediums, and share your artistic journey with others."
+roles = "The main role of an Art Club volunteer is to help create a welcoming, inclusive, and supportive atmosphere — greeting new members, offering guidance or encouragement, keeping the space tidy, and helping uphold the values and ethos of the Star and Shadow."
+organising = "Art Club meets every Sunday for a four-hour session. Volunteers also communicate via a WhatsApp group."
+proud_of = ""
+get_involved = "Call in on a Sunday — it runs 12–4pm. New volunteers welcome."
+contact = ""
+
+[[collectives]]
+name = "Bar Collective"
+slug = "bar-collective"
+display_order = 20
+volunteer_count = ""
+about = "The Bar Collective pulls the pints — and makes sure there are pints to pull. It's a large Star and Shadow volunteer group, with a subgroup called Operations who take care of stock and supplies. The bar runs during regular programming (film nights on Thursdays and Sundays), plus most events."
+roles = "Bar shift tasks: serving drinks; collecting, washing, and correctly shelving glasses; cleaning and disinfecting surfaces; maintaining stock levels in the bar and the cellar; waste management. Other ongoing jobs include cleaning beer lines, ordering stock, doing stock-takes, and organising meetings."
+organising = "Meetings in person every couple of months, organised through the bar email list. All meeting agendas, minutes, and other documents are in the Bar folder in the Nextcloud."
+proud_of = ""
+get_involved = "As alcohol sales are licensed, you'll need to complete a bar induction before doing a shift. Once inducted, you'll be added to the bar mailing list and can sign up for any bar role on the rota. Please arrive 45–60 minutes before the listed time to set up."
+contact = ""
+
+[[collectives]]
+name = "Cafe Collective"
+slug = "cafe-collective"
+display_order = 30
+volunteer_count = ""
+about = "The Cafe Collective runs the Star and Shadow's volunteer-led cafe, serving drinks and cold food during regular events and special occasions. It's a welcoming, sociable part of the building. The cafe is open every Sunday 12–4pm, on the fourth Saturday of the month 10:30am–12:30pm for Family Film Club, and by arrangement for special events."
+roles = "On-shift tasks: setting up and closing down the cafe, serving drinks, selling cold food, cleaning the kitchen and cafe area, and basic cafe admin. Other collective jobs include occasional deep cleaning, ordering stock, ongoing admin, and calling quarterly meetings. There is also a Cafe Coordinator role reviewed at each quarterly meeting."
+organising = "Decisions are made at quarterly cafe collective meetings held in person. Information is shared in the cafe box (stored in the admin section of the kitchen) and on the Nextcloud in the volunteer toolkit."
+proud_of = ""
+get_involved = "A one-hour cafe induction is required before signing up for a shift — these are listed on the rota once a month. If you're interested in cooking or handling hot food, a kitchen induction is also available. A Level 2 Food Safety and Hygiene Certificate is required for kitchen roles."
+contact = ""
+
+[[collectives]]
+name = "Caretaking & Operations Collective"
+slug = "caretaking-operations"
+display_order = 40
+volunteer_count = ""
+about = "Caretaking & Operations Volunteers are responsible for the maintenance and running of the physical building — electricity, water, fire extinguishers, shutters, roof, doors, air conditioning, and more — as well as admin tasks needed to run the organisation, such as renewing licences, insurance policies, risk assessments, and Health & Safety policies."
+roles = "All tasks and instructions are documented on the Nextcloud in the Caretaking of the Building folder. A key document lists all annual jobs, their deadlines, and which volunteer is assigned to each. The general rule is that a volunteer's name should only appear once on the list per year to spread the work evenly."
+organising = "The Caretaking Meeting on the 3rd Monday of each month is where building and operational issues are discussed and co-ordinated. Actual tasks are executed throughout the month and year by the assigned volunteer."
+proud_of = ""
+get_involved = "Anyone can attend the Caretaking Meeting. New volunteers are always welcome. There is no rota; tasks are assigned at the meeting."
+contact = ""
+
+[[collectives]]
+name = "Community Kitchen Collective"
+slug = "community-kitchen"
+display_order = 50
+volunteer_count = ""
+about = "The Community Kitchen organises a monthly event: a community project designed to foster a sense of community and solidarity within the Shieldfield area, and between locals and the cinema. Each month a free vegan meal is put on, accompanied by activities such as a fix-it cafe, films, knitting, and live music. The collective also provides meals for volunteer hangouts, events, and meetings."
+roles = "Tasks include food shopping and recipe planning before the event. On the day: cooking, cleaning, serving, working the cafe, or helping set up and pack away. After the event: washing tea towels and aprons."
+organising = "In-person meeting once a month. All information, resources, meeting agendas, and minutes are shared on Nextcloud."
+proud_of = ""
+get_involved = "Get in touch via the community kitchen contact, come along to a meeting, or speak to someone at an event. Kitchen roles require a cafe induction and a Level 2 Food Safety and Hygiene Certificate, which S&S can reimburse."
+contact = ""
+
+[[collectives]]
+name = "Facilitation Collective"
+slug = "facilitation"
+display_order = 60
+volunteer_count = ""
+about = "Facilitation is very important to the Star and Shadow. In meetings and groups with no bosses or management, a facilitator's task is to ensure everyone is on equal footing and to maintain consensus-based decision making. The Facilitation Collective aims to improve facilitation across the organisation by building capacity, creating a supportive environment for volunteers to practise, and organising training."
+roles = "The only role is to facilitate. Everyone is there to join discussions and trainings, to volunteer to co-facilitate at collective meetings when they'd like to, and to give feedback to people learning. New members can shadow a facilitator at a meeting."
+organising = "In-person meetings roughly every three weeks. Knowledge and information are shared using a Google Drive, accessible via the toolkit or by emailing the mailing list."
+proud_of = ""
+get_involved = "Email the mailing list for info or come along to one of the meetings. There is no induction as yet, but the collective is looking to provide training."
+contact = ""
+
+[[collectives]]
+name = "Film Programming Collective"
+slug = "film-programming"
+display_order = 70
+volunteer_count = ""
+about = "The Film Programming Collective creates the film programme for the Star and Shadow, planning Thursday and Sunday slots in three-month seasons, and organising special screenings at other times."
+roles = "For each season: collecting suggestions from film programmers; agreeing on what to show (ensuring a diverse range); securing licences; putting film listings on the S&S website, Instagram, and publications such as the Crack and Narc; and mentoring newer programmers."
+organising = "Monthly online meetings and an active WhatsApp community. Planning happens in three-month blocks."
+proud_of = ""
+get_involved = "There is an email list and WhatsApp groups — anyone can join, no induction needed. There is also a comprehensive guide called 'How to Programme a Film' for new programmers. Note: you don't need to project a film you programme."
+contact = ""
+
+[[collectives]]
+name = "Film Projection / Tech Collective"
+slug = "film-projection-tech"
+display_order = 80
+volunteer_count = ""
+about = "The Film Projection/Tech Collective projects films and helps with tech in the cinema."
+roles = "Roles include: Projectionist — DVD, MP4, DCP, 16mm, and 35mm formats; projectionist shadowing; audio-visual technician (setting up audio and/or Zoom projection for filmmaker Q&As); contact with Omnex (the technicians who service the projectors); projectionist training; communicating with programming; and coordinating clean-ups."
+organising = "Meetings quarterly, in person, for meetings and cleaning up the space."
+proud_of = ""
+get_involved = "Look out for projection inductions listed on the rota. Training and shadowing are required before signing up for a projectionist role."
+contact = ""
+
+[[collectives]]
+name = "Finance Collective"
+slug = "finance"
+display_order = 90
+volunteer_count = ""
+about = "The Finance Collective keeps the financial records up to date to comply with the law, HMRC, and the S&S Governing Document. It provides good-quality, timely financial information to S&S volunteers on a quarterly basis to inform decisions about the organisation."
+roles = "All tasks and responsibilities are documented in 'The Finance Bible' on the Nextcloud, including a contingency plan and the S&S spending authorisation policy."
+organising = "Three meetings per year by Zoom. Quarterly reports and a 12-month cash forecast are emailed to all working group email lists. The collective presents the Annual Accounts at the AGM and gives a brief financial overview at the Participatory Budgeting meeting."
+proud_of = ""
+get_involved = "Volunteers need to be available, reliable, methodical, honest, and skilled in Excel and Sage. Open information-sharing sessions are planned. Get in touch via the finance collective contact."
+contact = ""
+
+[[collectives]]
+name = "Keyholder Collective"
+slug = "keyholder"
+display_order = 100
+volunteer_count = ""
+about = "The Keyholder group is made up of volunteers trained to perform the keyholder role. There must be at least one keyholder on shift for every event. Keyholders open up the building for volunteers and the public, and have many responsibilities from cashing up to taking care of everyone's safety and comfort."
+roles = "Keyholders are first in, last out. They are responsible for the security of the building, timely access for staff, the safety and comfort of volunteers and the public, supervision of the safe and tills, management of emergency situations, and the set of keys registered to them."
+organising = "Communication via a keyholder WhatsApp group and email list. Two key documents are on the Nextcloud: the Keyholder Approval and Recruitment Policy, and the Keyholder Bible."
+proud_of = ""
+get_involved = "Keyholders must be regular volunteers who have volunteered for at least one year, and must be punctual, reliable, and communicative. Prospective keyholders can nominate themselves at a Caretaking Meeting."
+contact = ""
+
+[[collectives]]
+name = "Safer Spaces Collective"
+slug = "safer-spaces"
+display_order = 110
+volunteer_count = ""
+about = "The Safer Spaces Collective supports the Star and Shadow in being a welcoming, inclusive, and accountable community. It maintains and embeds the Safer Spaces & Anti-Oppression Policy, which outlines the shared commitment to treating one another with care, respect, and fairness."
+roles = "Creating resources to help volunteers navigate the non-hierarchical set-up. Running workshops such as Listening Skills training. A smaller group within Safer Spaces acts as mediators and helps people talk when communication has broken down."
+organising = "At least once a quarter, more if needed."
+proud_of = ""
+get_involved = "Volunteers in Safer Spaces must have been volunteering for at least a year to ensure they understand the cinema and its values. Anyone interested can get in touch by email."
+contact = ""
+
+[[collectives]]
+name = "The Canny Little Library Collective"
+slug = "canny-little-library"
+display_order = 120
+volunteer_count = ""
+about = "A small lending library of radical (left/anarchist/alternative) books and zines at the Star and Shadow Cinema, maintained by volunteers who want to keep a diverse collection that many people might struggle to find elsewhere."
+roles = "Sorting and tidying books on the shelves; categorising books and zines; deciding on new acquisitions; cataloguing returned books; social media about books and library-related events; writing book reviews; cataloguing books online; choosing books to display or promote; making posters. New ideas for activities are welcome."
+organising = "A WhatsApp chat for communication. Volunteers meet irregularly, whenever someone suggests it and others are free, usually on a Sunday."
+proud_of = ""
+get_involved = "Get in touch via the library contact email with a bit about why you'd like to get involved. If you'd like to donate books, please contact the library first — space is limited."
+contact = ""
