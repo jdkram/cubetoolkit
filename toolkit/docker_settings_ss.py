@@ -33,15 +33,26 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "insecure-dev-secret-key-change-in-pro
 
 # Print emails to the container logs instead of attempting SMTP delivery.
 # Change to smtp.EmailBackend and set EMAIL_HOST/PORT/etc. in production.
-# Use whitenoise's manifest storage so the collectstatic run baked into the
-# Docker image generates a manifest that matches what docker_settings_prod_ss
-# uses at runtime. The dev runserver doesn't use STORAGES for static files.
+# Generate a hashed staticfiles manifest during the Docker build so that
+# whitenoise's CompressedManifestStaticFilesStorage can read it at runtime.
+# We use a permissive subclass of Django's ManifestStaticFilesStorage rather
+# than whitenoise's version because whitenoise aborts on missing source-map
+# references (e.g. bootstrap.bundle.min.js.map) that aren't shipped in our
+# static tree. manifest_strict=False silences those without skipping the file.
+# The manifest format is identical so whitenoise reads it correctly.
+from django.contrib.staticfiles.storage import ManifestStaticFilesStorage  # noqa: E402
+
+
+class _PermissiveManifestStorage(ManifestStaticFilesStorage):
+    manifest_strict = False
+
+
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": "toolkit.docker_settings_ss._PermissiveManifestStorage",
     },
 }
 
