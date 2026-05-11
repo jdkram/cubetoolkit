@@ -4,9 +4,37 @@ This doc is for people new to the project who want to get a local dev environmen
 
 ---
 
+## TL;DR
+
+```bash
+# 1. Clone and enter the repo
+git clone https://github.com/jdkram/sns-toolkit.git
+cd sns-toolkit
+
+# 2. Build and start (wait until you see "Starting development server at http://0.0.0.0:8000/")
+docker compose up --build
+```
+
+Once you see `Starting development server at http://0.0.0.0:8000/` in the output, open a second terminal and run:
+
+```bash
+cd sns-toolkit
+
+# 3. Create accounts and seed data
+docker compose exec toolkit /venv/bin/python3 manage.py configure_toolkit_users --password DevPassword1!
+docker compose exec toolkit /venv/bin/python3 manage.py seed_dev_data
+docker compose exec toolkit /venv/bin/python3 manage.py seed_labs_data
+```
+
+Visit [http://localhost:8000](http://localhost:8000). Log in at [http://localhost:8000/auth/login](http://localhost:8000/auth/login) — username `admin`, password `DevPassword1!`.
+
+> If you start with `docker compose up --build -d` (detached), wait for migrations to finish before running the seed commands: `docker compose logs -f toolkit` and wait for the "Starting development server" line.
+
+---
+
 ## What Is This?
 
-Cube Toolkit is the internal web application that powers [Cube Microplex](https://www.cubecinema.com/), a volunteer-run cinema in Bristol. It handles:
+Cube Toolkit is the internal web application that powers [Cube Microplex](https://www.cubecinema.com/) and [Star and Shadow Cinema](https://www.starandshadow.org.uk/), both volunteer-run cinemas. It handles:
 
 - **Event diary** — scheduling events, managing showings, volunteer rotas
 - **Member database** — tracking members, volunteers, and mailout subscriptions
@@ -17,14 +45,23 @@ It's a [Django](https://www.djangoproject.com/) application backed by a MariaDB 
 
 ---
 
-## Getting Started with Docker
+## Getting Started
 
-Docker is the recommended way to run the app locally. You don't need to install Python, MySQL, or any other dependencies on your machine.
+### Prerequisites
 
-**Prerequisites:** [Docker](https://docs.docker.com/engine/install/) and the [Compose plugin](https://docs.docker.com/compose/install/).
+- [Git](https://git-scm.com/)
+- [Docker](https://docs.docker.com/engine/install/) and the [Compose plugin](https://docs.docker.com/compose/install/)
 
-- **Linux (Mint, Ubuntu, Debian):** Install Docker Engine and the Compose plugin via your package manager or the official install script. Docker Desktop is optional and not required. Quickest route: follow [the official Linux install guide](https://docs.docker.com/engine/install/ubuntu/) for your distro, then [add your user to the `docker` group](https://docs.docker.com/engine/install/linux-postinstall/) so you can run `docker` without `sudo`. **You will need to log out and back in for the group change to take effect.**
-- **Mac / Windows:** [Docker Desktop](https://docs.docker.com/desktop/) includes everything you need.
+**Linux (Mint, Ubuntu, Debian):** Install Docker Engine and the Compose plugin via your package manager or the official install script. Docker Desktop is optional and not required. Follow [the official Linux install guide](https://docs.docker.com/engine/install/ubuntu/) for your distro, then [add your user to the `docker` group](https://docs.docker.com/engine/install/linux-postinstall/) so you can run `docker` without `sudo`. **You will need to log out and back in for the group change to take effect.**
+
+**Mac / Windows:** [Docker Desktop](https://docs.docker.com/desktop/) includes everything you need.
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/jdkram/sns-toolkit.git
+cd sns-toolkit
+```
 
 ### Which venue are you developing for?
 
@@ -44,25 +81,25 @@ DJANGO_SETTINGS_MODULE: "toolkit.docker_settings"
 
 Everything else in this guide applies to both venues.
 
-### 1. Build and start the services
+### 2. Build and start the services
 
 ```bash
 docker compose up --build
 ```
 
 This builds the app image and starts two containers:
-- `toolkit` — the Django web app, served by gunicorn on port 8000
+- `toolkit` — the Django web app, served by Django's development server on port 8000
 - `mariadb` — the database
 
 On first run, the app container will automatically run database migrations before starting. Give it ~30 seconds.
 
-### 2. Open the app
+### 3. Open the app
 
 Visit [http://localhost:8000](http://localhost:8000)
 
 You'll see the diary (event list), which is public. The internal toolkit is at [http://localhost:8000/toolkit/](http://localhost:8000/toolkit/) and requires a login.
 
-### 3. Create demo user accounts and seed sample data
+### 4. Create demo user accounts and seed sample data
 
 Run these two commands in a separate terminal:
 
@@ -72,6 +109,10 @@ docker compose exec toolkit /venv/bin/python3 manage.py configure_toolkit_users 
 
 # Populate the database with sample events, volunteers, and roles
 docker compose exec toolkit /venv/bin/python3 manage.py seed_dev_data
+
+# Populate labs app data (collectives, jobs, donations, room notes)
+# Run after seed_dev_data — it depends on rooms being present
+docker compose exec toolkit /venv/bin/python3 manage.py seed_labs_data
 ```
 
 `configure_toolkit_users --password` creates all demo accounts non-interactively. Log in at [http://localhost:8000/auth/login](http://localhost:8000/auth/login) with any of these:
@@ -91,7 +132,7 @@ For production setup (interactive password prompts per account):
 docker compose exec toolkit /venv/bin/python3 manage.py configure_toolkit_users
 ```
 
-### 4. Stop the services
+### 5. Stop the services
 
 ```bash
 docker compose down
@@ -121,36 +162,20 @@ docker compose exec toolkit /venv/bin/python manage.py test --settings=toolkit.t
 
 ### Edit / reload cycle
 
-The source code is bind-mounted into the container at `/site/`, so the running container always sees your local files directly. No rebuild is needed for most changes.
+The source code is bind-mounted into the container, so the running container always sees your local files directly. No rebuild is needed for most changes — the development server auto-reloads.
 
 | What changed | What to do |
 |---|---|
-| Python files (views, models, forms…) | Nothing — gunicorn watches `*.py` files and reloads workers automatically |
+| Python files (views, models, forms…) | Nothing — Django reloads automatically |
 | Templates (`.html`) | Nothing — debug mode disables template caching |
-| CSS or JS (static files) | Run collectstatic (see below) |
+| CSS or JS (static files) | Nothing — the dev server serves static files directly from source |
 | New Python dependency | `docker compose up --build -d` (must rebuild) |
 | Dockerfile or `tk_run.sh` | `docker compose up --build -d` (must rebuild) |
-
-**After changing CSS or JS:**
-
-```bash
-docker compose exec toolkit /venv/bin/python3 manage.py collectstatic --noinput
-```
-
-This takes a few seconds. Refresh the browser and the new files are live.
-
-**If you need a full rebuild** (new dependency, Dockerfile change):
-
-```bash
-docker compose up --build -d
-```
-
-The container runs `collectstatic` automatically on every start, so static files are always up to date after a rebuild too.
 
 **Running management commands:**
 
 ```bash
-# Seed dev data
+# Seed dev data (--wipe clears existing data first)
 docker compose exec toolkit /venv/bin/python3 manage.py seed_dev_data --wipe
 
 # Run migrations (happens automatically on start, but you can trigger manually)
@@ -185,7 +210,7 @@ Browser → URL router (urls.py) → View function (views.py)
                                  Template (templates/) → HTML response
 ```
 
-**Settings** live in `toolkit/settings_*.py` files. Django reads whichever one is pointed to by the `DJANGO_SETTINGS_MODULE` environment variable. In Docker, this is set to `toolkit.docker_settings`.
+**Settings** live in `toolkit/settings_*.py` files. Django reads whichever one is pointed to by the `DJANGO_SETTINGS_MODULE` environment variable. In Docker, this is set to `toolkit.docker_settings_ss`.
 
 **Migrations:** whenever someone changes a model, they run `manage.py makemigrations` to generate a migration file, then `manage.py migrate` to apply it. The Docker entrypoint runs `migrate` automatically on startup, so you shouldn't need to think about this for day-to-day dev.
 
@@ -194,26 +219,29 @@ Browser → URL router (urls.py) → View function (views.py)
 ## Project Structure
 
 ```
-cubetoolkit/
+sns-toolkit/                  # Repo root
 ├── toolkit/                  # The Django project (all Python code lives here)
 │   ├── diary/                # App: event scheduling and volunteer rotas
 │   ├── members/              # App: member and volunteer database
 │   ├── mailer/               # App: email mailout system
 │   ├── content/              # App: Wagtail CMS pages
 │   ├── index/                # App: the internal dashboard/index page
+│   ├── labs/                 # App: experimental / work-in-progress features
 │   ├── toolkit_auth/         # App: login/logout and auth decorators
 │   ├── util/                 # Shared utilities (image processing, context processors)
 │   │
 │   ├── settings_common.py    # Settings shared across all environments
-│   ├── docker_settings.py    # Overrides for Docker (reads DB config from env vars)
-│   ├── devserver_settings.py # Overrides for running locally without Docker
-│   ├── test_settings.py      # Overrides for the test suite (uses SQLite)
-│   ├── settings_ss.py        # Variant config for the Star & Shadow venue
+│   ├── settings_ss.py        # Star & Shadow venue config (imported by docker_settings_ss.py)
+│   ├── docker_settings_ss.py # Docker settings for Star & Shadow (default)
+│   ├── docker_settings.py    # Docker settings for Cube Microplex
+│   ├── devserver_settings.py # Settings for running locally without Docker
+│   ├── test_settings.py      # Settings for the test suite (uses SQLite)
 │   │
 │   ├── urls.py               # Top-level URL router
 │   └── static_common/        # CSS/JS shared across apps
 │
 ├── templates/                # Base HTML templates
+├── star_and_shadow_templates/ # S+S-specific template overrides
 ├── media/                    # User-uploaded files (images, PDFs, etc.)
 ├── containerconfig/
 │   └── tk_run.sh             # Docker container entrypoint script
@@ -223,11 +251,12 @@ cubetoolkit/
 │   ├── dev.txt               # Adds dev tools (debug toolbar, black, fabric)
 │   └── docker.txt            # Adds gunicorn, mysqlclient
 │
-├── Dockerfile                # Multi-stage Docker build
-├── docker-compose.yml        # Dev environment (app + database)
-├── manage.py                 # Django's CLI tool (always use this to run commands)
-├── runtests                  # Shortcut script to run the test suite
-└── tox.ini                   # Test automation config (runs black + tests)
+├── Dockerfile                    # Multi-stage Docker build
+├── docker-compose.yml            # Dev environment (app + database)
+├── docker-compose.override.yml   # Dev overrides (applied automatically)
+├── docker-compose-production.yml # Production deployment
+├── manage.py                     # Django's CLI tool (always use this to run commands)
+└── VERSION                       # Canonical version string
 ```
 
 ---
@@ -247,7 +276,7 @@ This is the largest and most central app. It manages:
 - **Event templates** — reusable defaults for recurring events
 
 Key files:
-- [toolkit/diary/models.py](toolkit/diary/models.py) — all the data models (739 lines; start here to understand the domain)
+- [toolkit/diary/models.py](toolkit/diary/models.py) — all the data models (start here to understand the domain)
 - [toolkit/diary/public_views.py](toolkit/diary/public_views.py) — the public-facing event listing
 - [toolkit/diary/edit_views.py](toolkit/diary/edit_views.py) — the event editing interface (login required)
 - [toolkit/diary/urls.py](toolkit/diary/urls.py) — URL routing for diary views
@@ -256,7 +285,7 @@ URL prefixes: `/programme/` (public), `/diary/` (editing interface)
 
 ### `members` — Member and Volunteer Database
 
-Manages people who are members or volunteers of the Cube. Key concepts:
+Manages people who are members or volunteers. Key concepts:
 
 - **Members** — people with a mailing list subscription and optionally a membership
 - **Volunteers** — a subset of members who take on roles in the rota
@@ -269,7 +298,7 @@ Key files:
 
 URL prefixes: `/members/`, `/volunteers/`
 
-Note: the page to add a new member is IP-restricted (only accessible from within the Cube's network). This is configured via `CUBE_IP_ADDRESSES` in settings.
+Note: the page to add a new member is IP-restricted (only accessible from within the venue's network). This is configured via `CUBE_IP_ADDRESSES` in settings.
 
 ### `mailer` — Email Mailouts
 
@@ -294,6 +323,10 @@ Public-facing content pages (About, Contact, etc.) managed through [Wagtail](htt
 
 The internal toolkit homepage at `/toolkit/`. Just a list of navigation links organised into categories (`IndexLink`, `IndexCategory` models).
 
+### `labs` — Experimental Features
+
+Work-in-progress or venue-specific features under active development. URL prefix: `/labs/`
+
 ### `toolkit_auth` — Authentication
 
 Login/logout views and custom decorators used throughout the codebase to protect views. URL prefix: `/auth/`
@@ -310,10 +343,13 @@ Login/logout views and custom decorators used throughout the codebase to protect
 /volunteers/              → Volunteer rota (login required)
 /mailout/                 → Mailout scheduling (login required)
 /toolkit/                 → Internal dashboard (login required)
+/labs/                    → Experimental features (login required)
 /auth/login               → Login page
 /cms/                     → Wagtail CMS admin
+/doc/                     → Wagtail documents
 /pages/                   → Wagtail public pages
 /id/<id>/                 → Single event by ID (public)
+/health/                  → Health check endpoint
 ```
 
 The full routing is in [toolkit/urls.py](toolkit/urls.py).
@@ -365,26 +401,17 @@ The Docker settings expect these environment variables (with defaults from `dock
 
 ## Running Tests
 
-The test suite uses SQLite (not MariaDB) so it doesn't need Docker:
+All tests must be run inside the Docker container. The project dependencies (including C extensions and `mysqlclient`) are only installed inside the image — do not try to run tests on the host.
 
 ```bash
-# If you have a local Python venv set up:
-./runtests
-
-# From inside Docker:
+# Run the full test suite
 docker compose exec toolkit /venv/bin/python manage.py test --settings=toolkit.test_settings
 
-# Run a specific app's tests:
-./runtests toolkit.diary
+# Run a specific app's tests
+docker compose exec toolkit /venv/bin/python manage.py test toolkit.diary --settings=toolkit.test_settings
 
-# Run a specific test file:
-./runtests toolkit.members.tests.test_members
-```
-
-Run `tox` to replicate what CI does (formatting check + full test suite):
-
-```bash
-tox
+# Run a specific test file
+docker compose exec toolkit /venv/bin/python manage.py test toolkit.members.tests.test_members --settings=toolkit.test_settings
 ```
 
 Tests are in `toolkit/*/tests/` directories. The `diary` and `members` apps have the most extensive suites.
@@ -394,7 +421,13 @@ Tests are in `toolkit/*/tests/` directories. The `diary` and `members` apps have
 The project uses [black](https://black.readthedocs.io/) with a line length of 79 characters. Run it before committing:
 
 ```bash
-black --line-length 79 toolkit/
+docker compose exec toolkit /venv/bin/black --line-length 79 toolkit/
+```
+
+To check formatting without making changes:
+
+```bash
+docker compose exec toolkit /venv/bin/black --line-length 79 --check toolkit/
 ```
 
 ---
@@ -405,14 +438,18 @@ The [Dockerfile](Dockerfile) uses a multi-stage build:
 
 1. **`base` stage** — Debian with Python and runtime system libraries
 2. **`build` stage** — adds build tools and compiles Python dependency wheels
-3. **`run` stage** — final image; copies wheels from build stage, installs them, copies app code
+3. **`run` stage** — final image; copies wheels from build stage, installs them, copies app code; runs `collectstatic` to bake static files into the image
 
 The entrypoint script is [containerconfig/tk_run.sh](containerconfig/tk_run.sh). It:
 1. Waits for the database to be available
 2. Runs `manage.py migrate` to apply any pending migrations
-3. Starts either `gunicorn` (web app) or `mailerd` (background email daemon)
+3. Starts either `runserver` (dev), `gunicorn` (production), or `mailerd` (background email daemon)
 
-In development (`docker-compose.yml`), only the web app runs. In production (`docker-compose-production.yml`), the mailerd daemon runs in a separate container.
+**In development**, `docker-compose.yml` uses `tk_run runserver` — Django's built-in development server. This serves static files directly from source (no `collectstatic` step needed) and auto-reloads on code changes.
+
+`docker-compose.override.yml` is applied automatically on top of `docker-compose.yml`. It adds extra bind mounts for `toolkit/` and `star_and_shadow_templates/` so that Python and template changes propagate into the running container immediately.
+
+**In production**, `docker-compose-production.yml` uses `gunicorn` for the web app and `mailerd` in a separate container for sending email.
 
 ---
 
@@ -436,7 +473,7 @@ The canonical version string is in the [`VERSION`](../VERSION) file at the repo 
 
    ```bash
    git add VERSION
-   git commit -m "chore: bump version to 2026.04.1"
+   git commit -m "chore(release): 2026.04.1"
    ```
 
 3. **Tag the commit:**
@@ -444,8 +481,6 @@ The canonical version string is in the [`VERSION`](../VERSION) file at the repo 
    ```bash
    git tag v2026.04.1
    ```
-
-   Tags are named pointers to a commit. The `v` prefix is convention — it keeps tags visually distinct from branch names. `git push` does **not** push tags by default.
 
 4. **Push both the commit and the tag:**
 
@@ -458,12 +493,6 @@ The canonical version string is in the [`VERSION`](../VERSION) file at the repo 
 
    Go to the repo on GitHub → **Releases** → **Draft a new release** → choose the tag you just pushed → write a short summary of what changed → **Publish release**.
 
-   GitHub can auto-generate release notes from commit messages if you click "Generate release notes".
-
-### What the version does not guarantee
-
-The `VERSION` file tells you what the code claims to be. It does not prove which exact Docker image is running — that would require embedding the git commit hash at build time. For a dev site this level of tracking is enough; the watermark gives you a quick sanity check that the right version is deployed.
-
 ---
 
 ## Key Concepts and Patterns
@@ -472,7 +501,9 @@ The `VERSION` file tells you what the code claims to be. It does not prove which
 
 **Read-only model protection:** Some database records (system `Role` objects, standard `EventTag` objects) are marked `read_only = True`. The model's `save()` and `delete()` methods check this flag and silently block changes. This is an application-level guard, not a database constraint.
 
-**Multi-venue support:** The project can also power the Star & Shadow venue by using `settings_ss.py` instead of the default settings. Feature flags like `MULTIROOM_ENABLED` and `MEMBERSHIP_EXPIRY_ENABLED` toggle venue-specific behaviour. The `VENUE` dict in `settings_common.py` holds venue-specific strings (name, email addresses, social media links).
+**Multi-venue support:** The project powers both Cube Microplex and Star & Shadow by swapping settings files. Feature flags like `MULTIROOM_ENABLED` and `MEMBERSHIP_EXPIRY_ENABLED` toggle venue-specific behaviour. The `VENUE` dict in `settings_common.py` holds venue-specific strings (name, email addresses, social media links).
+
+**S+S template overrides:** Star & Shadow uses `star_and_shadow_templates/` to override specific base templates. Django's template loader checks this directory first when `docker_settings_ss.py` is active.
 
 **Legacy copy:** Events imported from the old Perl system have a `legacy_copy` flag. The diary display code applies special regex-based processing to fix their HTML.
 
@@ -504,9 +535,10 @@ docker compose down --volumes
 # Rebuild and start — migrations run clean from scratch
 docker compose up --build
 
-# Once running, recreate users and seed data (see step 3 above for details)
+# Once running, recreate users and seed data
 docker compose exec toolkit /venv/bin/python3 manage.py configure_toolkit_users --password DevPassword1!
 docker compose exec toolkit /venv/bin/python3 manage.py seed_dev_data
+docker compose exec toolkit /venv/bin/python3 manage.py seed_labs_data
 ```
 
 ### Archive view fails with `SELECT command denied … mysql.time_zone`
@@ -517,7 +549,7 @@ docker compose exec toolkit /venv/bin/python3 manage.py seed_dev_data
 OperationalError: (1142, "SELECT command denied to user 'starandshadow'@'localhost' for table `mysql`.`time_zone`")
 ```
 
-**Cause:** `USE_TZ = True` is set in `settings_common.py`. Django's generic archive views (`ArchiveIndexView`, `YearArchiveView`, `MonthArchiveView`) do timezone-aware date queries; on MariaDB/MySQL this translates to `CONVERT_TZ()` calls which read from the `mysql.time_zone` system tables. The app DB user doesn't have `SELECT` permission on those tables, or they haven't been populated.
+**Cause:** `USE_TZ = True` is set in `settings_common.py`. Django's generic archive views do timezone-aware date queries; on MariaDB/MySQL this translates to `CONVERT_TZ()` calls which read from the `mysql.time_zone` system tables. The app DB user doesn't have `SELECT` permission on those tables, or they haven't been populated.
 
 **Fix (run as root on the database server):**
 
@@ -532,10 +564,10 @@ sudo mysql -u root -e "GRANT SELECT ON mysql.time_zone TO 'starandshadow'@'local
 In Docker dev (the DB container's root user has no password by default):
 
 ```bash
-docker compose exec db mariadb -u root -e "GRANT SELECT ON mysql.time_zone TO 'starandshadow'@'%'; FLUSH PRIVILEGES;"
+docker compose exec mariadb mariadb -u root -e "GRANT SELECT ON mysql.time_zone TO 'toolkit'@'%'; FLUSH PRIVILEGES;"
 ```
 
-This is a one-time server configuration step that must be re-applied any time the database is rebuilt or the DB user is recreated. Production works because this has already been done on the production host.
+This is a one-time server configuration step that must be re-applied any time the database is rebuilt or the DB user is recreated.
 
 ---
 
