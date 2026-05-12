@@ -66,9 +66,9 @@ CUBE role rota
     {% if showing.setup_time or showing.doors_time or showing.final_volunteer_time %}<tr><td class="right" style="font-size:0.85em; color:#555;">Times:</td><td colspan="3" style="font-size:0.85em; color:#555;">{% if showing.setup_time %}Setup {{ showing.setup_time|time:"H:i" }}{% endif %}{% if showing.doors_time %}{% if showing.setup_time %} · {% endif %}Doors {{ showing.doors_time|time:"H:i" }}{% endif %}{% if showing.final_volunteer_time %}{% if showing.setup_time or showing.doors_time %} · {% endif %}Finish ~{{ showing.final_volunteer_time|time:"H:i" }}{% endif %}</td></tr>{% endif %}
     {% for rota_entry in showing.rotaentry_set.all %}
         {% if forloop.counter|divisibleby:2 %}
-            <td class="rota_box">   {{ rota_entry.name }}</td><td> {% if rota_entry.role.description %}<span title="{{ rota_entry.role.description }}" style="cursor: help; color: #0066cc; font-weight: bold;">ℹ</span> {% endif %}{{ rota_entry.role.name }}-{{ rota_entry.rank }} </td></tr>
+            <td class="rota_box">   {% if rota_entry.volunteer %}{{ rota_entry.volunteer.member.name }}{% else %}{{ rota_entry.name }}{% endif %}</td><td> {% if rota_entry.role.description %}<span title="{{ rota_entry.role.description }}" style="cursor: help; color: #0066cc; font-weight: bold;">ℹ</span> {% endif %}{{ rota_entry.role.name }}-{{ rota_entry.rank }} </td></tr>
         {% else %}
-            <tr><td class="right"> {% if rota_entry.role.description %}<span title="{{ rota_entry.role.description }}" style="cursor: help; color: #0066cc; font-weight: bold;">ℹ</span> {% endif %}{{ rota_entry.role.name }}-{{ rota_entry.rank }} </td><td class="rota_box">{{ rota_entry.name }}</td>
+            <tr><td class="right"> {% if rota_entry.role.description %}<span title="{{ rota_entry.role.description }}" style="cursor: help; color: #0066cc; font-weight: bold;">ℹ</span> {% endif %}{{ rota_entry.role.name }}-{{ rota_entry.rank }} </td><td class="rota_box">{% if rota_entry.volunteer %}{{ rota_entry.volunteer.member.name }}{% else %}{{ rota_entry.name }}{% endif %}</td>
             {% if forloop.last %}
             <td></td><td></td></tr>
             {% endif %}

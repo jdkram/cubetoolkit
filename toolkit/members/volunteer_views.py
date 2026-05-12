@@ -589,10 +589,17 @@ def anonymise_volunteer(request, volunteer_id):
     member = volunteer.member
     volunteer_name = member.name
 
-    rota_matches = RotaEntry.objects.filter(name__iexact=volunteer_name)
-    rota_match_count = rota_matches.count()
+    # FK-linked entries are authoritative; text-match catches legacy entries
+    # where the FK was never set (pre-migration rota history).
+    fk_matches = RotaEntry.objects.filter(volunteer=volunteer)
+    name_matches = RotaEntry.objects.filter(
+        name__iexact=volunteer_name, volunteer__isnull=True
+    )
+    rota_match_count = fk_matches.count() + name_matches.count()
     rota_sample = list(
-        rota_matches.select_related("showing__event")[:5]
+        fk_matches.select_related("showing__event")[:5]
+    ) or list(
+        name_matches.select_related("showing__event")[:5]
     )
 
     if request.method == "POST":
@@ -609,8 +616,10 @@ def anonymise_volunteer(request, volunteer_id):
         with transaction.atomic():
             anon_label = f"Anonymised volunteer {volunteer.pk}"
 
-            # Blank name from rota history by text match
-            rota_matches.update(name="")
+            # Clear FK-linked rota entries (primary path)
+            fk_matches.update(volunteer=None, name="")
+            # Legacy fallback: text-match entries where FK was never set
+            name_matches.update(name="")
 
             # Anonymise the Member record
             member.name = anon_label

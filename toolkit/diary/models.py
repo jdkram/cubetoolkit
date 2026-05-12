@@ -846,10 +846,19 @@ class RotaEntry(models.Model):
 
     role = models.ForeignKey(Role, on_delete=models.PROTECT)
     showing = models.ForeignKey(Showing, on_delete=models.CASCADE)
+    volunteer = models.ForeignKey(
+        "members.Volunteer",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="rota_entries",
+    )
 
     required = models.BooleanField(default=True)
     rank = models.IntegerField(default=1)
 
+    # Free text for superusers (external hires, ad-hoc notes) and legacy entries.
+    # For volunteer sign-ups, written from volunteer.member.name at time of save.
     name = models.TextField(max_length=256, null=False, blank=True)
 
     # created_at = models.DateTimeField(auto_now_add=True)

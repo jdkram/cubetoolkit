@@ -3,12 +3,21 @@ from datetime import timedelta, datetime
 import zoneinfo
 from unittest.mock import patch
 
+from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 from django.urls import reverse
 
 from toolkit.diary.models import RotaEntry, Showing, get_site_config
+from toolkit.members.models import Member
 
 from .common import DiaryTestsMixin
+
+
+def _grant_rota_permission(user):
+    ct = ContentType.objects.get(app_label="diary", model="rotaentry")
+    perm = Permission.objects.get(codename="change_rotaentry", content_type=ct)
+    user.user_permissions.add(perm)
 
 
 class EditRotaViewGet(DiaryTestsMixin, TestCase):
@@ -109,26 +118,42 @@ class EditRotaViewGet(DiaryTestsMixin, TestCase):
         self.assertNotContains(response, "Some notes about the Rota!")
 
     @patch("django.utils.timezone.now")
-    def test_rota_name_pronouns_tooltip(self, now_patch):
-        """When a rota entry's name matches a volunteer with pronouns set,
-        the rendered <span> gets a title attribute with the pronouns."""
+    def test_rota_name_pronouns_tooltip_via_name_match(self, now_patch):
+        """Legacy path: name-dict lookup populates the tooltip when no FK is set."""
         now_patch.return_value = self._fake_now
 
-        # Set pronouns on Volunteer One (m3) and assign their name to a confirmed
-        # rota entry that falls within the default date window.
-        from toolkit.members.models import Member
         m = Member.objects.get(name="Volunteer One")
         m.personal_pronouns = "they/them"
         m.save()
 
         entry = RotaEntry.objects.filter(showing=self.e4s3).first()
         entry.name = "Volunteer One"
+        entry.volunteer = None
         entry.save()
 
         response = self.client.get(reverse("rota-edit"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'title="they/them"')
-        # And no tooltip is rendered for entries whose name doesn't match anyone:
+        self.assertNotContains(response, 'title=""')
+
+    @patch("django.utils.timezone.now")
+    def test_rota_name_pronouns_tooltip_via_fk(self, now_patch):
+        """FK path: pronouns are taken directly from the linked volunteer."""
+        now_patch.return_value = self._fake_now
+
+        m = Member.objects.get(name="Volunteer One")
+        m.personal_pronouns = "she/her"
+        m.save()
+
+        vol1 = m.volunteer
+        entry = RotaEntry.objects.filter(showing=self.e4s3).first()
+        entry.name = "Volunteer One"
+        entry.volunteer = vol1
+        entry.save()
+
+        response = self.client.get(reverse("rota-edit"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'title="she/her"')
         self.assertNotContains(response, 'title=""')
 
 
@@ -148,17 +173,14 @@ class EditRotaViewPost(DiaryTestsMixin, TestCase):
 
     @patch("django.utils.timezone.now")
     def test_edit_entry(self, now_patch):
+        # rota_editor has no linked volunteer, so free-text mode applies.
         now_patch.return_value = self._fake_now
 
         url = reverse("rota-edit")
 
-        # Get data that will be edited:
-        rota_entries = self.e4s3.rotaentry_set.all()
-        self.assertEqual(len(rota_entries), 1)
         rota_entry = self.e4s3.rotaentry_set.all()[0]
         self.assertEqual(rota_entry.name, "")
 
-        # New content
         entry = "\u01aeesty McTestingt\u01d2n III"
 
         response = self.client.post(
@@ -168,9 +190,88 @@ class EditRotaViewPost(DiaryTestsMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, entry.encode("utf-8"))
 
-        # Check edit happened:
         rota_entry = RotaEntry.objects.get(pk=rota_entry.pk)
         self.assertEqual(rota_entry.name, entry)
+        self.assertIsNone(rota_entry.volunteer)
+
+    @patch("django.utils.timezone.now")
+    def test_volunteer_signup(self, now_patch):
+        # A logged-in volunteer's submission coerces the name to their own
+        # canonical name and links the FK regardless of what was typed.
+        now_patch.return_value = self._fake_now
+
+        from django.contrib.auth.models import User
+        _grant_rota_permission(User.objects.get(username="vol1"))
+
+        self.client.logout()
+        self.client.login(username="vol1", password="testpass")
+
+        url = reverse("rota-edit")
+        rota_entry = self.e4s3.rotaentry_set.all()[0]
+
+        response = self.client.post(
+            url, data={"id": rota_entry.pk, "value": "anything typed"}
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        rota_entry = RotaEntry.objects.get(pk=rota_entry.pk)
+        # Name is coerced to the volunteer's member name ("Volunteer One")
+        self.assertEqual(rota_entry.name, "Volunteer One")
+        self.assertEqual(response.content, b"Volunteer One")
+        # FK is set to the correct volunteer (v1 \u2192 m3 "Volunteer One")
+        vol1_volunteer = Member.objects.get(name="Volunteer One").volunteer
+        self.assertEqual(rota_entry.volunteer, vol1_volunteer)
+
+    @patch("django.utils.timezone.now")
+    def test_volunteer_clears_slot(self, now_patch):
+        now_patch.return_value = self._fake_now
+
+        from django.contrib.auth.models import User
+        _grant_rota_permission(User.objects.get(username="vol1"))
+
+        self.client.logout()
+        self.client.login(username="vol1", password="testpass")
+
+        url = reverse("rota-edit")
+        rota_entry = self.e4s3.rotaentry_set.all()[0]
+        rota_entry.name = "Volunteer One"
+        rota_entry.volunteer = Member.objects.get(name="Volunteer One").volunteer
+        rota_entry.save()
+
+        response = self.client.post(
+            url, data={"id": rota_entry.pk, "value": ""}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, b"")
+
+        rota_entry = RotaEntry.objects.get(pk=rota_entry.pk)
+        self.assertEqual(rota_entry.name, "")
+        self.assertIsNone(rota_entry.volunteer)
+
+    @patch("django.utils.timezone.now")
+    def test_superuser_free_text(self, now_patch):
+        # Superusers bypass coercion: any text is accepted, FK stays None.
+        now_patch.return_value = self._fake_now
+
+        self.client.logout()
+        self.client.login(username="admin", password="T3stPassword!")
+
+        url = reverse("rota-edit")
+        rota_entry = self.e4s3.rotaentry_set.all()[0]
+
+        arbitrary = "External hire / Funzo Productions"
+        response = self.client.post(
+            url, data={"id": rota_entry.pk, "value": arbitrary}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, arbitrary.encode("utf-8"))
+
+        rota_entry = RotaEntry.objects.get(pk=rota_entry.pk)
+        self.assertEqual(rota_entry.name, arbitrary)
+        self.assertIsNone(rota_entry.volunteer)
 
     @patch("django.utils.timezone.now")
     def test_clear_entry(self, now_patch):

@@ -110,17 +110,17 @@
     <th>Rota history</th>
     <td>
       {% if rota_match_count == 0 %}
-        No entries found matching this name — none will be changed.
+        No rota entries linked to this volunteer — none will be changed.
       {% elif rota_match_count == 1 %}
-        1 rota entry matching <strong>{{ member.name }}</strong> will be blanked.
+        1 rota entry linked to <strong>{{ member.name }}</strong> will be blanked.
       {% else %}
-        {{ rota_match_count }} rota entries matching <strong>{{ member.name }}</strong> will be blanked.
+        {{ rota_match_count }} rota entries linked to <strong>{{ member.name }}</strong> will be blanked.
       {% endif %}
       {% if rota_match_count > 0 %}
         <div class="rota-sample">
-          Note: entries using a nickname or alternative spelling will not be found.
+          Note: entries with a nickname or alternative spelling and no account link will not be found.
           {% if rota_sample %}
-            <br>Sample matches:
+            <br>Sample:
             <ul>
               {% for entry in rota_sample %}
                 <li>{{ entry.showing.event.name }} ({{ entry.showing.start|date:"d M Y" }}) — role: {{ entry.role }}</li>

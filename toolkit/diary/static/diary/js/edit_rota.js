@@ -1,4 +1,4 @@
-function edit_rota(jQuery, rota_edit_base_url, edit_rota_notes_url_prefix, vol_email, CSRF_TOKEN, rota_clear_email_prompt_enabled) {
+function edit_rota(jQuery, rota_edit_base_url, edit_rota_notes_url_prefix, vol_email, CSRF_TOKEN, rota_clear_email_prompt_enabled, is_superuser, current_volunteer_pk) {
     "use strict";
     var $ = jQuery;
 
@@ -49,9 +49,69 @@ function edit_rota(jQuery, rota_edit_base_url, edit_rota_notes_url_prefix, vol_e
                          vol_email +
                          " to say that the shift needs covering.");
         }
+        $(document).trigger('rota:entry-changed');
+    }
+
+    function postRotaChange(entryId, value, onSuccess) {
+        var span = $('#' + entryId);
+        span.addClass('rota-signup-loading');
+        $.ajax({
+            url: rota_edit_base_url,
+            type: 'POST',
+            data: { id: entryId, value: value, csrfmiddlewaretoken: CSRF_TOKEN },
+            success: onSuccess,
+            error: function() { window.location.reload(); },
+            complete: function() { span.removeClass('rota-signup-loading'); }
+        });
+    }
+
+    function configureVolunteerTapToToggle() {
+        // Initialise state classes from data-volunteer-id attributes.
+        // Superusers use jeditable instead; this path is volunteers only.
+        $('.rota_name').each(function() {
+            var span = $(this);
+            var vid = (span.attr('data-volunteer-id') || '').toString();
+            if (!vid) {
+                span.html('<span class="na rota-signup-prompt">—</span>');
+                span.addClass('rota-signup-available');
+            } else if (vid === current_volunteer_pk.toString()) {
+                span.addClass('rota-signup-mine');
+            }
+            // else: someone else is signed up — plain text, no interaction
+        });
+
+        $(document).on('click', '.rota_name.rota-signup-available', function() {
+            var span = $(this);
+            postRotaChange(span.attr('id'), 'signup', function(name) {
+                span.text(name);
+                span.attr('data-volunteer-id', current_volunteer_pk);
+                span.removeClass('rota-signup-available').addClass('rota-signup-mine');
+                $(document).trigger('rota:entry-changed');
+            });
+        });
+
+        $(document).on('click', '.rota_name.rota-signup-mine', function() {
+            var span = $(this);
+            if (rota_clear_email_prompt_enabled) {
+                window.alert("Slot cleared.\nPlease consider emailing " +
+                             vol_email +
+                             " to say that the shift needs covering.");
+            }
+            postRotaChange(span.attr('id'), '', function() {
+                span.html('<span class="na rota-signup-prompt">—</span>');
+                span.attr('data-volunteer-id', '');
+                span.removeClass('rota-signup-mine').addClass('rota-signup-available');
+                $(document).trigger('rota:entry-changed');
+            });
+        });
     }
 
     function configureRotaNameEditInPlaceControls() {
+        if (!is_superuser && current_volunteer_pk) {
+            configureVolunteerTapToToggle();
+            return;
+        }
+        // Superusers (and accounts without a volunteer record) get jeditable free-text.
         $('.rota_name').editable('', {
             width: "25%",
             placeholder: '<span class="na">Click to edit</span>',
