@@ -357,11 +357,17 @@
     .rota-showing.rota-mooned:hover {
         opacity: 0.75;
     }
-    /* ── Critical unfilled slot (keyholder / programmer) ────────────────── */
-    /* Applied unconditionally to future showings — not gated by the filter. */
-    li.rota-critical-empty {
-        background: #fde8c8;
+    /* ── Role warning badge (needs keyholder / programmer) ──────────────── */
+    .rota-role-warning-badge {
+        font-size: 0.75rem;
+        font-weight: bold;
+        color: #856404;
+        background: #fff3cd;
+        border: 1px solid #ffc107;
         border-radius: 3px;
+        padding: 0.1em 0.4em;
+        white-space: nowrap;
+        align-self: center;
     }
 
     /* Good-first-role slot highlight (applied via wrapper class) */
@@ -396,9 +402,10 @@
         .showing-date        { order: 1; }
         .showing-event-name  { order: 2; }
         .showing-room-badge  { order: 3; }
-        .outside-hire-badge  { order: 4; }
-        .event-tag-badges    { order: 5; }
-        .showing-public-link { order: 6; }
+        .outside-hire-badge       { order: 4; }
+        .rota-role-warning-badge  { order: 5; }
+        .event-tag-badges         { order: 6; }
+        .showing-public-link      { order: 7; }
         /* Pull toggle out of flow into the left gutter */
         .rota-mark-toggle {
             position: absolute;
@@ -651,16 +658,28 @@ edit_rota(
         });
     }
 
-    // ── Critical slot highlighting (keyholder / programmer) ───────────────
-    // Highlights empty slots for roles flagged as critical.
-    // Runs unconditionally on future showings — not gated by the filter checkbox.
-    // Re-runs on rota:entry-changed so it clears as soon as a slot is filled.
+    // ── Role warning badges (needs keyholder / programmer) ────────────────
+    // Injects a badge into .showing-meta-tail for future showings that have
+    // an unfilled keyholder or programmer slot. Toggled via the controls bar;
+    // re-runs on rota:entry-changed so badges clear as slots are filled.
     function applyCriticalSlotWarnings() {
-        $(".rota-showing[data-in-past='0'] li[data-keyholder='1'], " +
-          ".rota-showing[data-in-past='0'] li[data-programmer='1']").each(function() {
-            var li    = $(this);
-            var empty = li.find(".rota_name .na").length > 0;
-            li.toggleClass("rota-critical-empty", empty);
+        $(".rota-role-warning-badge").remove();
+        if (!$("#rota-show-role-warnings").is(":checked")) { return; }
+
+        $(".rota-showing[data-in-past='0']").each(function() {
+            var showing         = $(this);
+            var needsKeyholder  = showing.find("li[data-keyholder='1'] .rota_name .na").length > 0;
+            var needsProgrammer = showing.find("li[data-programmer='1'] .rota_name .na").length > 0;
+
+            if (!needsKeyholder && !needsProgrammer) { return; }
+
+            var text = needsKeyholder && needsProgrammer
+                ? 'needs keyholder + programmer'
+                : needsKeyholder ? 'needs keyholder' : 'needs programmer';
+
+            showing.find(".showing-meta-tail").prepend(
+                '<span class="rota-role-warning-badge">' + text + '</span>'
+            );
         });
     }
 
@@ -956,6 +975,18 @@ edit_rota(
                 });
             }
         });
+
+        // Role warnings toggle — dynamically computed so handled separately.
+        var warningsCb = document.getElementById("rota-show-role-warnings");
+        if (warningsCb) {
+            var storedWarnings = localStorage.getItem("rota_role_warnings");
+            var showWarnings = storedWarnings !== null ? (storedWarnings === "1") : true;
+            warningsCb.checked = showWarnings;
+            $(warningsCb).on("change", function() {
+                localStorage.setItem("rota_role_warnings", this.checked ? "1" : "0");
+                applyCriticalSlotWarnings();
+            });
+        }
     }
 
     function updateDayHeaderOffset() {
@@ -990,8 +1021,8 @@ edit_rota(
         buildRoleDropdown();
         buildTagFilterBar();
         injectRoleBadges();
-        applyCriticalSlotWarnings();
         initBadgeToggles();
+        applyCriticalSlotWarnings();
         setupRoleDescriptions();
         {% if can_mark_events %}initMarkButtons();{% endif %}
 
@@ -1105,6 +1136,10 @@ edit_rota(
                     <div class="form-check form-check--highlight">
                         <input class="form-check-input" type="checkbox" id="badge-pref-keyholder">
                         <label class="form-check-label" for="badge-pref-keyholder">🔑 Keyholder only</label>
+                    </div>
+                    <div class="form-check form-check--highlight">
+                        <input class="form-check-input" type="checkbox" id="rota-show-role-warnings" checked>
+                        <label class="form-check-label" for="rota-show-role-warnings">⚠ Role warnings</label>
                     </div>
                 </div>
             </div>
