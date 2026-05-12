@@ -357,19 +357,11 @@
     .rota-showing.rota-mooned:hover {
         opacity: 0.75;
     }
-    /* ── Missing-keyholder warning badge ────────────────────────────────── */
-    .keyholder-warning {
-        display: inline-block;
-        font-size: 0.78em;
-        color: #842029;
-        background: #f8d7da;
-        border: 1px solid #f5c2c7;
+    /* ── Critical unfilled slot (keyholder / programmer) ────────────────── */
+    /* Applied unconditionally to future showings — not gated by the filter. */
+    li.rota-critical-empty {
+        background: #fde8c8;
         border-radius: 3px;
-        padding: 0.05em 0.35em;
-        margin-left: 0.4em;
-        vertical-align: middle;
-        cursor: default;
-        white-space: nowrap;
     }
 
     /* Good-first-role slot highlight (applied via wrapper class) */
@@ -659,34 +651,16 @@ edit_rota(
         });
     }
 
-    // ── Keyholder warning badge ────────────────────────────────────────────
-    // Adds ⚠ No keyholder to future showings where a keyholder slot is empty.
-    // Re-runs on rota:entry-changed so it stays accurate after tap-to-toggle.
-    function applyKeyholderWarnings() {
-        $(".rota-showing").each(function() {
-            var showing = $(this);
-            var inPast  = showing.data("in-past") === 1;
-            var badge   = showing.find(".keyholder-warning");
-
-            if (inPast) {
-                badge.remove();
-                return;
-            }
-
-            var hasKeyholderSlot = showing.find("li[data-keyholder='1']").length > 0;
-            var keyholderFilled  = showing.find("li[data-keyholder='1']").filter(function() {
-                return $(this).find(".rota_name .na").length === 0;
-            }).length > 0;
-
-            if (hasKeyholderSlot && !keyholderFilled) {
-                if (badge.length === 0) {
-                    showing.find(".showing-event-name").first().after(
-                        '<span class="keyholder-warning" title="No keyholder assigned yet">⚠ keyholder</span>'
-                    );
-                }
-            } else {
-                badge.remove();
-            }
+    // ── Critical slot highlighting (keyholder / programmer) ───────────────
+    // Highlights empty slots for roles flagged as critical.
+    // Runs unconditionally on future showings — not gated by the filter checkbox.
+    // Re-runs on rota:entry-changed so it clears as soon as a slot is filled.
+    function applyCriticalSlotWarnings() {
+        $(".rota-showing[data-in-past='0'] li[data-keyholder='1'], " +
+          ".rota-showing[data-in-past='0'] li[data-programmer='1']").each(function() {
+            var li    = $(this);
+            var empty = li.find(".rota_name .na").length > 0;
+            li.toggleClass("rota-critical-empty", empty);
         });
     }
 
@@ -1016,7 +990,7 @@ edit_rota(
         buildRoleDropdown();
         buildTagFilterBar();
         injectRoleBadges();
-        applyKeyholderWarnings();
+        applyCriticalSlotWarnings();
         initBadgeToggles();
         setupRoleDescriptions();
         {% if can_mark_events %}initMarkButtons();{% endif %}
@@ -1043,7 +1017,7 @@ edit_rota(
         // Re-apply empty-slot highlights and keyholder warnings after a sign-up or clear.
         $(document).on("rota:entry-changed", function() {
             applyEmptyHighlight($("#rota-filter-empty").is(":checked"));
-            applyKeyholderWarnings();
+            applyCriticalSlotWarnings();
             applyFilters();
         });
 
@@ -1201,7 +1175,8 @@ edit_rota(
                 <li data-role-name="{{ rota_entry.role.name }}"
                     data-beginner="{{ rota_entry.role.beginner_friendly|yesno:'1,0' }}"
                     data-wheelchair="{{ rota_entry.role.wheelchair_accessible|yesno:'1,0' }}"
-                    data-keyholder="{{ rota_entry.role.keyholder_only|yesno:'1,0' }}">
+                    data-keyholder="{{ rota_entry.role.keyholder_only|yesno:'1,0' }}"
+                    data-programmer="{{ rota_entry.role.programmer_contact|yesno:'1,0' }}">
                 <span class="rota_role{% if rota_entry.role.description %} rota_role--described{% endif %}"{% if rota_entry.role.description %} title="{{ rota_entry.role.description }}"{% endif %}>{{ rota_entry.role.name }}-{{ rota_entry.rank }}</span>
                 &nbsp;
                 {% if showing.in_past %}

@@ -11,8 +11,8 @@ description = "Holds overall responsibility for opening and closing the building
 [[roles]]
 name = "Programmer"
 standard = true
-description = "Curate and schedule events. Involves being responsible for coordinating the event."
-# rota scheduling label; diary edit permission is separate (Permissions section)
+programmer_contact = true
+description = "Point of contact for questions about this event. The person who scheduled it or is taking responsibility on the night."
 
 [[roles]]
 name = "Projectionist - DCP"

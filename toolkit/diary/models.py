@@ -70,6 +70,12 @@ class Role(models.Model):
         "slot must be filled by a trained venue keyholder.",
     )
 
+    programmer_contact = models.BooleanField(
+        default=False,
+        help_text="Mark this as the event's programmer/contact slot — "
+        "empty slots show a warning on the rota to encourage sign-up.",
+    )
+
     class Meta:
         db_table = "Roles"
         ordering = ["name"]

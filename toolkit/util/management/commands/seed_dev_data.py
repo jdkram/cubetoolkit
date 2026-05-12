@@ -237,12 +237,14 @@ class Command(BaseCommand):
             role.beginner_friendly = role_data.get("beginner_friendly", False)
             role.wheelchair_accessible = role_data.get("wheelchair_accessible", False)
             role.keyholder_only = role_data.get("keyholder_only", False)
+            role.programmer_contact = role_data.get("programmer_contact", False)
             role.description = role_data.get("description", "")
             role.save(
                 update_fields=[
                     "beginner_friendly",
                     "wheelchair_accessible",
                     "keyholder_only",
+                    "programmer_contact",
                     "description",
                 ]
             )
