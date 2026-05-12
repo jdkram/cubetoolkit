@@ -2016,7 +2016,7 @@ class DiaryCalendarViewTests(DiaryTestsMixin, TestCase):
     def _get_room_list(self, response):
         # Match room list in init call, accounting for IIFE wrapper and initialFilters param
         match = re.search(
-            r"init_calendar_view\(\s*'[^']*'\s*,\s*'[^']*'\s*,\s*'[^']*'\s*,\s*urls\s*,\s*(?P<room_list>\[.*?\])\s*,\s*initialFilters",
+            r"init_calendar_view\(\s*'[^']*'\s*,\s*'[^']*'\s*,\s*'[^']*'\s*,\s*urls\s*,\s*(?P<room_list>\[.*?\])\s*,\s*initialFilters",  # noqa: E501
             response.content.decode("utf-8"),
             re.DOTALL,
         )

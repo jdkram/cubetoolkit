@@ -4211,3 +4211,95 @@ Calculated `next_due` property: most recent `MaintenanceRecord` + frequency peri
 | **Total** | **~17–21h** (without import script) |
 
 **Minimum viable increment:** models + admin registration + read-only schedule view (~8h). "Mark done" action is the next step; full CRUD follows.
+
+---
+
+### 9.86 — Volunteer opt-in directory 🔵 S (8–14h)
+
+A page (login required) listing volunteers who have opted in, with granular controls per volunteer on what to share.
+
+**Per-volunteer privacy controls** (new fields on `Volunteer` or a companion model):
+- `dir_share_name` choices: full name / first name + initial / not listed
+- `dir_share_email` BooleanField (default off)
+- `dir_share_phone` BooleanField (default off)
+- `dir_share_pronouns` BooleanField (default off) — reuses `Member.personal_pronouns`
+- `dir_share_access_rider` BooleanField (default off) — reuses `Member.access_requirements`
+- `dir_share_collectives` BooleanField (default off)
+
+**Directory page:** `/toolkit/volunteers/directory/` — table or card list, login required. Searchable by name. Filterable by collective membership. Shows only entries where `dir_share_name != 'none'`.
+
+**Volunteer edit page:** New "Directory" card in the volunteer profile. Volunteer can set their own preferences. Panopticon can set them for any volunteer.
+
+**Design notes:**
+- All fields default off — opt-in only, never opt-out.
+- `dir_share_name: 'initial'` shows e.g. "Jonny K" — not the full surname.
+- Phone number only shown to authenticated users with at least volunteer-level access.
+- Email shown as `<a href="mailto:...">` — no harvesting protection needed since this is internal only.
+
+**Sizing:**
+
+| Component | Est. |
+|---|---|
+| Privacy fields on `Volunteer` + migration | 1h |
+| Volunteer edit form additions | 1h |
+| Directory view + template | 3–4h |
+| Tests | 2h |
+| **Total** | **~8–14h** |
+
+**Minimum viable increment:** name + pronouns + collectives only (~5h).
+
+---
+
+### 9.87 — Collectives → simplelists email list sync 🟡 M (design first)
+
+When a volunteer joins or leaves a collective, automatically subscribe or unsubscribe them from the corresponding simplelists mailing list.
+
+**Known lists** (from the working-groups form at `/toolkit/working-groups/`):
+- `volunteers@lists.starandshadow.org.uk` — volunteer shifts
+- `filmprogramming@lists.starandshadow.org.uk` — film programming
+- `musiceventprogramming@lists.starandshadow.org.uk` — music event programming
+- `programme@lists.starandshadow.org.uk` — programme
+- `tech@lists.starandshadow.org.uk` — tech
+- `garden@lists.starandshadow.org.uk` — garden
+- `access@lists.starandshadow.org.uk` — access
+- `radio@lists.starandshadow.org.uk` — radio
+- `howtovideos@lists.starandshadow.org.uk` — how to videos
+- `artgroup@lists.starandshadow.org.uk` — artgroup
+- `knittingclub@lists.starandshadow.org.uk` — knitting club
+- `fundraising@lists.starandshadow.org.uk` — fundraising
+- `facilitation@lists.starandshadow.org.uk` — facilitation
+- `Building@lists.starandshadow.org.uk` — building maintenance
+- `CommunityKitchen@lists.starandshadow.org.uk` — community kitchen
+- `BuildingWork@lists.starandshadow.org.uk` — S&S building work
+- `PrintRoom@lists.starandshadow.org.uk` — print room
+- `darkroom@lists.starandshadow.org.uk` — dark room
+- `barlicencing@lists.starandshadow.org.uk` — bar licencing
+- `chat@lists.starandshadow.org.uk` — chat
+
+**Integration approach:** simplelists has no API key — the only interface is the subscribe/unsubscribe form at `https://www.simplelists.com/subscribe.php`. Server-side POSTing this form should work (it's a standard HTML form). Needs testing with a real collective + list pairing.
+
+**Collective → list mapping:** New `Collective.simplelists_address` optional field. Mapping is opt-in per collective. Lists without a mapping are unaffected.
+
+**Sync policy:**
+- Join collective → subscribe to list (POST `action=subscribe`)
+- Leave collective → unsubscribe from list (POST `action=unsubscribe`)
+- Existing manual subscriptions (people who subscribed via the form but aren't in the toolkit collective) are never touched — we can't discover them without list owner access.
+- Failure tolerance: failed POST logs a warning but doesn't block the collective join/leave. Collective membership is the source of truth.
+
+**Design questions to resolve:**
+1. Can simplelists handle programmatic POSTs without CAPTCHA? Needs testing.
+2. Should we use `digest` mode by default? Probably default off (matches form default).
+3. Does leaving the collective always warrant unsubscribing, or should it be a prompt? The user wants automatic unsubscribe on leave — this is the chosen policy.
+4. Who to use as the subscriber name? `member.name` from the volunteer record.
+
+**Sizing:**
+
+| Component | Est. |
+|---|---|
+| `Collective.simplelists_address` field + admin | 1h |
+| `post_save`/`m2m_changed` signal for collective membership | 2h |
+| simplelists form POST helper + error handling | 2h |
+| Tests (mock the POST) | 2h |
+| **Total** | **~7–9h** (after design questions resolved) |
+
+**Prerequisite:** Verify simplelists accepts programmatic POSTs before coding. Test manually with `curl` first.

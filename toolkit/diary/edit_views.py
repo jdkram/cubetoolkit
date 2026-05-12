@@ -330,6 +330,7 @@ def edit_diary_calendar(request, year=None, month=None, day=None):
         "settings": settings,
         "rooms_and_colours": (Room.objects.all() if settings.MULTIROOM_ENABLED else []),
         "all_tags": EventTag.objects.all(),
+        "calendar_slot_min_hour": get_site_config().calendar_slot_min_hour,
     }
 
     return render(request, "edit_event_calendar_index.html", context)
@@ -1334,10 +1335,11 @@ class EditRotaView(PermissionRequiredMixin, View):
         )
 
         if not request.user.is_superuser:
-            # Don't allow data from before yesterday to be displayed:
-            # TODO datepicker is still nobbled to yesterday
-            if start_date < yesterday_local_date:
-                start_date = yesterday_local_date
+            # Allow up to 1 month back (past entries are display-only; POST
+            # handler blocks edits to in-past showings server-side).
+            one_month_ago = today_local_date - datetime.timedelta(days=31)
+            if start_date < one_month_ago:
+                start_date = one_month_ago
 
         end_date = start_date + datetime.timedelta(days=days_ahead)
         showings = (

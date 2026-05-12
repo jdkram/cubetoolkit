@@ -558,7 +558,8 @@ var urls = {
         [{% for room in rooms_and_colours %}
             { "id": {{ room.id }}, "title": "{{ room.name }}", "eventColor": "{{ room.colour }}"}{% if not forloop.last %},{% endif %}
         {% endfor %}],
-        initialFilters
+        initialFilters,
+        { slotMinHour: {{ calendar_slot_min_hour }} }
     );
 })();
 </script>
