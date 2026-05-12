@@ -9,10 +9,11 @@
 <style>
 body {
   padding: 5rem 1.4rem;
+  overflow-x: clip; /* prevents horizontal overflow from making position:fixed navbar disappear on iOS Safari */
 }
 @media (max-width: 576px) {
   body {
-    padding: 3.5rem 0.5rem;
+    padding: 4.5rem 0.5rem;
   }
 }
 /* On mobile the collapsible nav must carry the navbar's background colour.
