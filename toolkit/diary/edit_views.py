@@ -1035,7 +1035,7 @@ def view_event_field(request, field, year=None, month=None, day=None):
         .start_in_range(start_date, end_date)
         .order_by("start")
         #              following prefetch is for the rota view
-        .prefetch_related("rotaentry_set__role")
+        .prefetch_related("rotaentry_set__role", "rotaentry_set__volunteer__member")
         .select_related()
     )
 
@@ -1346,7 +1346,11 @@ class EditRotaView(PermissionRequiredMixin, View):
             .start_in_range(start_date, end_date)
             .order_by("start")
             #              force sane number of queries:
-            .prefetch_related("rotaentry_set__role", "event__tags")
+            .prefetch_related(
+            "rotaentry_set__role",
+            "rotaentry_set__volunteer__member",
+            "event__tags",
+        )
             .select_related()
         )
 
@@ -1358,9 +1362,12 @@ class EditRotaView(PermissionRequiredMixin, View):
         # Keyed by event_id -> mark_type string ("star" or "shadow").
         rota_marks: dict[int, str] = {}
         can_mark_events = False
+        current_volunteer_pk = ""
         try:
             volunteer = request.user.volunteer
             can_mark_events = True
+            if not request.user.is_superuser:
+                current_volunteer_pk = str(volunteer.pk)
             event_ids = [s.event_id for s in showings]
             for mark in VolunteerEventMark.objects.filter(
                 volunteer=volunteer, event_id__in=event_ids
@@ -1382,9 +1389,12 @@ class EditRotaView(PermissionRequiredMixin, View):
                     pronouns_by_name[key] = v.member.personal_pronouns
         for showing in showings:
             for entry in showing.rotaentry_set.all():
-                entry.pronouns = pronouns_by_name.get(
-                    (entry.name or "").strip().lower(), ""
-                )
+                if entry.volunteer_id and entry.volunteer.member.personal_pronouns:
+                    entry.pronouns = entry.volunteer.member.personal_pronouns
+                else:
+                    entry.pronouns = pronouns_by_name.get(
+                        (entry.name or "").strip().lower(), ""
+                    )
 
         context = {
             "start_date": start_date,
@@ -1396,6 +1406,7 @@ class EditRotaView(PermissionRequiredMixin, View):
             "rota_show_tags": get_site_config().rota_show_tags,
             "can_mark_events": can_mark_events,
             "rota_marks_json": json.dumps(rota_marks),
+            "current_volunteer_pk": current_volunteer_pk,
         }
 
         return render(request, "edit_rota.html", context)
@@ -1425,6 +1436,29 @@ class EditRotaView(PermissionRequiredMixin, View):
                 "Invalid request", status=400, content_type="text/plain"
             )
 
+        # Resolve the logged-in user's volunteer record (None for superusers
+        # and accounts that aren't linked to a volunteer).
+        linked_volunteer = None
+        if not request.user.is_superuser:
+            try:
+                linked_volunteer = request.user.volunteer
+            except Exception:
+                pass
+
+        if linked_volunteer and name:
+            # Volunteer signing up: ignore typed text, use their canonical name
+            # and link the FK so rota history is reliably attributable.
+            rota_entry.volunteer = linked_volunteer
+            rota_entry.name = linked_volunteer.member.name
+        elif linked_volunteer and not name:
+            # Volunteer clearing their slot
+            rota_entry.volunteer = None
+            rota_entry.name = ""
+        else:
+            # Superuser or non-volunteer account: free text, no FK
+            rota_entry.volunteer = None
+            rota_entry.name = name
+
         logger.info(
             "Update role id {0} (#{1}) for showing {2} '{3}' -> '{4}' ({5})".format(
                 rota_entry.role_id,
@@ -1436,10 +1470,9 @@ class EditRotaView(PermissionRequiredMixin, View):
             )
         )
 
-        rota_entry.name = name
         rota_entry.save()
 
-        response = escape(name)
+        response = escape(rota_entry.name)
 
         # Returned text is displayed as the rota entry:
         return HttpResponse(response, content_type="text/plain")

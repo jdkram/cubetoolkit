@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-05-12 (Bug AD ✅; volunteer FK investigation complete)
+**Last updated:** 2026-05-12 (Bug AD ✅; volunteer FK — 8.1 MVP ✅)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [ROADMAP.md](docs/ROADMAP.md) (wave-by-wave sequencing) · [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -84,6 +84,7 @@
 | ~~9.10.5~~ | ~~Role timing notes field~~ | Shelved | Merged with 9.40 — both add time fields to rota. Deferred: may add visual clutter and more fields for programmers to fill. Revisit if needed. |
 | 13.5 | Collectives directory (CMS-managed) | 🔵 S | Wagtail page with directory listing |
 | ~~9.78~~ | ~~Donation specifier~~ | ✅ 2026-05-06 | Public `/labs/donations/` page (no login) + internal `/labs/donations/manage/` (login required). Traffic-light status badges; items grouped by category. Manage page: expandable row drill-down — compact summary (name, category, status badge, last-edited-by), click to open full edit panel (public notes, internal notes, contact, order, active). `DonationItem` gains `internal_notes`, `last_edited_by`, `updated_at`. Seed data: 13 sample items across 4 categories. |
+| ~~**8.1 MVP**~~ | ~~**RotaEntry → Volunteer FK**~~ | ✅ 2026-05-12 | `RotaEntry.volunteer` nullable FK (`SET_NULL`) + migration `diary/0028`. Non-superuser rota sign-ups coerced: FK set to `request.user.volunteer`, name written from `member.name`. Superusers keep free text (FK = None). Pronouns tooltip uses FK directly when set; dict fallback for legacy entries. Display in `edit_rota.html` + `view_rota.html` prefers FK name. GDPR anonymisation: FK path primary (`filter(volunteer=v)`), text-match fallback for legacy entries. No backfill migration — production name-variant mapping deferred. 7 new tests. |
 | 9.79 | Tool library | 🔵 S | Lending catalogue for volunteer/collective tools; availability status; contact-to-borrow MVP; see TASKS.md 9.79 |
 | ~~9.80~~ | ~~Non-rota jobs / maintenance schedule~~ | ✅ 2026-05-06 | `/labs/jobs/` table-format jobs board matching the existing spreadsheet. Fields: date, area, description, safety risk ⚠️, skill needed 🔧, keyholder required 🔑, location type (building/remote/both) 🏠/🏡/🔀, reporter name, plan/status, claimed by. Urgency sorted semantically (high→medium→low). `Job` model overhauled: `location`+`skills` removed; `area`, `safety_risk`, `skill_needed`, `location_type`, `reporter_name`, `plan_status`, `resolved`/`resolved_at` added. Seed data: 6 jobs including one resolved example. |
 | 9.81 | Building maintenance & annual jobs checklist | 🟡 M | Table of recurring core jobs (contract renewals, annual inspections, etc.); sign-up slots; links to Nextcloud instructions; historical log of who did them. Design spec needed first. |

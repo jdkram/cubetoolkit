@@ -531,8 +531,31 @@
         .event-links { margin-left: 0.5em; }
     }
     .rota_role--described {
-        cursor: help;
+        cursor: pointer;
     }
+    .rota-role-desc {
+        display: block;
+        font-size: 0.8em;
+        font-weight: normal;
+        color: #555;
+        background: #f8f9fa;
+        border-left: 2px solid #ced4da;
+        padding: 0.2em 0.5em;
+        margin-top: 0.2em;
+        width: 100%;
+    }
+
+    /* ── Volunteer tap-to-toggle ─────────────────────────────────────── */
+    .rota-signup-available { cursor: pointer; }
+    .rota-signup-available .rota-signup-prompt {
+        color: #ccc;
+        font-weight: normal;
+        transition: color 0.12s;
+    }
+    .rota-signup-available:hover .rota-signup-prompt { color: #0056b3; }
+    .rota-signup-mine { cursor: pointer; }
+    .rota-signup-mine:hover { color: #dc3545; text-decoration: line-through; }
+    .rota-signup-loading { opacity: 0.45; pointer-events: none; }
 </style>
 {% endblock %}
 
@@ -549,7 +572,9 @@ edit_rota(
     "{{ edit_showing_notes_url_prefix }}",
     "{{ VENUE.vols_email }}",
     "{{ csrf_token }}",
-    {{ rota_clear_email_prompt_enabled|lower }}
+    {{ rota_clear_email_prompt_enabled|lower }},
+    {{ request.user.is_superuser|lower }},
+    "{{ current_volunteer_pk }}"
 );
 
 (function($) {
@@ -922,6 +947,22 @@ edit_rota(
     }
     window.addEventListener('resize', updateDayHeaderOffset);
 
+    // ── Role description tap-to-reveal ────────────────────────────────────
+    function setupRoleDescriptions() {
+        $(document).on("click", ".rota_role--described", function() {
+            var role = $(this);
+            var li = role.closest("li");
+            var existing = role.next(".rota-role-desc");
+            if (existing.length) {
+                existing.remove();
+                li.find(".rota-signup-prompt").text("—");
+            } else {
+                $('<span class="rota-role-desc">').text(role.attr("title")).insertAfter(role);
+                li.find(".rota-signup-prompt").text("Tap to sign up");
+            }
+        });
+    }
+
     $(document).ready(function() {
         updateDayHeaderOffset();
         setupFilterToggle();
@@ -930,6 +971,7 @@ edit_rota(
         buildTagFilterBar();
         injectRoleBadges();
         initBadgeToggles();
+        setupRoleDescriptions();
         {% if can_mark_events %}initMarkButtons();{% endif %}
 
         // Clicking a tag badge on any showing activates that tag in the
@@ -950,6 +992,12 @@ edit_rota(
         $("#rota-filter-role, #rota-filter-empty, " +
           "#rota-filter-beginner, #rota-filter-vacancies{% if can_mark_events %}, #rota-filter-starred{% endif %}")
             .on("change", applyFilters);
+
+        // Re-apply empty-slot highlights after a tap-to-toggle sign-up or clear.
+        $(document).on("rota:entry-changed", function() {
+            applyEmptyHighlight($("#rota-filter-empty").is(":checked"));
+            applyFilters();
+        });
 
         $("#rota-search").on("input", debounce(applyFilters, 200));
     });
@@ -1109,9 +1157,9 @@ edit_rota(
                 <span class="rota_role{% if rota_entry.role.description %} rota_role--described{% endif %}"{% if rota_entry.role.description %} title="{{ rota_entry.role.description }}"{% endif %}>{{ rota_entry.role.name }}-{{ rota_entry.rank }}</span>
                 &nbsp;
                 {% if showing.in_past %}
-                    <span{% if rota_entry.pronouns %} class="rota_name--with-pronouns" title="{{ rota_entry.pronouns }}"{% endif %}>{{ rota_entry.name }}</span>
+                    <span{% if rota_entry.pronouns %} class="rota_name--with-pronouns" title="{{ rota_entry.pronouns }}"{% endif %}>{% if rota_entry.volunteer %}{{ rota_entry.volunteer.member.name }}{% else %}{{ rota_entry.name }}{% endif %}</span>
                 {% else %}
-                    <span class="rota_name{% if rota_entry.pronouns %} rota_name--with-pronouns{% endif %}" id="{{ rota_entry.pk }}"{% if rota_entry.pronouns %} title="{{ rota_entry.pronouns }}"{% endif %}>{{ rota_entry.name|default:placeholder_text }}</span>
+                    <span class="rota_name{% if rota_entry.pronouns %} rota_name--with-pronouns{% endif %}" id="{{ rota_entry.pk }}" data-volunteer-id="{{ rota_entry.volunteer.pk|default:'' }}"{% if rota_entry.pronouns %} title="{{ rota_entry.pronouns }}"{% endif %}>{% if rota_entry.volunteer %}{{ rota_entry.volunteer.member.name|default:placeholder_text }}{% else %}{{ rota_entry.name|default:placeholder_text }}{% endif %}</span>
                 {% endif %}
                 </li>
             {% endfor %}
