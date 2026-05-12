@@ -357,6 +357,21 @@
     .rota-showing.rota-mooned:hover {
         opacity: 0.75;
     }
+    /* ── Missing-keyholder warning badge ────────────────────────────────── */
+    .keyholder-warning {
+        display: inline-block;
+        font-size: 0.78em;
+        color: #842029;
+        background: #f8d7da;
+        border: 1px solid #f5c2c7;
+        border-radius: 3px;
+        padding: 0.05em 0.35em;
+        margin-left: 0.4em;
+        vertical-align: middle;
+        cursor: default;
+        white-space: nowrap;
+    }
+
     /* Good-first-role slot highlight (applied via wrapper class) */
     .rota-beginner-active li[data-beginner="1"] {
         background: #e8f5e9;
@@ -641,6 +656,37 @@ edit_rota(
                     li.find(".rota_role").append(" " + badge.html);
                 }
             });
+        });
+    }
+
+    // ── Keyholder warning badge ────────────────────────────────────────────
+    // Adds ⚠ No keyholder to future showings where a keyholder slot is empty.
+    // Re-runs on rota:entry-changed so it stays accurate after tap-to-toggle.
+    function applyKeyholderWarnings() {
+        $(".rota-showing").each(function() {
+            var showing = $(this);
+            var inPast  = showing.data("in-past") === 1;
+            var badge   = showing.find(".keyholder-warning");
+
+            if (inPast) {
+                badge.remove();
+                return;
+            }
+
+            var hasKeyholderSlot = showing.find("li[data-keyholder='1']").length > 0;
+            var keyholderFilled  = showing.find("li[data-keyholder='1']").filter(function() {
+                return $(this).find(".rota_name .na").length === 0;
+            }).length > 0;
+
+            if (hasKeyholderSlot && !keyholderFilled) {
+                if (badge.length === 0) {
+                    showing.find(".showing-event-name").first().after(
+                        '<span class="keyholder-warning" title="No keyholder assigned yet">⚠ keyholder</span>'
+                    );
+                }
+            } else {
+                badge.remove();
+            }
         });
     }
 
@@ -970,6 +1016,7 @@ edit_rota(
         buildRoleDropdown();
         buildTagFilterBar();
         injectRoleBadges();
+        applyKeyholderWarnings();
         initBadgeToggles();
         setupRoleDescriptions();
         {% if can_mark_events %}initMarkButtons();{% endif %}
@@ -993,9 +1040,10 @@ edit_rota(
           "#rota-filter-beginner, #rota-filter-vacancies{% if can_mark_events %}, #rota-filter-starred{% endif %}")
             .on("change", applyFilters);
 
-        // Re-apply empty-slot highlights after a tap-to-toggle sign-up or clear.
+        // Re-apply empty-slot highlights and keyholder warnings after a sign-up or clear.
         $(document).on("rota:entry-changed", function() {
             applyEmptyHighlight($("#rota-filter-empty").is(":checked"));
+            applyKeyholderWarnings();
             applyFilters();
         });
 

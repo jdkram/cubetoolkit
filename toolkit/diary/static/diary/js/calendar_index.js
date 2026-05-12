@@ -22,7 +22,7 @@
 //   - Name: text search on event title
 //   - Rooms: multi-select checkbox (multiroom venues only)
 
-function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, resources, initialFilters) {
+function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, resources, initialFilters, calendarConfig) {
     "use strict";
 
     var STORAGE_KEY = 'fc6-calendar-view';
@@ -211,12 +211,21 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
         }
     }
 
+    // TIME_GRID_VIEWS: views that show a vertical hour grid and benefit from
+    // slotMinTime/slotMaxTime trimming (as opposed to month/day-grid views).
+    var TIME_GRID_VIEWS = ['timeGridWeek', 'threeDay', 'resourceTimelineWeek'];
+
+    // Default earliest slot from site config (passed in via calendarConfig).
+    var cfg = calendarConfig || {};
+    var slotMinHour = (typeof cfg.slotMinHour === 'number') ? cfg.slotMinHour : 10;
+    var defaultMinTime = (slotMinHour < 10 ? '0' : '') + slotMinHour + ':00:00';
+
     function updateTimelineHours(timeFilter) {
         if (!calendar) { return; }
-        
+
         var view = calendar.view;
-        if (view.type !== 'resourceTimelineWeek') { return; }
-        
+        if (TIME_GRID_VIEWS.indexOf(view.type) === -1) { return; }
+
         var minTime, maxTime;
         switch (timeFilter) {
             case 'daytime':
@@ -227,12 +236,12 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
                 minTime = '17:00:00';
                 maxTime = '24:00:00';
                 break;
-            default: // 'all'
-                minTime = '09:00:00';
+            default: // 'all' — hide dead early-morning hours per site config
+                minTime = defaultMinTime;
                 maxTime = '24:00:00';
                 break;
         }
-        
+
         calendar.setOption('slotMinTime', minTime);
         calendar.setOption('slotMaxTime', maxTime);
     }
@@ -429,6 +438,15 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
 
         var isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
+        // Button text: abbreviated on mobile so the toolbar doesn't overflow.
+        var btnText = {
+            month:      isMobile ? 'Mo'   : 'month',
+            week:       isMobile ? 'Wk'   : 'week',
+            threeDay:   isMobile ? '3d'   : '3 days',
+            roomsWeek:  isMobile ? 'Wk·R' : 'week (rooms)',
+            roomsMonth: isMobile ? 'Mo·R' : 'month (rooms)'
+        };
+
         var calendarOpts = {
             initialView: initialView,
             initialDate: defaultDate,
@@ -436,6 +454,14 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
             schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
 
             height: 'auto',  // Prevent excessive vertical whitespace
+
+            buttonText: {
+                dayGridMonth: btnText.month
+            },
+
+            // Hide early-morning dead hours in all time-grid views by default.
+            slotMinTime: defaultMinTime,
+            slotMaxTime: '24:00:00',
 
             headerToolbar: hasResources
                 ? {
@@ -453,7 +479,7 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
                 threeDay: {
                     type:       'timeGrid',
                     duration:   { days: 3 },
-                    buttonText: '3 days',
+                    buttonText: btnText.threeDay,
                     buttonHint: '3-day view'
                 }
             },
@@ -604,7 +630,7 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
         };
 
         calendarOpts.views.timeGridWeek = {
-            buttonText: 'week'
+            buttonText: btnText.week
         };
 
         if (hasResources) {
@@ -612,13 +638,13 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
             calendarOpts.resourceAreaWidth = '15%';
 
             calendarOpts.views.resourceTimelineWeek = {
-                buttonText: 'week (rooms)',
+                buttonText: btnText.roomsWeek,
                 slotDuration: '01:00',
                 scrollTime: '16:00:00',
                 contentHeight: 'auto'
             };
             calendarOpts.views.resourceTimelineMonth = {
-                buttonText: 'month (rooms)',
+                buttonText: btnText.roomsMonth,
                 slotDuration: { day: 1 },
                 slotMinWidth: 120,
                 contentHeight: 'auto',

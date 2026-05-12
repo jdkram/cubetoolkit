@@ -28,9 +28,11 @@ function edit_rota(jQuery, rota_edit_base_url, edit_rota_notes_url_prefix, vol_e
     }
 
     function configureDatePickerControls() {
-        // Restrict date inputs to today or later, then navigate on any change.
-        var today = new Date().toISOString().split('T')[0];
-        $('#id_from_date, #id_to_date').attr('min', today);
+        // Allow up to 1 month in the past (past entries are display-only; edits blocked server-side).
+        var oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        var minDate = oneMonthAgo.toISOString().split('T')[0];
+        $('#id_from_date, #id_to_date').attr('min', minDate);
 
         $('#id_from_date, #id_to_date').on('change', function() {
             if ($('#id_from_date')[0].value && $('#id_to_date')[0].value) {

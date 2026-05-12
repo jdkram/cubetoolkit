@@ -1078,6 +1078,16 @@ class SiteConfiguration(models.Model):
         ),
     )
 
+    # --- Calendar ---
+    calendar_slot_min_hour = models.PositiveSmallIntegerField(
+        default=10,
+        help_text=(
+            "Earliest hour shown in the 3-day and week calendar views (0–23). "
+            "Events before this time are still shown but the grid starts here. "
+            "Default 10 hides the dead early-morning hours."
+        ),
+    )
+
     # --- Programme limits ---
     max_count_per_role = models.PositiveSmallIntegerField(
         default=8,
