@@ -571,6 +571,66 @@ def edit_event_links(request, event_id):
 
 @permission_required("toolkit.write")
 @require_http_methods(["GET", "POST"])
+def quick_create_open_session(request):
+    """One-step form for a keyholder to announce the building is open.
+
+    Creates a private, confirmed Event using the 'Building Open' template and
+    a single Showing with the given times. The closing time is stored as
+    final_volunteer_time so it appears on the rota automatically.
+    """
+    today = timezone.localtime(timezone.now()).date()
+
+    if request.method == "POST":
+        form = diary_forms.QuickCreateOpenSessionForm(request.POST)
+        if form.is_valid():
+            d = form.cleaned_data
+            template = EventTemplate.objects.filter(name="Building Open").first()
+
+            note = d["note"].strip()
+            event_name = f"Building open — {d['date'].strftime('%-d %b')}"
+
+            new_event = Event(
+                name=event_name,
+                private=True,
+                **({'template': template} if template else {}),
+            )
+            if note:
+                new_event.notes = note
+            new_event.save()
+            new_event.reset_tags_to_default()
+
+            start_dt = datetime.datetime.combine(
+                d["date"],
+                d["opens_at"],
+                tzinfo=timezone.get_current_timezone(),
+            )
+            new_showing = Showing(
+                event=new_event,
+                start=start_dt,
+                confirmed=True,
+                final_volunteer_time=d["closes_at"],
+            )
+            new_showing.save()
+            new_showing.reset_rota_to_default()
+
+            messages.success(
+                request,
+                f"Building open session created for {d['date'].strftime('%-d %b')},"
+                f" {d['opens_at'].strftime('%H:%M')}–{d['closes_at'].strftime('%H:%M')}.",
+            )
+            return HttpResponseRedirect(
+                reverse("edit-event-details-view", kwargs={"event_id": new_event.pk})
+            )
+    else:
+        form = diary_forms.QuickCreateOpenSessionForm(
+            initial={"date": today.strftime("%Y-%m-%d")}
+        )
+
+    return render(request, "quick_create_open_session.html", {"form": form})
+
+
+@permission_required("toolkit.write")
+@require_http_methods(["GET", "POST"])
 def add_event(request):
     # Called GET, with a "date" parameter of the form day-month-year:
     #     returns 'form_new_event_and_showing' with given date filled in.
@@ -1289,14 +1349,23 @@ def view_rota_vacancies(request):
         .start_in_range(start, end_date)
         .order_by("start")
         .prefetch_related("rotaentry_set__role")
-        .select_related()
+        .select_related("event")
     )
     showings_vacant_roles = OrderedDict(
         (
             showing,
-            showing.rotaentry_set.filter(Q(name="") | Q(name__isnull=True)),
+            list(showing.rotaentry_set.filter(Q(name="") | Q(name__isnull=True))),
         )
         for showing in showings
+    )
+
+    # Collect all distinct role names across all vacancies for the filter UI.
+    all_role_names = sorted(
+        {
+            entry.role.name
+            for entries in showings_vacant_roles.values()
+            for entry in entries
+        }
     )
 
     # Surprisingly round-about way to get tomorrow's date:
@@ -1308,6 +1377,7 @@ def view_rota_vacancies(request):
         "now_plus_1d": now_local + datetime.timedelta(days=1),
         "rota_edit_url": request.build_absolute_uri(reverse("rota-edit")),
         "showings_vacant_roles": showings_vacant_roles,
+        "all_role_names": all_role_names,
     }
 
     return render(request, "view_rota_vacancies.html", context)

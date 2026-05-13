@@ -14,6 +14,7 @@ from toolkit.diary.edit_views import (
     edit_ideas,
     delete_showing,
     add_event,
+    quick_create_open_session,
     edit_event_templates,
     edit_event_template_detail,
     edit_event_tags,
@@ -233,6 +234,8 @@ diary_urls = [
     ),
     # Add a new event + showing
     re_path(r"^edit/event/add$", add_event, name="add-event"),
+    # Quick-create a "building open" session (minimal keyholder form)
+    re_path(r"^edit/event/open$", quick_create_open_session, name="quick-create-open-session"),
     # Edit event types (list + per-template detail/create)
     re_path(
         r"^edit/eventtemplates/$",
@@ -285,6 +288,16 @@ diary_urls = [
         r"(?P<month>\d{1,2})/?(?P<day>(?<=/)\d{0,2})?/?)?$$",
         EditRotaView.as_view(),
         name="rota-edit",
+    ),
+    re_path(
+        r"^edit/rota/(?P<year>\d{4})/(?P<month>\d{1,2})/(?P<day>\d{1,2})/$",
+        EditRotaView.as_view(),
+        name="rota-edit-day",
+    ),
+    re_path(
+        r"^edit/rota/(?P<year>\d{4})/(?P<month>\d{1,2})/$",
+        EditRotaView.as_view(),
+        name="rota-edit-month",
     ),
     re_path(
         r"^rota/vacancies$", view_rota_vacancies, name="view-rota-vacancies"

@@ -1,0 +1,76 @@
+{% extends "base_admin.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Building open session{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+.open-session-card {
+    max-width: 480px;
+    margin: 2rem auto;
+}
+.open-session-card .card-header {
+    background: #343a40;
+    color: #fff;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+.open-session-explainer {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-bottom: 1.25rem;
+}
+.time-row {
+    display: flex;
+    gap: 1rem;
+}
+.time-row > div { flex: 1; }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="open-session-card">
+    <div class="card">
+        <div class="card-header">🔑 Building open session</div>
+        <div class="card-body">
+            <p class="open-session-explainer">
+                Creates a private volunteer-only event so people know the building is open and when it closes.
+                Takes about ten seconds.
+            </p>
+            <form method="POST">
+                {% csrf_token %}
+
+                <div class="form-group">
+                    <label for="id_date"><strong>Date</strong></label>
+                    {{ form.date }}
+                    {% if form.date.errors %}<div class="invalid-feedback d-block">{{ form.date.errors }}</div>{% endif %}
+                </div>
+
+                <div class="time-row">
+                    <div class="form-group">
+                        <label for="id_opens_at"><strong>Opens at</strong></label>
+                        {{ form.opens_at }}
+                        {% if form.opens_at.errors %}<div class="invalid-feedback d-block">{{ form.opens_at.errors }}</div>{% endif %}
+                    </div>
+                    <div class="form-group">
+                        <label for="id_closes_at"><strong>Closes at</strong></label>
+                        {{ form.closes_at }}
+                        <small class="form-text text-muted">Volunteers need to be out by this time.</small>
+                        {% if form.closes_at.errors %}<div class="invalid-feedback d-block">{{ form.closes_at.errors }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="id_note">Note <span class="text-muted font-weight-normal">(optional)</span></label>
+                    {{ form.note }}
+                    <small class="form-text text-muted">e.g. "Print room is free all day" or "Meet at 3pm to move furniture".</small>
+                    {% if form.note.errors %}<div class="invalid-feedback d-block">{{ form.note.errors }}</div>{% endif %}
+                </div>
+
+                <button type="submit" class="btn btn-dark btn-block mt-3">Post it</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

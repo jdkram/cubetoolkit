@@ -1,69 +1,239 @@
 {% extends "base_admin.html" %}
 {% load noprefix_url %}
 
-{% block title %}
-{{ VENUE.longname }} role rota vacancies
-{% endblock %}
+{% block title %}{{ VENUE.longname }} rota vacancies{% endblock %}
 
 {% block css %}
 {{ block.super }}
-<style type="text/css">
-    body { font-family:Arial,Helvetica,sans-serif; }
-    h1, h2 { margin: 1mm; }
-    h1 { font-size: 13pt; }
-    h2 { font-size: 11pt; }
-    p { font-size: 10pt; }
-    input[type=number] { width: 3.5em; }
-    input[type=submit] { font-size: 60%; }
+<style>
+.vacancy-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: flex-end;
+    margin-bottom: 1.25rem;
+}
+.vacancy-controls label {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    display: block;
+}
+.role-filter-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+.role-filter-pills input[type=checkbox] { display: none; }
+.role-filter-pills label {
+    font-weight: normal;
+    cursor: pointer;
+    padding: 0.2em 0.65em;
+    border: 1px solid #adb5bd;
+    border-radius: 2em;
+    font-size: 0.85rem;
+    background: #fff;
+    transition: background 0.1s, color 0.1s;
+    user-select: none;
+}
+.role-filter-pills input:checked + label {
+    background: #343a40;
+    color: #fff;
+    border-color: #343a40;
+}
+.vacancy-card {
+    margin-bottom: 0.6rem;
+    border-left: 4px solid #dee2e6;
+}
+.vacancy-card.urgent-today    { border-left-color: #dc3545; }
+.vacancy-card.urgent-tomorrow { border-left-color: #fd7e14; }
+.vacancy-card .card-body { padding: 0.6rem 0.85rem; }
+.vacancy-date {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+.vacancy-event {
+    font-size: 1rem;
+}
+.urgency-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.1em 0.5em;
+    border-radius: 3px;
+    vertical-align: middle;
+}
+.urgency-today    { background: #dc3545; color: #fff; }
+.urgency-tomorrow { background: #fd7e14; color: #fff; }
+.role-list {
+    margin: 0.35rem 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+.role-list li {
+    font-size: 0.85rem;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 3px;
+    padding: 0.1em 0.5em;
+}
+#email-output {
+    font-family: monospace;
+    font-size: 0.85rem;
+    width: 100%;
+    height: 14em;
+    margin-top: 1rem;
+    display: none;
+}
+.no-vacancies {
+    color: #6c757d;
+    font-style: italic;
+}
 </style>
+{% endblock %}
+
+{% block body %}
+<h1 class="h4 mb-3">{{ VENUE.longname }} rota vacancies</h1>
+
+<div class="vacancy-controls">
+    <div>
+        <label for="id_daysahead">Show next</label>
+        <form method="GET" style="display:inline-flex; align-items:center; gap:0.4rem;">
+            <input type="number" id="id_daysahead" name="daysahead" min="1" max="60" value="{{ days_ahead }}" class="form-control form-control-sm" style="width:4.5rem;">
+            <span>days</span>
+            <button type="submit" class="btn btn-sm btn-outline-secondary">Update</button>
+        </form>
+    </div>
+</div>
+
+{% if all_role_names %}
+<div class="mb-3">
+    <span class="font-weight-bold mr-2" style="font-size:0.9rem;">Filter by role:</span>
+    <div class="role-filter-pills" id="role-filters">
+        {% for role_name in all_role_names %}
+        <span>
+            <input type="checkbox" id="role-{{ forloop.counter }}" class="role-filter-cb" value="{{ role_name }}">
+            <label for="role-{{ forloop.counter }}">{{ role_name }}</label>
+        </span>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div id="vacancy-list">
+{% for showing, vacant_roles in showings_vacant_roles.items %}
+    {% if vacant_roles %}
+    {% if showing.start < now_plus_1d %}
+        {% if showing.start.date == now.date %}
+        <div class="card vacancy-card urgent-today" data-roles="{% for e in vacant_roles %}{{ e.role.name }}|{% endfor %}">
+        {% else %}
+        <div class="card vacancy-card urgent-tomorrow" data-roles="{% for e in vacant_roles %}{{ e.role.name }}|{% endfor %}">
+        {% endif %}
+    {% else %}
+        <div class="card vacancy-card" data-roles="{% for e in vacant_roles %}{{ e.role.name }}|{% endfor %}">
+    {% endif %}
+        <div class="card-body">
+            <span class="vacancy-date">{{ showing.start|date:"D j M, H:i" }}</span>
+            {% if showing.start < now_plus_1d %}
+                {% if showing.start.date == now.date %}
+                <span class="urgency-badge urgency-today">TODAY</span>
+                {% else %}
+                <span class="urgency-badge urgency-tomorrow">TOMORROW</span>
+                {% endif %}
+            {% endif %}
+            &mdash;
+            <a class="vacancy-event" href="{% noprefix_url "single-showing-view" showing.pk %}">{{ showing.event.name }}</a>
+            <ul class="role-list">
+            {% for rota_entry in vacant_roles %}
+                <li class="role-pill" data-role="{{ rota_entry.role.name }}">{{ rota_entry.role.name }}{% if rota_entry.rank > 1 %} #{{ rota_entry.rank }}{% endif %}</li>
+            {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+{% empty %}
+    <p class="no-vacancies">No vacancies in the next {{ days_ahead }} days.</p>
+{% endfor %}
+</div>
+
+<div class="mt-3">
+    <button class="btn btn-sm btn-outline-secondary" id="draft-email-btn">Draft email text</button>
+    <textarea id="email-output" class="form-control" readonly></textarea>
+</div>
+
+<p class="mt-3 text-muted" style="font-size:0.85rem;">
+    <a href="{{ rota_edit_url }}">Full rota</a> &mdash; {{ rota_edit_url }}
+</p>
 {% endblock %}
 
 {% block script %}
 {{ block.super }}
 <script>
-$(document).ready(function() {
-  $('input[type=submit]').hide();
-  $('#id_daysahead').on("change", function (ev) {
-      if (ev.target.value != "{{ days_ahead }}") {
-          $('input[type=submit]').show();
-      } else {
-          $('input[type=submit]').hide();
-      }
-  })
-})
+(function() {
+    "use strict";
+
+    // ── Role filter ────────────────────────────────────────────────────────
+    var filterCbs = document.querySelectorAll('.role-filter-cb');
+
+    function activeFilters() {
+        return Array.from(filterCbs).filter(function(cb) { return cb.checked; }).map(function(cb) { return cb.value; });
+    }
+
+    function applyFilter() {
+        var active = activeFilters();
+        document.querySelectorAll('#vacancy-list .vacancy-card').forEach(function(card) {
+            if (active.length === 0) { card.style.display = ''; return; }
+            var roles = (card.dataset.roles || '').split('|').map(function(r) { return r.trim(); }).filter(Boolean);
+            card.style.display = active.some(function(f) { return roles.indexOf(f) !== -1; }) ? '' : 'none';
+        });
+    }
+
+    filterCbs.forEach(function(cb) { cb.addEventListener('change', applyFilter); });
+
+    // ── Email draft ────────────────────────────────────────────────────────
+    var draftBtn  = document.getElementById('draft-email-btn');
+    var output    = document.getElementById('email-output');
+
+    function buildEmailText() {
+        var active  = activeFilters();
+        var lines   = [];
+        var daysAhead = {{ days_ahead }};
+        lines.push('{{ VENUE.longname }} rota — roles still needed (next ' + daysAhead + ' days)');
+        lines.push('');
+
+        document.querySelectorAll('#vacancy-list .vacancy-card').forEach(function(card) {
+            if (card.style.display === 'none') { return; }
+            var dateEl  = card.querySelector('.vacancy-date');
+            var eventEl = card.querySelector('.vacancy-event');
+            var pills   = card.querySelectorAll('.role-pill');
+            if (!dateEl || !eventEl || pills.length === 0) { return; }
+
+            var roles = Array.from(pills)
+                .filter(function(p) { return active.length === 0 || active.indexOf(p.dataset.role) !== -1; })
+                .map(function(p) { return p.textContent.trim(); });
+            if (roles.length === 0) { return; }
+
+            lines.push(dateEl.textContent.trim() + ' — ' + eventEl.textContent.trim());
+            roles.forEach(function(r) { lines.push('  ' + r); });
+            lines.push('');
+        });
+
+        if (lines.length <= 2) {
+            return 'No vacancies to report.';
+        }
+
+        lines.push('To sign up, visit the rota: {{ rota_edit_url }}');
+        return lines.join('\n');
+    }
+
+    draftBtn.addEventListener('click', function() {
+        var text = buildEmailText();
+        output.value = text;
+        output.style.display = 'block';
+        output.select();
+        output.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+}());
 </script>
-{% endblock %}
-
-{% block body %}
-<form method="GET">
-    <h1><label for="id_daysahead">{{ VENUE.longname }} rota roles that need filling in the next</label>  <input type="number" id="id_daysahead" name="daysahead" min="0" value="{{ days_ahead }}"> days <input type="submit" value="Update"></h1>
-</form>
-
-<p><i>See the <a href="{{ rota_edit_url }}">full rota</a> at {{ rota_edit_url}}</i></p>
-<div id="missing_list">
-{% for showing, vacant_roles in showings_vacant_roles.items %}
-    {% if vacant_roles %}
-    <p><b>
-        {% if showing.start < now_plus_1d %}
-        <span style="color: red;">Urgent!
-            {% if showing.start.day == now.day %}
-             Today!
-            {% else %}
-             Tomorrow!
-            {% endif %}
-            ({{ showing.start|date:"D jS H:i" }})
-        </span>
-        {% else %}
-            {{ showing.start|date:"D jS H:i" }}
-        {% endif %} &mdash;
-        <a href="{% noprefix_url "single-showing-view" showing.pk %}">{{ showing.event.name }}</a></b> <i>needs</i>
-        {% for rota_entry in vacant_roles %}
-            {{ rota_entry.role.name }}{% if rota_entry.rank > 1 %} #{{ rota_entry.rank }}{% endif %}{% if not forloop.last %},{% endif %}
-        {% empty %}
-            Nobody!
-        {% endfor %}
-    </p>
-    {% endif %}
-{% endfor %}
-</div>
 {% endblock %}
