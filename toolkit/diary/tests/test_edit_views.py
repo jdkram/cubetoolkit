@@ -1770,7 +1770,7 @@ class ViewEventFieldTests(DiaryTestsMixin, TestCase):
 
         self.assertNotContains(response, "Event three title")
         self.assertContains(response, "Event four titl\u0113")
-        self.assertContains(response, "Role 2 (nonstandard)-1")
+        self.assertContains(response, "Role 2 (nonstandard)")
 
     def test_view_event_field_copy(self):
         url = reverse("view_event_field", kwargs={"field": "copy"})

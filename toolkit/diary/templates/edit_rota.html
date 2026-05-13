@@ -1,6 +1,7 @@
 {% extends "base_admin.html" %}
 {% load noprefix_url %}
 {% load calendar_links %}
+{% load rota_display %}
 
 {% block meta %}
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -570,6 +571,21 @@
     .rota-signup-mine { cursor: pointer; }
     .rota-signup-mine:hover { color: #dc3545; text-decoration: line-through; }
     .rota-signup-loading { opacity: 0.45; pointer-events: none; }
+
+    /* scroll-margin-top: navbar (~3.6rem) + sticky day header (~2.5rem) + breathing room */
+    .rota-showing { scroll-margin-top: 7rem; }
+
+    /* Deep-link highlight: permanent amber left bar, background fades over 5s */
+    @keyframes rota-linked-bg {
+        0%   { background-color: rgba(255, 193, 7, 0.22); }
+        50%  { background-color: rgba(255, 193, 7, 0.22); }
+        100% { background-color: transparent; }
+    }
+    .rota-showing--linked {
+        box-shadow: inset 4px 0 0 #e6a817;
+        animation: rota-linked-bg 5s ease-out forwards;
+        border-radius: 0 2px 2px 0;
+    }
 </style>
 {% endblock %}
 
@@ -991,9 +1007,15 @@ edit_rota(
 
     function updateDayHeaderOffset() {
         var navbarHeight = document.querySelector('.navbar.fixed-top').offsetHeight;
+        var firstDayHeader = document.querySelector('.rota-day-group-header');
+        var dayHeaderHeight = firstDayHeader ? firstDayHeader.offsetHeight : 40;
+        var showingMargin = navbarHeight + dayHeaderHeight;
         document.querySelectorAll('.rota-day-group-header').forEach(function(el) {
             el.style.top = navbarHeight + 'px';
             el.style.scrollMarginTop = navbarHeight + 'px';
+        });
+        document.querySelectorAll('.rota-showing').forEach(function(el) {
+            el.style.scrollMarginTop = showingMargin + 'px';
         });
     }
     window.addEventListener('resize', updateDayHeaderOffset);
@@ -1056,6 +1078,15 @@ edit_rota(
     });
 
 })(jQuery);
+
+(function () {
+    var hash = window.location.hash;
+    if (!hash || hash.indexOf('#showing-') !== 0) return;
+    var target = document.querySelector(hash);
+    if (!target) return;
+    target.classList.add('rota-showing--linked');
+    target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+})();
 </script>
 {% endblock %}
 
@@ -1167,7 +1198,7 @@ edit_rota(
 
         {# Build comma-separated tag slugs for JS filtering #}
         {% with tag_slugs=showing.event.tags.all %}
-        <div class="rota-showing" data-in-past="{% if showing.in_past %}1{% else %}0{% endif %}"
+        <div class="rota-showing" id="showing-{{ showing.pk }}" data-in-past="{% if showing.in_past %}1{% else %}0{% endif %}"
              data-tags="{% for tag in tag_slugs %}{{ tag.slug }}{% if not forloop.last %},{% endif %}{% endfor %}"
              data-tag-names="{% for tag in tag_slugs %}{{ tag.name }}{% if not forloop.last %}|{% endif %}{% endfor %}">
 
@@ -1180,7 +1211,7 @@ edit_rota(
                         {% if not showing.in_past and not showing.cancelled %}{% calendar_links showing date_trigger=True %}{% else %}<span class="showing-date">{{ showing.start|date:"H:i" }}{% if showing.event.duration %}–{{ showing.end_time|date:"H:i" }}{% endif %}</span>{% endif %}
                         <span class="showing-meta-tail">
                         {% if MULTIROOM_ENABLED and showing.room %}<span class="showing-room-badge"><span class="room-colour-dot" style="background-color: {{ showing.room.colour }};"></span>{{ showing.room.name }}</span>{% endif %}
-                        {% if showing.event.outside_hire %}<span class="outside-hire-badge">Outside hire</span>{% endif %}
+                        {% if showing.event.outside_hire %}<span class="outside-hire-badge">Outside hire{% if showing.event.hire_name %}: {{ showing.event.hire_name }}{% endif %}</span>{% endif %}
                         <a class="showing-public-link"
                            href="{% noprefix_url 'single-showing-view' showing.pk %}"
                            title="Public programme view">↗</a>
@@ -1212,7 +1243,7 @@ edit_rota(
                     data-wheelchair="{{ rota_entry.role.wheelchair_accessible|yesno:'1,0' }}"
                     data-keyholder="{{ rota_entry.role.keyholder_only|yesno:'1,0' }}"
                     data-programmer="{{ rota_entry.role.programmer_contact|yesno:'1,0' }}">
-                <span class="rota_role{% if rota_entry.role.description %} rota_role--described{% endif %}"{% if rota_entry.role.description %} title="{{ rota_entry.role.description }}"{% endif %}>{{ rota_entry.role.name }}-{{ rota_entry.rank }}</span>
+                <span class="rota_role{% if rota_entry.role.description %} rota_role--described{% endif %}"{% if rota_entry.role.description %} title="{{ rota_entry.role.description }}"{% endif %}>{{ rota_entry|role_label:showing }}</span>
                 &nbsp;
                 {% if showing.in_past %}
                     <span{% if rota_entry.pronouns %} class="rota_name--with-pronouns" title="{{ rota_entry.pronouns }}"{% endif %}>{% if rota_entry.volunteer %}{{ rota_entry.volunteer.member.name }}{% else %}{{ rota_entry.name }}{% endif %}</span>

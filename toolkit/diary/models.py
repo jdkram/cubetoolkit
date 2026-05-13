@@ -268,6 +268,12 @@ class Event(models.Model):
     duration = models.TimeField(null=True)
 
     outside_hire = models.BooleanField(default=False)
+    hire_name = models.CharField(
+        max_length=256,
+        blank=True,
+        verbose_name="Hirer name / organisation",
+        help_text="Who is hiring the venue? Shown on the rota so everyone knows who to liaise with.",
+    )
     private = models.BooleanField(default=False)
 
     media = models.ManyToManyField(MediaItem, db_table="Event_MediaItems")

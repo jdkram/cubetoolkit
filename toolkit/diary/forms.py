@@ -178,6 +178,7 @@ class EventForm(forms.ModelForm):
             "meeting_minutes_url",
             "duration",
             "outside_hire",
+            "hire_name",
             "private",
             "copy",
             "copy_summary",
@@ -555,6 +556,34 @@ class NewEventForm(forms.Form):
     outside_hire = forms.BooleanField(required=False)
     # confirmed = forms.BooleanField(required=False)
     discounted = forms.BooleanField(required=False)
+
+
+class QuickCreateOpenSessionForm(forms.Form):
+    """Minimal form for a keyholder to announce the building is open."""
+
+    date = forms.DateField(
+        widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+        help_text="Which day? Defaults to today.",
+    )
+    opens_at = forms.TimeField(
+        widget=forms.TimeInput(attrs={"type": "time", "class": "form-control"}),
+        initial=datetime.time(14, 0),
+        help_text="When will you open up?",
+    )
+    closes_at = forms.TimeField(
+        widget=forms.TimeInput(attrs={"type": "time", "class": "form-control"}),
+        initial=datetime.time(18, 0),
+        help_text="When will you be locking up? Volunteers need to be out by this time.",
+    )
+    note = forms.CharField(
+        max_length=256,
+        required=False,
+        widget=forms.TextInput(attrs={
+            "class": "form-control",
+            "placeholder": "e.g. Print room is free all day",
+        }),
+        help_text="Optional — anything useful for people dropping in.",
+    )
 
 
 class MailoutForm(forms.Form):

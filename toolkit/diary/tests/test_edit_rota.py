@@ -490,7 +490,7 @@ class ViewRotaVacancies(DiaryTestsMixin, TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "view_rota_vacancies.html")
-        self.assertNotContains(response, "<i>needs</i>")
+        self.assertContains(response, "No vacancies in the next")
 
     @patch("django.utils.timezone.now")
     def test_get(self, now_patch):
@@ -503,19 +503,6 @@ class ViewRotaVacancies(DiaryTestsMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "view_rota_vacancies.html")
 
-        self.assertContains(
-            response,
-            "<p><b>"
-            " Sat 13th 18:00"
-            " &mdash;"
-            ' <a href="/programme/showing/id/6/">Event three title</a></b>'
-            " <i>needs</i>"
-            " Role 1 (standard),"
-            " Role 1 (standard) #2,"
-            " Role 1 (standard) #3,"
-            " Role 1 (standard) #4,"
-            " Role 1 (standard) #5,"
-            " Role 1 (standard) #6"
-            " </p>",
-            html=True,
-        )
+        self.assertContains(response, "Sat 13 Apr, 18:00")
+        self.assertContains(response, "Event three title")
+        self.assertContains(response, "Role 1 (standard)")

@@ -88,3 +88,10 @@ name = "Training"
 pricing = "Free"
 roles = ["Keyholder", "Trainee (inducted)"]
 tags = ["training-for-volunteers"]
+
+[[templates]]
+name = "Building Open"
+pricing = "Free"
+private = true
+roles = ["Keyholder"]
+tags = ["volunteer"]

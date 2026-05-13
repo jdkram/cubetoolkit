@@ -168,6 +168,11 @@ function hideAddShowingForm() {
     {% else %}<span class="text-muted">No</span>{% endif %}
   </dd>
 
+  {% if event.outside_hire %}
+  <dt class="col-sm-3">Hirer</dt>
+  <dd class="col-sm-9">{% if event.hire_name %}{{ event.hire_name }}{% else %}<span class="text-muted">—</span>{% endif %}</dd>
+  {% endif %}
+
   <dt class="col-sm-3">Private
     <span class="field-tip" data-toggle="tooltip" data-placement="right"
           title="When ticked, this event is hidden from the public website entirely — it won't appear in any listing or be accessible via URL, even if showings are confirmed. Use for internal events or placeholders.">ⓘ</span>
@@ -383,6 +388,7 @@ function hideAddShowingForm() {
         </form>
       {% endif %}
       <a href="{% url 'edit-showing' showing.id %}" class="btn btn-sm btn-outline-primary ml-1">Edit showing / rota →</a>
+      <a href="{% url 'rota-edit-month' year=showing.start.year month=showing.start.month %}#showing-{{ showing.id }}" class="btn btn-sm btn-outline-secondary ml-1">Rota ↗</a>
     </div>
   </div>
 </div>
