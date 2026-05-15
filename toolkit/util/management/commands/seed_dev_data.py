@@ -31,6 +31,7 @@ from toolkit.diary.models import (
     EventTemplateRole,
     MediaItem,
     Role,
+    RoomBooking,
     RotaEntry,
     Room,
     Showing,
@@ -364,6 +365,7 @@ class Command(BaseCommand):
                 defaults={
                     "colour": room_data["colour"],
                     "is_primary": room_data.get("is_primary", False),
+                    "map_slug": room_data.get("map_slug", ""),
                 },
             )
             rooms_dict[room_data["name"]] = room_obj
@@ -374,7 +376,9 @@ class Command(BaseCommand):
 
         # Events and Showings
         now = timezone.now()
-        anchor = now + datetime.timedelta(days=14)
+        # localise before replacing hours so that hour=18 means 18:00 local time,
+        # not 18:00 UTC (which would be 19:00 BST in summer).
+        anchor = timezone.localtime(now + datetime.timedelta(days=14))
 
         for ev_idx, event_data in enumerate(EVENTS):
             if "duration" in event_data:
@@ -430,7 +434,6 @@ class Command(BaseCommand):
                 event=event,
                 start=showing_start,
                 defaults={
-                    "room": event_room,
                     "booked_by": event_data.get("booked_by", "seed_dev_data"),
                     "confirmed": event_data.get("confirmed", True),
                     "cancelled": event_data.get("cancelled", False),
@@ -441,6 +444,12 @@ class Command(BaseCommand):
             )
             if s_created:
                 counts["showings"] += 1
+                if event_room:
+                    RoomBooking.objects.get_or_create(
+                        showing=showing,
+                        room=event_room,
+                        defaults={"start": showing_start},
+                    )
                 self._book_slot(event_room, showing_start, dur_minutes)
 
             # Rota entries
@@ -784,7 +793,6 @@ class Command(BaseCommand):
             event=event,
             start=showing_start,
             defaults={
-                "room": room,
                 "booked_by": "seed_dev_data",
                 "confirmed": True,
                 "cancelled": False,
@@ -795,6 +803,12 @@ class Command(BaseCommand):
         )
         if s_created:
             counts["showings"] += 1
+            if room:
+                RoomBooking.objects.get_or_create(
+                    showing=showing,
+                    room=room,
+                    defaults={"start": showing_start},
+                )
             self._book_slot(room, showing_start, _dur_mins)
 
         # Rota entries
@@ -904,7 +918,6 @@ class Command(BaseCommand):
             event=event,
             start=showing_start,
             defaults={
-                "room": room,
                 "booked_by": "seed_dev_data",
                 "confirmed": True,
                 "cancelled": False,
@@ -915,6 +928,12 @@ class Command(BaseCommand):
         )
         if s_created:
             counts["showings"] += 1
+            if room:
+                RoomBooking.objects.get_or_create(
+                    showing=showing,
+                    room=room,
+                    defaults={"start": showing_start},
+                )
             self._book_slot(room, showing_start, 120)
 
         # Rota entries for a film screening
@@ -962,21 +981,18 @@ class Command(BaseCommand):
         # Exclude seed showings: they will register themselves via _book_slot as
         # they're created, so existing seed data doesn't cause time-shifting on
         # idempotent re-runs (which would create duplicate showings).
-        for showing in Showing.objects.filter(
-            start__gte=timezone.now()
+        for rb in RoomBooking.objects.filter(
+            showing__start__gte=timezone.now()
         ).exclude(
-            booked_by="seed_dev_data"
-        ).select_related("event", "room"):
-            if showing.room is None:
-                continue
-            duration = showing.event.duration
+            showing__booked_by="seed_dev_data"
+        ).select_related("showing__event", "room"):
+            duration = rb.showing.event.duration
             if duration is None:
-                continue
-            dur_mins = duration.hour * 60 + duration.minute
-            if dur_mins == 0:
                 dur_mins = 120
-            end = showing.start + datetime.timedelta(minutes=dur_mins)
-            self._room_bookings[showing.room.pk].append((showing.start, end))
+            else:
+                dur_mins = duration.hour * 60 + duration.minute or 120
+            end = rb.start + datetime.timedelta(minutes=dur_mins)
+            self._room_bookings[rb.room.pk].append((rb.start, end))
 
     def _find_free_slot(self, room, preferred_start, duration_minutes):
         """Return the first start time >= preferred_start where room is free.

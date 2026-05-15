@@ -697,7 +697,8 @@ erDiagram
     Event }o--|| EventTemplate : "based on (optional)"
     Event }o--o{ EventTag : "tagged"
     Event }o--o{ MediaItem : "has images"
-    Showing }o--o| Room : "held in"
+    Showing ||--o{ RoomBooking : "books rooms"
+    RoomBooking }o--|| Room : "for this room"
     Showing ||--o{ RotaEntry : "has rota entries"
     RotaEntry }o--|| Role : "for this role"
     Volunteer }o--o{ Role : "qualified in"
@@ -764,13 +765,31 @@ A specific scheduled date/time of an Event. One event can have many showings.
 
 Key fields:
 - `start` — datetime; must be in the future at time of creation/edit
-- `room` — which room (only relevant when `MULTIROOM_ENABLED = True`). A
-showing has at most one room, which is a significant limitation: events that require multiple rooms at different times (e.g. tech setup in the booth from 6pm, main cinema from 7pm) cannot be correctly modelled. See 8.11.
 - `confirmed` — only confirmed showings appear in the public programme
 - `hide_in_programme` — confirmed but hidden (e.g. private events)
 - `cancelled` / `discounted` / `sold_out` — status flags
 - `rota_notes` — free-text notes visible on the internal rota
 - Showings **cannot be edited or deleted once they are in the past**
+
+Room bookings are tracked via `RoomBooking` (see below).
+
+#### RoomBooking
+A time-slot reservation linking a `Showing` to a `Room`. A showing can have zero, one, or many `RoomBooking` records — supporting events that use multiple rooms at different times (e.g. setup in Venue Space from 16:00, screening in Cinema from 19:30).
+
+Key fields:
+- `showing` — FK to Showing
+- `room` — FK to Room (PROTECT — room cannot be deleted if bookings exist)
+- `start` — when the room is needed from (may be earlier than `Showing.start`)
+- `end` — when the room is released (optional; open-ended if null)
+- `notes` — optional programmer note (e.g. "Tech setup only, not public")
+
+Clash detection runs on save: if a confirmed showing has an overlapping `RoomBooking` in the same room, an amber warning is shown on the showing edit page. The save is not blocked — intentional overlaps (shared foyer, handover windows) are permitted.
+
+#### Room
+A physical space in the venue.
+
+- `map_slug` — optional SVG element ID linking this room to the building floorplan (e.g. `room-cinema`). Used by the advanced room booking UI.
+- `is_primary` — primary rooms are shown at full colour in the calendar; secondary rooms are desaturated.
 
 #### Role
 A volunteer job type — e.g. "Bar Staff", "Projectionist", "Keyholder".

@@ -2612,23 +2612,179 @@ The data model (Event → multiple Showings/Bookings → single Room) is sound. 
 
 ---
 
-### 9.35.1 Toolkit homepage: informative dashboard vs. link directory 🟡 M (16–30h)
+### 9.35.1 Toolkit homepage: dashboard section above link directory 🔵 S (10–14h)
 
-**Context:** The `/toolkit/` homepage is currently a link directory — it lists all the tools in logical sections, but provides no live information. For coordinators who log in daily, a *dashboard* view would be more useful: upcoming events at a glance, rota vacancies, outstanding tasks, etc.
+**Context:** The `/toolkit/` homepage is currently a pure link directory -- hardcoded cards by permission tier plus a superuser-managed custom link group at the bottom. It has no live information. This spec adds a personalised dashboard section above the existing directory, without removing or replacing it.
 
-**Problem:** These two mental models are in tension:
-- **Directory** — "Where do I find X?" — best for infrequent users or onboarding.
-- **Dashboard** — "What needs attention right now?" — best for regulars.
+---
 
-**Options:**
-1. **Split landing page** — first-time or infrequent users land on the directory; regulars land on a configurable dashboard. Too complex.
-2. **Directory with status widgets** — keep the link directory but add a compact status row at the top (e.g. "3 events this week · 5 rota vacancies"). Low cost, good value.
-3. **Replace with dashboard** — show upcoming events, vacancies, and quick-action buttons. Bury the full link directory behind a "More…" link.
-4. **User-configurable** — allow each user to choose their preferred landing. Nice, but high cost.
+#### Why both, not either/or
 
-**Recommendation:** Option 2 as a first step. A single `<div class="alert">` at the top of `/toolkit/` showing: events in the next 7 days, open rota vacancies, and (for programmers) events missing copy. No new views — just add a compact query to `ToolkitIndexView.get_context_data()`.
+The link directory solves a real problem: where do I find X? Infrequent users and newly inducted volunteers need it. The dashboard solves a different problem: what's happened since I last logged in, and what do I need to do? Both are useful. The simplest resolution is to stack them: dashboard at the top, directory below a `<hr>`.
 
-**Related:** 9.38 (last-login display), 9.36 (vacancies email tool)
+---
+
+#### The custom link groups (IndexLink / IndexCategory)
+
+The bottom section of the homepage is a set of superuser-managed link groups (`IndexLink` / `IndexCategory` models). These hold external URLs that have no dedicated toolkit page -- Nextcloud, WhatsApp groups, shared documents, supplier websites, etc. They also support an optional `description` field used for credential notes visible only to logged-in volunteers.
+
+These must stay accessible. The dashboard addition does not displace them. If the homepage is ever restructured more radically, these groups would need a dedicated "Resources" or "External links" page first, so there is somewhere to link them from before removing them from `/toolkit/`.
+
+---
+
+#### Page structure
+
+```
+/toolkit/
+├── [Dashboard section]           ← new
+│   ├── Your upcoming shifts       (all volunteers with a linked account)
+│   ├── New on the calendar        (Programmer+ only)
+│   ├── Your starred events        (all volunteers; hidden if empty)
+│   └── Shopping list: items needed (all volunteers; blocked on 9.88; hidden if nothing flagged)
+├── <hr>
+├── [Link directory]              ← existing, unchanged
+│   ├── Rota card
+│   ├── Programming card (Programmer+)
+│   ├── Meta-programming card (Programmer+)
+│   ├── Members card (Panopticon)
+│   ├── Volunteers card (Panopticon)
+│   └── Admin card (Panopticon)
+├── <hr>
+└── [Custom link groups]          ← existing IndexLink/IndexCategory, unchanged
+    └── (e.g. Nextcloud, WhatsApp, supplier logins, etc.)
+```
+
+---
+
+#### Dashboard widget specs
+
+**1. Your upcoming shifts** — all logged-in volunteers with a `Volunteer` record linked
+
+Query:
+```python
+RotaEntry.objects.filter(
+    volunteer=request.user.volunteer,
+    showing__start__gte=now,
+    showing__confirmed=True,
+).select_related("showing__event", "role").order_by("showing__start")[:5]
+```
+
+Display: compact table or list -- event name, date, role, link to rota entry (deep-linked with `#showing-{pk}` anchor per 9.61). Limit 5; "View full rota" link below.
+
+Empty state: "You have no upcoming shifts. Browse the rota to sign up." (with link to `rota-edit`).
+
+Only shown if `hasattr(request.user, 'volunteer')`.
+
+---
+
+**2. New on the calendar** — Programmer+ only (`perms.toolkit.write`)
+
+Shows showings added to the diary since the user's last login. This catches both brand-new events and new dates added to existing events.
+
+Query:
+```python
+Showing.objects.filter(
+    created_at__gte=request.user.last_login,
+    start__gte=now,
+    event__private=False,
+).select_related("event").order_by("created_at")[:8]
+```
+
+Display: event name, showing date, link to event hub. Group by event if multiple showings of the same event were added.
+
+Edge cases:
+- `last_login` is `None` (first-ever login): skip widget entirely, or show "Nothing yet -- this is your first login."
+- `last_login` was a long time ago (e.g. months): cap the lookback at 30 days to avoid overwhelming the widget. `created_at__gte=max(last_login, now - 30 days)`.
+
+Empty state: hidden (nothing new since last login is fine; no card needed).
+
+---
+
+**3. Your starred events** — all volunteers
+
+Query:
+```python
+VolunteerEventMark.objects.filter(
+    volunteer=request.user.volunteer,
+    mark=VolunteerEventMark.MARK_STAR,
+    event__showings__start__gte=now,
+).select_related("event").distinct().order_by("event__showings__start")[:5]
+```
+
+Display: event name, next upcoming showing date, link to event detail.
+
+Empty state: widget hidden entirely. No point showing an empty "starred events" card.
+
+Only shown if `hasattr(request.user, 'volunteer')`.
+
+---
+
+**4. Shopping list: items needed** — all volunteers (blocked on 9.88)
+
+Query (once 9.88 is built):
+```python
+NeedFlag.objects.filter(
+    resolved_at__isnull=True,
+).select_related("item", "flagged_by__member").order_by("flagged_at")[:5]
+```
+
+Display: item name, who flagged it, whether someone has pledged to get it (and their ETA). Link to `/volunteers/labs/shopping/`.
+
+Empty state: widget hidden. "Nothing on the shopping list" is not actionable.
+
+Note: this widget is not personalised -- it shows all current needs, not just ones relevant to the logged-in user. That's intentional: seeing what the venue needs prompts volunteers to help.
+
+---
+
+#### View changes
+
+All dashboard data is computed in `ToolkitIndexView.get_context_data()` in `toolkit/index/views.py`. No new views needed.
+
+Guard every volunteer-specific query:
+```python
+try:
+    volunteer = request.user.volunteer
+except Exception:
+    volunteer = None
+```
+
+Pass `upcoming_shifts`, `new_showings`, `starred_events`, `shopping_needs` (once 9.88 is built) to the template context.
+
+---
+
+#### Template changes
+
+Dashboard section is a Bootstrap row of widget cards, same visual language as the existing link directory cards. Each widget is a `col-md-6 mb-4` card.
+
+Widget cards that are empty (no shifts, nothing starred, nothing needed) are hidden via `{% if %}` -- no empty cards. The exception is "your upcoming shifts" which always shows (even if empty) because the empty state is an actionable call-to-action (sign up for a shift).
+
+The existing hardcoded link directory cards and the IndexLink groups require no changes.
+
+---
+
+#### Nextcloud recent files (9.35.2 -- separate subfeature)
+
+Intentionally out of scope for this ticket. The Nextcloud OCS Activity API (`GET /ocs/v2.php/apps/activity/api/v2/activity`) can return a per-account activity feed, but requires authentication. Two approaches:
+
+- **Shared service account:** one set of credentials stored in settings; shows a venue-wide activity feed (not personalised). Simpler to implement, less useful for individuals.
+- **Per-volunteer OAuth:** each volunteer authenticates once; shows their personal activity feed. More useful, but requires storing OAuth tokens per volunteer and handling token refresh.
+
+Decision needed before starting: which auth model, and whether the S+S Nextcloud instance supports the OCS API. Raise with Marcus (see `feedback_marcus.md` -- strong on bare metal, unfamiliar with Docker; likely knows the Nextcloud setup).
+
+---
+
+#### Sizing
+
+| Component | Est. |
+|---|---|
+| `get_context_data()` queries (shifts, new showings, starred events) | 2h |
+| Template: dashboard widget cards + layout | 3h |
+| Edge case handling (no volunteer record, None last_login, 30-day cap) | 1h |
+| Shopping list widget (once 9.88 is built) | 1h |
+| Tests (context data, empty states, permission gating) | 3h |
+| **Total** | **~10h** (shopping list widget adds ~1h when 9.88 is done) |
+
+**Dependency:** Shopping list widget blocked on 9.88. All other widgets are independent.
 
 ---
 
@@ -4301,5 +4457,366 @@ When a volunteer joins or leaves a collective, automatically subscribe or unsubs
 | simplelists form POST helper + error handling | 2h |
 | Tests (mock the POST) | 2h |
 | **Total** | **~7–9h** (after design questions resolved) |
+
+---
+
+### 9.88 — Shared shopping list (consumables) 🟡 M (20–35h)
+
+A lightweight shared list for flagging when consumables run out and coordinating who will restock them. Lives under the existing Labs section (`/volunteers/labs/`), accessible to any logged-in volunteer.
+
+---
+
+#### Problem
+
+When something runs out at the venue (hand soap, bin bags, dishwasher tablets), the current process is word of mouth or a message on the volunteers list. There is no central record of what is needed, who said they'd get it, or when it will arrive. Things fall through the gaps between busy weeks.
+
+---
+
+#### Scope
+
+This spec covers venue consumables only. Bar stock ordering is intentionally excluded: the existing bar ordering process is working and we don't have enough knowledge of it to avoid breaking something. A separate "last item used" flag for bar stock could be considered later, but the ordering integration would need input from whoever currently runs it.
+
+---
+
+#### Core concepts
+
+**Item** — a consumable the venue regularly stocks. Has a name, optional notes, and optional supplier info (see below). Items are managed by Panopticon in the Django admin; volunteers cannot create or delete them.
+
+**NeedFlag** — a record that a particular item has run out (or is low). Created by any volunteer with a single tap. Has: `item`, `flagged_by` (FK to `Volunteer`), `flagged_at` (datetime), `notes` (optional short free text, e.g. "last one used Thursday"), `resolved_at` (nullable datetime), `resolved_by` (nullable FK to `Volunteer`).
+
+**ProcurementPledge** — a volunteer's commitment to get the flagged item. One pledge per flag (first-come-first-served, or the most recent pledge wins — see design questions). Has: `need_flag` (FK to `NeedFlag`), `pledged_by` (FK to `Volunteer`), `pledged_at` (datetime), `eta` (optional date or free text, e.g. "Friday cleaning club" or "by next Saturday"), `fulfilled_at` (nullable datetime).
+
+When a pledge is marked fulfilled, the parent `NeedFlag` is auto-resolved if not already.
+
+---
+
+#### Item catalogue
+
+Pre-seeded list of common consumables, plus a mechanism for Panopticon to add more via admin.
+
+Initial catalogue:
+
+- Hand soap
+- Bin bags
+- Washing detergent
+- Dishwasher detergent
+- Dishwasher rinse aid
+- Washing up sponges
+- Steel scrubbers
+- Cling film
+- Steriliser tablets
+- Pens
+- Lamination sheets (A4)
+- Reams of paper (A4)
+- Reams of paper (A3)
+- Microfibre cloths
+
+Each item has a `category` field (free-text or choice: Cleaning / Stationery / Kitchen) for display grouping.
+
+---
+
+#### Supplier info
+
+Each item can have zero or more `SupplierRecord` entries (a separate model, edited in the Django admin inline). Fields:
+
+- `supplier_name` — e.g. "Suma", "Bookers", "Nisbets", "Amazon"
+- `product_code` — optional, e.g. Suma SKU
+- `product_url` — optional link to the product page
+- `unit_description` — e.g. "6-pack", "25 tablets", "5L"
+- `approx_unit_price` — optional decimal
+- `ordering_notes` — free text for logistics that don't fit elsewhere (see examples below)
+- `account_holder` — optional FK to `Volunteer` (who holds the login for this supplier account)
+- `account_notes` — short free text for anything else about the account
+
+Example ordering notes for Suma: "Order arrives next working day. Can be scheduled for Friday delivery to coincide with cleaning club. Bulk orders only — check if anything else is needed before placing."
+
+Example for Nisbets: "Next-working-day delivery. Login held by [volunteer]. Can deliver to a volunteer's home address for non-bulky items if needed."
+
+The `account_holder` field is informational only — it surfaces who to ask for the login, without storing credentials anywhere.
+
+Supplier info is Panopticon-only to edit, and is shown read-only to volunteers on the item detail view.
+
+---
+
+#### Views
+
+**`/volunteers/labs/shopping/`** — the main list view. Two sections:
+
+1. **Needs attention** — items with an unresolved `NeedFlag`, sorted by `flagged_at` descending. Each row shows: item name, who flagged it, when, and whether there is a current pledge (and by whom, and the ETA). A volunteer can click "I'll get it" to create a pledge.
+2. **Recently resolved** — flags resolved in the last 30 days, collapsed by default. Shows item, who got it, when resolved.
+
+A button on each item row opens the item detail view.
+
+**`/volunteers/labs/shopping/<item_id>/`** — item detail. Shows:
+
+- Current need flag status (or "none flagged")
+- Supplier info (read-only)
+- History: previous flags and how they were resolved
+
+**`/volunteers/labs/shopping/flag/<item_id>/`** — POST endpoint. Creates a `NeedFlag` for the item. If there is already an open flag for that item, either silently no-ops or adds a +1 acknowledgement (see design questions). Redirects back to the list.
+
+**`/volunteers/labs/shopping/pledge/<flag_id>/`** — POST endpoint. Creates or updates a `ProcurementPledge`. Redirects back to the list.
+
+**`/volunteers/labs/shopping/resolve/<flag_id>/`** — POST endpoint. Marks a flag as resolved (and its pledge as fulfilled if one exists). Any volunteer can resolve; does not need to be the pledger.
+
+---
+
+#### Design questions to resolve before building
+
+1. **Duplicate flags:** if an item already has an open flag, should a second volunteer's "flag it" tap no-op silently, show a "someone already flagged this" message, or add a separate acknowledgement count? The simplest path is a `unique_together` constraint on `(item, resolved_at=None)` so only one open flag per item can exist at a time, and the UI shows "already flagged — do you want to pledge to get it?" instead.
+
+2. **Pledge ownership:** should only one pledge be active per flag (first-come-first-served), or can multiple volunteers each say they'll get it? Multiple is messier to resolve but more resilient if one person drops out. Proposed default: one active pledge, with the ability for the pledger to cancel it (returning it to "needs a pledger").
+
+3. **ETA field:** free text is flexible but hard to sort. A date picker with an optional "delivery window" note (like "Friday cleaning club") may be more useful for planning. Could be an optional date + optional notes.
+
+4. **Notifications:** no push notifications are planned for this feature. The assumption is volunteers check the list occasionally, or it's mentioned on the mailing list. Revisit if the list goes stale.
+
+5. **Bar stock:** excluded for now. If bar volunteers later want a "last item used" flag, the `NeedFlag` model is directly reusable — the only question is whether bar ordering should trigger auto-alerts or touch an external system.
+
+6. **Supplier account credentials:** explicitly out of scope. The `account_holder` field points to a person to ask; actual credentials are never stored in the toolkit.
+
+---
+
+#### Permissions
+
+| Action | Who |
+|---|---|
+| View the shopping list | Any logged-in volunteer (`diary.view_rotaentry` or just `is_authenticated` + volunteer record) |
+| Flag an item as needed | Any logged-in volunteer |
+| Pledge to get an item | Any logged-in volunteer |
+| Mark a flag as resolved | Any logged-in volunteer |
+| Edit items / supplier records | Panopticon only (Django admin) |
+| View supplier info (read-only) | Any logged-in volunteer |
+
+---
+
+#### Data model sketch
+
+```
+ConsumableItem
+  name           CharField(100)
+  category       CharField (choices: Cleaning / Stationery / Kitchen / Other)
+  notes          TextField (blank)
+  active         BooleanField (default True; soft-delete inactive items)
+
+SupplierRecord
+  item           FK → ConsumableItem
+  supplier_name  CharField(100)
+  product_code   CharField(100, blank)
+  product_url    URLField(blank)
+  unit_desc      CharField(200, blank)
+  approx_price   DecimalField(null)
+  ordering_notes TextField(blank)
+  account_holder FK → Volunteer (null, blank)
+  account_notes  TextField(blank)
+
+NeedFlag
+  item           FK → ConsumableItem
+  flagged_by     FK → Volunteer
+  flagged_at     DateTimeField(auto_now_add)
+  notes          CharField(300, blank)
+  resolved_at    DateTimeField(null, blank)
+  resolved_by    FK → Volunteer (null, blank, related_name='resolved_flags')
+
+ProcurementPledge
+  need_flag      OneToOneField → NeedFlag  (one active pledge per flag)
+  pledged_by     FK → Volunteer
+  pledged_at     DateTimeField(auto_now_add)
+  eta_date       DateField(null, blank)
+  eta_notes      CharField(200, blank)
+  fulfilled_at   DateTimeField(null, blank)
+```
+
+---
+
+#### Sizing
+
+| Component | Est. |
+|---|---|
+| Models + migrations | 2h |
+| Django admin (items, supplier records inline) | 2h |
+| List view + item detail view | 4h |
+| Flag / pledge / resolve POST endpoints | 3h |
+| Templates (list, detail, forms) | 4h |
+| Seed data (initial item catalogue) | 1h |
+| Tests (model constraints, view permissions, flag/pledge flow) | 5h |
+| **Total** | **~21h** (after design questions resolved) |
+
+**Blocked by:** design question 1 (duplicate flags), design question 2 (pledge ownership). Resolve those before writing any model code.
+
+---
+
+### 9.89 — Weekly volunteer digest email 🔵 S (10–16h)
+
+An opt-in weekly email sent to each volunteer with a personalised summary: their upcoming shifts, what's new on the programme, their starred events, and the current shopping list needs. Content mirrors the 9.35.1 dashboard but reformatted for email.
+
+---
+
+#### Why it's different from the existing mailer
+
+The existing mailer (`MailoutJob` / `mailerd.py`) is a broadcast system: one job, one body, sent to all member recipients. The volunteer digest is fundamentally different:
+
+- Recipients are **volunteers**, not members (though most volunteers are members)
+- Content is **personalised per recipient** -- each email shows that volunteer's own shifts and starred events
+- Delivery is **scheduled weekly by a management command**, not by the UI-driven `MailoutJob` workflow
+- Opt-in is per-volunteer, not per-member
+
+For these reasons the digest does not use `MailoutJob` or `mailerd.py`. It is a standalone management command that sends directly via Django's email backend.
+
+---
+
+#### Opt-in mechanism
+
+A `weekly_digest` BooleanField on `Volunteer` (default `False`). Exposed on the volunteer self-edit page (9.50, already implemented) and on the Panopticon volunteer edit page.
+
+No default opt-in. Volunteers choose to receive it.
+
+Email address: `volunteer.member.email`. If a volunteer has no `Member` record with an email, they are skipped silently.
+
+---
+
+#### Digest content
+
+The email content is computed per-recipient. Each section is included only if it has something to show; empty sections are omitted.
+
+**1. Your upcoming shifts (next 7 days)**
+
+Shifts within the next 7 days where `RotaEntry.volunteer == this_volunteer` and `showing.confirmed == True`. Ordered by `showing.start`. If empty, the section is omitted.
+
+**2. New on the programme**
+
+Events with showings added since `volunteer.last_digest_sent_at` (see below), with at least one future showing. Capped at 30 days lookback for first-time recipients (where `last_digest_sent_at` is null). If empty, omitted.
+
+This section is shown to all opted-in volunteers, not just Programmers -- all volunteers benefit from knowing what's new.
+
+**3. Your starred events (next 30 days)**
+
+Events where `VolunteerEventMark.volunteer == this_volunteer` and `mark == 'star'`, with at least one showing in the next 30 days. Ordered by next showing date. If empty, omitted.
+
+**4. Shopping list: items needed** (blocked on 9.88)
+
+All currently unresolved `NeedFlag` records. If nothing is flagged, omitted. Not personalised -- all volunteers see the same list.
+
+---
+
+#### Tracking: `last_digest_sent_at`
+
+A nullable `DateTimeField` on `Volunteer`. Set to `now()` after each successful send. Used to compute the "new on the programme" lookback window.
+
+First-time send: `last_digest_sent_at` is null → lookback window is `now() - 30 days`.
+
+If a volunteer's email bounces or the send raises an exception, `last_digest_sent_at` is not updated (so next week's digest will cover the missed period too).
+
+---
+
+#### Scheduling
+
+A management command: `manage.py send_volunteer_digest`. Intended to run weekly via a systemd timer or cron job on the production server. Not triggered by the UI.
+
+The project has no Celery. Do not introduce it for this feature.
+
+Example systemd timer (to document in `docs/ONBOARDING.md`):
+
+```ini
+# /etc/systemd/system/volunteer-digest.timer
+[Unit]
+Description=Weekly volunteer digest email
+
+[Timer]
+OnCalendar=Thu 09:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+The day and time (Thursday 09:00) are a reasonable default for a weekend-heavy programme. Could be made configurable via `SiteConfiguration` later, but hardcoding is fine for MVP.
+
+---
+
+#### Email format
+
+Plain text for the MVP. The existing mailer supports HTML, but the added complexity of HTML email templating is not worth it for the first version. A plain-text digest is readable in all clients and simpler to maintain.
+
+Structure:
+
+```
+Subject: Your Star and Shadow volunteer digest — week of [date]
+
+Hi [name],
+
+Here's your weekly summary.
+
+YOUR UPCOMING SHIFTS (next 7 days)
+-----------------------------------
+[Event name] — [date] — [role]
+[Event name] — [date] — [role]
+
+NEW ON THE PROGRAMME
+---------------------
+[Event name] — first showing [date]
+[Event name] — first showing [date]
+
+YOUR STARRED EVENTS
+--------------------
+[Event name] — next showing [date]
+
+SHOPPING LIST: ITEMS NEEDED
+-----------------------------
+[Item name] — flagged by [name] on [date]
+
+---
+You're receiving this because you opted in at [toolkit URL].
+To stop receiving these emails, visit: [unsubscribe link]
+```
+
+---
+
+#### Unsubscribe
+
+The email footer includes a one-click unsubscribe link: `/volunteers/digest/unsubscribe/?token=<token>`. The token is derived from the volunteer's pk + a HMAC using `SECRET_KEY` (same pattern as Django's password reset tokens, using `django.core.signing`). The view sets `volunteer.weekly_digest = False` and confirms with a short "You've been unsubscribed" page. No login required.
+
+Do not reuse the existing member unsubscribe mechanism -- that controls all mailouts to members; we only want to toggle the digest preference.
+
+---
+
+#### Data model addition
+
+```python
+# On Volunteer:
+weekly_digest = models.BooleanField(default=False)
+last_digest_sent_at = models.DateTimeField(null=True, blank=True)
+```
+
+One migration. No new model needed.
+
+---
+
+#### Design questions to resolve before building
+
+1. **Day of send:** Thursday 09:00 proposed. Check with coordinators whether Friday (closer to weekend shifts) is better, or Monday (planning the week ahead).
+
+2. **Digest vs real-time:** would some volunteers prefer immediate notifications (e.g. when a shift they're signed up to is changed)? Real-time is a larger feature; the digest is deliberately weekly and low-frequency. Decide scope clearly before starting.
+
+3. **What counts as "new on the programme":** is it `Showing.created_at >= last_digest` (new dates added to any event), or `Event.created_at >= last_digest` (new events only)? Proposed: `Showing.created_at`, which also catches new dates added to existing events -- more useful for volunteers planning their attendance.
+
+4. **Deduplication:** if a volunteer is also a member and the existing member mailout goes to all members, will they receive two emails from the toolkit in the same week? Yes, potentially. These are different in purpose (digest vs. programme/newsletter), but worth noting. No action required for MVP; could be addressed if volunteers complain.
+
+---
+
+#### Sizing
+
+| Component | Est. |
+|---|---|
+| `Volunteer.weekly_digest` + `last_digest_sent_at` fields + migration | 1h |
+| Opt-in toggle on volunteer self-edit + Panopticon edit pages | 1h |
+| Management command: query logic + per-recipient build | 3h |
+| Plain-text email template | 2h |
+| Unsubscribe view + token generation | 2h |
+| Tests (opt-in/out, content generation, unsubscribe, skips for missing email) | 4h |
+| Systemd timer docs update | 0.5h |
+| **Total** | **~13–14h** |
+
+**Dependencies:** 9.35.1 (dashboard) is a design dependency -- share the query logic. Shopping list section blocked on 9.88. Everything else is independent.
 
 **Prerequisite:** Verify simplelists accepts programmatic POSTs before coding. Test manually with `curl` first.

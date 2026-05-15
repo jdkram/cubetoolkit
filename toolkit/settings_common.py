@@ -122,7 +122,7 @@ DAWN_OF_TOOLKIT = datetime.date(year=2014, month=2, day=12)
 DEFAULT_TRAINING_EXPIRY_MONTHS = 12
 
 # Colour used for the calendar view if multiroom isn't enabled:
-CALENDAR_DEFAULT_COLOUR = "#33CC33"
+CALENDAR_DEFAULT_COLOUR = "#888888"
 # Parameters to tweak colour by:
 CALENDAR_HISTORIC_LIGHTER = 0.75
 CALENDAR_HISTORIC_SHADIER = 1.0

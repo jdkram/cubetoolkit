@@ -267,8 +267,6 @@ class MediaItemForm(forms.ModelForm):
 class ShowingForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if not settings.MULTIROOM_ENABLED:
-            del self.fields["room"]
         self.helper = FormHelper()
         self.helper.form_tag = False
         self.helper.form_class = "form-horizontal"
@@ -278,7 +276,6 @@ class ShowingForm(forms.ModelForm):
     class Meta:
         model = toolkit.diary.models.Showing
         fields = (
-            "room",
             "start",
             "booked_by",
             "confirmed",
@@ -411,9 +408,6 @@ class CloneEventForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if not settings.MULTIROOM_ENABLED:
-            del self.fields["room"]
-
         self.helper = FormHelper()
         self.helper.form_tag = False
         self.helper.form_class = "form-horizontal"
@@ -436,8 +430,9 @@ class CloneEventForm(forms.Form):
     )
     room = forms.ModelChoiceField(
         queryset=toolkit.diary.models.Room.objects.all(),
-        required=True,
+        required=False,
         label="Room",
+        empty_label="— no room —",
     )
     booked_by = forms.CharField(
         min_length=1,
@@ -511,19 +506,95 @@ EventTemplateLinkFormSet = inlineformset_factory(
 class RoomForm(forms.ModelForm):
     class Meta:
         model = toolkit.diary.models.Room
-        fields = ("name", "colour", "is_primary")
+        fields = ("name", "colour", "is_primary", "map_slug")
         widgets = {
             "name": forms.TextInput(attrs={"class": "form-control form-control-sm"}),
             "colour": forms.TextInput(attrs={"type": "color", "class": "form-control form-control-sm", "style": "max-width: 80px; padding: 2px 4px;"}),
+            "map_slug": forms.TextInput(attrs={"class": "form-control form-control-sm", "placeholder": "e.g. room-cinema"}),
         }
+
+
+class RoomBookingForm(forms.ModelForm):
+    """A single room booking slot for a Showing (room + time window + notes).
+
+    start_time / end_time are time-only fields; the showing's local date is
+    combined with them on save.  The model's start/end DateTimeFields are
+    excluded from the form and set programmatically.
+    """
+
+    start_time = forms.TimeField(
+        widget=forms.TimeInput(
+            attrs={"type": "time", "class": "form-control form-control-sm"},
+            format="%H:%M",
+        ),
+        label="Start",
+    )
+    end_time = forms.TimeField(
+        required=False,
+        widget=forms.TimeInput(
+            attrs={"type": "time", "class": "form-control form-control-sm"},
+            format="%H:%M",
+        ),
+        label="End",
+    )
+
+    class Meta:
+        model = toolkit.diary.models.RoomBooking
+        fields = ("room", "notes")
+        widgets = {
+            "notes": forms.TextInput(
+                attrs={
+                    "placeholder": "e.g. Tech setup only, not public",
+                    "class": "form-control form-control-sm",
+                }
+            ),
+        }
+        labels = {"notes": "Notes (optional)"}
+
+    def __init__(self, *args, showing_date=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.showing_date = showing_date
+        # Pre-populate time fields from existing instance
+        if self.instance and self.instance.pk and self.instance.start:
+            import django.utils.timezone as dj_tz
+            self.initial["start_time"] = dj_tz.localtime(self.instance.start).strftime("%H:%M")
+            if self.instance.end:
+                self.initial["end_time"] = dj_tz.localtime(self.instance.end).strftime("%H:%M")
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.showing_date and self.cleaned_data.get("start_time"):
+            import django.utils.timezone as dj_tz
+            tz = dj_tz.get_current_timezone()
+            instance.start = dj_tz.make_aware(
+                datetime.datetime.combine(self.showing_date, self.cleaned_data["start_time"]),
+                tz,
+            )
+            end_t = self.cleaned_data.get("end_time")
+            instance.end = (
+                dj_tz.make_aware(datetime.datetime.combine(self.showing_date, end_t), tz)
+                if end_t
+                else None
+            )
+        if commit:
+            instance.save()
+            self.save_m2m()
+        return instance
+
+
+RoomBookingInlineFormSet = inlineformset_factory(
+    toolkit.diary.models.Showing,
+    toolkit.diary.models.RoomBooking,
+    form=RoomBookingForm,
+    extra=0,
+    can_delete=True,
+    min_num=0,
+)
 
 
 class NewEventForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if not settings.MULTIROOM_ENABLED:
-            del self.fields["room"]
-
         self.helper = FormHelper()
         self.helper.form_tag = False
         self.helper.form_class = "form-horizontal"
@@ -531,7 +602,9 @@ class NewEventForm(forms.Form):
         self.helper.field_class = "col-sm-10"
 
     room = forms.ModelChoiceField(
-        queryset=toolkit.diary.models.Room.objects.all(), required=True
+        queryset=toolkit.diary.models.Room.objects.all(),
+        required=False,
+        empty_label="— no room —",
     )
     start = forms.DateTimeField(
         required=True,

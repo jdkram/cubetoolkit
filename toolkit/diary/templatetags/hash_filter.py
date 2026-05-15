@@ -18,8 +18,8 @@ def lookup(dictionary, key):
 
 @register.filter(name="showing_for_room")
 def showing_for_room(showings, room):
-    """Return the first showing in the list whose room matches, or None."""
+    """Return the first showing in the list that has a RoomBooking for room, or None."""
     for showing in showings:
-        if showing.room == room:
+        if any(rb.room_id == room.pk for rb in showing.room_bookings.all()):
             return showing
     return None

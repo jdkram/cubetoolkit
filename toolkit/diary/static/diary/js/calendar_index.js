@@ -161,11 +161,14 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
             }
         }
 
-        // Room filter (multi-select: event must be in one of visible rooms)
+        // Room filter: show event if at least one of its rooms is visible
         if (resources && resources.length > 0) {
-            var eventRoomId = event.getResources ? event.getResources()[0]?.id : event.extendedProps?.resourceId;
-            if (eventRoomId && filterState.visibleRooms.indexOf(parseInt(eventRoomId, 10)) === -1) {
-                return false;
+            var eventResources = event.getResources ? event.getResources().filter(Boolean) : [];
+            if (eventResources.length > 0) {
+                var anyVisible = eventResources.some(function(r) {
+                    return filterState.visibleRooms.indexOf(parseInt(r.id, 10)) !== -1;
+                });
+                if (!anyVisible) { return false; }
             }
         }
 
@@ -568,9 +571,9 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
                 } else if (s) {
                     lines.push(fmtTimePretty(s));
                 }
-                var roomResources = info.event.getResources ? info.event.getResources() : [];
+                var roomResources = info.event.getResources ? info.event.getResources().filter(Boolean) : [];
                 if (roomResources.length > 0) {
-                    lines.push(roomResources[0].title);
+                    lines.push(roomResources.map(function(r) { return r.title; }).join(', '));
                 }
                 if (statuses.length > 0) { lines.push(statuses.join(', ')); }
                 info.el.title = lines.join('\n');

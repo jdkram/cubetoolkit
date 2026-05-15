@@ -240,7 +240,7 @@ def view_showing(request, showing_id=None):
 
 
 def single_showing_ics(request, showing_id=None):
-    showings = Showing.objects.public().filter(id=showing_id).select_related("event", "room")
+    showings = Showing.objects.public().filter(id=showing_id).select_related("event").prefetch_related("room_bookings__room")
     if not showings:
         raise Http404("Showing not found")
     showing = showings[0]

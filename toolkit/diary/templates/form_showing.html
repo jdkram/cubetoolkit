@@ -1,5 +1,5 @@
 {% extends "form_base.html" %}
-{% load crispy_forms_tags %}
+{% load crispy_forms_tags static %}
 {% block title %}
 Details for: {{ showing.event.name }}
 {% endblock %}
@@ -14,6 +14,86 @@ $(document).ready(function() {
 </script>
 <script>
 "use strict";
+
+// Room booking helpers — global so the SVG fetch callback can reach them
+var RB = (function () {
+    var ROOMS = {{ rooms_json|safe }};
+    var roomsBySlug = {};
+    var roomsById = {};
+    ROOMS.forEach(function (r) {
+        roomsById[r.id] = r;
+        if (r.map_slug) roomsBySlug[r.map_slug] = r;
+    });
+
+    function svgEl() { return document.getElementById("room-booking-map"); }
+
+    function syncSvgHighlights() {
+        var svg = svgEl();
+        if (!svg) return;
+        svg.querySelectorAll("[id^='room-']").forEach(function (el) {
+            el.classList.remove("rb-selected");
+        });
+        document.querySelectorAll(".rb-formset-row:not([data-deleted='1']) select[id$='-room']").forEach(function (sel) {
+            var room = roomsById[parseInt(sel.value, 10)];
+            if (room && room.map_slug) {
+                var svgRoom = svg.querySelector("#" + room.map_slug);
+                if (svgRoom) svgRoom.classList.add("rb-selected");
+            }
+        });
+    }
+
+    function addBookingRow(roomId) {
+        var template = document.getElementById("rb-empty-form");
+        if (!template) return;
+        var totalForms = document.getElementById("id_room_bookings-TOTAL_FORMS");
+        var count = parseInt(totalForms.value, 10);
+        var html = template.innerHTML.replace(/__prefix__/g, String(count));
+        var tbody = document.createElement("tbody");
+        tbody.innerHTML = html;
+        var row = tbody.firstElementChild;
+        if (!row) return;
+        if (roomId) {
+            var sel = row.querySelector("select[id$='-room']");
+            if (sel) sel.value = roomId;
+        }
+        document.getElementById("rb-formset-rows").appendChild(row);
+        totalForms.value = count + 1;
+        syncSvgHighlights();
+    }
+
+    function bindSvgClicks(svg) {
+        svg.addEventListener("click", function (e) {
+            var target = e.target.closest("[id^='room-']");
+            if (!target) return;
+            var room = roomsBySlug[target.id];
+            if (!room) return;
+            var existing = null;
+            document.querySelectorAll(".rb-formset-row:not([data-deleted='1']) select[id$='-room']").forEach(function (sel) {
+                if (parseInt(sel.value, 10) === room.id) existing = sel.closest(".rb-formset-row");
+            });
+            if (existing) {
+                deleteRow(existing);
+            } else {
+                addBookingRow(room.id);
+            }
+        });
+    }
+
+    function deleteRow(row) {
+        var delCheckbox = row.querySelector("input[id$='-DELETE']");
+        if (delCheckbox) {
+            delCheckbox.checked = true;
+            row.setAttribute("data-deleted", "1");
+            row.style.display = "none";
+        } else {
+            row.remove();
+        }
+        syncSvgHighlights();
+    }
+
+    return { addBookingRow: addBookingRow, syncSvgHighlights: syncSvgHighlights, bindSvgClicks: bindSvgClicks, deleteRow: deleteRow };
+}());
+
 document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll("input.rota_count").forEach(function (el) {
         function highlight() {
@@ -23,6 +103,39 @@ document.addEventListener("DOMContentLoaded", function () {
         el.addEventListener("input", highlight);
         el.addEventListener("change", highlight);
     });
+
+    document.getElementById("rb-add-btn").addEventListener("click", function (e) {
+        e.preventDefault();
+        RB.addBookingRow(null);
+    });
+
+    document.addEventListener("click", function (e) {
+        if (e.target.matches(".rb-delete-row")) {
+            RB.deleteRow(e.target.closest(".rb-formset-row"));
+        }
+    });
+
+    // Load the SVG map in the background — ready when the panel is opened
+    fetch("{% static 'labs/floorplan.svg' %}")
+        .then(function (r) { return r.text(); })
+        .then(function (svgText) {
+            var wrap = document.getElementById("room-booking-map-container");
+            wrap.innerHTML = svgText;
+            var svg = wrap.querySelector("svg");
+            if (svg) {
+                svg.id = "room-booking-map";
+                svg.style.maxWidth = "100%";
+                svg.style.height = "auto";
+                RB.bindSvgClicks(svg);
+            }
+            RB.syncSvgHighlights();
+        })
+        .catch(function () {
+            var wrap = document.getElementById("room-booking-map-container");
+            if (wrap) wrap.textContent = "Map unavailable.";
+        });
+
+    RB.syncSvgHighlights();
 });
 </script>
 {% endblock %}
@@ -66,12 +179,30 @@ document.addEventListener("DOMContentLoaded", function () {
     @media screen and (min-width: 800px) {
         .rota_role {
           width: 35%;
+        }
+        #id_rota_notes {
+            width: 100%;
+            min-height: 6em;
+            font-family: monospace;
+        }
     }
-    #id_rota_notes {
-        width: 100%;
-        min-height: 6em;
-        font-family: monospace;
-    }
+    /* Room booking section */
+    .rb-section { margin: 1.5rem 0; }
+    .rb-map-wrap { margin-bottom: 1rem; }
+    #room-booking-map { max-width: 100%; height: auto; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; user-select: none; }
+    #room-booking-map [id^="room-"] { transition: fill 0.15s; }
+    #room-booking-map [id^="room-"].rb-selected { fill: #3a7bd5 !important; opacity: 0.75; }
+    #room-booking-map [id^="room-"]:hover { opacity: 0.6; }
+    #room-booking-map text { pointer-events: none; }
+    .rb-formset-table { width: 100%; border-collapse: collapse; font-size: 0.9em; margin-bottom: 0.5rem; }
+    .rb-formset-table th { font-weight: 600; border-bottom: 1px solid #dee2e6; padding: 0.25rem 0.5rem; }
+    .rb-formset-table td { padding: 0.25rem 0.5rem; vertical-align: middle; }
+    .rb-formset-row select, .rb-formset-row input[type=text] { width: 100%; }
+    .rb-delete-row { background: none; border: none; color: #dc3545; cursor: pointer; font-size: 1.1em; padding: 0 0.25rem; }
+    .rb-delete-row[hidden] { display: none; }
+    .rb-add-btn { font-size: 0.85em; }
+    .rb-clash-alert { margin-top: 1rem; }
+    .rb-map-toggle { font-size: 0.85em; }
 </style>
 {% endblock %}
 
@@ -84,6 +215,18 @@ document.addEventListener("DOMContentLoaded", function () {
 </ul>
 {% endif %}
 
+{% if clashes %}
+<div class="alert alert-warning rb-clash-alert" role="alert">
+  <strong>⚠ Room booking clash</strong>
+  <ul class="mb-0 mt-1">
+    {% for clash in clashes %}
+    <li>{{ clash.room.name }} overlaps with <strong>{{ clash.showing.event.name }}</strong> ({{ clash.start|date:"D j M, H:i" }}{% if clash.end %}–{{ clash.end|date:"H:i" }}{% endif %})</li>
+    {% endfor %}
+  </ul>
+  <p class="mb-0 mt-1 small">Saved anyway — resolve if this is unintentional.</p>
+</div>
+{% endif %}
+
 <h2>
   <span class="sub">Booking @</span> {{ showing.start|date:"d/m/Y H:i" }} <span class="sub">for</span>
   <a href="{% url "edit-event-details-view" event_id=showing.event.id %}">{{ showing.event.name }}</a>
@@ -92,6 +235,65 @@ document.addEventListener("DOMContentLoaded", function () {
 <form action="{% url "edit-showing" showing_id=showing.id %}" method="post">
   {% csrf_token %}
   {% crispy form %}
+
+  {# ---- Room bookings ---- #}
+  <div class="rb-section">
+    <h3>Room booking</h3>
+
+    {{ room_booking_formset.management_form }}
+
+    {# Formset table — always visible #}
+    <table class="rb-formset-table">
+      <thead>
+        <tr>
+          <th>Room</th>
+          <th>Start</th>
+          <th>End</th>
+          <th>Notes</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="rb-formset-rows">
+        {% for f in room_booking_formset.forms %}
+        <tr class="rb-formset-row" {% if f.DELETE.value %}data-deleted="1" style="display:none"{% endif %}>
+          <td>{{ f.id }}{{ f.room }}</td>
+          <td>{{ f.start_time }}</td>
+          <td>{{ f.end_time }}</td>
+          <td>{{ f.notes }}</td>
+          <td>
+            {# × button hides the row; DELETE checkbox is the actual Django formset signal #}
+            <button type="button" class="rb-delete-row" title="Remove this booking">×</button>
+            <span hidden>{% if f.DELETE %}{{ f.DELETE }}{% endif %}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <button type="button" id="rb-add-btn" class="btn btn-sm btn-outline-secondary rb-add-btn">+ Add room booking</button>
+
+    {# SVG building map — collapsible, loaded on expand #}
+    <div class="mt-2">
+      <a class="rb-map-toggle" href="#rb-map-panel" data-toggle="collapse">Show building map ↓</a>
+      <div class="collapse" id="rb-map-panel">
+        <div class="rb-map-wrap mt-2">
+          <div id="room-booking-map-container"><p class="text-muted small">Loading map&hellip;</p></div>
+        </div>
+      </div>
+    </div>
+
+    {# Empty form template for JS cloning — not rendered to user #}
+    <script type="text/template" id="rb-empty-form">
+    <tr class="rb-formset-row">
+      <td>{{ room_booking_formset.empty_form.id }}{{ room_booking_formset.empty_form.room }}</td>
+      <td>{{ room_booking_formset.empty_form.start_time }}</td>
+      <td>{{ room_booking_formset.empty_form.end_time }}</td>
+      <td>{{ room_booking_formset.empty_form.notes }}</td>
+      <td><button type="button" class="rb-delete-row" title="Remove this booking">×</button></td>
+    </tr>
+    </script>
+  </div>
+
   <p>
   <input class="btn btn-primary" type="submit" value="Update" />
   </p>

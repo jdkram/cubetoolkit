@@ -11,6 +11,8 @@ from toolkit.diary.models import (
     PrintedProgramme,
     EventTag,
     Role,
+    Room,
+    RoomBooking,
 )
 
 from .common import DiaryTestsMixin, NowPatchMixin
@@ -620,3 +622,121 @@ class RoleTests(TestCase):
 
         r2 = Role(name="Roller")
         self.assertRaises(django.db.IntegrityError, r2.save)
+
+
+class RoomBookingModelTests(TestCase):
+    def setUp(self):
+        self.room_a = Room.objects.create(name="Cinema", colour="#CC2200")
+        self.room_b = Room.objects.create(name="Café", colour="#FFD700")
+        self.event = Event.objects.create(name="Test Event", duration="02:00:00")
+        self.showing = Showing.objects.create(
+            event=self.event,
+            start=datetime(2026, 6, 1, 19, 0, tzinfo=zoneinfo.ZoneInfo("UTC")),
+            booked_by="Tester",
+            confirmed=True,
+        )
+
+    def _make_booking(self, room, start_offset_hours=0, end_offset_hours=None):
+        base = datetime(2026, 6, 1, 19, 0, tzinfo=zoneinfo.ZoneInfo("UTC"))
+        start = base + timedelta(hours=start_offset_hours)
+        end = base + timedelta(hours=end_offset_hours) if end_offset_hours is not None else None
+        return RoomBooking.objects.create(showing=self.showing, room=room, start=start, end=end)
+
+    def test_primary_room_returns_first_by_start(self):
+        self._make_booking(self.room_b, start_offset_hours=1)
+        self._make_booking(self.room_a, start_offset_hours=0)
+        self.assertEqual(self.showing.primary_room, self.room_a)
+
+    def test_primary_room_returns_none_when_no_bookings(self):
+        self.assertIsNone(self.showing.primary_room)
+
+    def test_rooms_display_single(self):
+        self._make_booking(self.room_a)
+        self.assertEqual(self.showing.rooms_display, "Cinema")
+
+    def test_rooms_display_multiple_ordered_by_start(self):
+        self._make_booking(self.room_b, start_offset_hours=1)
+        self._make_booking(self.room_a, start_offset_hours=0)
+        self.assertEqual(self.showing.rooms_display, "Cinema, Café")
+
+    def test_rooms_display_empty_when_no_bookings(self):
+        self.assertEqual(self.showing.rooms_display, "")
+
+    def test_str(self):
+        rb = self._make_booking(self.room_a)
+        self.assertIn("Cinema", str(rb))
+
+
+class ClashDetectionTests(TestCase):
+    def setUp(self):
+        self.room = Room.objects.create(name="Cinema", colour="#CC2200")
+        self.other_room = Room.objects.create(name="Café", colour="#FFD700")
+        self.event = Event.objects.create(name="Test Event", duration="02:00:00")
+        UTC = zoneinfo.ZoneInfo("UTC")
+
+        self.showing_a = Showing.objects.create(
+            event=self.event,
+            start=datetime(2026, 6, 1, 19, 0, tzinfo=UTC),
+            booked_by="A",
+            confirmed=True,
+        )
+        self.showing_b = Showing.objects.create(
+            event=self.event,
+            start=datetime(2026, 6, 1, 20, 0, tzinfo=UTC),
+            booked_by="B",
+            confirmed=True,
+        )
+        self.UTC = UTC
+
+    def _book(self, showing, room, start_hour, end_hour=None):
+        UTC = self.UTC
+        start = datetime(2026, 6, 1, start_hour, 0, tzinfo=UTC)
+        end = datetime(2026, 6, 1, end_hour, 0, tzinfo=UTC) if end_hour else None
+        return RoomBooking.objects.create(showing=showing, room=room, start=start, end=end)
+
+    def test_overlapping_bookings_detected(self):
+        from toolkit.diary.clash import find_clashes
+        rb_a = self._book(self.showing_a, self.room, 19, 21)
+        rb_b = self._book(self.showing_b, self.room, 20, 22)
+        clashes = find_clashes(rb_b)
+        self.assertIn(rb_a, clashes)
+
+    def test_non_overlapping_bookings_not_detected(self):
+        from toolkit.diary.clash import find_clashes
+        rb_a = self._book(self.showing_a, self.room, 19, 20)
+        rb_b = self._book(self.showing_b, self.room, 20, 22)
+        clashes = find_clashes(rb_b)
+        self.assertNotIn(rb_a, clashes)
+
+    def test_self_excluded_from_clashes(self):
+        from toolkit.diary.clash import find_clashes
+        rb = self._book(self.showing_a, self.room, 19, 21)
+        clashes = find_clashes(rb)
+        self.assertNotIn(rb, clashes)
+
+    def test_different_room_not_flagged(self):
+        from toolkit.diary.clash import find_clashes
+        rb_a = self._book(self.showing_a, self.other_room, 19, 21)
+        rb_b = self._book(self.showing_b, self.room, 19, 21)
+        clashes = find_clashes(rb_b)
+        self.assertNotIn(rb_a, clashes)
+
+    def test_unconfirmed_showing_not_flagged(self):
+        from toolkit.diary.clash import find_clashes
+        unconfirmed = Showing.objects.create(
+            event=self.event,
+            start=datetime(2026, 6, 1, 19, 0, tzinfo=self.UTC),
+            booked_by="U",
+            confirmed=False,
+        )
+        rb_a = self._book(unconfirmed, self.room, 19, 21)
+        rb_b = self._book(self.showing_b, self.room, 19, 21)
+        clashes = find_clashes(rb_b)
+        self.assertNotIn(rb_a, clashes)
+
+    def test_open_ended_existing_booking_treated_as_clash(self):
+        from toolkit.diary.clash import find_clashes
+        rb_a = self._book(self.showing_a, self.room, 19)  # no end — open-ended
+        rb_b = self._book(self.showing_b, self.room, 20, 22)
+        clashes = find_clashes(rb_b)
+        self.assertIn(rb_a, clashes)

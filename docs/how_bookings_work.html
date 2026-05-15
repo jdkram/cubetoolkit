@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How Bookings Work — S+S Toolkit</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #e8e4de;
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 36px 16px 52px;
+  }
+  svg { max-width: 900px; width: 100%; height: auto; display: block; }
+</style>
+</head>
+<body>
+<svg viewBox="0 0 860 596" xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-labelledby="diag-title diag-desc">
+  <title id="diag-title">How Bookings Work — S+S Toolkit</title>
+  <desc id="diag-desc">
+    Diagram showing: an Event has many Showings. Each Showing has Room Bookings
+    (each with their own start and end time, which can be before the showing starts)
+    and a Rota of volunteer roles per showing.
+  </desc>
+
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+    </style>
+    <filter id="sh" x="-8%" y="-8%" width="124%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="5" flood-color="#00000016"/>
+    </filter>
+    <marker id="arr" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <path d="M 0 0.5 L 8 3.5 L 0 6.5 Z" fill="#b0bec5"/>
+    </marker>
+  </defs>
+
+  <!-- ── Background ── -->
+  <rect width="860" height="596" fill="#e8e4de"/>
+
+  <!-- ════════════════════ TITLE ════════════════════ -->
+  <text x="430" y="33" text-anchor="middle" font-size="19" font-weight="700" fill="#1e293b">
+    How Bookings Work
+  </text>
+  <text x="430" y="52" text-anchor="middle" font-size="12" fill="#64748b">
+    Event → Showings → Room Bookings + Rota
+  </text>
+
+  <!-- ════════════════════ EVENT card ════════════════════ -->
+  <!-- x=222 y=64 w=416 h=84 -->
+  <rect x="222" y="64" width="416" height="84" rx="11" fill="#eff6ff" filter="url(#sh)"/>
+  <text x="243" y="83" font-size="9" font-weight="700" letter-spacing="2" fill="#93c5fd">EVENT</text>
+  <text x="430" y="107" text-anchor="middle" font-size="17" font-weight="700" fill="#1e3a5f">
+    Liquid Architecture #14
+  </text>
+  <text x="430" y="125" text-anchor="middle" font-size="12" fill="#3b82f6">
+    Experimental electronic music
+  </text>
+  <text x="430" y="140" text-anchor="middle" font-size="11" fill="#93c5fd">
+    tags: music · experimental · live
+  </text>
+
+  <!-- Event → Showing arrow -->
+  <line x1="430" y1="148" x2="430" y2="177" stroke="#b0bec5" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="440" y="165" font-size="10" fill="#94a3b8">one event, many showings</text>
+
+  <!-- ════════════════════ SHOWING card ════════════════════ -->
+  <!-- x=148 y=180 w=564 h=90 → bottom y=270 -->
+  <rect x="148" y="180" width="564" height="90" rx="11" fill="#f0fdf4" filter="url(#sh)"/>
+  <text x="169" y="199" font-size="9" font-weight="700" letter-spacing="2" fill="#6ee7b7">SHOWING</text>
+  <text x="430" y="222" text-anchor="middle" font-size="17" font-weight="700" fill="#064e3b">
+    Sat 14 Jun 2026 · 19:30
+  </text>
+  <!-- confirmed pill -->
+  <rect x="372" y="229" width="116" height="20" rx="10" fill="#10b981"/>
+  <text x="430" y="243" text-anchor="middle" font-size="11" font-weight="600" fill="white">● confirmed</text>
+  <!-- sub line -->
+  <text x="430" y="261" text-anchor="middle" font-size="11" fill="#065f46">
+    Running time: 3 hrs · public event
+  </text>
+
+  <!-- Showing → RoomBookings arrow -->
+  <!-- from: (310, 270) → to: (210, 347)  angle ≈ −42° -->
+  <line x1="308" y1="270" x2="211" y2="346" stroke="#b0bec5" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="232" y="309" text-anchor="middle" font-size="10" fill="#94a3b8"
+        transform="rotate(-41,232,309)">room bookings</text>
+
+  <!-- Showing → Rota arrow -->
+  <!-- from: (552, 270) → to: (650, 347)  angle ≈ +41° -->
+  <line x1="552" y1="270" x2="649" y2="346" stroke="#b0bec5" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="628" y="309" text-anchor="middle" font-size="10" fill="#94a3b8"
+        transform="rotate(41,628,309)">rota</text>
+
+  <!-- ════════════════════ ROOM BOOKINGS card ════════════════════ -->
+  <!-- x=20 y=350 w=378 h=198 → bottom y=548 -->
+  <rect x="20" y="350" width="378" height="198" rx="11" fill="#fffbeb" filter="url(#sh)"/>
+  <text x="40" y="369" font-size="9" font-weight="700" letter-spacing="2" fill="#fcd34d">
+    ROOM BOOKINGS
+  </text>
+
+  <!-- Café row -->
+  <circle cx="42" cy="385" r="5.5" fill="#FFD700"/>
+  <text x="55" y="390" font-size="13" font-weight="600" fill="#1e293b">Café</text>
+  <text x="128" y="390" font-size="13" fill="#475569">18:00 – 22:00</text>
+  <rect x="265" y="379" width="52" height="16" rx="8" fill="#fed7aa"/>
+  <text x="291" y="391" text-anchor="middle" font-size="10" fill="#c2410c">setup</text>
+
+  <!-- Cinema row -->
+  <circle cx="42" cy="407" r="5.5" fill="#CC2200"/>
+  <text x="55" y="412" font-size="13" font-weight="600" fill="#1e293b">Cinema</text>
+  <text x="128" y="412" font-size="13" fill="#475569">19:30 – 22:30</text>
+
+  <!-- Rule -->
+  <line x1="40" y1="423" x2="378" y2="423" stroke="#fde68a" stroke-width="1"/>
+
+  <!-- ── Timeline ──
+       x range: 44 to 374 = 330 px for 270 min (18:00–22:30)
+       scale: 330 / 270 = 1.222 px/min
+
+       Café:   0–240 min  → x 44 to 337  (width 293)
+       Cinema: 90–270 min → x 154 to 374  (width 220)
+       Showing start: 90 min → x 154
+  -->
+
+  <!-- Showing start dashed line -->
+  <line x1="154" y1="423" x2="154" y2="471" stroke="#10b981" stroke-width="1.5" stroke-dasharray="3,2.5"/>
+
+  <!-- Café bar -->
+  <rect x="44" y="432" width="293" height="13" rx="4" fill="#FFD700" opacity="0.85"/>
+  <text x="52" y="442" font-size="9" fill="#78350f">Café</text>
+
+  <!-- Cinema bar -->
+  <rect x="154" y="450" width="220" height="13" rx="4" fill="#CC2200" opacity="0.85"/>
+  <text x="162" y="460" font-size="9" fill="white">Cinema</text>
+
+  <!-- Time axis -->
+  <line x1="44" y1="469" x2="374" y2="469" stroke="#fde68a" stroke-width="1"/>
+
+  <!-- Time tick marks -->
+  <line x1="44" y1="466" x2="44" y2="471" stroke="#d97706" stroke-width="1"/>
+  <line x1="154" y1="466" x2="154" y2="471" stroke="#059669" stroke-width="1.5"/>
+  <line x1="374" y1="466" x2="374" y2="471" stroke="#d97706" stroke-width="1"/>
+
+  <!-- Time labels -->
+  <text x="44" y="480" text-anchor="middle" font-size="9" fill="#d97706">18:00</text>
+  <text x="154" y="480" text-anchor="middle" font-size="9" fill="#059669" font-weight="600">19:30</text>
+  <text x="374" y="480" text-anchor="middle" font-size="9" fill="#d97706">22:30</text>
+
+  <!-- Showing label -->
+  <text x="154" y="491" text-anchor="middle" font-size="9" fill="#059669" font-weight="600">
+    showing starts
+  </text>
+
+  <!-- Note -->
+  <text x="209" y="513" text-anchor="middle" font-size="11" font-style="italic" fill="#92400e">
+    Rooms can start before the showing for setup
+  </text>
+
+  <!-- ════════════════════ ROTA card ════════════════════ -->
+  <!-- x=462 y=350 w=378 h=198 → bottom y=548 -->
+  <rect x="462" y="350" width="378" height="198" rx="11" fill="#faf5ff" filter="url(#sh)"/>
+  <text x="482" y="369" font-size="9" font-weight="700" letter-spacing="2" fill="#c4b5fd">ROTA</text>
+
+  <!-- Column headers -->
+  <text x="482" y="387" font-size="10" font-weight="700" fill="#a78bfa">ROLE</text>
+  <text x="614" y="387" font-size="10" font-weight="700" fill="#a78bfa">VOLUNTEER</text>
+  <line x1="482" y1="392" x2="820" y2="392" stroke="#e9d5ff" stroke-width="1"/>
+
+  <!-- Role rows -->
+  <text x="482" y="410" font-size="13" font-weight="600" fill="#7c3aed">Keyholder</text>
+  <text x="614" y="410" font-size="13" fill="#1e293b">Alex T</text>
+
+  <text x="482" y="430" font-size="13" font-weight="600" fill="#7c3aed">Programmer</text>
+  <text x="614" y="430" font-size="13" fill="#1e293b">Sam K</text>
+
+  <text x="482" y="450" font-size="13" font-weight="600" fill="#7c3aed">Bar  ×2</text>
+  <text x="614" y="450" font-size="13" fill="#1e293b">Jo, Kim</text>
+
+  <text x="482" y="470" font-size="13" font-weight="600" fill="#7c3aed">Door</text>
+  <rect x="614" y="459" width="60" height="16" rx="8" fill="#fee2e2"/>
+  <text x="644" y="471" text-anchor="middle" font-size="10" fill="#dc2626">unfilled</text>
+
+  <text x="482" y="490" font-size="13" font-weight="600" fill="#7c3aed">Projectionist</text>
+  <rect x="614" y="479" width="60" height="16" rx="8" fill="#fee2e2"/>
+  <text x="644" y="491" text-anchor="middle" font-size="10" fill="#dc2626">unfilled</text>
+
+  <!-- Note -->
+  <text x="651" y="521" text-anchor="middle" font-size="11" font-style="italic" fill="#6d28d9">
+    Filled independently per showing
+  </text>
+
+  <!-- ════════════════════ FOOTER ════════════════════ -->
+  <text x="430" y="572" text-anchor="middle" font-size="10" fill="#a39d95">
+    Star &amp; Shadow · Cube Toolkit · docs/how_bookings_work.html
+  </text>
+
+</svg>
+</body>
+</html>

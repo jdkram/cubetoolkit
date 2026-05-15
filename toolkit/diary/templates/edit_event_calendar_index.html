@@ -556,7 +556,7 @@ var urls = {
         '{{ display_time|date:"Y-m-d" }}',
         urls,
         [{% for room in rooms_and_colours %}
-            { "id": {{ room.id }}, "title": "{{ room.name }}", "eventColor": "{{ room.colour }}"}{% if not forloop.last %},{% endif %}
+            { "id": {{ room.id }}, "title": "{{ room.name }}", "eventColor": "{{ room.colour }}", "eventTextColor": "{{ room.text_colour }}"}{% if not forloop.last %},{% endif %}
         {% endfor %}],
         initialFilters,
         { slotMinHour: {{ calendar_slot_min_hour }} }

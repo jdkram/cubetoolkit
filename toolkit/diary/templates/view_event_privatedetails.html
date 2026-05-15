@@ -336,7 +336,7 @@ function hideAddShowingForm() {
 <div class="card showing-card">
   <div class="card-body">
     <strong>{{ showing.start|date:"D j M Y, H:i" }}</strong>
-    {% if MULTIROOM_ENABLED %} in {{ showing.room }}{% endif %}
+    {% if MULTIROOM_ENABLED %}{% with rd=showing.rooms_display %}{% if rd %} in {{ rd }}{% endif %}{% endwith %}{% endif %}
     — booked by <em>{{ showing.booked_by }}</em>
 
     {% if showing.hide_in_programme %}
@@ -416,7 +416,7 @@ function hideAddShowingForm() {
     {% for showing in past_showings %}
       <tr>
         <td>{{ showing.start|date:"d/m/Y H:i" }}</td>
-        {% if MULTIROOM_ENABLED %}<td>{{ showing.room }}</td>{% endif %}
+        {% if MULTIROOM_ENABLED %}<td>{{ showing.rooms_display }}</td>{% endif %}
         <td>{{ showing.booked_by }}</td>
         <td>
           {% if showing.cancelled %}<span class="badge badge-danger">Cancelled</span>

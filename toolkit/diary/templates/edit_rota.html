@@ -1210,7 +1210,7 @@ edit_rota(
                         {% if can_mark_events %}<button class="rota-mark-toggle" data-event-id="{{ showing.event.pk }}" data-mark="" title="Click to bookmark this event" aria-label="Cycle event mark">☆</button>{% endif %}
                         {% if not showing.in_past and not showing.cancelled %}{% calendar_links showing date_trigger=True %}{% else %}<span class="showing-date">{{ showing.start|date:"H:i" }}{% if showing.event.duration %}–{{ showing.end_time|date:"H:i" }}{% endif %}</span>{% endif %}
                         <span class="showing-meta-tail">
-                        {% if MULTIROOM_ENABLED and showing.room %}<span class="showing-room-badge"><span class="room-colour-dot" style="background-color: {{ showing.room.colour }};"></span>{{ showing.room.name }}</span>{% endif %}
+                        {% if MULTIROOM_ENABLED %}{% with pr=showing.primary_room %}{% if pr %}<span class="showing-room-badge"><span class="room-colour-dot" style="background-color: {{ pr.colour }};"></span>{{ showing.rooms_display }}</span>{% endif %}{% endwith %}{% endif %}
                         {% if showing.event.outside_hire %}<span class="outside-hire-badge">Outside hire{% if showing.event.hire_name %}: {{ showing.event.hire_name }}{% endif %}</span>{% endif %}
                         <a class="showing-public-link"
                            href="{% noprefix_url 'single-showing-view' showing.pk %}"
