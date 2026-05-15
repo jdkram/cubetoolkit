@@ -46,7 +46,7 @@
             {% else %}
                 {{ showing.start|date:"D j F " }}//{{ showing.start|date:" H:i" }}
             {% endif %}
-            {% if MULTIROOM_ENABLED %}/ {{ showing.room }}{% endif %}
+            {% if MULTIROOM_ENABLED %}{% with rd=showing.rooms_display %}{% if rd %}/ {{ rd }}{% endif %}{% endwith %}{% endif %}
             {% if showing.cancelled %}</span> (cancelled){% endif %}
             {% if showing.sold_out %}</span> (SOLD OUT){% endif %}
             {% if showing.discounted %}<abbr class="discounted" title="* cheap night">*</abbr>{% endif %}

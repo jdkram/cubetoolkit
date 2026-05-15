@@ -19,7 +19,7 @@ class CalendarLinksTests(DiaryTestsMixin, TestCase):
     def _fresh_showing(self):
         # Fixture sets duration as a string; refetch so TimeField resolves
         from toolkit.diary.models import Showing
-        return Showing.objects.select_related("event", "room").get(pk=self.e2s2.pk)
+        return Showing.objects.select_related("event").prefetch_related("room_bookings__room").get(pk=self.e2s2.pk)
 
     def test_ics_view_returns_calendar_mime(self):
         url = reverse("single-showing-ics", kwargs={"showing_id": self.e2s2.pk})

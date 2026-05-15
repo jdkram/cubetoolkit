@@ -74,6 +74,13 @@ document.addEventListener("DOMContentLoaded", function () {
     </label>
   </div>
 
+  <div class="form-group">
+    <label for="{{ form.map_slug.id_for_label }}">Building map ID <small class="text-muted">(optional)</small></label>
+    {{ form.map_slug }}
+    {% if form.map_slug.errors %}<div class="text-danger small">{{ form.map_slug.errors }}</div>{% endif %}
+    <small class="form-text text-muted">SVG element ID from the building floorplan, e.g. <code>room-cinema</code>. Links this room to the interactive booking map.</small>
+  </div>
+
   <button type="submit" class="btn btn-primary btn-sm">Save</button>
   <a href="{% url 'edit_rooms' %}" class="btn btn-secondary btn-sm ml-1">Cancel</a>
 </form>

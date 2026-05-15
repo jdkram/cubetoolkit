@@ -21,6 +21,8 @@ from toolkit.diary.models import (
     EventTemplate,
     MediaItem,
     RotaEntry,
+    Room,
+    RoomBooking,
     get_site_config,
 )
 
@@ -304,9 +306,11 @@ class EditShowing(DiaryTestsMixin, TestCase):
                 "discounted": "on",
                 "role_1": "3",
                 "other_3": "1",
-                # data should be ignored if multiroom_enabled == False, but not
-                # cause an error
-                "room": "2",
+                # RoomBookingInlineFormSet management form (no bookings submitted)
+                "room_bookings-TOTAL_FORMS": "0",
+                "room_bookings-INITIAL_FORMS": "0",
+                "room_bookings-MIN_NUM_FORMS": "0",
+                "room_bookings-MAX_NUM_FORMS": "1000",
             },
         )
 
@@ -323,7 +327,8 @@ class EditShowing(DiaryTestsMixin, TestCase):
         self.assertEqual(showing.hide_in_programme, True)
         self.assertEqual(showing.cancelled, True)
         self.assertEqual(showing.discounted, True)
-        self.assertEqual(showing.room_id, 2 if multiroom_enabled else None)
+        # Room is now tracked via RoomBooking; no room bookings submitted so none should exist
+        self.assertFalse(showing.room_bookings.exists())
         # Check rota is as expected:
         rota = list(showing.rotaentry_set.all())
         self.assertEqual(len(rota), 4)
@@ -479,6 +484,10 @@ class EditShowing(DiaryTestsMixin, TestCase):
                 "confirmed": "on",
                 "role_1": "0",
                 "rota_notes": "Updated rota notes via form.",
+                "room_bookings-TOTAL_FORMS": "0",
+                "room_bookings-INITIAL_FORMS": "0",
+                "room_bookings-MIN_NUM_FORMS": "0",
+                "room_bookings-MAX_NUM_FORMS": "1000",
             },
         )
 
@@ -503,6 +512,10 @@ class EditShowing(DiaryTestsMixin, TestCase):
                 "booked_by": "T-format User",
                 "confirmed": "on",
                 "role_1": "0",
+                "room_bookings-TOTAL_FORMS": "0",
+                "room_bookings-INITIAL_FORMS": "0",
+                "room_bookings-MIN_NUM_FORMS": "0",
+                "room_bookings-MAX_NUM_FORMS": "1000",
             },
         )
 
@@ -691,7 +704,10 @@ class AddEventView(DiaryTestsMixin, TestCase):
                     role_1,
                 ],
             )
-            self.assertEqual(s.room_id, 2 if multiroom_enabled else None)
+            # Room is tracked via RoomBooking; room_id=2 submitted so a booking should exist
+            rb = s.room_bookings.first()
+            self.assertIsNotNone(rb)
+            self.assertEqual(rb.room_id, 2)
 
     @override_settings(MULTIROOM_ENABLED=False)
     @patch("django.utils.timezone.now")
@@ -2098,11 +2114,15 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
     def _common_test_valid_query(self, now_patch, multiroom_enabled):
         now_patch.return_value = self._fake_now
 
-        # Always set a room, even if multiroom disabled - the retrieved data
-        # shouldn't show this if multiroom is disabled:
+        # Create a RoomBooking for showing 2 so multi-room calendar data can be tested:
+        from toolkit.diary.models import RoomBooking
+
         showing = Showing.objects.get(id=2)
-        showing.room_id = self.room_2.id
-        showing.save(force=True)
+        RoomBooking.objects.get_or_create(
+            showing=showing,
+            room=self.room_2,
+            defaults={"start": showing.start},
+        )
 
         FUTURE_COLOUR = "#cc3333"
         # Historic events now use the same colour as future events — the
@@ -2649,3 +2669,128 @@ class EditDiaryListViewTests(DiaryTestsMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         # Template emits a <td class="time"> for empty days
         self.assertContains(response, "<td")
+
+
+class EditShowingRoomBookingTests(DiaryTestsMixin, TestCase):
+    """Integration tests for RoomBooking formset handling in edit_showing."""
+
+    UTC = zoneinfo.ZoneInfo("UTC")
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="admin", password="T3stPassword!")
+        # e4s3 is showing pk=7 (event e4, start 2013-06-09 18:00 UTC)
+        self.showing = Showing.objects.get(pk=7)
+        self.url = reverse("edit-showing", kwargs={"showing_id": 7})
+
+    def _base_post(self, extra=None):
+        data = {
+            "start": "09/06/2013 18:00",
+            "booked_by": "Tester",
+            "confirmed": "on",
+            "role_1": "0",
+            "room_bookings-TOTAL_FORMS": "0",
+            "room_bookings-INITIAL_FORMS": "0",
+            "room_bookings-MIN_NUM_FORMS": "0",
+            "room_bookings-MAX_NUM_FORMS": "1000",
+        }
+        if extra:
+            data.update(extra)
+        return data
+
+    @patch("django.utils.timezone.now")
+    def test_post_creates_room_booking(self, now_patch):
+        now_patch.return_value = datetime(2013, 1, 1, tzinfo=self.UTC)
+        response = self.client.post(
+            self.url,
+            data={
+                "start": "09/06/2013 18:00",
+                "booked_by": "Tester",
+                "confirmed": "on",
+                "role_1": "0",
+                "room_bookings-TOTAL_FORMS": "1",
+                "room_bookings-INITIAL_FORMS": "0",
+                "room_bookings-MIN_NUM_FORMS": "0",
+                "room_bookings-MAX_NUM_FORMS": "1000",
+                "room_bookings-0-room": str(self.room_2.pk),
+                "room_bookings-0-start_time": "19:00",
+                "room_bookings-0-end_time": "",
+                "room_bookings-0-notes": "",
+                "room_bookings-0-DELETE": "",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        rb = self.showing.room_bookings.first()
+        self.assertIsNotNone(rb)
+        self.assertEqual(rb.room_id, self.room_2.pk)
+
+    @patch("django.utils.timezone.now")
+    def test_post_no_bookings_clears_existing(self, now_patch):
+        now_patch.return_value = datetime(2013, 1, 1, tzinfo=self.UTC)
+        RoomBooking.objects.create(
+            showing=self.showing,
+            room=self.room_2,
+            start=self.showing.start,
+        )
+        self.assertEqual(self.showing.room_bookings.count(), 1)
+        response = self.client.post(self.url, data=self._base_post({
+            "room_bookings-INITIAL_FORMS": "1",
+            "room_bookings-TOTAL_FORMS": "1",
+            "room_bookings-0-id": str(self.showing.room_bookings.first().pk),
+            "room_bookings-0-room": str(self.room_2.pk),
+            "room_bookings-0-start": "09/06/2013 19:00",
+            "room_bookings-0-end": "",
+            "room_bookings-0-notes": "",
+            "room_bookings-0-DELETE": "on",
+        }))
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(self.showing.room_bookings.exists())
+
+    @patch("django.utils.timezone.now")
+    def test_get_includes_room_booking_formset(self, now_patch):
+        now_patch.return_value = datetime(2013, 1, 1, tzinfo=self.UTC)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("room_booking_formset", response.context)
+        self.assertIn("rooms_json", response.context)
+
+    @patch("django.utils.timezone.now")
+    def test_overlapping_booking_shows_clash_warning(self, now_patch):
+        now_patch.return_value = datetime(2013, 1, 1, tzinfo=self.UTC)
+        # Create a confirmed showing in the same room for an overlapping time
+        other_event = Event.objects.create(name="Other Event", duration="02:00:00")
+        other_showing = Showing.objects.create(
+            event=other_event,
+            start=datetime(2013, 6, 9, 18, 0, tzinfo=self.UTC),
+            booked_by="Other",
+            confirmed=True,
+        )
+        RoomBooking.objects.create(
+            showing=other_showing,
+            room=self.room_2,
+            start=datetime(2013, 6, 9, 18, 0, tzinfo=self.UTC),
+            end=datetime(2013, 6, 9, 21, 0, tzinfo=self.UTC),
+        )
+        # Now submit the edit_showing form adding room_2 at an overlapping time
+        response = self.client.post(
+            self.url,
+            data={
+                "start": "09/06/2013 18:00",
+                "booked_by": "Tester",
+                "confirmed": "on",
+                "role_1": "0",
+                "room_bookings-TOTAL_FORMS": "1",
+                "room_bookings-INITIAL_FORMS": "0",
+                "room_bookings-MIN_NUM_FORMS": "0",
+                "room_bookings-MAX_NUM_FORMS": "1000",
+                "room_bookings-0-room": str(self.room_2.pk),
+                "room_bookings-0-start_time": "19:00",
+                "room_bookings-0-end_time": "21:00",
+                "room_bookings-0-notes": "",
+                "room_bookings-0-DELETE": "",
+            },
+        )
+        # Non-blocking: page re-renders with 200 and a clashes context
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("clashes", response.context)
+        self.assertTrue(len(response.context["clashes"]) > 0)

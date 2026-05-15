@@ -493,12 +493,42 @@ class Room(models.Model):
         default=False,
         help_text="Primary spaces are shown with full colour in the calendar; others are desaturated.",
     )
+    map_slug = models.SlugField(
+        max_length=64,
+        blank=True,
+        default="",
+        help_text="SVG element ID in the building floorplan (e.g. 'room-cinema'). Leave blank if not on the map.",
+    )
 
     class Meta:
         db_table = "Rooms"
 
     def __str__(self):
         return self.name
+
+
+class RoomBooking(models.Model):
+    """A time-slot reservation of a Room for a Showing.
+
+    A Showing can have multiple RoomBookings (e.g. setup in Venue Space from
+    16:00, screening in Cinema from 19:30). start/end are independent of
+    Showing.start so that pre/post-event room use can be recorded.
+    """
+
+    showing = models.ForeignKey(
+        "Showing", on_delete=models.CASCADE, related_name="room_bookings"
+    )
+    room = models.ForeignKey(Room, on_delete=models.PROTECT, related_name="bookings")
+    start = models.DateTimeField()
+    end = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        db_table = "RoomBookings"
+        ordering = ["start"]
+
+    def __str__(self):
+        return f"{self.room.name} @ {self.showing}"
 
 
 class ShowingQuerySet(QuerySet):
@@ -543,9 +573,6 @@ class Showing(models.Model):
 
     event = models.ForeignKey(
         "Event", related_name="showings", on_delete=models.CASCADE
-    )
-    room = models.ForeignKey(
-        "Room", related_name="showings", null=True, on_delete=models.SET_NULL
     )
 
     start = FutureDateTimeField(db_index=True)
@@ -619,7 +646,6 @@ class Showing(models.Model):
                 "hide_in_programme",
                 "cancelled",
                 "discounted",
-                "room",
             )
             for attribute in attributes_to_copy:
                 setattr(self, attribute, getattr(copy_from, attribute))
@@ -692,6 +718,17 @@ class Showing(models.Model):
         return self.start + datetime.timedelta(
             hours=duration.hour, minutes=duration.minute
         )
+
+    @property
+    def rooms_display(self):
+        """Comma-separated room names, ordered by booking start time."""
+        return ", ".join(rb.room.name for rb in self.room_bookings.all()) or ""
+
+    @property
+    def primary_room(self):
+        """First booked room by start time, or None."""
+        rb = self.room_bookings.all().first()
+        return rb.room if rb else None
 
     def in_past(self):
         return self.start and (self.start < django.utils.timezone.now())

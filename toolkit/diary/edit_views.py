@@ -40,6 +40,7 @@ from toolkit.diary.models import (
     RotaEntry,
     PrintedProgramme,
     Room,
+    RoomBooking,
     VolunteerEventMark,
     get_site_config,
 )
@@ -57,6 +58,16 @@ logger.setLevel(logging.DEBUG)
 
 def _return_to_editindex(request):
     return HttpResponseRedirect(reverse("default-edit"))
+
+
+def _create_room_booking(showing, room, event):
+    """Create a single RoomBooking for showing in room, deriving end from event.duration."""
+    end = None
+    if event.duration is not None:
+        end = showing.start + datetime.timedelta(
+            hours=event.duration.hour, minutes=event.duration.minute
+        )
+    RoomBooking.objects.create(showing=showing, room=room, start=showing.start, end=end)
 
 
 @permission_required("toolkit.write")
@@ -124,6 +135,7 @@ def edit_diary_list(request, year=None, day=None, month=None):
         Showing.objects.start_in_range(startdatetime, enddatetime)
         .order_by("start")
         .select_related()
+        .prefetch_related("room_bookings__room")
     )
     # Build two dicts, to hold the showings and the ideas. These dicts are
     # initially empty, and get filled in if there are actually showings or
@@ -237,7 +249,7 @@ def edit_diary_data(request):
         Showing.objects.start_in_range(start, end)
         .order_by("start")
         .select_related()
-        .prefetch_related("event__tags")
+        .prefetch_related("event__tags", "room_bookings__room")
     )
 
     local_now = timezone.localtime(timezone.now())
@@ -251,9 +263,11 @@ def edit_diary_data(request):
         )
         styles = []
 
-        # Initially set colour to "confirmed" colour for the room:
-        if settings.MULTIROOM_ENABLED and showing.room:
-            colour = showing.room.colour
+        primary_room = showing.primary_room
+        if settings.MULTIROOM_ENABLED:
+            colour = None
+        elif primary_room:
+            colour = primary_room.colour
         else:
             colour = settings.CALENDAR_DEFAULT_COLOUR
 
@@ -273,7 +287,7 @@ def edit_diary_data(request):
             styles.append("s_confirmed")
         else:
             styles.append("s_unconfirmed")
-        if settings.MULTIROOM_ENABLED and showing.room and not showing.room.is_primary:
+        if settings.MULTIROOM_ENABLED and primary_room and not primary_room.is_primary:
             styles.append("s_auxiliary_room")
 
         # Extract hour for time-of-day filtering (0-23)
@@ -283,24 +297,52 @@ def edit_diary_data(request):
         # Build tag list for filtering
         tag_slugs = [tag.slug for tag in showing.event.tags.all()]
 
-        showing_data = {
-            "id": showing.pk,
+        base = {
             "title": showing.event.name,
-            "start": local_start.isoformat(),
-            "end": timezone.localtime(showing.end_time).isoformat(),
             "url": url,
             "className": styles,
-            "color": colour,
-            "hour": hour,
             "tags": tag_slugs,
         }
-        if _is_light_colour(colour):
-            showing_data["textColor"] = "#111111"
 
         if settings.MULTIROOM_ENABLED:
-            showing_data["resourceId"] = showing.room_id
-
-        results.append(showing_data)
+            room_bookings = list(showing.room_bookings.all())
+            if room_bookings:
+                # One calendar event per room booking, each at its own time.
+                # Omit top-level color so each resource's eventColor applies.
+                showing_end = timezone.localtime(showing.end_time).isoformat()
+                for rb in room_bookings:
+                    rb_start = timezone.localtime(rb.start)
+                    rb_end = timezone.localtime(rb.end).isoformat() if rb.end else showing_end
+                    results.append({
+                        **base,
+                        "id": f"rb-{rb.pk}",
+                        "start": rb_start.isoformat(),
+                        "end": rb_end,
+                        "hour": rb_start.hour,
+                        "resourceIds": [rb.room_id],
+                    })
+            else:
+                # No room bookings: single event at showing time, grey, no resource lane.
+                results.append({
+                    **base,
+                    "id": showing.pk,
+                    "start": local_start.isoformat(),
+                    "end": timezone.localtime(showing.end_time).isoformat(),
+                    "hour": hour,
+                    "color": settings.CALENDAR_DEFAULT_COLOUR,
+                })
+        else:
+            showing_data = {
+                **base,
+                "id": showing.pk,
+                "start": local_start.isoformat(),
+                "end": timezone.localtime(showing.end_time).isoformat(),
+                "hour": hour,
+                "color": colour,
+            }
+            if _is_light_colour(colour):
+                showing_data["textColor"] = "#111111"
+            results.append(showing_data)
 
     return HttpResponse(
         json.dumps(results), content_type="application/json; charset=utf-8"
@@ -328,7 +370,20 @@ def edit_diary_calendar(request, year=None, month=None, day=None):
         "display_time": display_time,
         "defaultView": defaultView,
         "settings": settings,
-        "rooms_and_colours": (Room.objects.all() if settings.MULTIROOM_ENABLED else []),
+        "rooms_and_colours": (
+            [
+                {
+                    "id": r.id,
+                    "name": r.name,
+                    "colour": r.colour,
+                    "text_colour": "#111111" if _is_light_colour(r.colour) else "#ffffff",
+                    "is_primary": r.is_primary,
+                }
+                for r in Room.objects.all()
+            ]
+            if settings.MULTIROOM_ENABLED
+            else []
+        ),
         "all_tags": EventTag.objects.all(),
         "calendar_slot_min_hour": get_site_config().calendar_slot_min_hour,
     }
@@ -490,9 +545,10 @@ def clone_event(request, event_id):
                 booked_by=form.cleaned_data["booked_by"],
                 confirmed=False,
             )
-            if settings.MULTIROOM_ENABLED:
-                new_showing.room = form.cleaned_data["room"]
             new_showing.save()
+            room = form.cleaned_data.get("room")
+            if room:
+                _create_room_booking(new_showing, room, new_event)
             new_showing.clone_or_reset_rota(latest_showing)
 
             messages.success(
@@ -513,8 +569,7 @@ def clone_event(request, event_id):
         suggested_booked_by = ""
         if latest_showing:
             suggested_start = latest_showing.start + datetime.timedelta(weeks=1)
-            if settings.MULTIROOM_ENABLED:
-                suggested_room = latest_showing.room_id
+            suggested_room = latest_showing.primary_room
             suggested_booked_by = latest_showing.booked_by
 
         form = diary_forms.CloneEventForm(
@@ -677,9 +732,10 @@ def add_event(request):
                     # confirmed=form.cleaned_data['confirmed'],
                     booked_by=form.cleaned_data["booked_by"],
                 )
-                if settings.MULTIROOM_ENABLED:
-                    new_showing.room = form.cleaned_data["room"]
                 new_showing.save()
+                room = form.cleaned_data.get("room")
+                if room:
+                    _create_room_booking(new_showing, room, new_event)
                 # Set showing roles to those from its template:
                 new_showing.reset_rota_to_default()
 
@@ -772,9 +828,13 @@ def add_event(request):
 @permission_required("toolkit.write")
 @require_http_methods(["GET", "POST"])
 def edit_showing(request, showing_id=None):
+    from toolkit.diary.clash import find_clashes
+
     showing = get_object_or_404(Showing, pk=showing_id)
 
     RotaForm = diary_forms.rota_form_factory(showing)
+    showing_date = timezone.localtime(showing.start).date()
+    rb_form_kwargs = {"showing_date": showing_date}
 
     if request.method == "POST":
         form = diary_forms.ShowingForm(request.POST, instance=showing)
@@ -782,15 +842,45 @@ def edit_showing(request, showing_id=None):
         rota_notes_form = diary_forms.ShowingRotaNotesForm(
             request.POST, instance=showing
         )
+        room_booking_formset = diary_forms.RoomBookingInlineFormSet(
+            request.POST, instance=showing, form_kwargs=rb_form_kwargs
+        )
 
-        if form.is_valid() and rota_form.is_valid() and rota_notes_form.is_valid():
-            # The rota form is separate; first save the updated showing
+        if (
+            form.is_valid()
+            and rota_form.is_valid()
+            and rota_notes_form.is_valid()
+            and room_booking_formset.is_valid()
+        ):
             modified_showing = form.save()
-            # Then update the rota with the returned data:
             rota = rota_form.get_rota()
             modified_showing.update_rota(rota)
-            # Save rota notes (a second save on the same instance is fine)
             rota_notes_form.save()
+            room_booking_formset.save()
+
+            # Clash detection: check all active bookings for this showing
+            clashes = []
+            for rb in modified_showing.room_bookings.select_related("room").all():
+                clashes.extend(find_clashes(rb))
+
+            if clashes:
+                # Re-render with clash warnings — don't redirect yet
+                room_booking_formset = diary_forms.RoomBookingInlineFormSet(
+                    instance=modified_showing, form_kwargs=rb_form_kwargs
+                )
+                context = {
+                    "showing": modified_showing,
+                    "form": diary_forms.ShowingForm(instance=modified_showing),
+                    "rota_form": RotaForm(),
+                    "rota_notes_form": diary_forms.ShowingRotaNotesForm(
+                        instance=modified_showing
+                    ),
+                    "room_booking_formset": room_booking_formset,
+                    "clashes": clashes,
+                    "max_role_assignment_count": get_site_config().max_count_per_role,
+                    "rooms_json": _rooms_json(),
+                }
+                return render(request, "form_showing.html", context)
 
             messages.add_message(
                 request,
@@ -810,16 +900,29 @@ def edit_showing(request, showing_id=None):
         form = diary_forms.ShowingForm(instance=showing)
         rota_form = RotaForm()
         rota_notes_form = diary_forms.ShowingRotaNotesForm(instance=showing)
+        room_booking_formset = diary_forms.RoomBookingInlineFormSet(
+            instance=showing, form_kwargs=rb_form_kwargs
+        )
 
     context = {
         "showing": showing,
         "form": form,
         "rota_form": rota_form,
         "rota_notes_form": rota_notes_form,
+        "room_booking_formset": room_booking_formset,
         "max_role_assignment_count": get_site_config().max_count_per_role,
+        "rooms_json": _rooms_json(),
     }
 
     return render(request, "form_showing.html", context)
+
+
+def _rooms_json():
+    """Return a JSON-serialisable list of room dicts for the booking map JS."""
+    import json
+
+    rooms = Room.objects.all().values("id", "name", "colour", "map_slug")
+    return json.dumps(list(rooms))
 
 
 class EditEventView(PermissionRequiredMixin, View):
@@ -1745,7 +1848,7 @@ def edit_room_detail(request, room_id):
 
     if request.method == "POST":
         if "delete" in request.POST:
-            if room.showing_set.exists():
+            if room.bookings.exists():
                 messages.error(
                     request,
                     f"Cannot delete '{room.name}' — it is still used by one or more showings.",
