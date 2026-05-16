@@ -2,10 +2,9 @@ from django.urls import re_path, include
 import django.conf
 import django.views.generic as generic
 import django.views.static
-from django.contrib.auth.decorators import login_required
 from django.conf import settings
 
-from toolkit.index.views import ToolkitIndexView, health
+from toolkit.index.urls import root_urlpatterns as index_root_urlpatterns
 
 from wagtail.admin import urls as wagtailadmin_urls
 from wagtail.documents import urls as wagtaildocs_urls
@@ -19,7 +18,7 @@ import toolkit.mailer.urls
 import toolkit.labs.urls
 
 urlpatterns = [
-    re_path(r"^health/$", health, name="health"),
+    re_path(r"^", include(index_root_urlpatterns)),
     re_path(r"^programme/", include(toolkit.diary.urls.programme_urls)),
     re_path(r"^diary/", include(toolkit.diary.urls.diary_urls)),
     re_path(r"^members/", include(toolkit.members.urls.member_urls)),
@@ -39,13 +38,6 @@ urlpatterns = [
         generic.TemplateView.as_view(
             template_name="robots.txt", content_type="text/plain"
         ),
-    ),
-    # Main index page: requires logging in, even though some other parts
-    # (eg diary index) don't.
-    re_path(
-        r"^toolkit/$",
-        login_required(ToolkitIndexView.as_view()),
-        name="toolkit-index",
     ),
     # Static content, only used when running in the development server
     # (django.views.static.serve only works when DEBUG=True)

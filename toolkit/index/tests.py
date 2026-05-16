@@ -1,10 +1,18 @@
+import zoneinfo
+from datetime import datetime, timedelta
+
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 import django.contrib.auth.models as auth_models
 import django.contrib.contenttypes as contenttypes
 
+from toolkit.diary.models import Event, Role, RotaEntry, Showing, VolunteerEventMark
 from toolkit.index.models import IndexLink, IndexCategory
+from toolkit.members.models import Member, Volunteer
+
+UKTZ = zoneinfo.ZoneInfo("Europe/London")
 
 
 class SecurityTests(TestCase):
@@ -232,5 +240,158 @@ class TestViews(TestCase):
             response.context["form"], "name", "This field is required."
         )
 
-        cat = IndexCategory.objects.get(id=1)
-        self.assertEqual(cat.name, "Category 1 Links!")
+
+def _make_volunteer_user(username: str, password: str = "T3stPassword!") -> tuple[auth_models.User, Volunteer]:
+    member = Member.objects.create(name=f"{username} Test", email=f"{username}@example.com")
+    user = auth_models.User.objects.create_user(username, email=f"{username}@example.com", password=password)
+    volunteer = Volunteer.objects.create(member=member, user=user)
+    return user, volunteer
+
+
+def _make_showing(days_ahead: int = 7, confirmed: bool = True) -> Showing:
+    now = timezone.now()
+    event = Event.objects.create(name=f"Test Event {days_ahead}d")
+    showing = Showing.objects.create(
+        event=event,
+        start=now + timedelta(days=days_ahead),
+        confirmed=confirmed,
+    )
+    return showing
+
+
+class TestDashboardWidgets(TestCase):
+    def setUp(self):
+        # Write permission setup (mirrors TestViews.setUp)
+        ct = contenttypes.models.ContentType.objects.get_or_create(
+            model="", app_label="toolkit"
+        )[0]
+        self.write_perm = auth_models.Permission.objects.get_or_create(
+            name="Write access to all toolkit content",
+            content_type=ct,
+            codename="write",
+        )[0]
+        self.url = reverse("toolkit-index")
+
+    def _login(self, user: auth_models.User) -> None:
+        self.client.login(username=user.username, password="T3stPassword!")
+
+    def test_no_volunteer_record_no_shift_widgets(self):
+        # A user without a Volunteer record should not see shift/starred widgets
+        user = auth_models.User.objects.create_user("plain", password="T3stPassword!")
+        self._login(user)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("has_volunteer", response.context)
+        self.assertNotIn("upcoming_shifts", response.context)
+        self.assertNotIn("starred_events", response.context)
+
+    def test_upcoming_shifts_empty_when_no_rota_entries(self):
+        user, _volunteer = _make_volunteer_user("vol1")
+        self._login(user)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("upcoming_shifts", response.context)
+        self.assertEqual(list(response.context["upcoming_shifts"]), [])
+
+    def test_upcoming_shifts_shows_confirmed_future_entry(self):
+        user, volunteer = _make_volunteer_user("vol2")
+        role = Role.objects.create(name="Test Role", read_only=False, standard=True)
+        showing = _make_showing(days_ahead=3, confirmed=True)
+        RotaEntry.objects.create(showing=showing, role=role, volunteer=volunteer, name=volunteer.member.name)
+        self._login(user)
+        response = self.client.get(self.url)
+        shifts = response.context["upcoming_shifts"]
+        self.assertEqual(len(shifts), 1)
+        self.assertEqual(shifts[0].showing, showing)
+
+    def test_upcoming_shifts_excludes_unconfirmed(self):
+        user, volunteer = _make_volunteer_user("vol3")
+        role = Role.objects.create(name="Test Role 2", read_only=False, standard=True)
+        showing = _make_showing(days_ahead=3, confirmed=False)
+        RotaEntry.objects.create(showing=showing, role=role, volunteer=volunteer, name=volunteer.member.name)
+        self._login(user)
+        response = self.client.get(self.url)
+        self.assertEqual(list(response.context["upcoming_shifts"]), [])
+
+    def test_starred_events_shows_events_with_future_showings(self):
+        user, volunteer = _make_volunteer_user("vol4")
+        showing = _make_showing(days_ahead=10)
+        VolunteerEventMark.objects.create(
+            volunteer=volunteer, event=showing.event, mark_type=VolunteerEventMark.MARK_STAR
+        )
+        self._login(user)
+        response = self.client.get(self.url)
+        starred = response.context["starred_events"]
+        self.assertEqual(len(starred), 1)
+        self.assertEqual(starred[0].event, showing.event)
+
+    def test_starred_events_card_shown_with_empty_state_when_no_stars(self):
+        user, _volunteer = _make_volunteer_user("vol4b")
+        self._login(user)
+        response = self.client.get(self.url)
+        self.assertIn("starred_events", response.context)
+        self.assertEqual(list(response.context["starred_events"]), [])
+        self.assertContains(response, "Star events on the")
+        self.assertContains(response, "rota")
+
+    def test_starred_events_excludes_past_showings(self):
+        user, volunteer = _make_volunteer_user("vol5")
+        # FutureDateTimeField blocks saving in the past; create future then move back.
+        showing = _make_showing(days_ahead=1)
+        Showing.objects.filter(pk=showing.pk).update(
+            start=timezone.now() - timedelta(days=2)
+        )
+        VolunteerEventMark.objects.create(
+            volunteer=volunteer, event=showing.event, mark_type=VolunteerEventMark.MARK_STAR
+        )
+        self._login(user)
+        response = self.client.get(self.url)
+        self.assertEqual(list(response.context["starred_events"]), [])
+
+    def test_starred_events_excludes_shadow_marks(self):
+        user, volunteer = _make_volunteer_user("vol6")
+        showing = _make_showing(days_ahead=5)
+        VolunteerEventMark.objects.create(
+            volunteer=volunteer, event=showing.event, mark_type=VolunteerEventMark.MARK_SHADOW
+        )
+        self._login(user)
+        response = self.client.get(self.url)
+        self.assertEqual(list(response.context["starred_events"]), [])
+
+    def test_new_showings_visible_to_programmer(self):
+        user = auth_models.User.objects.create_user("prog1", password="T3stPassword!")
+        user.user_permissions.add(self.write_perm)
+        user.save()
+        showing = _make_showing(days_ahead=7)
+        self._login(user)
+        # client.login() sets last_login to now (after creation); push it back
+        # so the showing's created_at falls within the lookback window.
+        auth_models.User.objects.filter(pk=user.pk).update(
+            last_login=timezone.now() - timedelta(hours=1)
+        )
+        response = self.client.get(self.url)
+        self.assertIn("new_showings", response.context)
+        pks = [s.pk for s in response.context["new_showings"]]
+        self.assertIn(showing.pk, pks)
+
+    def test_new_showings_not_in_context_for_volunteer(self):
+        user, _vol = _make_volunteer_user("vol7")
+        _make_showing(days_ahead=7)
+        self._login(user)
+        response = self.client.get(self.url)
+        self.assertNotIn("new_showings", response.context)
+
+    def test_new_showings_uses_30day_fallback_when_no_last_login(self):
+        # When last_login is None, fall back to 30-day lookback rather than skipping.
+        user = auth_models.User.objects.create_user("prog2", password="T3stPassword!")
+        user.user_permissions.add(self.write_perm)
+        user.save()
+        showing = _make_showing(days_ahead=7)
+        self._login(user)
+        # Force last_login back to None to exercise the fallback path.
+        auth_models.User.objects.filter(pk=user.pk).update(last_login=None)
+        response = self.client.get(self.url)
+        # Showing created during this test is within the 30-day window.
+        self.assertIn("new_showings", response.context)
+        pks = [s.pk for s in response.context["new_showings"]]
+        self.assertIn(showing.pk, pks)

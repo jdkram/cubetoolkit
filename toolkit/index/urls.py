@@ -1,12 +1,23 @@
 from django.urls import re_path
 import django.utils.functional as functional
 import django.views.generic.edit as generic_edit
-from django.contrib.auth.decorators import permission_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.urls import reverse
 
 from toolkit.index.models import IndexLink, IndexCategory
+from toolkit.index.views import ToolkitIndexView, health
 
 write_decorator = permission_required("toolkit.write")
+
+# Mounted at the domain root in both URL confs (toolkit/urls.py and urls_flat.py).
+root_urlpatterns = [
+    re_path(r"^health/$", health, name="health"),
+    re_path(
+        r"^toolkit/$",
+        login_required(ToolkitIndexView.as_view()),
+        name="toolkit-index",
+    ),
+]
 
 urlpatterns = [
     # Link edit:
