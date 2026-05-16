@@ -108,21 +108,72 @@ function edit_rota(jQuery, rota_edit_base_url, edit_rota_notes_url_prefix, vol_e
         });
     }
 
+    var SUPEDIT_WARNING = (
+        "This creates a plain-text entry, not a link to a volunteer account.\n\n" +
+        "The person won't see this shift in their upcoming events list, and they won't " +
+        "be able to remove their own name — only a panopticon user can edit it.\n\n" +
+        "Continue?"
+    );
+
+    function bindJeditableFreetext(event_trigger) {
+        $('.rota_name').editable('', {
+            event: event_trigger || 'click',
+            width: "25%",
+            placeholder: '<span class="na">Click to edit</span>',
+            submit: "Save",
+            submitdata: { csrfmiddlewaretoken: CSRF_TOKEN },
+            callback: nameEditedCallback,
+            // jeditable reads $(element).html() to prepopulate the field. For empty slots
+            // that have been through tap-to-toggle setup, that's the placeholder span HTML,
+            // not a name. Return '' for those; decode entities for real names.
+            data: function(value) {
+                if ($(this).hasClass('rota-signup-available')) {
+                    return '';
+                }
+                return value
+                    .replace(/&amp;/g,  '&')
+                    .replace(/&lt;/g,   '<')
+                    .replace(/&gt;/g,   '>')
+                    .replace(/&quot;/g, '"')
+                    .replace(/&#x27;/g, "'")
+                    .replace(/&#39;/g,  "'");
+            }
+        });
+    }
+
+    function configureSuperuserFreetextEdit() {
+        // Bind jeditable to a custom event so it doesn't conflict with tap-to-toggle clicks.
+        bindJeditableFreetext('supedit');
+
+        // Inject a small [e] link after each rota name span. Clicking it fires the custom
+        // event, opening the freetext editor for that slot.
+        $('.rota_name').each(function() {
+            $('<a href="#" class="rota-supedit-btn" title="Edit name directly">[e]</a>')
+                .insertAfter($(this));
+        });
+
+        $(document).on('click', '.rota-supedit-btn', function(e) {
+            e.preventDefault();
+            if (!window.confirm(SUPEDIT_WARNING)) { return; }
+            $(this).prev('.rota_name').trigger('supedit');
+        });
+    }
+
     function configureRotaNameEditInPlaceControls() {
+        if (is_superuser && current_volunteer_pk) {
+            // Panopticon users who also have a volunteer record: tap-to-toggle their own
+            // slot like any volunteer, plus [e] links to freetext-edit any slot.
+            configureVolunteerTapToToggle();
+            configureSuperuserFreetextEdit();
+            return;
+        }
         if (!is_superuser && current_volunteer_pk) {
             configureVolunteerTapToToggle();
             return;
         }
-        // Superusers (and accounts without a volunteer record) get jeditable free-text.
-        $('.rota_name').editable('', {
-            width: "25%",
-            placeholder: '<span class="na">Click to edit</span>',
-            submit: "Save",
-            submitdata: {
-                csrfmiddlewaretoken: CSRF_TOKEN
-            },
-            callback: nameEditedCallback
-        });
+        // Superusers without a volunteer record, and programmers without one:
+        // jeditable freetext on click.
+        bindJeditableFreetext('click');
     }
 
     function configureRotaNotesEditInPlaceControls() {

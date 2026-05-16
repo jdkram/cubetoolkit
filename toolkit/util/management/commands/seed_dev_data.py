@@ -366,6 +366,7 @@ class Command(BaseCommand):
                     "colour": room_data["colour"],
                     "is_primary": room_data.get("is_primary", False),
                     "map_slug": room_data.get("map_slug", ""),
+                    "show_column": room_data.get("show_column", True),
                 },
             )
             rooms_dict[room_data["name"]] = room_obj

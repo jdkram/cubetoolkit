@@ -67,10 +67,17 @@ document.addEventListener("DOMContentLoaded", function () {
     <small class="form-text text-muted">Shown as a left-border stripe on the rota and calendar.</small>
   </div>
 
-  <div class="form-check mb-3">
+  <div class="form-check mb-2">
     {{ form.is_primary }}
     <label class="form-check-label" for="{{ form.is_primary.id_for_label }}">
       Primary room (shown in full colour on calendar; secondary rooms are desaturated)
+    </label>
+  </div>
+
+  <div class="form-check mb-3">
+    {{ form.show_column }}
+    <label class="form-check-label" for="{{ form.show_column.id_for_label }}">
+      Show as its own column in the diary list view (uncheck to bundle into "Other rooms")
     </label>
   </div>
 

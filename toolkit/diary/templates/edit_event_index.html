@@ -97,6 +97,33 @@ Editing {{ event_list_name }}
       white-space: nowrap;
   }
 
+  /* "Other rooms" column — narrow, no colour stripe */
+  th.other-col, td.other-col {
+      min-width: 5rem;
+      max-width: 10rem;
+      font-size: 0.8em;
+      vertical-align: top;
+  }
+  /* Small pill badge for other-room bookings */
+  .other-room-badge {
+      display: inline-block;
+      padding: 0 0.3em;
+      border-radius: 3px;
+      border-left-width: 3px !important;
+      border-left-style: solid;
+      background: #f8f9fa;
+      color: #333;
+      text-decoration: none;
+      white-space: nowrap;
+      margin: 1px 0;
+      font-size: 0.9em;
+      line-height: 1.5;
+  }
+  .other-room-badge:hover {
+      background: #e9ecef;
+      color: #000;
+  }
+
   /* ── Controls bar ─────────────────────────────────────────────── */
   .diary-controls {
       background: #f8f9fa;
@@ -234,6 +261,7 @@ function filter_events() {
         {% for room in rooms %}
           <th class="room-col" style="border-bottom-color:{{ room.colour|default:'transparent' }};">{{ room.name }}</th>
         {% endfor %}
+        {% if has_other_rooms %}<th class="room-col other-col" title="Rooms without their own column">Other</th>{% endif %}
       {% else %}
         <th>Event</th>
       {% endif %}
@@ -253,7 +281,7 @@ function filter_events() {
       </td>
       <td {% if slot_local.hour <= 17 %}class="daytime"{% endif %}>{{ slot_local|date:"H:i" }}</td>
       {% for room in rooms %}
-        {% with slot_showings|showing_for_room:room as showing %}
+        {% showing_for_room_at slot_showings room time_slot as showing %}
         {% if showing %}
         <td class="room-col">
           <a href="{% url "edit-event-details-view" event_id=showing.event.pk %}"
@@ -272,8 +300,11 @@ function filter_events() {
         {% else %}
           <td class="room-col empty-slot"><a href="{% url "add-event" %}?date={{ day|date:"j-m-Y" }}&time={{ slot_local|date:"G:i" }}&room={{ room.id }}">+</a></td>
         {% endif %}
-        {% endwith %}
       {% endfor %}
+      {% if has_other_rooms %}
+        {% other_room_bookings_at slot_showings time_slot as other_bookings %}
+        <td class="room-col other-col">{% for rb, showing in other_bookings %}<a href="{% url "edit-event-details-view" event_id=showing.event.pk %}" class="other-room-badge" style="border-left-color:{{ rb.room.colour }};" title="{{ showing.event.name }} — {{ rb.room.name }}">{{ rb.room.name }}</a>{% endfor %}</td>
+      {% endif %}
       <td class="room-col">{% for s in slot_showings %}{{ s.booked_by }}{% if not s.confirmed %} <span class="pencilled-at" title="Pencilled in on {{ s.created_at|date:"d-m-y" }}">(&#x270f;&#xfe0f;{{ s.created_at|date:"d-m-y" }})</span>{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
     </tr>
     {% else %}
@@ -313,6 +344,7 @@ function filter_events() {
       <td></td>
       {% if multiroom_enabled %}
         {% for room in rooms %}<td class="room-col empty-slot"><a href="{% url "add-event" %}?date={{ day|date:"j-m-Y" }}&room={{ room.id }}">+</a></td>{% endfor %}
+        {% if has_other_rooms %}<td class="room-col other-col"></td>{% endif %}
       {% else %}
         <td></td>
       {% endif %}

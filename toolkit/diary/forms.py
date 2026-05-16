@@ -506,7 +506,7 @@ EventTemplateLinkFormSet = inlineformset_factory(
 class RoomForm(forms.ModelForm):
     class Meta:
         model = toolkit.diary.models.Room
-        fields = ("name", "colour", "is_primary", "map_slug")
+        fields = ("name", "colour", "is_primary", "show_column", "map_slug")
         widgets = {
             "name": forms.TextInput(attrs={"class": "form-control form-control-sm"}),
             "colour": forms.TextInput(attrs={"type": "color", "class": "form-control form-control-sm", "style": "max-width: 80px; padding: 2px 4px;"}),

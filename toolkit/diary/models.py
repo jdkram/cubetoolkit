@@ -499,6 +499,11 @@ class Room(models.Model):
         default="",
         help_text="SVG element ID in the building floorplan (e.g. 'room-cinema'). Leave blank if not on the map.",
     )
+    show_column = models.BooleanField(
+        default=True,
+        help_text="Show this room as its own column in the diary list view. "
+        "Uncheck to bundle bookings into the 'Other rooms' column.",
+    )
 
     class Meta:
         db_table = "Rooms"
