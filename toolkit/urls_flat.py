@@ -3,7 +3,6 @@ import django.conf
 import django.views.generic as generic
 from django.views.generic.base import RedirectView
 import django.views.static
-from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.contrib import admin
 
@@ -18,11 +17,10 @@ import toolkit.diary.urls
 import toolkit.mailer.urls
 import toolkit.labs.urls
 
-from toolkit.index.models import IndexLink
-from toolkit.index.views import health
+from toolkit.index.urls import root_urlpatterns as index_root_urlpatterns
 
 urlpatterns = [
-    re_path(r"^health/$", health, name="health"),
+    re_path(r"^", include(index_root_urlpatterns)),
     re_path(r"^toolkit/admin/", admin.site.urls),
     re_path(r"^programme/", include(toolkit.diary.urls.programme_urls)),
     re_path(r"^diary/", include(toolkit.diary.urls.diary_urls)),
@@ -59,17 +57,6 @@ urlpatterns = [
         r"^on/(?P<event_type>\w+)/(?P<legacy_id>\d+)/$",
         toolkit.diary.public_views.redirect_legacy_event,
         name="redirect-legacy-event",
-    ),
-    # Main index page: requires logging in, even though some other parts
-    # (eg diary index) don't.
-    re_path(
-        r"^toolkit/$",
-        login_required(
-            generic.list.ListView.as_view(
-                model=IndexLink, template_name="toolkit_index.html"
-            )
-        ),
-        name="toolkit-index",
     ),
     # Static content, only used when running in the development server
     # (django.views.static.serve only works when DEBUG=True)

@@ -58,6 +58,9 @@ body {
 
       <div class="collapse navbar-collapse" id="navbarsExampleDefault">
         <ul class="navbar-nav mr-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="{% url "toolkit-index" %}">Home</a>
+          </li>
           {% if perms.toolkit.write %}
           <li class="nav-item">
             <a class="nav-link" href="{% url "default-edit" %}">Diary</a>

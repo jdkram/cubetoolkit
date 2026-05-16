@@ -6,6 +6,7 @@
 
 {% block css %}
 {{ block.super }}
+<link rel="stylesheet" href="{{ STATIC_URL }}diary/css/calendar_links.css">
 <style>
     .index-edit {
         color: #a3a3a3;
@@ -34,11 +35,129 @@
     .card-links li:last-child {
         border-bottom: none;
     }
+    .dashboard-empty {
+        color: #888;
+        font-size: 0.9em;
+    }
+    .shift-row td {
+        padding: 0.2rem 0.5rem 0.2rem 0;
+        vertical-align: top;
+        font-size: 0.9em;
+    }
+    .shift-row td:first-child {
+        white-space: nowrap;
+        color: #555;
+    }
+    .link-card .card-body {
+        padding: 0.6rem 1rem;
+    }
+    .link-card .card-links li {
+        padding: 0.15rem 0;
+    }
+    .starred-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .starred-list li {
+        padding: 0.25rem 0;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 0.9em;
+    }
+    .starred-list li:last-child {
+        border-bottom: none;
+    }
+    .starred-date {
+        color: #555;
+        font-size: 0.85em;
+        margin-left: 0.4em;
+    }
 </style>
 {% endblock %}
 
+{% load calendar_links %}
 {% block body %}
 <h1>{{ VENUE.longname }} Toolkit</h1>
+
+{% if has_volunteer or new_showings %}
+<div class="row mb-2">
+
+  {# Upcoming shifts — all volunteers with a linked account #}
+  {% if has_volunteer %}
+  <div class="col-md-6 mb-4 d-flex">
+    <div class="card w-100">
+      <div class="card-header"><strong>Your upcoming shifts</strong></div>
+      <div class="card-body">
+        {% if upcoming_shifts %}
+        <table class="w-100">
+          {% for entry in upcoming_shifts %}
+          <tr class="shift-row">
+            <td>{{ entry.showing.start|date:"D j M" }}</td>
+            <td>
+              <a href="{% url "rota-edit-month" year=entry.showing.start.year month=entry.showing.start.month %}#showing-{{ entry.showing.pk }}">{{ entry.showing.event.name }}</a>
+              <small class="text-muted">{{ entry.role.name }}</small>
+            </td>
+            <td class="text-right">{% calendar_links entry.showing %}</td>
+          </tr>
+          {% endfor %}
+        </table>
+        <div class="mt-2"><small><a href="{% url "rota-edit" %}">View full rota &rarr;</a></small></div>
+        {% else %}
+        <p class="dashboard-empty mb-1">No upcoming shifts.</p>
+        <p class="mb-0"><small><a href="{% url "rota-edit" %}">Browse the rota to sign up &rarr;</a></small></p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Starred events — volunteers with a linked account #}
+  {% if has_volunteer %}
+  <div class="col-md-6 mb-4 d-flex">
+    <div class="card w-100">
+      <div class="card-header"><strong>Your starred events</strong></div>
+      <div class="card-body">
+        {% if starred_events %}
+        <ul class="starred-list">
+          {% for mark in starred_events %}
+          <li>
+            <a href="{% url "single-event-view" event_id=mark.event.pk %}">{{ mark.event.name }}</a>
+            <span class="starred-date">{{ mark.next_showing|date:"j M" }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="dashboard-empty mb-1">No starred events yet.</p>
+        <p class="mb-0"><small>Star events on the <a href="{% url "rota-edit" %}">rota</a> to track them here.</small></p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# New on the calendar — Programmer+ only #}
+  {% if new_showings %}
+  <div class="col-md-6 mb-4 d-flex">
+    <div class="card w-100">
+      <div class="card-header"><strong>New since your last login</strong></div>
+      <div class="card-body">
+        <table class="w-100">
+          {% for showing in new_showings %}
+          <tr class="shift-row">
+            <td>{{ showing.start|date:"D j M" }}</td>
+            <td><a href="{% url "edit-event-details-view" event_id=showing.event.pk %}">{{ showing.event.name }}</a></td>
+          </tr>
+          {% endfor %}
+        </table>
+        <div class="mt-2"><small><a href="{% url "default-edit" %}">Open diary &rarr;</a></small></div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+<hr class="mt-0 mb-4">
+{% endif %}
 
 <div class="row">
 
@@ -219,4 +338,7 @@
   {% endif %}
 </p>
 
+{% if has_volunteer %}
+<script defer src="{{ STATIC_URL }}diary/js/calendar_links.js"></script>
+{% endif %}
 {% endblock %}
