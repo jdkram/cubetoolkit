@@ -57,27 +57,31 @@ is_primary = false
 map_slug = "room-green-room"
 
 # ---------------------------------------------------------------------------
-# Functional rooms not yet bookable via the diary, included here so colours
-# are consistent if they are added as bookable spaces in future.
-# To activate: remove the leading `# ` from each line, set is_primary as needed.
+# Minor spaces — bookable but bundled into the "Other rooms" column in the
+# diary list view (show_column = false). Each still has its own colour for
+# the building map and calendar.
 # ---------------------------------------------------------------------------
 
-# [[rooms]]
-# name = "Kitchen"
-# colour = "#FFF0A8"  # pastel amber — café family
-# is_primary = false
+[[rooms]]
+name = "Kitchen"
+colour = "#FFF0A8"  # pastel amber — café family
+is_primary = false
+show_column = false
 
-# [[rooms]]
-# name = "Snug"
-# colour = "#FFE8A0"  # warm pastel amber — café family, cosier than kitchen
-# is_primary = false
+[[rooms]]
+name = "Snug"
+colour = "#FFE8A0"  # warm pastel amber — café family, cosier than kitchen
+is_primary = false
+show_column = false
 
-# [[rooms]]
-# name = "Projection Booth"
-# colour = "#F5C0B2"  # pastel coral/salmon — cinema family
-# is_primary = false
+[[rooms]]
+name = "Projection Booth"
+colour = "#F5C0B2"  # pastel coral/salmon — cinema family
+is_primary = false
+show_column = false
 
-# [[rooms]]
-# name = "Middle Corridor"
-# colour = "#EBEBEB"  # near-white grey — used as exhibition space occasionally
-# is_primary = false
+[[rooms]]
+name = "Middle Corridor"
+colour = "#EBEBEB"  # near-white grey — used as exhibition space occasionally
+is_primary = false
+show_column = false

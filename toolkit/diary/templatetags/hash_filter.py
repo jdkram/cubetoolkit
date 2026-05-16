@@ -16,10 +16,27 @@ def lookup(dictionary, key):
         return ""
 
 
-@register.filter(name="showing_for_room")
-def showing_for_room(showings, room):
-    """Return the first showing in the list that has a RoomBooking for room, or None."""
+@register.simple_tag
+def showing_for_room_at(showings, room, time_slot):
+    """Return the first showing with a RoomBooking for room starting at time_slot."""
     for showing in showings:
-        if any(rb.room_id == room.pk for rb in showing.room_bookings.all()):
+        if any(
+            rb.room_id == room.pk and rb.start == time_slot
+            for rb in showing.room_bookings.all()
+        ):
             return showing
     return None
+
+
+@register.simple_tag
+def other_room_bookings_at(showings, time_slot):
+    """Return (RoomBooking, Showing) pairs for non-column rooms booked at time_slot."""
+    result = []
+    seen = set()
+    for showing in showings:
+        for rb in showing.room_bookings.all():
+            key = (rb.room_id, showing.pk)
+            if not rb.room.show_column and rb.start == time_slot and key not in seen:
+                seen.add(key)
+                result.append((rb, showing))
+    return result

@@ -183,16 +183,25 @@ def edit_diary_list(request, year=None, day=None, month=None):
         ideas[startdate] = idea_list[0].ideas
 
     context["ideas"] = ideas
-    # Group each day's showings by start time so the template can render
-    # same-time events in different rooms on a single row (multiroom mode).
+    # Group each day's showings into time rows for the diary table.
+    # In multiroom mode, key by each room booking's own start time so that a
+    # booking at 19:00 on a 12:00 showing appears in its own 19:00 row.
+    # In single-room mode, key by showing.start as before.
     dates_by_time: OrderedDict = OrderedDict()
     for day, day_showings in dates.items():
         time_groups: OrderedDict = OrderedDict()
         for showing in day_showings:
-            if showing.start not in time_groups:
-                time_groups[showing.start] = []
-            time_groups[showing.start].append(showing)
-        dates_by_time[day] = time_groups
+            if settings.MULTIROOM_ENABLED and showing.room_bookings.exists():
+                for rb in showing.room_bookings.all():
+                    if rb.start not in time_groups:
+                        time_groups[rb.start] = []
+                    if showing not in time_groups[rb.start]:
+                        time_groups[rb.start].append(showing)
+            else:
+                if showing.start not in time_groups:
+                    time_groups[showing.start] = []
+                time_groups[showing.start].append(showing)
+        dates_by_time[day] = OrderedDict(sorted(time_groups.items()))
     context["dates"] = dates_by_time
     # Page title:
     context["event_list_name"] = "Diary for {} to {}".format(
@@ -201,7 +210,12 @@ def edit_diary_list(request, year=None, day=None, month=None):
     context["start"] = startdatetime
     context["end"] = enddatetime
     context["edit_prefs"] = edit_prefs.get_preferences(request.session)
-    context["rooms"] = list(Room.objects.all())
+    all_rooms = list(Room.objects.all())
+    column_rooms = [r for r in all_rooms if r.show_column]
+    other_rooms = [r for r in all_rooms if not r.show_column]
+    context["rooms"] = column_rooms
+    context["other_rooms"] = other_rooms
+    context["has_other_rooms"] = bool(other_rooms)
     context["multiroom_enabled"] = settings.MULTIROOM_ENABLED
     return render(request, "edit_event_index.html", context)
 
@@ -266,8 +280,6 @@ def edit_diary_data(request):
         primary_room = showing.primary_room
         if settings.MULTIROOM_ENABLED:
             colour = None
-        elif primary_room:
-            colour = primary_room.colour
         else:
             colour = settings.CALENDAR_DEFAULT_COLOUR
 
@@ -1541,8 +1553,7 @@ class EditRotaView(PermissionRequiredMixin, View):
         try:
             volunteer = request.user.volunteer
             can_mark_events = True
-            if not request.user.is_superuser:
-                current_volunteer_pk = str(volunteer.pk)
+            current_volunteer_pk = str(volunteer.pk)
             event_ids = [s.event_id for s in showings]
             for mark in VolunteerEventMark.objects.filter(
                 volunteer=volunteer, event_id__in=event_ids

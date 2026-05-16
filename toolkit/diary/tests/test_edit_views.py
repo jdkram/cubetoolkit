@@ -2057,8 +2057,8 @@ class DiaryCalendarViewTests(DiaryTestsMixin, TestCase):
         self.assertJSONEqual(
             self._get_room_list(response),
             [
-                {"id": 1, "title": "Room one", "eventColor": "#Ff0000"},
-                {"id": 2, "title": "Room two", "eventColor": "#00abcd"},
+                {"id": 1, "title": "Room one", "eventColor": "#Ff0000", "eventTextColor": "#ffffff"},
+                {"id": 2, "title": "Room two", "eventColor": "#00abcd", "eventTextColor": "#ffffff"},
             ],
         )
 
@@ -2142,7 +2142,19 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
         self.assertEqual(response.status_code, 200)
 
         data = response.json()
-        data_by_showing = {int(i["id"]): i for i in data}
+
+        # In multiroom mode, room-booked showings get IDs like "rb-{pk}" rather
+        # than integer showing PKs. Normalise both formats to showing PKs.
+        from toolkit.diary.models import RoomBooking as _RB
+        rb_to_showing = {rb.pk: rb.showing_id for rb in _RB.objects.all()}
+
+        def _showing_id(id_val):
+            s = str(id_val)
+            if s.startswith("rb-"):
+                return rb_to_showing[int(s[3:])]
+            return int(id_val)
+
+        data_by_showing = {_showing_id(i["id"]): i for i in data}
 
         expected_showings = {1, 2, 3, 4, 5, 6, 7, 10}
 
@@ -2250,14 +2262,13 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
         }
 
         if multiroom_enabled:
-            for showing_id in expected_data:
-                # Showing 2 room is set above
-                expected_data[showing_id]["resourceId"] = 2 if showing_id == 2 else None
-            # Showing 2 is assigned to room 2 (#00abcd). Historic events
-            # no longer have their colour adjusted — room colour is returned as-is.
-            expected_data[2]["color"] = "#00abcd"
-            # Room 2 has is_primary=False (the default), so s_auxiliary_room
-            # is appended to its className in multiroom mode.
+            # Showing 2 has a room booking → its event uses resourceIds (array)
+            # and room colour. Showings without bookings get no resourceIds key.
+            expected_data[2]["resourceIds"] = [2]
+            expected_data[2]["id"] = data_by_showing[2]["id"]  # "rb-{pk}" string
+            # In multiroom mode, colour comes from the FC resource eventColor,
+            # not the event's color key. s_auxiliary_room added (room not is_primary).
+            del expected_data[2]["color"]
             expected_data[2]["className"] = expected_data[2]["className"] + [
                 "s_auxiliary_room"
             ]

@@ -62,6 +62,7 @@
       <th>Name</th>
       <th>Colour</th>
       <th>Primary</th>
+      <th>Diary column</th>
       <th></th>
     </tr>
   </thead>
@@ -74,6 +75,7 @@
       </td>
       <td><code>{{ room.colour }}</code></td>
       <td>{% if room.is_primary %}Yes{% else %}—{% endif %}</td>
+      <td>{% if room.show_column %}Yes{% else %}<span class="text-muted">Other</span>{% endif %}</td>
       <td>
         <a href="{% url 'edit_room_detail' room.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
       </td>
@@ -101,9 +103,13 @@
         {% if form.colour.errors %}<div class="text-danger small">{{ form.colour.errors }}</div>{% endif %}
       </div>
       <div class="field-group" style="justify-content: flex-end; padding-bottom: 0.15rem;">
-        <div class="form-check" style="margin: 0;">
+        <div class="form-check" style="margin: 0 0 0.25rem;">
           {{ form.is_primary }}
           <label class="form-check-label small" for="{{ form.is_primary.id_for_label }}">Primary</label>
+        </div>
+        <div class="form-check" style="margin: 0;">
+          {{ form.show_column }}
+          <label class="form-check-label small" for="{{ form.show_column.id_for_label }}">Diary column</label>
         </div>
       </div>
     </div>
