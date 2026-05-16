@@ -959,6 +959,45 @@ date range. Allows programmers to see at a glance whether a room is free
 before proposing an event, without having to check every individual showing
 in the diary.
 
+#### "Other rooms" column — minor spaces without their own diary column 🔵 S (6–10h)
+
+**Goal:** Make every bookable room in the building recordable in the diary
+without adding a full column for each minor space. Useful for brief
+notifications ("Middle Corridor blocked 14:00–15:00 for exhibition install").
+
+**Design:**
+
+1. **Model change** — add `Room.show_column = BooleanField(default=True)`.
+   Rooms with `show_column=False` are fully bookable but bundled into a
+   shared "Other" column. One migration; all existing rooms default to `True`.
+
+2. **Seed data / rooms.toml** — activate currently commented-out rooms
+   (Middle Corridor, Kitchen, Snug, Projection Booth) with
+   `is_primary=false, show_column=false`. Add a `show_column` key to the
+   toml format and the seed loader.
+
+3. **Diary table (`edit_event_index.html` + `edit_views.py`)** — pass
+   `column_rooms` and `other_rooms` lists separately to context. Add an
+   "Other" column at the right of the room columns; its cell for a given
+   time slot lists all non-column room bookings at that slot as plain text
+   (e.g. "Middle Corridor"). New `other_bookings_at` simple_tag in
+   `hash_filter.py` (same pattern as `showing_for_room_at`).
+
+4. **Calendar (`edit_views.py` `edit_diary_data` + `calendar_index.js` +
+   `edit_event_calendar_index.html`)** — add a synthetic `{"id": "other",
+   "title": "Other rooms"}` resource to the FC resources list. Events for
+   non-column room bookings get `resourceIds: ["other"]` and their room name
+   prepended to the event title. Add an "Other rooms" checkbox to the room
+   filter bar. The `rooms_and_colours` context list excludes non-column
+   rooms; a separate `has_other_rooms` flag triggers the synthetic resource.
+
+**Files touched:** `models.py`, new migration, `rooms.toml`, seed loader,
+`edit_views.py` (two functions), `hash_filter.py`, `edit_event_index.html`,
+`edit_event_calendar_index.html`, `calendar_index.js`. (~8 files)
+
+**Not needed:** no change to `RoomBookingForm` — all rooms are already
+selectable there; no change to clash detection logic.
+
 ### 9.9 Break-even calculator for programmers 🟢 XS
 
 **Goal:** Help programmers quickly work out whether a proposed event is
@@ -2785,6 +2824,30 @@ Decision needed before starting: which auth model, and whether the S+S Nextcloud
 | **Total** | **~10h** (shopping list widget adds ~1h when 9.88 is done) |
 
 **Dependency:** Shopping list widget blocked on 9.88. All other widgets are independent.
+
+---
+
+### 9.35.3 Star events from the public diary 🟢 XS (2–4h)
+
+Currently starring and shadowing only works from the rota edit view. Logged-in volunteers visiting the public programme can't star events without navigating away. This creates friction and means the "Your starred events" dashboard widget isn't easily discoverable for new volunteers.
+
+**Goal:** add a star toggle to the public event page for logged-in volunteers, mirroring what the rota already does.
+
+#### Scope
+
+- Add a star/unstar button to `view_event.html` (the single-event public page), visible only to authenticated users who have a `Volunteer` record.
+- Clicking toggles `VolunteerEventMark` for `MARK_STAR` — same logic as the rota.
+- Button state reflects current mark on page load (starred vs not starred).
+- No AJAX required for MVP — POST + redirect back to the event page is fine.
+- Shadow mark (`MARK_SHADOW`) out of scope; that belongs to the rota workflow.
+
+#### Notes
+
+- The rota uses a small form POST via `DiaryUpdateEventMarksView`. Reuse that view or extract a shared helper rather than duplicating the toggle logic.
+- The public diary does not require login, so the star button must be conditional on `user.is_authenticated and user.volunteer`.
+- The empty-state copy on the dashboard already links to the rota; update it to also mention the public diary once this is shipped.
+
+**Related:** 9.35.1 (dashboard — the starred events widget), 9.75 (starred events spec).
 
 ---
 
@@ -4820,3 +4883,111 @@ One migration. No new model needed.
 **Dependencies:** 9.35.1 (dashboard) is a design dependency -- share the query logic. Shopping list section blocked on 9.88. Everything else is independent.
 
 **Prerequisite:** Verify simplelists accepts programmatic POSTs before coding. Test manually with `curl` first.
+
+---
+
+### 9.90 — Access transparency: visible list of privileged users with rights explanation 🔵 S (8–14h)
+
+The toolkit has two elevated access tiers above ordinary volunteers: **Programmer** and **Panopticon**. The collective values non-hierarchy, which creates a tension: some members hold privileges that others don't -- and those members should be clearly identified and accountable, not invisible. This feature surfaces that information to all logged-in users and builds in a lightweight accountability mechanism for Panopticon access specifically.
+
+This spec reflects Jonny's individual strong opinion; implementation should be flagged to the wider collective before deploying to production as it touches governance norms.
+
+---
+
+#### Access levels page
+
+**URL:** `/toolkit/access/` — login required (any tier).
+
+The page has two sections:
+
+**1. What each access level can do**
+
+A plain-language table or set of cards explaining the three tiers:
+
+| Tier | Who | What they can do |
+|---|---|---|
+| Volunteer | All logged-in volunteers | View programme and rota, sign up for shifts, edit own profile, view the volunteer directory |
+| Programmer | Members granted programming access | Everything volunteers can do, plus: create and edit events and showings, manage rota entries for any volunteer, view the full volunteer list, use event templates |
+| Panopticon | Members granted full access | Everything above, plus: create and manage other users, view and edit all volunteer/member PII (names, emails, phone numbers, access riders), perform GDPR anonymisation, grant or revoke access tiers, manage site configuration |
+
+The descriptions should be written in plain language -- this page should be usable as part of a volunteer privacy notice (data rights, who can see what). The Panopticon row in particular should be accurate and honest about PII access.
+
+**2. Current privileged users**
+
+Two sub-sections, each listing the relevant volunteers:
+
+*Panopticon users*: name (linked to volunteer profile for superusers, or unlinked otherwise), reason for access, date granted, date of last review (or "Not yet reviewed" if null). Ordered by date granted ascending (longest-serving first).
+
+*Programmer users*: name, date added to Programmers group (if recorded; "Unknown" if pre-existing). Ordered alphabetically.
+
+Only lists active users (`is_active=True`, `volunteer.status='active'`). Does not list the system admin / service accounts if any.
+
+---
+
+#### Panopticon grant record
+
+A new `PanopticonGrant` model captures the audit trail when Panopticon is granted:
+
+```python
+class PanopticonGrant(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="panopticon_grant")
+    reason = models.TextField(help_text="Why does this person have Panopticon access?")
+    granted_at = models.DateField(auto_now_add=True)
+    granted_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name="+")
+    last_reviewed_at = models.DateField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+```
+
+**When Panopticon is granted** (i.e. `is_superuser` ticked in `UserForm` and was previously False): `UserForm.save()` creates a `PanopticonGrant` for the user. The reason is required -- `UserForm` gains a `panopticon_reason` text field that is shown conditionally (JS: visible when "Panopticon access" is checked, hidden otherwise). If `is_superuser` is being set to True and no reason is given, the form is invalid.
+
+**When Panopticon is revoked** (i.e. `is_superuser` unchecked): `PanopticonGrant` is deleted.
+
+**Pre-existing Panopticon users** (those who had `is_superuser=True` before this feature was deployed): their `PanopticonGrant` will not exist. The access list page handles this gracefully by showing "Reason not recorded" and "Date unknown" for those users. A one-time management command (`backfill_panopticon_grants`) can be run post-deploy to create stub grants for them with an admin-supplied reason.
+
+**Annual review:** The access list page highlights (amber row or badge) any Panopticon user whose `last_reviewed_at` is null or more than 365 days ago. A "Mark as reviewed" button (Panopticon-only) updates `last_reviewed_at = today` and `reviewed_by = request.user`. This is the minimal mechanism -- no email, no expiry, no automatic revocation. The social pressure of a publicly visible "not reviewed" flag is the accountability mechanism.
+
+---
+
+#### Programmer grant record
+
+Programmer status is currently tracked only via group membership (`User.groups`), with no date or reason. This feature adds a lightweight record for new grants:
+
+A `ProgrammerGrant` model (similar to above but without `reason` -- reasons for programmer access are less sensitive and the collective convention is less formal):
+
+```python
+class ProgrammerGrant(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="programmer_grant")
+    granted_at = models.DateField(auto_now_add=True)
+    granted_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name="+")
+```
+
+Created when the "Programmer status" checkbox is first ticked. Deleted when unchecked. Pre-existing programmers shown with "Date unknown".
+
+---
+
+#### Design questions to resolve before implementation
+
+1. **Should the page be public (no login) or internal (login required)?** The spec says login required. A case could be made for public access (maximum transparency to community members who aren't toolkit users), but this would expose the names of people who may not want to be findable via Google. Login-required is the safer default; revisit if the collective prefers full transparency.
+
+2. **Should the reason field be visible to all logged-in users, or only to Panopticons?** The spec shows it to all. The reason for access is not sensitive and transparency is the point. Override this only if a specific reason turns out to contain personal information (e.g. "replacing [person] who left").
+
+3. **Should Programmer access also require a reason?** The spec omits this. Programmer access touches programme data only, not PII. If the collective wants parity, add a `reason` field to `ProgrammerGrant`.
+
+4. **What happens to `PanopticonGrant` if the volunteer record is anonymised (GDPR)?** The `PanopticonGrant.user` FK is `CASCADE` -- if the `User` is deleted, the grant goes with it. The `granted_by` and `reviewed_by` FKs are `SET_NULL`. This is correct behaviour: a deactivated/anonymised account should not remain on the access list.
+
+---
+
+#### Sizing
+
+| Component | Est. |
+|---|---|
+| `PanopticonGrant` + `ProgrammerGrant` models + migration | 1h |
+| `UserForm` changes (conditional reason field, validation) | 1.5h |
+| Access levels page (view + template -- rights table + user lists) | 3–4h |
+| Annual review "Mark as reviewed" button | 1h |
+| Tests | 2h |
+| **Total** | **~8–10h** |
+
+**Minimum viable increment:** Access levels page (rights explanation only, no grant model) + simple list of current Panopticon/Programmer users by name (~3h). The grant model and review mechanism can follow in a second pass.
+
+**Governance note:** Deploy the access list page in dev first and share with the collective for feedback on the rights descriptions before going live. The plain-language summary of what Panopticon can do will be the first time it's been written down anywhere, and it should be accurate.
