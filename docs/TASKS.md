@@ -3655,6 +3655,50 @@ The view should be:
 
 ---
 
+### 9.68 — Collectives public directory 🔵 S (4–8h)
+
+#### 9.68.1 — Public copy field and /collectives/ page 🔵 S (4–8h)
+
+**Context:** The `Collective` model (`toolkit/labs/models.py`) holds rich internal content about each working group: what they do, what they're proud of, how to get involved, and a contact address. All of this is currently visible only to logged-in toolkit users at `/labs/collectives/`. There is no public-facing page.
+
+Prospective volunteers — people who have heard about S+S but haven't yet signed up — often don't realise the breadth of what goes on: the Community Kitchen, Print Room, Library, Film Archive, and others are invisible until you're already on the inside. A lightweight public page would help people self-sort into the right collective before they arrive, and reduce the load on induction nights.
+
+**What to build:**
+
+Two new fields on `Collective`:
+
+- `public_copy` — `TextField(blank=True, default="")`. A short blurb (target: 100–300 chars) written for a public audience, distinct from the internal `about` field. Blank by default; leaving it blank means the collective opts out even if `listed_publicly=True`.
+- `listed_publicly` — `BooleanField(default=False)`. Opt-in flag. Collectives are hidden from the public page unless both `listed_publicly=True` and `public_copy` is non-empty.
+
+Both fields should be exposed in the collective edit form in the toolkit labs UI.
+
+A new Django view (no `login_required`) at `/collectives/` that renders a list of all collectives where `listed_publicly=True` and `public_copy` is non-empty, ordered by `display_order`. For each collective, show:
+
+- Name (as a heading)
+- `public_copy` text
+- `get_involved` text (already exists; copy written for internal users but usually usable publicly — no transformation needed)
+- Contact email/link if `contact` is non-empty
+
+**URL routing:**
+
+Register in `urls_flat.py` (S+S root URL conf) and `urls.py` (Cube root URL conf) under `/collectives/`. No login required. Add an `IndexLink` or direct template link from the S+S homepage if appropriate.
+
+**Template:**
+
+`star_and_shadow_templates/collectives_public.html` (or in the labs template dir). Should not use the toolkit base layout — use the public site base (`base.html` or equivalent) so it looks like part of the public website, not the staff toolkit.
+
+**Toolkit edit form:**
+
+The existing collective edit view and template should gain the two new fields. Keep `public_copy` near `about` in the form. Show a short note: "Leave blank to exclude from the public directory." `listed_publicly` can be a checkbox.
+
+**Migration:** straightforward `ALTER TABLE ADD COLUMN` for both fields — no data migration needed.
+
+**Out of scope:** images per collective, translations, search/filter on the public page, volunteer sign-up flow from the page. Keep it static and readable.
+
+**Related:** 9.87 (simplelists sync) surfaces collectives differently (mailing list subscription). This ticket is presentation-only, no list sync needed.
+
+---
+
 *Completed tasks: [ARCHIVE.md](ARCHIVE.md)*
 
 ---
