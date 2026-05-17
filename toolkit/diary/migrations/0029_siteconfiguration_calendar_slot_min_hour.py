@@ -10,10 +10,21 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='siteconfiguration',
-            name='calendar_slot_min_hour',
-            field=models.PositiveSmallIntegerField(default=10, help_text='Earliest hour shown in the 3-day and week calendar views (0–23). Events before this time are still shown but the grid starts here. Default 10 hides the dead early-morning hours.'),
+        # Use RunSQL with IF NOT EXISTS so this migration is idempotent on
+        # MySQL/MariaDB. MySQL DDL is non-transactional: if the container
+        # crashes after ALTER TABLE runs but before django_migrations records
+        # the migration, a subsequent restart would fail with "Duplicate column
+        # name" from the standard AddField operation.
+        migrations.RunSQL(
+            sql="ALTER TABLE SiteConfiguration ADD COLUMN IF NOT EXISTS calendar_slot_min_hour smallint(5) unsigned NOT NULL DEFAULT 10",
+            reverse_sql="ALTER TABLE SiteConfiguration DROP COLUMN IF EXISTS calendar_slot_min_hour",
+            state_operations=[
+                migrations.AddField(
+                    model_name='siteconfiguration',
+                    name='calendar_slot_min_hour',
+                    field=models.PositiveSmallIntegerField(default=10, help_text='Earliest hour shown in the 3-day and week calendar views (0–23). Events before this time are still shown but the grid starts here. Default 10 hides the dead early-morning hours.'),
+                ),
+            ],
         ),
         migrations.AlterField(
             model_name='role',
