@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-05-16 (other rooms column; diary time-grouping fix; 3 calendar test fixes; toolkit homepage dashboard; 9.90 spec)
+**Last updated:** 2026-05-16 (room show_column; multiroom time-grouping; homepage dashboard; URL routing fix; panopticon rota tap-to-toggle + [e] freetext; nav Home link; homeserver deploy fix; star/shadow icons missing on homeserver — investigation paused)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [ROADMAP.md](docs/ROADMAP.md) (wave-by-wave sequencing) · [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -13,6 +13,7 @@
 
 | # | Bug | Notes |
 |---|-----|-------|
+| **Bug AE** | **Homeserver: star/shadow mark icons missing on rota; panopticon [e]/tap-to-toggle not working** | Likely JS runtime error on production (`DEBUG=False`). Code is confirmed deployed (VERSION 2026.05.5, `supedit` in `edit_rota.js`). Hard refresh didn't fix it. Suspect `edit_rota.js` uses `{{ STATIC_URL }}diary/js/edit_rota.js` (no content hash) so browser caches old version — OR there's a runtime JS error before `configureRotaNameEditInPlaceControls()` is called. **Next step:** open browser dev console on homeserver rota page, look for JS errors. Also switch rota template to use `{% static 'diary/js/edit_rota.js' %}` for cache-busting. Star/shadow icons (☆★☽) are JS-injected from `rota_marks` data — if JS errors early, they won't appear either. |
 | ~~**Bug W**~~ | ~~**Burger menu vanishes on very narrow mobile views**~~ | ✅ 2026-04-28 — Root cause: `.showing-meta` in `edit_rota.html` had `flex-wrap: nowrap`. On multi-room events with duration + room badge + outside-hire badge + link, the combined min-content width exceeds the ~274px available at 320px viewport, causing horizontal overflow. On iOS Safari, horizontal overflow causes the fixed navbar to appear to scroll off-screen. Fix: changed to `flex-wrap: wrap`. |
 | ~~**Bug X**~~ | ~~**3-day calendar view button renders blank**~~ | ✅ 2026-05-05 — `buttonText` and `buttonHint` moved inside the `threeDay` view definition in `calendar_index.js`; top-level `buttonText`/`buttonHints` objects removed (unreliable with FC6 scheduler bundle). **Regressed and re-fixed 2026-05-08:** the `views` config object was being defined once with `threeDay`, then reassigned a few lines later to `{ timeGridWeek: {...} }`, wiping the `threeDay` definition. Changed reassignment to a merge (`calendarOpts.views.timeGridWeek = {...}`). |
 | ~~**Bug AA**~~ | ~~**Sidebar clips programme/event content on wide screens**~~ | ✅ 2026-05-08 — `layout.css` widened sidebar from 170px → 192px at the 1600px breakpoint, but `site_custom.css`'s `.grid { margin-left: 170px }` content-offset was hard-coded with no matching breakpoint. Fixed by promoting sidebar width to a CSS custom property (`--sidebar-width`) defined once on `:root` with breakpoint overrides; sidebar geometry and `.grid` margin-left now both consume it, so they cannot drift. |
@@ -158,6 +159,7 @@
 | 9.66 | Film event metadata + TMDB integration | 🟡 M | Dedicated `Film` model (Director, year, country, language, etc.) with FK to Event. Pre-populate from TMDB API with programmer override. User has API key. **Status:** Needs spec by Jonny+Claude |
 | ~~9.67~~ | ~~Room scratchpad/notes~~ | 🟢 XS | Free-text `scratchpad` field on `Room` model. Any user can edit. Visible on rota and room pages. Photos later. **Status:** Needs spec by Jonny+Claude |
 | 9.68 | Collectives directory + membership | 🟡 M | Collectives page with descriptions + key links (Nextcloud folders, WhatsApp groups). Users select membership for prioritised view. Toolkit-only (no mailing list sync yet). Related to 9.51. **Status:** Needs spec by Jonny+Claude |
+| 9.68.1 | Collectives public directory: `public_copy` + `/collectives/` page | 🔵 S (4–8h) | Two new fields on `Collective` (`public_copy` TextField, `listed_publicly` BooleanField). New public (no login) view at `/collectives/` showing opted-in collectives with public blurb, get_involved text, contact. Goal: prospective volunteers discover unexpected collectives (Kitchen, Print Room, etc.). See TASKS.md 9.68.1. |
 | 9.69 | Event detail showing date UX improvements | 🟡 M | On event detail pages, the full list of showing dates creates cognitive overhead. Users must scroll through past or distant future dates to find the next occurrence. Design solution needed: hide past dates, bold next upcoming, or restructure how multi-date events are presented. See TASKS.md 9.69 |
 | ~~9.70~~ | ~~Nightly production DB backup~~ | Shelved | Production team has their own backup process. |
 | ~~**9.71**~~ | ~~**Event terms and financial field change log**~~ | ✅ 2026-04-22 | See above. |
