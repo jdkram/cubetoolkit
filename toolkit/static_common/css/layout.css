@@ -643,7 +643,7 @@ body {
 
 /* --- Text and background colours --- */
 
-html, body, #sidebar, .grid-item, .grid, .black_overlay, .showing:nth-child(7n+3) {
+html, body, #sidebar, .grid-item, .grid, .black_overlay {
     color: #082080;
     background-color: #e3cae3;
 }

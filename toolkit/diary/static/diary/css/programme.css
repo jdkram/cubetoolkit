@@ -20,7 +20,6 @@
 
 .showing {
     position: relative;
-    padding: 5px 5px 10px;
     padding-top: 1.5625%;
     padding-left: 1.5625%;
     padding-right: 1.5625%;
@@ -28,15 +27,13 @@
     margin-bottom: 20px;
     float: left;
     overflow: hidden;
-    width: 310px;
     width: 96.875%;
-    background-color: #fff;
-    border: 0.07142857142857142em solid transparent;
+    background: rgba(255,255,255,0.55);
+    border: 1px solid transparent;
 }
 
 .event_image {
     position: relative;
-    width: 298px;
     width: 100%;
     min-height: 1em;
 }
@@ -47,7 +44,6 @@
     height: auto;
     display: block;
     position: relative;
-    -webkit-transition: top 0.2s ease-out, left 0.2s ease-out;
     transition: top 0.2s ease-out, left 0.2s ease-out;
 }
 
@@ -63,7 +59,7 @@
     font-weight: 400;
     font-size: 0.7857em;
     line-height: 1.4;
-    color: #666666;
+    color: #666;
     text-transform: none;
     text-decoration: none;
     margin: 0;
@@ -81,24 +77,23 @@
 
 .showing h3 a:hover {
     text-decoration: none;
-    color: #000000;
+    color: #000;
     border-bottom: 0.1em solid;
 }
 
 .showing h3 a:visited {
-    color: #000000;
+    color: #000;
 }
 
 .showing:hover > h3 a {
     text-decoration: none;
-    color: #000000;
+    color: #000;
     border-bottom: 0.1em solid;
 }
 
 .showing:hover {
-    border: 0.07142857142857142em solid #cccccc;
-    border: 0.3125% solid #cccccc;
-    background: #F7F7F7;
+    border: 1px solid #cccccc;
+    background: rgba(255,255,255,0.72);
     cursor: pointer;
 }
 
@@ -125,7 +120,7 @@ p.copy {
     font-size: 0.7142em;
     font-weight: 400;
     line-height: 1.4;
-    color: #000000;
+    color: #000;
     padding: 0;
 }
 
@@ -161,7 +156,6 @@ span.tags a {
     position: relative;
     top: 0;
     margin: 44px 10px 48px;
-    background: #fff;
 }
 .list p {
     font-size: 0.7142em;
@@ -253,13 +247,13 @@ p.sameday {
         padding-right: 1.0526%;
         padding-bottom: 40px;
         width: 48.4210%;
-        border: 0.07142857142857142em solid transparent;
+        border: 1px solid transparent;
     }
     .event_image {
         width: 100%;
     }
     .showing:hover {
-        border: 0.07142857142857142em solid #cccccc;
+        border: 1px solid #cccccc;
     }
     .list.active {
         padding-left: 12px;
@@ -310,10 +304,10 @@ p.sameday {
         padding-right: 0.625%;
         padding-bottom: 40px;
         margin-bottom: 5px;
-        border: 0.07142857142857142em solid transparent;
+        border: 1px solid transparent;
     }
     .showing:hover {
-        border: 0.07142857142857142em solid #cccccc;
+        border: 1px solid #cccccc;
     }
     .event_image {
         width: 100%;
@@ -347,7 +341,6 @@ p.sameday {
 /* 1000px */
 @media screen and (min-width: 1000px) {
     .programme {
-        margin: 64px 5px 48px;
         width: 820px;
         margin: 0px 6px 48px;
         display: block;
@@ -376,12 +369,12 @@ p.sameday {
         max-height: 300px;
     }
     .showing:nth-child(7n+3) {
-        width: 540px;
+        width: 535px;
         padding: 5px 5px 40px;
         margin-bottom: 5px;
     }
     .showing:nth-child(7n+3) > .event_image {
-        width: 528px;
+        width: 523px;
     }
     .showing:nth-child(7n+3) > .event_image img {
         max-width: 100%;
@@ -474,10 +467,10 @@ p.sameday {
         padding-right: 6px;
         padding-bottom: 40px;
         margin-bottom: 6px;
-        border: 0.07142857142857142em solid transparent;
+        border: 1px solid transparent;
     }
     .showing:hover {
-        border: 0.07142857142857142em solid #cccccc;
+        border: 1px solid #cccccc;
     }
     .event_image {
         width: 316px;
@@ -530,9 +523,6 @@ p.sameday {
         width: 400px;
     }
     .showing {
-        position: relative;
-        float: left;
-        overflow: hidden;
         width: 400px;
         height: 482px;
         padding-top: 6px;
@@ -540,10 +530,10 @@ p.sameday {
         padding-right: 6px;
         padding-bottom: 74px;
         margin-bottom: 6px;
-        border: 0.07142857142857142em solid transparent;
+        border: 1px solid transparent;
     }
     .showing:hover {
-        border: 0.07142857142857142em solid #cccccc;
+        border: 1px solid #cccccc;
     }
     .event_image {
         position: relative;
@@ -554,22 +544,6 @@ p.sameday {
         height: 232px;
     }
     .event_image img {
-        min-width: 100%;
-        min-height: 100%;
-        object-fit: cover;
-    }
-    .showing:nth-child(7n+3) {
-        width: 400px;
-        padding-top: 6px;
-        padding-left: 6px;
-        padding-right: 6px;
-        padding-bottom: 74px;
-        margin-bottom: 6px;
-    }
-    .showing:nth-child(7n+3) > .event_image {
-        width: 386px;
-    }
-    .showing:nth-child(7n+3) > .event_image img {
         min-width: 100%;
         min-height: 100%;
         object-fit: cover;
@@ -598,42 +572,22 @@ span.tags {
 }
 
 
-/* --- Volunteer badge on internal events --- */
-
-/* Base style: small outlined pill, shown to logged-in volunteers only */
-.volunteer-badge {
-    display: inline-block;
-    font-size: 0.75em;
-    padding: 0.1em 0.4em;
-    background: #ffe0b2;
-    border: 1px solid #f09020;
-    border-radius: 3px;
-    margin-bottom: 0.3em;
+/* Volunteer-only (internal) event cards: warm tint + full border.
+ * Double-class selector gives specificity (0,2,0) so it beats the per-breakpoint
+ * .showing:hover rules (0,2,0 but earlier in source) without touching each query. */
+.showing.showing-internal {
+    background: rgba(255, 240, 220, 0.7);
+    border-color: #f09020;
 }
 
-/* Grid card: badge spans the full card width */
-.showing .volunteer-badge {
-    display: block;
-    width: 100%;
-    box-sizing: border-box;
-    text-align: center;
+.showing.showing-internal:hover {
+    background: rgba(255, 232, 208, 0.84);
+    border-color: #d07010;
 }
 
-/* List view: strip the box so it sits inline in the compact text */
-.list .volunteer-badge {
-    display: inline;
-    padding: 0;
-    background: none;
-    border: none;
-    border-radius: 0;
-    font-size: 0.85em;
+/* List view: tint the link text for internal events */
+.list a.event-internal-link {
     color: #b06010;
-}
-
-/* Left-border accent on volunteer-only (internal) event cards */
-.showing-internal {
-    border-left: 3px solid #f09020;
-    padding-left: 0.4em;
 }
 
 
