@@ -64,12 +64,6 @@ setup_page(true);
 {% for event, showings in events.items %}
     <div class="showing{% if is_volunteer and event.private or is_volunteer and showings.0.hide_in_programme %} showing-internal{% endif %}" id="event_{{ event.id }}">
 
-        {% if is_volunteer and event.private %}
-        <span class="volunteer-badge" title="Private event — not listed publicly">&#128274; volunteer only</span>
-        {% elif is_volunteer and showings.0.hide_in_programme %}
-        <span class="volunteer-badge" title="Hidden from public programme">&#128274; internal</span>
-        {% endif %}
-
         <div class="event_image">
             {% with media_item=event.media.all.0 event_slug=event.name|slugify %}
             {% if is_volunteer and event.private or is_volunteer and showings.0.hide_in_programme %}
@@ -123,7 +117,7 @@ setup_page(true);
     {% endifchanged %}
     <span class="time">{{showing.start|date:"H:i"}}</span> ....
     {% if is_volunteer and showing.hide_in_programme or is_volunteer and showing.event.private %}
-        <a href="{% url "rota-edit" %}">{{ showing.event.name|capfirst }} <span class="volunteer-badge">&#128274; volunteer only</span></a></p>
+        <a href="{% url "rota-edit" %}" class="event-internal-link">{{ showing.event.name|capfirst }}</a></p>
     {% elif not showing.hide_in_programme and not showing.event.private %}
         <a href="{% url "single-event-view" event_id=showing.event_id %}">{{ showing.event.pre_title|title }} {{ showing.event.name|capfirst }} {{ showing.event.post_title|title }}{% if showing.cancelled %} (CANCELLED){% endif %}{% if showing.sold_out %} (SOLD OUT){% endif %}{% if showing.discounted %} *{% endif %}</a></p>
     {% endif %}
