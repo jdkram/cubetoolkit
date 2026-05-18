@@ -8,7 +8,7 @@ from django.utils import timezone
 import django.contrib.auth.models as auth_models
 import django.contrib.contenttypes as contenttypes
 
-from toolkit.diary.models import Event, Role, RotaEntry, Showing, VolunteerEventMark
+from toolkit.diary.models import Event, EventTag, Role, RotaEntry, Showing, SiteConfiguration, VolunteerEventMark
 from toolkit.index.models import IndexLink, IndexCategory
 from toolkit.members.models import Member, Volunteer
 
@@ -395,3 +395,148 @@ class TestDashboardWidgets(TestCase):
         self.assertIn("new_showings", response.context)
         pks = [s.pk for s in response.context["new_showings"]]
         self.assertIn(showing.pk, pks)
+
+
+class TestRotaGapsWidget(TestCase):
+    """9.91 — Dashboard widget: upcoming showings with gaps in the rota."""
+
+    def setUp(self):
+        SiteConfiguration.objects.update_or_create(pk=1, defaults={"rota_gap_min_missing": 3, "rota_gap_min_pct": 0})
+        self.url = reverse("toolkit-index")
+        self.user = auth_models.User.objects.create_user("gapuser", password="T3stPassword!")
+        self.client.login(username="gapuser", password="T3stPassword!")
+        self.role = Role.objects.create(name="Gap Role", read_only=False, standard=True)
+
+    def _make_showing_with_gaps(self, days_ahead: int, n_empty: int, n_filled: int = 0) -> Showing:
+        showing = _make_showing(days_ahead=days_ahead, confirmed=True)
+        for _ in range(n_empty):
+            RotaEntry.objects.create(showing=showing, role=self.role, required=True)
+        for i in range(n_filled):
+            RotaEntry.objects.create(showing=showing, role=self.role, required=True, name=f"Person {i}")
+        return showing
+
+    def test_showing_with_enough_gaps_appears(self):
+        showing = self._make_showing_with_gaps(days_ahead=5, n_empty=3)
+        response = self.client.get(self.url)
+        self.assertIn("showings_with_gaps", response.context)
+        pks = [s.pk for s in response.context["showings_with_gaps"]]
+        self.assertIn(showing.pk, pks)
+
+    def test_showing_with_too_few_gaps_excluded(self):
+        self._make_showing_with_gaps(days_ahead=5, n_empty=2)
+        response = self.client.get(self.url)
+        self.assertNotIn("showings_with_gaps", response.context)
+
+    def test_fully_staffed_showing_excluded(self):
+        self._make_showing_with_gaps(days_ahead=5, n_empty=0, n_filled=4)
+        response = self.client.get(self.url)
+        self.assertNotIn("showings_with_gaps", response.context)
+
+    def test_widget_suppressed_when_both_thresholds_zero(self):
+        SiteConfiguration.objects.update_or_create(pk=1, defaults={"rota_gap_min_missing": 0, "rota_gap_min_pct": 0})
+        self._make_showing_with_gaps(days_ahead=5, n_empty=10)
+        response = self.client.get(self.url)
+        self.assertNotIn("showings_with_gaps", response.context)
+
+    def test_showing_beyond_21_days_excluded(self):
+        self._make_showing_with_gaps(days_ahead=22, n_empty=5)
+        response = self.client.get(self.url)
+        self.assertNotIn("showings_with_gaps", response.context)
+
+    def test_percentage_threshold(self):
+        SiteConfiguration.objects.update_or_create(pk=1, defaults={"rota_gap_min_missing": 0, "rota_gap_min_pct": 50})
+        # 2 filled, 3 empty out of 5 = 60% missing — should appear
+        showing = self._make_showing_with_gaps(days_ahead=5, n_empty=3, n_filled=2)
+        response = self.client.get(self.url)
+        self.assertIn("showings_with_gaps", response.context)
+        pks = [s.pk for s in response.context["showings_with_gaps"]]
+        self.assertIn(showing.pk, pks)
+
+
+class TestUnconfirmedWidget(TestCase):
+    """9.92 — Dashboard widget: unconfirmed upcoming showings (Programmer+)."""
+
+    def setUp(self):
+        self.url = reverse("toolkit-index")
+        ct = contenttypes.models.ContentType.objects.get_or_create(model="", app_label="toolkit")[0]
+        self.write_perm = auth_models.Permission.objects.get_or_create(
+            name="Write access to all toolkit content",
+            content_type=ct,
+            codename="write",
+        )[0]
+        self.prog = auth_models.User.objects.create_user("uncprog", password="T3stPassword!")
+        self.prog.user_permissions.add(self.write_perm)
+        self.vol_user = auth_models.User.objects.create_user("uncvol", password="T3stPassword!")
+
+    def test_unconfirmed_showing_visible_to_programmer(self):
+        showing = _make_showing(days_ahead=10, confirmed=False)
+        self.client.login(username="uncprog", password="T3stPassword!")
+        response = self.client.get(self.url)
+        self.assertIn("unconfirmed_showings", response.context)
+        pks = [s.pk for s in response.context["unconfirmed_showings"]]
+        self.assertIn(showing.pk, pks)
+
+    def test_confirmed_showing_excluded(self):
+        _make_showing(days_ahead=10, confirmed=True)
+        self.client.login(username="uncprog", password="T3stPassword!")
+        response = self.client.get(self.url)
+        self.assertNotIn("unconfirmed_showings", response.context)
+
+    def test_unconfirmed_not_visible_to_volunteer(self):
+        _make_showing(days_ahead=10, confirmed=False)
+        self.client.login(username="uncvol", password="T3stPassword!")
+        response = self.client.get(self.url)
+        self.assertNotIn("unconfirmed_showings", response.context)
+
+    def test_showing_beyond_42_days_excluded(self):
+        _make_showing(days_ahead=43, confirmed=False)
+        self.client.login(username="uncprog", password="T3stPassword!")
+        response = self.client.get(self.url)
+        self.assertNotIn("unconfirmed_showings", response.context)
+
+
+class TestUpcomingTrainingWidget(TestCase):
+    """9.93 — Dashboard widget: upcoming inductions and training."""
+
+    def setUp(self):
+        self.url = reverse("toolkit-index")
+        self.user = auth_models.User.objects.create_user("trainuser", password="T3stPassword!")
+        self.client.login(username="trainuser", password="T3stPassword!")
+        self.induction_tag = EventTag.objects.create(name="induction", slug="induction")
+        self.training_tag = EventTag.objects.create(name="training-for-volunteers", slug="training-for-volunteers")
+
+    def _make_tagged_showing(self, tag: EventTag, days_ahead: int = 7) -> Showing:
+        showing = _make_showing(days_ahead=days_ahead, confirmed=True)
+        showing.event.tags.add(tag)
+        return showing
+
+    def test_induction_showing_appears(self):
+        showing = self._make_tagged_showing(self.induction_tag)
+        response = self.client.get(self.url)
+        self.assertIn("upcoming_training", response.context)
+        pks = [s.pk for s in response.context["upcoming_training"]]
+        self.assertIn(showing.pk, pks)
+
+    def test_training_showing_appears(self):
+        showing = self._make_tagged_showing(self.training_tag)
+        response = self.client.get(self.url)
+        self.assertIn("upcoming_training", response.context)
+        pks = [s.pk for s in response.context["upcoming_training"]]
+        self.assertIn(showing.pk, pks)
+
+    def test_untagged_showing_excluded(self):
+        _make_showing(days_ahead=7, confirmed=True)
+        response = self.client.get(self.url)
+        self.assertNotIn("upcoming_training", response.context)
+
+    def test_showing_beyond_42_days_excluded(self):
+        self._make_tagged_showing(self.induction_tag, days_ahead=43)
+        response = self.client.get(self.url)
+        self.assertNotIn("upcoming_training", response.context)
+
+    def test_showing_with_both_tags_appears_once(self):
+        showing = self._make_tagged_showing(self.induction_tag)
+        showing.event.tags.add(self.training_tag)
+        response = self.client.get(self.url)
+        pks = [s.pk for s in response.context["upcoming_training"]]
+        self.assertEqual(pks.count(showing.pk), 1)

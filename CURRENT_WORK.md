@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-05-16 (room show_column; multiroom time-grouping; homepage dashboard; URL routing fix; panopticon rota tap-to-toggle + [e] freetext; nav Home link; homeserver deploy fix; star/shadow icons missing on homeserver — investigation paused)
+**Last updated:** 2026-05-18 (9.91–9.94: dashboard widgets — rota gaps, unconfirmed showings, inductions/training, localStorage toggles; migration 0036; migration 0029 fixed for SQLite test compatibility)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [ROADMAP.md](docs/ROADMAP.md) (wave-by-wave sequencing) · [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -160,6 +160,10 @@
 | ~~9.67~~ | ~~Room scratchpad/notes~~ | 🟢 XS | Free-text `scratchpad` field on `Room` model. Any user can edit. Visible on rota and room pages. Photos later. **Status:** Needs spec by Jonny+Claude |
 | 9.68 | Collectives directory + membership | 🟡 M | Collectives page with descriptions + key links (Nextcloud folders, WhatsApp groups). Users select membership for prioritised view. Toolkit-only (no mailing list sync yet). Related to 9.51. **Status:** Needs spec by Jonny+Claude |
 | 9.68.1 | Collectives public directory: `public_copy` + `/collectives/` page | 🔵 S (4–8h) | Two new fields on `Collective` (`public_copy` TextField, `listed_publicly` BooleanField). New public (no login) view at `/collectives/` showing opted-in collectives with public blurb, get_involved text, contact. Goal: prospective volunteers discover unexpected collectives (Kitchen, Print Room, etc.). See TASKS.md 9.68.1. |
+| ~~9.91~~ | ~~Dashboard widget: upcoming showings with rota gaps~~ | ✅ 2026-05-18 | All-users card: confirmed showings in the next 21 days with 3+ unfilled required slots. Thresholds (count and/or percentage) configurable via SiteConfiguration. `rota_gap_min_missing` (default 3) and `rota_gap_min_pct` (default 0) fields added to model + migration 0036 + site settings form. Badge shows missing count. Widget suppressed when both thresholds are 0. |
+| ~~9.92~~ | ~~Dashboard widget: unconfirmed upcoming showings~~ | ✅ 2026-05-18 | Programmer+ card: showings in the next 6 weeks still at confirmed=False, ordered by date. `booked_by` shown as muted context. Only appears when data exists. |
+| ~~9.93~~ | ~~Dashboard widget: upcoming inductions and training~~ | ✅ 2026-05-18 | All-users card: confirmed showings tagged `induction` or `training-for-volunteers` in the next 6 weeks. `.distinct()` prevents duplicates if both tags present. Only appears when data exists. |
+| ~~9.94~~ | ~~Dashboard widget toggles (localStorage)~~ | ✅ 2026-05-18 | Per-browser show/hide for all six dashboard cards. "Customise" button reveals a collapsible panel with checkboxes. IIFE on page load reads localStorage and hides cards before paint. JS sync block wired at bottom of dashboard section. No model change. |
 | 9.69 | Event detail showing date UX improvements | 🟡 M | On event detail pages, the full list of showing dates creates cognitive overhead. Users must scroll through past or distant future dates to find the next occurrence. Design solution needed: hide past dates, bold next upcoming, or restructure how multi-date events are presented. See TASKS.md 9.69 |
 | ~~9.70~~ | ~~Nightly production DB backup~~ | Shelved | Production team has their own backup process. |
 | ~~**9.71**~~ | ~~**Event terms and financial field change log**~~ | ✅ 2026-04-22 | See above. |

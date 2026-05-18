@@ -5035,3 +5035,314 @@ Created when the "Programmer status" checkbox is first ticked. Deleted when unch
 **Minimum viable increment:** Access levels page (rights explanation only, no grant model) + simple list of current Panopticon/Programmer users by name (~3h). The grant model and review mechanism can follow in a second pass.
 
 **Governance note:** Deploy the access list page in dev first and share with the collective for feedback on the rights descriptions before going live. The plain-language summary of what Panopticon can do will be the first time it's been written down anywhere, and it should be accurate.
+
+---
+
+### 9.91 — Dashboard widget: upcoming showings with gaps in the rota 🟢 XS (2–4h)
+
+A programmer-facing dashboard card that surfaces upcoming confirmed showings where a significant number of required rota slots are still unfilled. Gives programmers and panopticon users early warning of coverage problems before it's too late to act.
+
+---
+
+#### What "unfilled" means
+
+A `RotaEntry` is unfilled when `required=True` AND `volunteer` is null AND `name` is blank. Slots where a name has been typed in by a superuser (free-text entry) count as filled.
+
+#### What "significant" means — site-configurable threshold
+
+The threshold is controlled by two new fields on `SiteConfiguration`, configurable by panopticon users via the site settings dashboard:
+
+- `rota_gap_min_missing` — `PositiveSmallIntegerField(default=3)`. Show a showing if it has at least this many unfilled required slots. Set to 0 to disable the absolute count filter.
+- `rota_gap_min_pct` — `PositiveSmallIntegerField(default=0)`. Show a showing if at least this percentage of required slots are unfilled (0–100). Set to 0 to disable the percentage filter.
+
+A showing is included if it meets **either** condition (whichever is enabled). Both defaulting to their "off" state for the other means out of the box only the count threshold applies. Panopticons can switch to percentage-only, count-only, or both-must-match (their choice, document in help text).
+
+Help text for `rota_gap_min_missing`: `"Show the 'rota gaps' dashboard widget for showings with at least this many unfilled required slots. Set to 0 to use only the percentage threshold."`
+
+Help text for `rota_gap_min_pct`: `"Show the 'rota gaps' dashboard widget for showings where at least this percentage of required slots are unfilled (0–100). Set to 0 to use only the count threshold."`
+
+Both fields should appear in the site settings form under a "Dashboard" or "Rota" section heading.
+
+#### Query
+
+```python
+from django.db.models import Count, ExpressionWrapper, F, IntegerField, Q
+
+DAYS_AHEAD = 21
+cfg = get_site_config()
+
+qs = (
+    Showing.objects.filter(
+        start__gte=now,
+        start__lte=now + timedelta(days=DAYS_AHEAD),
+        confirmed=True,
+    )
+    .annotate(
+        total_required=Count(
+            "rotaentry", filter=Q(rotaentry__required=True)
+        ),
+        filled=Count(
+            "rotaentry",
+            filter=Q(rotaentry__required=True)
+            & (
+                Q(rotaentry__volunteer__isnull=False)
+                | Q(rotaentry__name__gt="")
+            ),
+        ),
+    )
+    .annotate(
+        missing=ExpressionWrapper(
+            F("total_required") - F("filled"),
+            output_field=IntegerField(),
+        )
+    )
+    .select_related("event")
+    .order_by("start")
+)
+
+# Apply whichever thresholds are enabled (OR logic)
+gap_filter = Q()
+if cfg.rota_gap_min_missing:
+    gap_filter |= Q(missing__gte=cfg.rota_gap_min_missing)
+if cfg.rota_gap_min_pct:
+    # Avoid division by zero: only consider showings with at least one slot
+    gap_filter |= Q(
+        total_required__gt=0,
+        missing__gte=ExpressionWrapper(
+            F("total_required") * cfg.rota_gap_min_pct / 100,
+            output_field=IntegerField(),
+        ),
+    )
+
+if gap_filter:
+    showings_with_gaps = list(qs.filter(gap_filter)[:8])
+else:
+    showings_with_gaps = []
+```
+
+If both thresholds are 0 (both disabled), the widget is suppressed entirely -- `gap_filter` is an empty `Q()` which would match everything, so the explicit `if gap_filter` guard prevents that.
+
+`ExpressionWrapper` and `F` are in `django.db.models`. Add imports alongside the existing `Min`, `Q` in `index/views.py`.
+
+#### Permission gate
+
+Any logged-in user. All volunteers can see which events need help and sign themselves up. Restricting this to Programmer+ would gatekeep information that belongs to the whole collective.
+
+#### View changes (`toolkit/index/views.py`)
+
+Run the query unconditionally for any authenticated user and add `showings_with_gaps` to context if the queryset is non-empty. No permission check needed.
+
+#### Template changes (`toolkit/index/templates/toolkit_index.html`)
+
+New card in the row alongside "New since your last login", gated on `{% if showings_with_gaps %}`. Each row: date, event name (linked to the rota month anchor), and the missing count as a badge.
+
+```
+┌─────────────────────────────────────────┐
+│ Gaps in the rota                        │
+├─────────────────────────────────────────┤
+│ Fri 23 May   Community Cinema Night   3 │
+│ Sat 31 May   Volunteer Hangout        5 │
+│ ...                                     │
+│ View full rota →                        │
+└─────────────────────────────────────────┘
+```
+
+The missing count should be styled as a warning badge (Bootstrap `badge-warning`) so it's visually distinct.
+
+Link each row to `{% url "rota-edit-month" year=... month=... %}#showing-{{ showing.pk }}` — same pattern as the "Your upcoming shifts" widget.
+
+#### Out of scope
+
+- Breaking down missing count by role (e.g. "2 Operators, 1 Door") — useful but adds complexity; can be a follow-up
+- Keyholder-specific highlighting — `keyholder_only` slots are already a subset of the required count; no special treatment needed for v1
+- Email notifications or nightly digests — separate from this widget (see 9.89)
+
+#### Sizing
+
+| Component | Est. |
+|---|---|
+| `SiteConfiguration` fields + migration | 0.5h |
+| Site settings form (two new fields, section heading) | 0.5h |
+| View query + context | 1h |
+| Template card | 0.5h |
+| Tests | 1h |
+| **Total** | **~3.5–4h** |
+
+---
+
+### 9.92 — Dashboard widget: unconfirmed upcoming showings 🟢 XS (2–3h)
+
+A programmer-facing card showing confirmed showings in the next six weeks that are still `confirmed=False`. These are invisible to the public — they're either waiting on a licence, on a ticket link, or simply forgotten. Surfacing them on the dashboard is a low-friction nudge to press go (or cancel).
+
+Note: this is deliberately **not** "your unconfirmed events". `Showing.booked_by` is a free-text field with no FK to `User`, so reliable per-user filtering isn't possible without a model change. More importantly, unconfirmed showings are a collective concern — any programmer can chase one up or help confirm it. This is consistent with the non-hierarchical ethos: the whole programmer community should be aware.
+
+#### Query
+
+```python
+DAYS_AHEAD = 42  # six weeks — far enough to catch things in the pipeline
+
+unconfirmed_showings = list(
+    Showing.objects.filter(
+        confirmed=False,
+        start__gte=now,
+        start__lte=now + timedelta(days=DAYS_AHEAD),
+    )
+    .select_related("event")
+    .order_by("start")[:8]
+)
+```
+
+No need to exclude `event__private` — a private unconfirmed showing is still worth flagging to programmers.
+
+#### Permission gate
+
+`toolkit.write` (Programmer and Panopticon). Volunteers can't confirm showings, so the widget isn't actionable for them.
+
+#### View changes
+
+Inside the `if user.has_perm("toolkit.write"):` block. Add `unconfirmed_showings` to context if non-empty.
+
+#### Template
+
+New card gated on `{% if unconfirmed_showings %}`. Each row: date, event name linked to the edit-event-details view, and the `booked_by` value as muted text (so programmers know whose event it is to chase). No badge needed — the concept is already urgent by nature.
+
+```
+┌──────────────────────────────────────────────────┐
+│ Not yet confirmed                                │
+├──────────────────────────────────────────────────┤
+│ Thu 29 May   Portrait of a Lady on Fire   alice  │
+│ Sun 1 Jun    Volunteer Hangout            bob     │
+│ ...                                              │
+│ Open diary →                                     │
+└──────────────────────────────────────────────────┘
+```
+
+#### Future improvement
+
+If a `created_by = ForeignKey(User, null=True, on_delete=SET_NULL)` field were added to `Showing`, this widget could additionally highlight showings belonging to the current user. That's a separate migration task and out of scope here.
+
+#### Sizing
+
+| Component | Est. |
+|---|---|
+| View query + context | 0.5h |
+| Template card | 0.5h |
+| Tests | 1h |
+| **Total** | **~2h** |
+
+---
+
+### 9.93 — Dashboard widget: upcoming inductions and training 🟢 XS (2–3h)
+
+A card showing upcoming confirmed showings tagged `induction` or `training-for-volunteers`, visible to all logged-in users. Helps new volunteers find their way in, and reminds experienced ones that training routes exist. Directly addresses the spec's stated value: "low barrier to entry is a core value."
+
+The two relevant tags already exist in the system (`induction`, `training-for-volunteers`). The induction tag is used for monthly volunteer inductions (first Sunday of the month). The training tag covers role-specific training sessions (projection, bar, café, etc.).
+
+#### Query
+
+```python
+DAYS_AHEAD = 42  # six weeks — inductions are monthly, so this shows 1–2 ahead
+
+upcoming_training = list(
+    Showing.objects.filter(
+        confirmed=True,
+        start__gte=now,
+        start__lte=now + timedelta(days=DAYS_AHEAD),
+        event__tags__name__in=["induction", "training-for-volunteers"],
+    )
+    .select_related("event")
+    .order_by("start")
+    .distinct()[:8]
+)
+```
+
+`.distinct()` is needed because a showing with both tags would otherwise appear twice.
+
+#### Permission gate
+
+All logged-in users. This is explicitly about lowering barriers, so there is no reason to restrict it.
+
+#### View changes
+
+Run the query unconditionally for any authenticated user. Add `upcoming_training` to context if non-empty.
+
+#### Template
+
+New card gated on `{% if upcoming_training %}`. Each row: date, event name linked to the public event detail page (not the edit view — this is informational, not an action). A brief role name or tag badge would be useful if the event name doesn't already make the type clear (e.g. "Volunteer Induction" is self-describing; "First Sunday" is not).
+
+```
+┌─────────────────────────────────────────────────┐
+│ Upcoming inductions & training                  │
+├─────────────────────────────────────────────────┤
+│ Sun 1 Jun    Volunteer Induction                │
+│ Sat 7 Jun    Café Induction                     │
+│ Sun 15 Jun   Projection Training (Level 1)      │
+│ ...                                             │
+└─────────────────────────────────────────────────┘
+```
+
+No "view all" link needed — the public programme filtered by tag covers this.
+
+#### Sizing
+
+| Component | Est. |
+|---|---|
+| View query + context | 0.5h |
+| Template card | 0.5h |
+| Tests | 1h |
+| **Total** | **~2h** |
+
+---
+
+### 9.94 — Dashboard widget toggles (localStorage) 🟢 XS (2–3h)
+
+Lets each user show or hide individual dashboard widgets. Preferences stored in `localStorage` — same pattern as the rota filter panel — so no model change or migration is needed. Preferences are per-browser; cross-device persistence is explicitly out of scope for this increment.
+
+#### Which widgets are toggleable
+
+Only widgets the current user is eligible to see. The toggle UI should not reveal the existence of widgets the user can't access. Eligibility is determined server-side (the view already conditionally includes context variables); the toggle JS only operates on cards that are actually present in the DOM.
+
+Proposed widget keys (used as `localStorage` keys):
+
+| Key | Widget | Shown to |
+|---|---|---|
+| `dash_upcoming_shifts` | Your upcoming shifts | Volunteers with accounts |
+| `dash_starred_events` | Your starred events | Volunteers with accounts |
+| `dash_new_showings` | New since your last login | Programmer+ |
+| `dash_rota_gaps` | Gaps in the rota | All |
+| `dash_unconfirmed` | Not yet confirmed | Programmer+ |
+| `dash_training` | Upcoming inductions & training | All |
+
+#### Implementation
+
+A small "Customise" toggle button or link in the dashboard header area opens a panel (or inline checkboxes) listing the visible widgets. Checking/unchecking hides/shows the corresponding card immediately and writes to `localStorage`. On page load, a short JS block reads preferences and hides cards accordingly before paint (to avoid flash of hidden content).
+
+```javascript
+(function() {
+    var KEYS = ['dash_upcoming_shifts', 'dash_starred_events', /* ... */];
+    KEYS.forEach(function(key) {
+        if (localStorage.getItem(key) === 'hidden') {
+            var el = document.getElementById(key);
+            if (el) el.style.display = 'none';
+        }
+    });
+})();
+```
+
+Each card's wrapper `<div>` gets an `id` matching its key (e.g. `id="dash_rota_gaps"`). The customise panel is a set of checkboxes that toggle `style.display` and write to `localStorage` on `change`.
+
+#### What this does not do
+
+- No server-side persistence. A volunteer using a different browser or device sees the default (all widgets visible).
+- No admin override of defaults. If the collective later wants to set organisation-wide defaults (e.g. hide the gaps widget on a fully staffed week), that's a separate server-side feature.
+- No drag-to-reorder. Order is fixed in the template.
+
+#### Sizing
+
+| Component | Est. |
+|---|---|
+| Card `id` attributes in template | 0.25h |
+| Page-load hide script | 0.5h |
+| Customise panel UI + toggle JS | 1h |
+| Tests (JS is minimal; test the rendered `id` attributes) | 0.5h |
+| **Total** | **~2–2.5h** |

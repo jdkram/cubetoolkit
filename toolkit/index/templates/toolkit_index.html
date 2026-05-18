@@ -79,12 +79,50 @@
 {% block body %}
 <h1>{{ VENUE.longname }} Toolkit</h1>
 
-{% if has_volunteer or new_showings %}
+{% if has_volunteer or new_showings or showings_with_gaps or unconfirmed_showings or upcoming_training %}
+<script>
+(function() {
+    var KEYS = ['dash_upcoming_shifts','dash_starred_events','dash_new_showings','dash_rota_gaps','dash_unconfirmed','dash_training'];
+    KEYS.forEach(function(key) {
+        if (localStorage.getItem(key) === 'hidden') {
+            var el = document.getElementById(key);
+            if (el) el.style.display = 'none';
+        }
+    });
+})();
+</script>
+<div class="d-flex justify-content-between align-items-baseline mb-2">
+  <h2 class="h5 mb-0">Dashboard</h2>
+  <button class="btn btn-sm btn-outline-secondary" type="button" data-toggle="collapse" data-target="#dash-customise" aria-expanded="false">Customise</button>
+</div>
+<div class="collapse mb-2" id="dash-customise">
+  <div class="card card-body py-2">
+    <p class="mb-1 text-muted" style="font-size:0.85em">Choose which cards to show. Preferences are saved in this browser.</p>
+    <div class="d-flex flex-wrap" style="gap:0.5rem">
+      {% if has_volunteer %}
+      <label class="mb-0"><input type="checkbox" class="dash-toggle" data-key="dash_upcoming_shifts" checked> Upcoming shifts</label>
+      <label class="mb-0"><input type="checkbox" class="dash-toggle" data-key="dash_starred_events" checked> Starred events</label>
+      {% endif %}
+      {% if new_showings %}
+      <label class="mb-0"><input type="checkbox" class="dash-toggle" data-key="dash_new_showings" checked> New on calendar</label>
+      {% endif %}
+      {% if showings_with_gaps %}
+      <label class="mb-0"><input type="checkbox" class="dash-toggle" data-key="dash_rota_gaps" checked> Rota gaps</label>
+      {% endif %}
+      {% if unconfirmed_showings %}
+      <label class="mb-0"><input type="checkbox" class="dash-toggle" data-key="dash_unconfirmed" checked> Not yet confirmed</label>
+      {% endif %}
+      {% if upcoming_training %}
+      <label class="mb-0"><input type="checkbox" class="dash-toggle" data-key="dash_training" checked> Inductions & training</label>
+      {% endif %}
+    </div>
+  </div>
+</div>
 <div class="row mb-2">
 
   {# Upcoming shifts — all volunteers with a linked account #}
   {% if has_volunteer %}
-  <div class="col-md-6 mb-4 d-flex">
+  <div id="dash_upcoming_shifts" class="col-md-6 mb-4 d-flex">
     <div class="card w-100">
       <div class="card-header"><strong>Your upcoming shifts</strong></div>
       <div class="card-body">
@@ -113,7 +151,7 @@
 
   {# Starred events — volunteers with a linked account #}
   {% if has_volunteer %}
-  <div class="col-md-6 mb-4 d-flex">
+  <div id="dash_starred_events" class="col-md-6 mb-4 d-flex">
     <div class="card w-100">
       <div class="card-header"><strong>Your starred events</strong></div>
       <div class="card-body">
@@ -137,7 +175,7 @@
 
   {# New on the calendar — Programmer+ only #}
   {% if new_showings %}
-  <div class="col-md-6 mb-4 d-flex">
+  <div id="dash_new_showings" class="col-md-6 mb-4 d-flex">
     <div class="card w-100">
       <div class="card-header"><strong>New since your last login</strong></div>
       <div class="card-body">
@@ -155,8 +193,94 @@
   </div>
   {% endif %}
 
+  {# Gaps in the rota — all logged-in users #}
+  {% if showings_with_gaps %}
+  <div id="dash_rota_gaps" class="col-md-6 mb-4 d-flex">
+    <div class="card w-100">
+      <div class="card-header"><strong>Gaps in the rota</strong></div>
+      <div class="card-body">
+        <table class="w-100">
+          {% for showing in showings_with_gaps %}
+          <tr class="shift-row">
+            <td>{{ showing.start|date:"D j M" }}</td>
+            <td><a href="{% url "rota-edit-month" year=showing.start.year month=showing.start.month %}#showing-{{ showing.pk }}">{{ showing.event.name }}</a></td>
+            <td class="text-right"><span class="badge badge-warning">{{ showing.missing }}</span></td>
+          </tr>
+          {% endfor %}
+        </table>
+        <div class="mt-2"><small><a href="{% url "rota-edit" %}">View full rota &rarr;</a></small></div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Not yet confirmed — Programmer+ only #}
+  {% if unconfirmed_showings %}
+  <div id="dash_unconfirmed" class="col-md-6 mb-4 d-flex">
+    <div class="card w-100">
+      <div class="card-header"><strong>Not yet confirmed</strong></div>
+      <div class="card-body">
+        <table class="w-100">
+          {% for showing in unconfirmed_showings %}
+          <tr class="shift-row">
+            <td>{{ showing.start|date:"D j M" }}</td>
+            <td><a href="{% url "edit-event-details-view" event_id=showing.event.pk %}">{{ showing.event.name }}</a></td>
+            {% if showing.booked_by %}<td class="text-right text-muted" style="font-size:0.85em">{{ showing.booked_by }}</td>{% endif %}
+          </tr>
+          {% endfor %}
+        </table>
+        <div class="mt-2"><small><a href="{% url "default-edit" %}">Open diary &rarr;</a></small></div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Upcoming inductions & training — all logged-in users #}
+  {% if upcoming_training %}
+  <div id="dash_training" class="col-md-6 mb-4 d-flex">
+    <div class="card w-100">
+      <div class="card-header"><strong>Upcoming inductions &amp; training</strong></div>
+      <div class="card-body">
+        <table class="w-100">
+          {% for showing in upcoming_training %}
+          <tr class="shift-row">
+            <td>{{ showing.start|date:"D j M" }}</td>
+            <td><a href="{% url "single-event-view" event_id=showing.event.pk %}">{{ showing.event.name }}</a></td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
 </div>
 <hr class="mt-0 mb-4">
+<script>
+(function() {
+    var KEYS = ['dash_upcoming_shifts','dash_starred_events','dash_new_showings','dash_rota_gaps','dash_unconfirmed','dash_training'];
+    function syncCheckboxes() {
+        document.querySelectorAll('.dash-toggle').forEach(function(cb) {
+            var key = cb.getAttribute('data-key');
+            cb.checked = localStorage.getItem(key) !== 'hidden';
+        });
+    }
+    document.querySelectorAll('.dash-toggle').forEach(function(cb) {
+        var key = cb.getAttribute('data-key');
+        cb.addEventListener('change', function() {
+            var el = document.getElementById(key);
+            if (cb.checked) {
+                localStorage.removeItem(key);
+                if (el) el.style.display = '';
+            } else {
+                localStorage.setItem(key, 'hidden');
+                if (el) el.style.display = 'none';
+            }
+        });
+    });
+    syncCheckboxes();
+})();
+</script>
 {% endif %}
 
 <div class="row">
