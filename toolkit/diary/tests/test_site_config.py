@@ -89,6 +89,8 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
                 config.default_training_expiry_months
             ),
             "volunteer_dormancy_months": str(config.volunteer_dormancy_months),
+            "rota_gap_min_missing": str(config.rota_gap_min_missing),
+            "rota_gap_min_pct": str(config.rota_gap_min_pct),
             "image_copyright_guidance_url": "",
             "alt_text_guidance_url": "",
         }
