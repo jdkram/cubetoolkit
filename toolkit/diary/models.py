@@ -1180,6 +1180,23 @@ class SiteConfiguration(models.Model):
         help_text="Months after which volunteer training records are considered expired.",
     )
 
+    # --- Dashboard ---
+    rota_gap_min_missing = models.PositiveSmallIntegerField(
+        default=3,
+        help_text=(
+            "Show the 'rota gaps' dashboard widget for showings with at least this many "
+            "unfilled required slots. Set to 0 to use only the percentage threshold."
+        ),
+    )
+    rota_gap_min_pct = models.PositiveSmallIntegerField(
+        default=0,
+        help_text=(
+            "Show the 'rota gaps' dashboard widget for showings where at least this "
+            "percentage of required slots are unfilled (0–100). Set to 0 to use only "
+            "the count threshold."
+        ),
+    )
+
     # --- Volunteers ---
     volunteer_dormancy_months = models.PositiveSmallIntegerField(
         default=24,

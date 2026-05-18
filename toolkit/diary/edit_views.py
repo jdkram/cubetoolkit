@@ -1773,6 +1773,10 @@ def edit_site_configuration(request):
             ],
         ),
         (
+            "Dashboard",
+            ["rota_gap_min_missing", "rota_gap_min_pct"],
+        ),
+        (
             "Guidance URLs",
             ["image_copyright_guidance_url", "alt_text_guidance_url"],
         ),
