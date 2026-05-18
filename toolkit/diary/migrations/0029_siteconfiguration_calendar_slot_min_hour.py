@@ -3,6 +3,38 @@
 from django.db import migrations, models
 
 
+def _add_column(apps, schema_editor):
+    # MySQL/MariaDB DDL is non-transactional: use IF NOT EXISTS so a crash
+    # between the ALTER TABLE and the django_migrations INSERT doesn't leave
+    # the column missing on the next startup. Other backends (SQLite in tests)
+    # use standard schema_editor.add_field, which errors cleanly on duplicate.
+    if schema_editor.connection.vendor == "mysql":
+        schema_editor.execute(
+            "ALTER TABLE SiteConfiguration "
+            "ADD COLUMN IF NOT EXISTS calendar_slot_min_hour "
+            "smallint(5) unsigned NOT NULL DEFAULT 10"
+        )
+    else:
+        SiteConfiguration = apps.get_model("diary", "SiteConfiguration")
+        field = models.PositiveSmallIntegerField(default=10)
+        field.set_attributes_from_name("calendar_slot_min_hour")
+        with schema_editor.connection.schema_editor() as inner:
+            inner.add_field(SiteConfiguration, field)
+
+
+def _drop_column(apps, schema_editor):
+    if schema_editor.connection.vendor == "mysql":
+        schema_editor.execute(
+            "ALTER TABLE SiteConfiguration DROP COLUMN IF EXISTS calendar_slot_min_hour"
+        )
+    else:
+        SiteConfiguration = apps.get_model("diary", "SiteConfiguration")
+        field = models.PositiveSmallIntegerField(default=10)
+        field.set_attributes_from_name("calendar_slot_min_hour")
+        with schema_editor.connection.schema_editor() as inner:
+            inner.remove_field(SiteConfiguration, field)
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,14 +42,8 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # Use RunSQL with IF NOT EXISTS so this migration is idempotent on
-        # MySQL/MariaDB. MySQL DDL is non-transactional: if the container
-        # crashes after ALTER TABLE runs but before django_migrations records
-        # the migration, a subsequent restart would fail with "Duplicate column
-        # name" from the standard AddField operation.
-        migrations.RunSQL(
-            sql="ALTER TABLE SiteConfiguration ADD COLUMN IF NOT EXISTS calendar_slot_min_hour smallint(5) unsigned NOT NULL DEFAULT 10",
-            reverse_sql="ALTER TABLE SiteConfiguration DROP COLUMN IF EXISTS calendar_slot_min_hour",
+        migrations.RunPython(_add_column, _drop_column),
+        migrations.SeparateDatabaseAndState(
             state_operations=[
                 migrations.AddField(
                     model_name='siteconfiguration',
