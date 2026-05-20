@@ -866,6 +866,188 @@
    id="text6"
    style="font-weight:bold;font-family:'JetBrainsMono Nerd Font';-inkscape-font-specification:'JetBrainsMono Nerd Font Bold';writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect6);display:inline;opacity:0.1;fill:#cae1e3" />
   </g>
+  <!-- ══════════════════════════════════════════════════════════════════
+       LOFT OVERLAY LAYER
+       Zones overlaid on the ground-floor blueprint.
+       Geometry is approximate — reshape in Inkscape to match the actual
+       loft footprint. Preserve the id= / data-zone= attributes; they are
+       canonical zone IDs keyed in views.py and the JS.
+       ══════════════════════════════════════════════════════════════════ -->
+  <g
+   inkscape:label="Loft overlay"
+   inkscape:groupmode="layer"
+   id="layer5"
+   style="display:none">
+
+    <!-- ── RAISED SECTION (north, ladder required) ─────────────────── -->
+    <rect
+   id="loft-raised-west"
+   x="1643" y="90" width="703" height="1272"
+   fill="#4a8040" fill-opacity="0.20"
+   stroke="#2d5c25" stroke-width="5"
+   class="loft-zone" role="button" tabindex="0"
+   aria-label="Raised West zone" data-zone="loft-raised-west">
+      <title>Raised West</title>
+    </rect>
+    <rect
+   id="loft-raised-mid"
+   x="2346" y="90" width="703" height="1272"
+   fill="#4a8040" fill-opacity="0.20"
+   stroke="#2d5c25" stroke-width="5"
+   class="loft-zone" role="button" tabindex="0"
+   aria-label="Raised Mid zone" data-zone="loft-raised-mid">
+      <title>Raised Mid</title>
+    </rect>
+    <rect
+   id="loft-raised-east"
+   x="3049" y="90" width="703" height="1272"
+   fill="#4a8040" fill-opacity="0.20"
+   stroke="#2d5c25" stroke-width="5"
+   class="loft-zone" role="button" tabindex="0"
+   aria-label="Raised East zone" data-zone="loft-raised-east">
+      <title>Raised East</title>
+    </rect>
+
+    <!-- ── LOW SECTION (south strip, direct access) ─────────────────── -->
+    <rect
+   id="loft-low-west"
+   x="1643" y="1362" width="703" height="573"
+   fill="#3a5c90" fill-opacity="0.20"
+   stroke="#1e3d6e" stroke-width="5"
+   class="loft-zone" role="button" tabindex="0"
+   aria-label="Low West zone" data-zone="loft-low-west">
+      <title>Low West</title>
+    </rect>
+    <rect
+   id="loft-low-mid"
+   x="2346" y="1362" width="703" height="573"
+   fill="#3a5c90" fill-opacity="0.20"
+   stroke="#1e3d6e" stroke-width="5"
+   class="loft-zone" role="button" tabindex="0"
+   aria-label="Low Mid zone" data-zone="loft-low-mid">
+      <title>Low Mid</title>
+    </rect>
+    <rect
+   id="loft-low-east"
+   x="3049" y="1362" width="703" height="573"
+   fill="#3a5c90" fill-opacity="0.20"
+   stroke="#1e3d6e" stroke-width="5"
+   class="loft-zone" role="button" tabindex="0"
+   aria-label="Low East zone" data-zone="loft-low-east">
+      <title>Low East</title>
+    </rect>
+
+    <!-- ── STEP / SECTION BOUNDARY ─────────────────────────────────── -->
+    <line
+   x1="362" y1="1362" x2="3762" y2="1362"
+   stroke="#444444" stroke-width="6"
+   stroke-dasharray="30, 15"
+   id="line-step-boundary" />
+
+    <!-- ── ENTRY HATCH / LADDER ACCESS ─────────────────────────────── -->
+    <g
+   id="loft-entry-hatch"
+   transform="translate(2948.0773,1492.6109)">
+      <circle cx="0" cy="0" r="65"
+              fill="#fffff0" fill-opacity="0.90"
+              stroke="#333333" stroke-width="6"
+              id="circle-hatch" />
+      <line x1="-24" y1="-44" x2="-24" y2="44"
+            stroke="#333333" stroke-width="7" stroke-linecap="round" />
+      <line x1="24"  y1="-44" x2="24"  y2="44"
+            stroke="#333333" stroke-width="7" stroke-linecap="round" />
+      <line x1="-24" y1="-28" x2="24" y2="-28"
+            stroke="#333333" stroke-width="5" stroke-linecap="round" />
+      <line x1="-24" y1="-10" x2="24" y2="-10"
+            stroke="#333333" stroke-width="5" stroke-linecap="round" />
+      <line x1="-24" y1="8"   x2="24" y2="8"
+            stroke="#333333" stroke-width="5" stroke-linecap="round" />
+      <line x1="-24" y1="26"  x2="24" y2="26"
+            stroke="#333333" stroke-width="5" stroke-linecap="round" />
+    </g>
+    <text
+   x="2948" y="1408"
+   text-anchor="middle"
+   font-family="'Atkinson Hyperlegible Mono', 'JetBrains Mono', 'Courier New', monospace"
+   font-size="36"
+   fill="#333333" fill-opacity="0.85"
+   id="text-hatch-label">loft entry</text>
+
+    <!-- ── ZONE LABELS ──────────────────────────────────────────────── -->
+    <!-- Raised West -->
+    <text
+   id="label-loft-raised-west"
+   x="1994" y="690"
+   text-anchor="middle"
+   font-family="'Atkinson Hyperlegible Mono', 'JetBrains Mono', 'Courier New', monospace"
+   font-size="72" font-weight="600"
+   fill="#1e3d18" fill-opacity="0.80">Raised West</text>
+    <text
+   x="1994" y="772"
+   text-anchor="middle"
+   font-family="'Atkinson Hyperlegible Mono', 'JetBrains Mono', 'Courier New', monospace"
+   font-size="42" font-style="italic"
+   fill="#2d5c25" fill-opacity="0.70">ladder access</text>
+
+    <!-- Raised Mid -->
+    <text
+   id="label-loft-raised-mid"
+   x="2697" y="690"
+   text-anchor="middle"
+   font-family="'Atkinson Hyperlegible Mono', 'JetBrains Mono', 'Courier New', monospace"
+   font-size="72" font-weight="600"
+   fill="#1e3d18" fill-opacity="0.80">Raised Mid</text>
+    <text
+   x="2697" y="772"
+   text-anchor="middle"
+   font-family="'Atkinson Hyperlegible Mono', 'JetBrains Mono', 'Courier New', monospace"
+   font-size="42" font-style="italic"
+   fill="#2d5c25" fill-opacity="0.70">ladder access</text>
+
+    <!-- Raised East -->
+    <text
+   id="label-loft-raised-east"
+   x="3400" y="690"
+   text-anchor="middle"
+   font-family="'Atkinson Hyperlegible Mono', 'JetBrains Mono', 'Courier New', monospace"
+   font-size="72" font-weight="600"
+   fill="#1e3d18" fill-opacity="0.80">Raised East</text>
+    <text
+   x="3400" y="772"
+   text-anchor="middle"
+   font-family="'Atkinson Hyperlegible Mono', 'JetBrains Mono', 'Courier New', monospace"
+   font-size="42" font-style="italic"
+   fill="#2d5c25" fill-opacity="0.70">ladder access</text>
+
+    <!-- Low West -->
+    <text
+   id="label-loft-low-west"
+   x="1994" y="1660"
+   text-anchor="middle"
+   font-family="'Atkinson Hyperlegible Mono', 'JetBrains Mono', 'Courier New', monospace"
+   font-size="72" font-weight="600"
+   fill="#0d2645" fill-opacity="0.80">Low West</text>
+
+    <!-- Low Mid -->
+    <text
+   id="label-loft-low-mid"
+   x="2697" y="1660"
+   text-anchor="middle"
+   font-family="'Atkinson Hyperlegible Mono', 'JetBrains Mono', 'Courier New', monospace"
+   font-size="72" font-weight="600"
+   fill="#0d2645" fill-opacity="0.80">Low Mid</text>
+
+    <!-- Low East -->
+    <text
+   id="label-loft-low-east"
+   x="3400" y="1660"
+   text-anchor="middle"
+   font-family="'Atkinson Hyperlegible Mono', 'JetBrains Mono', 'Courier New', monospace"
+   font-size="72" font-weight="600"
+   fill="#0d2645" fill-opacity="0.80">Low East</text>
+
+  </g>
+
   <metadata
    id="metadata48">
     <rdf:RDF>

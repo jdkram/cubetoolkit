@@ -3,6 +3,7 @@ Django<5.3,>=5.2.3
 # HTML sanitization (strip script tags / event-handler attrs from user HTML):
 nh3
 easy_thumbnails==2.10
+Pillow>=10.0
 django-crispy-forms<1.13
 # Functionality introduced at these versions is required:
 python-magic>=0.4.0

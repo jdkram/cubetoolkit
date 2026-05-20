@@ -17,4 +17,10 @@ urlpatterns = [
     re_path(r"^jobs/(?P<job_id>\d+)/claim/$", views.job_claim, name="labs-job-claim"),
     re_path(r"^jobs/(?P<job_id>\d+)/unclaim/$", views.job_unclaim, name="labs-job-unclaim"),
     re_path(r"^jobs/(?P<job_id>\d+)/resolve/$", views.job_resolve, name="labs-job-resolve"),
+    re_path(r"^loft/zone/(?P<zone_id>[\w-]+)/items/$", views.loft_item_create, name="labs-loft-item-create"),
+    re_path(r"^loft/item/(?P<item_id>\d+)/$", views.loft_item, name="labs-loft-item"),
+    re_path(r"^loft/item/(?P<item_id>\d+)/photo/$", views.loft_item_photo_upload, name="labs-loft-item-photo"),
+    re_path(r"^loft/photo/(?P<photo_id>\d+)/delete/$", views.loft_photo_delete, name="labs-loft-photo-delete"),
+    re_path(r"^area/(?P<area_id>[\w-]+)/photo/$", views.area_photo_upload, name="labs-area-photo-upload"),
+    re_path(r"^area/(?P<area_id>[\w-]+)/photo/delete/$", views.area_photo_delete, name="labs-area-photo-delete"),
 ]

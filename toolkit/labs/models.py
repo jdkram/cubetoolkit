@@ -208,3 +208,56 @@ class Job(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class LoftItem(models.Model):
+    zone_id = models.CharField(max_length=50)
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True, default="")
+    added_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="loft_items"
+    )
+    added_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "labs_loft_items"
+        ordering = ["zone_id", "added_at"]
+
+    def __str__(self):
+        return f"{self.zone_id}: {self.name}"
+
+
+class AreaPhoto(models.Model):
+    """One reference photo per mapped area (room or loft zone)."""
+
+    area_id = models.CharField(max_length=100, unique=True)
+    image = models.ImageField(upload_to="area-photos/")
+    caption = models.CharField(max_length=200, blank=True, default="")
+    uploaded_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "labs_area_photos"
+
+    def __str__(self) -> str:
+        return f"Photo for {self.area_id}"
+
+
+class LoftItemPhoto(models.Model):
+    item = models.ForeignKey(LoftItem, on_delete=models.CASCADE, related_name="photos")
+    image = models.ImageField(upload_to="loft-photos/")
+    caption = models.CharField(max_length=200, blank=True, default="")
+    uploaded_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "labs_loft_item_photos"
+        ordering = ["uploaded_at"]
+
+    def __str__(self):
+        return f"Photo for {self.item.name} ({self.pk})"
