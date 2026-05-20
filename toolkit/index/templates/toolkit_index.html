@@ -118,11 +118,11 @@
     </div>
   </div>
 </div>
-<div class="row mb-2">
+<div class="row gy-4 mb-2">
 
   {# Upcoming shifts — all volunteers with a linked account #}
   {% if has_volunteer %}
-  <div id="dash_upcoming_shifts" class="col-md-6 mb-4 d-flex">
+  <div id="dash_upcoming_shifts" class="col-md-6 d-flex">
     <div class="card w-100">
       <div class="card-header"><strong>Your upcoming shifts</strong></div>
       <div class="card-body">
@@ -151,7 +151,7 @@
 
   {# Starred events — volunteers with a linked account #}
   {% if has_volunteer %}
-  <div id="dash_starred_events" class="col-md-6 mb-4 d-flex">
+  <div id="dash_starred_events" class="col-md-6 d-flex">
     <div class="card w-100">
       <div class="card-header"><strong>Your starred events</strong></div>
       <div class="card-body">
@@ -175,7 +175,7 @@
 
   {# New on the calendar — Programmer+ only #}
   {% if new_showings %}
-  <div id="dash_new_showings" class="col-md-6 mb-4 d-flex">
+  <div id="dash_new_showings" class="col-md-6 d-flex">
     <div class="card w-100">
       <div class="card-header"><strong>New since your last login</strong></div>
       <div class="card-body">
@@ -195,7 +195,7 @@
 
   {# Gaps in the rota — all logged-in users #}
   {% if showings_with_gaps %}
-  <div id="dash_rota_gaps" class="col-md-6 mb-4 d-flex">
+  <div id="dash_rota_gaps" class="col-md-6 d-flex">
     <div class="card w-100">
       <div class="card-header"><strong>Gaps in the rota</strong></div>
       <div class="card-body">
@@ -216,7 +216,7 @@
 
   {# Not yet confirmed — Programmer+ only #}
   {% if unconfirmed_showings %}
-  <div id="dash_unconfirmed" class="col-md-6 mb-4 d-flex">
+  <div id="dash_unconfirmed" class="col-md-6 d-flex">
     <div class="card w-100">
       <div class="card-header"><strong>Not yet confirmed</strong></div>
       <div class="card-body">
@@ -237,7 +237,7 @@
 
   {# Upcoming inductions & training — all logged-in users #}
   {% if upcoming_training %}
-  <div id="dash_training" class="col-md-6 mb-4 d-flex">
+  <div id="dash_training" class="col-md-6 d-flex">
     <div class="card w-100">
       <div class="card-header"><strong>Upcoming inductions &amp; training</strong></div>
       <div class="card-body">
@@ -286,7 +286,7 @@
 <div class="row">
 
   {# Rota — all users #}
-  <div class="col-md-6 mb-4 d-flex">
+  <div class="col-md-6 d-flex">
     <div class="card w-100">
       <div class="card-header d-flex justify-content-between align-items-center">
         <strong>Rota</strong>
@@ -303,7 +303,7 @@
 
   {% if perms.toolkit.write %}
   {# Programming — Programmer+ #}
-  <div class="col-md-6 mb-4 d-flex">
+  <div class="col-md-6 d-flex">
     <div class="card w-100">
       <div class="card-header d-flex justify-content-between align-items-center">
         <strong>Programming</strong>
@@ -325,7 +325,7 @@
   </div>
 
   {# Meta-programming — Programmer+ #}
-  <div class="col-md-6 mb-4 d-flex">
+  <div class="col-md-6 d-flex">
     <div class="card w-100">
       <div class="card-header d-flex justify-content-between align-items-center">
         <strong>Meta-programming</strong>
@@ -347,7 +347,7 @@
 
   {% if user.is_superuser %}
   {# Members — Panopticon only #}
-  <div class="col-md-6 mb-4 d-flex">
+  <div class="col-md-6 d-flex">
     <div class="card w-100">
       <div class="card-header d-flex justify-content-between align-items-center">
         <strong>Members</strong>
@@ -369,7 +369,7 @@
   </div>
 
   {# Volunteers — Panopticon only #}
-  <div class="col-md-6 mb-4 d-flex">
+  <div class="col-md-6 d-flex">
     <div class="card w-100">
       <div class="card-header d-flex justify-content-between align-items-center">
         <strong>Volunteers</strong>
@@ -392,7 +392,7 @@
   </div>
 
   {# Admin — Panopticon only #}
-  <div class="col-md-6 mb-4 d-flex">
+  <div class="col-md-6 d-flex">
     <div class="card w-100">
       <div class="card-header d-flex justify-content-between align-items-center">
         <strong>Admin</strong>

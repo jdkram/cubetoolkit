@@ -4,9 +4,9 @@
 {% block title %}Building Map — Labs{% endblock %}
 
 {% block header-navbar-extra-post %}
-<ul class="navbar-nav ml-auto">
+<ul class="navbar-nav ms-auto">
   <li class="nav-item active">
-    <a class="nav-link" href="{% url 'labs-floorplan' %}">Building Map <span class="sr-only">(current)</span></a>
+    <a class="nav-link" href="{% url 'labs-floorplan' %}">Building Map <span class="visually-hidden">(current)</span></a>
   </li>
 </ul>
 {% endblock %}
@@ -408,9 +408,9 @@
     {{ section.label }}
     <span class="section-note-count badge bg-secondary ms-1" data-section="{{ section.key }}"></span>
   </h2>
-  <div class="row g-2 mb-4">
+  <div class="row g-3 mb-4">
     {% for room in section.rooms %}
-    <div class="col-sm-6 col-md-4 col-xl-3 d-flex mb-3 mb-sm-0">
+    <div class="col-sm-6 col-md-4 col-xl-3 d-flex">
       <div class="room-card card w-100" data-room-id="{{ room.id }}" data-section="{{ section.key }}">
         {# View mode #}
         <div class="room-card-view">
@@ -424,7 +424,7 @@
         {# Edit mode #}
         <div class="room-card-editor">
           <div class="room-card-name">{{ room.name }}</div>
-          <label for="note-{{ room.id }}" class="sr-only">Note for {{ room.name }}</label>
+          <label for="note-{{ room.id }}" class="visually-hidden">Note for {{ room.name }}</label>
           <textarea id="note-{{ room.id }}" class="form-control room-note-input mt-1"
                     rows="4" placeholder="Add a note about this room&hellip;"></textarea>
           <div class="room-note-meta-edit text-muted mt-1" style="font-size:0.72rem;"></div>
@@ -449,7 +449,7 @@
   <h2 class="rooms-section-heading">{{ section.label }}</h2>
   <div class="row g-3 mb-4">
     {% for zone in section.zones %}
-    <div class="col-12 col-sm-6 col-lg-4 mb-3 mb-sm-0">
+    <div class="col-12 col-sm-6 col-lg-4">
       <div class="zone-card" data-zone-id="{{ zone.id }}" data-section="{{ section.key }}">
         <div class="zone-card-header">
           <h3 class="zone-card-name">{{ zone.name }}</h3>
@@ -462,7 +462,7 @@
                     aria-label="Edit note for {{ zone.name }}">Edit</button>
           </div>
           <div class="zone-note-editor">
-            <label for="zone-note-{{ zone.id }}" class="sr-only">Note for {{ zone.name }}</label>
+            <label for="zone-note-{{ zone.id }}" class="visually-hidden">Note for {{ zone.name }}</label>
             <textarea id="zone-note-{{ zone.id }}" class="form-control zone-note-input"
                       rows="3" placeholder="Zone note&hellip;"></textarea>
             <div class="zone-note-meta"></div>
