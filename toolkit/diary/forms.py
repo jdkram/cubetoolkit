@@ -248,6 +248,9 @@ class MediaItemForm(forms.ModelForm):
             "media_file": forms.ClearableFileInput(
                 attrs={"accept": "image/jpeg,image/gif,image/png"}
             ),
+            "alt_text": forms.Textarea(
+                attrs={"rows": 3, "style": "resize: vertical;"}
+            ),
         }
         exclude = ("mimetype", "caption")
 

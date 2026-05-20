@@ -6,6 +6,7 @@
 {% block archive_body %}
 <h3>{{ VENUE.longname }} programme archive: {{ year|date:"Y" }}</h3>
     <form action="{% url "archive-search" %}">
+        <label for="archive_search_input" class="visually-hidden">Search {{ year|date:"Y" }}</label>
         <input id="archive_search_input" type="text" name="search_term" placeholder="Search {{ year|date:"Y" }}"/>
         <input type="submit" value="Search" />
         <input type="hidden" name="start_date" value="{{ year|date:"m/d/Y" }}">

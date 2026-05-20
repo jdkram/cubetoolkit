@@ -102,7 +102,7 @@ setup_page(true);
                     {% if showing.discounted %}<abbr class="discounted" title="* cheap night">*</abbr>{% endif %}<br>
                     {% endfor %}
             </p>
-            <p class="copy">{{ event.copy_summary|truncatewords:16 }} [<a class="more" href="{{ event_detail_url }}">more</a>]</p>
+            <p class="copy">{{ event.copy_summary|truncatewords:16 }} [<a class="more" href="{{ event_detail_url }}" aria-label="More about {{ event.name }}">more</a>]</p>
         </div>{% endwith %}
     </div>{% endfor %}<!-- end .showing -->
 </div><!-- end #programme -->

@@ -7,62 +7,47 @@
     <div class="grid-sizer"></div>
     <div class="gutter-sizer"></div>
 
-    {% if not page.image %}
-    {# No image defined #}
+    {% if page.image and page.image_alignment != "C" %}
+    {# Side-by-side layout: image column alongside text column #}
 
-    <div class="grid-item grid-item--width event-image">
-        &nbsp;
-    </div>
-    <div class="grid-item grid-item--width3">
-        <h3>{{ page.title }}</h3>
-        <br>
-        <div class="copy event-image event_image">
-            {{ page.body|richtext }}
-        </div>
-    </div>
-
-    {% elif page.image_alignment == "C" %}
-
-    <div class="grid-item grid-item--width">
-        &nbsp;
-    </div>
-    <div class="grid-item grid-item--width4">
+    {% if page.image_alignment == "L" %}
+    <div class="grid-item grid-item--width2 event-image">
         <div class="event_image">
             {% image page.image original %}
         </div>
-        <br>
+    </div>
+    {% endif %}
+
+    <div class="grid-item grid-item--width3">
         <h3>{{ page.title }}</h3>
-        <br>
-        <div class="copy event-image event_image">
+        <div class="copy">
             {{ page.body|richtext }}
         </div>
     </div>
 
+    {% if page.image_alignment == "R" %}
+    <div class="grid-item grid-item--width2 event-image">
+        <div class="event_image">
+            {% image page.image original %}
+        </div>
+    </div>
+    {% endif %}
+
     {% else %}
+    {# Image centred above text, or no image: use wide single column #}
 
-        {% if page.image_alignment == "L" %}
-        <div class="grid-item grid-item--width2 event-image">
-            <div class="event_image">
-                {% image page.image original %}
-            </div>
+    <div class="grid-item grid-item--width4">
+        {% if page.image %}
+        <div class="event_image">
+            {% image page.image original %}
         </div>
         {% endif %}
-
-        <div class="grid-item grid-item--width3">
-            <h3>{{ page.title }}</h3>
-            <br>
-            <div class="copy event-image event_image">
-                {{ page.body|richtext }}
-            </div>
+        <h3>{{ page.title }}</h3>
+        <div class="copy">
+            {{ page.body|richtext }}
         </div>
+    </div>
 
-        {% if page.image_alignment == "R" %}
-        <div class="grid-item grid-item--width2 event-image">
-            <div class="event_image">
-                {% image page.image original %}
-            </div>
-        </div>
-        {% endif %}
     {% endif %}
 
 </div>
