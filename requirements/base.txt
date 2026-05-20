@@ -12,7 +12,7 @@ python-dateutil
 # For generating non-html copy for mailout etc:
 html2text
 # CMS:
-wagtail==6.3.8
+wagtail==7.4.1
 monthdelta
 
 # The MySQL-python library requires a C build chain (gcc, etc.) and the mysql
