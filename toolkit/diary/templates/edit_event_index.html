@@ -49,13 +49,9 @@ Editing {{ event_list_name }}
       border-left: 1px solid #ddd;
   }
 
-  /* Day-level row banding */
-  tr.day-even {
-      background-color: #f5f5f5;
-  }
-  tr.day-odd {
-      background-color: #fff;
-  }
+  /* Day-level row banding — override BS5's --bs-table-bg on the row so cells inherit it */
+  tr.day-even { --bs-table-bg: #f5f5f5; }
+  tr.day-odd  { --bs-table-bg: #fff; }
   /* Thin separator between days */
   tr.first-in-day td {
       border-top: 1px solid #ccc;

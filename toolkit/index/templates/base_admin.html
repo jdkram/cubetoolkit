@@ -52,12 +52,12 @@ body {
       <a class="navbar-brand" href="{% url "toolkit-index" %}">
         <img alt="{{ VENUE.name }}" src="{{ STATIC_URL }}/{{ VENUE.internal_header_img }}" height="40px" style="max-width: 120px; width: auto;">
       </a>
-      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarsExampleDefault" aria-controls="navbarsExampleDefault" aria-expanded="false" aria-label="Toggle navigation">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarsExampleDefault" aria-controls="navbarsExampleDefault" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
 
       <div class="collapse navbar-collapse" id="navbarsExampleDefault">
-        <ul class="navbar-nav mr-auto">
+        <ul class="navbar-nav me-auto">
           <li class="nav-item">
             <a class="nav-link" href="{% url "toolkit-index" %}">Home</a>
           </li>
@@ -76,7 +76,7 @@ body {
             <a class="nav-link" href="{% url "default-view" %}">Website</a>
           </li>
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="dropdown-labs" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Labs</a>
+            <a class="nav-link dropdown-toggle" href="#" id="dropdown-labs" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Labs</a>
             <div class="dropdown-menu" aria-labelledby="dropdown-labs">
               <a class="dropdown-item" href="{% url "labs-collectives" %}">Collectives</a>
               <div class="dropdown-divider"></div>
@@ -88,7 +88,7 @@ body {
           </li>
           {% if perms.toolkit.write %}
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="dropdown-meta" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Meta</a>
+            <a class="nav-link dropdown-toggle" href="#" id="dropdown-meta" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Meta</a>
             <div class="dropdown-menu" aria-labelledby="dropdown-meta">
               <a class="dropdown-item" href="{% url "edit_event_tags" %}">Tags</a>
               <a class="dropdown-item" href="{% url "edit_event_templates" %}">Templates</a>
@@ -102,7 +102,7 @@ body {
           {% endif %}
           {% if user.is_superuser %}
              <li class="nav-item dropdown">
-               <a class="nav-link dropdown-toggle" href="{% url "search-members" %}" id="dropdown-members" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Members</a>
+               <a class="nav-link dropdown-toggle" href="{% url "search-members" %}" id="dropdown-members" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Members</a>
                <div class="dropdown-menu" aria-labelledby="dropdown-members">
                  <a class="dropdown-item" href="{% url "add-member" %}">Add Member</a>
                  <a class="dropdown-item" href="{% url "search-members" %}">Search Members</a>
@@ -113,7 +113,7 @@ body {
              </li>
 
              <li class="nav-item dropdown">
-               <a class="nav-link dropdown-toggle" href="{% url "view-volunteer-summary" %}" id="dropdown-volunteers" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Volunteers</a>
+               <a class="nav-link dropdown-toggle" href="{% url "view-volunteer-summary" %}" id="dropdown-volunteers" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Volunteers</a>
                <div class="dropdown-menu" aria-labelledby="dropdown-volunteers">
                  <a class="dropdown-item" href="{% url "view-volunteer-summary" %}">Volunteers summary</a>
                  <a class="dropdown-item" href="{% url "view-volunteer-list" %}">Volunteers profiles</a>

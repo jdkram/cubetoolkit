@@ -93,7 +93,7 @@
 </script>
 <div class="d-flex justify-content-between align-items-baseline mb-2">
   <h2 class="h5 mb-0">Dashboard</h2>
-  <button class="btn btn-sm btn-outline-secondary" type="button" data-toggle="collapse" data-target="#dash-customise" aria-expanded="false">Customise</button>
+  <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#dash-customise" aria-expanded="false">Customise</button>
 </div>
 <div class="collapse mb-2" id="dash-customise">
   <div class="card card-body py-2">
@@ -135,7 +135,7 @@
               <a href="{% url "rota-edit-month" year=entry.showing.start.year month=entry.showing.start.month %}#showing-{{ entry.showing.pk }}">{{ entry.showing.event.name }}</a>
               <small class="text-muted">{{ entry.role.name }}</small>
             </td>
-            <td class="text-right">{% calendar_links entry.showing %}</td>
+            <td class="text-end">{% calendar_links entry.showing %}</td>
           </tr>
           {% endfor %}
         </table>
@@ -204,7 +204,7 @@
           <tr class="shift-row">
             <td>{{ showing.start|date:"D j M" }}</td>
             <td><a href="{% url "rota-edit-month" year=showing.start.year month=showing.start.month %}#showing-{{ showing.pk }}">{{ showing.event.name }}</a></td>
-            <td class="text-right"><span class="badge badge-warning">{{ showing.missing }}</span></td>
+            <td class="text-end"><span class="badge text-bg-warning">{{ showing.missing }}</span></td>
           </tr>
           {% endfor %}
         </table>
@@ -225,7 +225,7 @@
           <tr class="shift-row">
             <td>{{ showing.start|date:"D j M" }}</td>
             <td><a href="{% url "edit-event-details-view" event_id=showing.event.pk %}">{{ showing.event.name }}</a></td>
-            {% if showing.booked_by %}<td class="text-right text-muted" style="font-size:0.85em">{{ showing.booked_by }}</td>{% endif %}
+            {% if showing.booked_by %}<td class="text-end text-muted" style="font-size:0.85em">{{ showing.booked_by }}</td>{% endif %}
           </tr>
           {% endfor %}
         </table>
@@ -290,7 +290,7 @@
     <div class="card w-100">
       <div class="card-header d-flex justify-content-between align-items-center">
         <strong>Rota</strong>
-        {% if perms.toolkit.write %}<span class="badge badge-secondary">All users</span>{% endif %}
+        {% if perms.toolkit.write %}<span class="badge text-bg-secondary">All users</span>{% endif %}
       </div>
       <div class="card-body">
         <ul class="card-links">
@@ -307,7 +307,7 @@
     <div class="card w-100">
       <div class="card-header d-flex justify-content-between align-items-center">
         <strong>Programming</strong>
-        <span class="badge badge-primary">Programmer+</span>
+        <span class="badge text-bg-primary">Programmer+</span>
       </div>
       <div class="card-body">
         <ul class="card-links">
@@ -329,7 +329,7 @@
     <div class="card w-100">
       <div class="card-header d-flex justify-content-between align-items-center">
         <strong>Meta-programming</strong>
-        <span class="badge badge-primary">Programmer+</span>
+        <span class="badge text-bg-primary">Programmer+</span>
       </div>
       <div class="card-body">
         <ul class="card-links">
@@ -351,7 +351,7 @@
     <div class="card w-100">
       <div class="card-header d-flex justify-content-between align-items-center">
         <strong>Members</strong>
-        <span class="badge badge-dark">Panopticon only</span>
+        <span class="badge text-bg-dark">Panopticon only</span>
       </div>
       <div class="card-body">
         <ul class="card-links">
@@ -373,7 +373,7 @@
     <div class="card w-100">
       <div class="card-header d-flex justify-content-between align-items-center">
         <strong>Volunteers</strong>
-        <span class="badge badge-dark">Panopticon only</span>
+        <span class="badge text-bg-dark">Panopticon only</span>
       </div>
       <div class="card-body">
         <ul class="card-links">
@@ -396,7 +396,7 @@
     <div class="card w-100">
       <div class="card-header d-flex justify-content-between align-items-center">
         <strong>Admin</strong>
-        <span class="badge badge-dark">Panopticon only</span>
+        <span class="badge text-bg-dark">Panopticon only</span>
       </div>
       <div class="card-body">
         <ul class="card-links">
@@ -417,7 +417,7 @@
 {% if object_list or user.is_superuser %}
 <hr class="mt-2 mb-3">
 {% if user.is_superuser %}
-<div class="text-right mb-2">
+<div class="text-end mb-2">
   <a href="{% url "create-index-link" %}" class="btn btn-sm btn-outline-secondary">+ Add link</a>
   <a href="{% url "create-index-category" %}" class="btn btn-sm btn-outline-secondary">+ Add group</a>
 </div>

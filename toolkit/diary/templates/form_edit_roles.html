@@ -83,7 +83,7 @@
             {% endif %}
             <tr{% if not form.id.value %} class="new-role-row"{% endif %}>
               {% if form.instance.read_only %}
-                <td>{{ form.name.as_hidden }}{{ form.name.value }} <span class="badge badge-secondary">read-only</span></td>
+                <td>{{ form.name.as_hidden }}{{ form.name.value }} <span class="badge text-bg-secondary">read-only</span></td>
                 {# Model on the back end enforces the read_only flag — no integrity worries about the hidden field #}
                 <td class="text-center">{{ form.standard }}</td>
                 <td>{{ form.description }}</td>

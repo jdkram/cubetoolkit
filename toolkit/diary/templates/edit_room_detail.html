@@ -51,13 +51,13 @@ document.addEventListener("DOMContentLoaded", function () {
 <form method="post" class="room-form">
   {% csrf_token %}
 
-  <div class="form-group">
+  <div class="mb-3">
     <label for="{{ form.name.id_for_label }}">Name</label>
     {{ form.name }}
     {% if form.name.errors %}<div class="text-danger small">{{ form.name.errors }}</div>{% endif %}
   </div>
 
-  <div class="form-group">
+  <div class="mb-3">
     <label for="{{ form.colour.id_for_label }}">Colour</label>
     <div style="display: flex; align-items: center; gap: 0.5rem;">
       {{ form.colour }}
@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", function () {
     </label>
   </div>
 
-  <div class="form-group">
+  <div class="mb-3">
     <label for="{{ form.map_slug.id_for_label }}">Building map ID <small class="text-muted">(optional)</small></label>
     {{ form.map_slug }}
     {% if form.map_slug.errors %}<div class="text-danger small">{{ form.map_slug.errors }}</div>{% endif %}
@@ -89,7 +89,7 @@ document.addEventListener("DOMContentLoaded", function () {
   </div>
 
   <button type="submit" class="btn btn-primary btn-sm">Save</button>
-  <a href="{% url 'edit_rooms' %}" class="btn btn-secondary btn-sm ml-1">Cancel</a>
+  <a href="{% url 'edit_rooms' %}" class="btn btn-secondary btn-sm ms-1">Cancel</a>
 </form>
 
 <div class="delete-zone">

@@ -274,7 +274,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     {# SVG building map — collapsible, loaded on expand #}
     <div class="mt-2">
-      <a class="rb-map-toggle" href="#rb-map-panel" data-toggle="collapse">Show building map ↓</a>
+      <a class="rb-map-toggle" href="#rb-map-panel" data-bs-toggle="collapse">Show building map ↓</a>
       <div class="collapse" id="rb-map-panel">
         <div class="rb-map-wrap mt-2">
           <div id="room-booking-map-container"><p class="text-muted small">Loading map&hellip;</p></div>
@@ -316,7 +316,7 @@ document.addEventListener("DOMContentLoaded", function () {
   </ul>
 
   <h3>Rota notes</h3>
-  <div class="form-group">
+  <div class="mb-3">
     {{ rota_notes_form.rota_notes }}
     {% if rota_notes_form.rota_notes.errors %}
     <p class="text-danger small">{{ rota_notes_form.rota_notes.errors }}</p>
