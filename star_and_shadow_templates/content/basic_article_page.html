@@ -3,52 +3,15 @@
 
 {% block body %}
 {{ block.super }}
-<div class="programme">
-    <div class="grid-sizer"></div>
-    <div class="gutter-sizer"></div>
-
-    {% if page.image and page.image_alignment != "C" %}
-    {# Side-by-side layout: image column alongside text column #}
-
-    {% if page.image_alignment == "L" %}
-    <div class="grid-item grid-item--width2 event-image">
-        <div class="event_image">
-            {% image page.image original %}
-        </div>
-    </div>
+<article class="article-page">
+    {% if page.image %}
+    <figure class="article-page__figure article-page__figure--{{ page.image_alignment|lower }}">
+        {% image page.image original %}
+    </figure>
     {% endif %}
-
-    <div class="grid-item grid-item--width3">
-        <h3>{{ page.title }}</h3>
-        <div class="copy">
-            {{ page.body|richtext }}
-        </div>
+    <h3>{{ page.title }}</h3>
+    <div class="copy">
+        {{ page.body|richtext }}
     </div>
-
-    {% if page.image_alignment == "R" %}
-    <div class="grid-item grid-item--width2 event-image">
-        <div class="event_image">
-            {% image page.image original %}
-        </div>
-    </div>
-    {% endif %}
-
-    {% else %}
-    {# Image centred above text, or no image: use wide single column #}
-
-    <div class="grid-item grid-item--width4">
-        {% if page.image %}
-        <div class="event_image">
-            {% image page.image original %}
-        </div>
-        {% endif %}
-        <h3>{{ page.title }}</h3>
-        <div class="copy">
-            {{ page.body|richtext }}
-        </div>
-    </div>
-
-    {% endif %}
-
-</div>
+</article>
 {% endblock %}
