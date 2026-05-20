@@ -26,21 +26,52 @@
   height: auto;
   display: block;
 }
-#floorplan-container svg [id^="room-"] {
-  cursor: pointer;
-  transition: opacity 0.12s;
-}
-#floorplan-container svg [id^="room-"]:hover {
-  opacity: 0.75;
-}
-#floorplan-container svg [id^="room-"].map-selected {
-  stroke: #0d6efd;
-  stroke-width: 4px;
-}
 #floorplan-loading {
   padding: 2rem;
   color: #6c757d;
   font-size: 0.9rem;
+}
+
+/* ── Tab bar ─────────────────────────────────────────────── */
+.map-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid #dee2e6;
+  margin-bottom: 1rem;
+  max-width: 900px;
+}
+.map-tab-btn {
+  padding: 0.45rem 1.1rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: none;
+  cursor: pointer;
+  color: #6c757d;
+  margin-bottom: -2px;
+  transition: color 0.12s, border-color 0.12s;
+}
+.map-tab-btn:hover { color: #212529; }
+.map-tab-btn.active {
+  color: #0d6efd;
+  border-bottom-color: #0d6efd;
+}
+
+/* ── SVG room/zone interaction ───────────────────────────── */
+#floorplan-container svg [id^="room-"],
+#floorplan-container svg [id^="loft-"] {
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+#floorplan-container svg [id^="room-"]:hover,
+#floorplan-container svg [id^="loft-"]:hover {
+  opacity: 0.75;
+}
+#floorplan-container svg [id^="room-"].map-selected,
+#floorplan-container svg [id^="loft-"].map-selected {
+  stroke: #0d6efd;
+  stroke-width: 8px;
 }
 
 /* ── Section headings ────────────────────────────────────── */
@@ -57,9 +88,10 @@
 .rooms-section-heading .section-note-count {
   font-size: 0.7rem;
   vertical-align: middle;
+  color: #fff;
 }
 
-/* ── Room cards ──────────────────────────────────────────── */
+/* ── Room cards (ground floor) ───────────────────────────── */
 .room-card {
   transition: border-color 0.15s, box-shadow 0.15s;
   height: 100%;
@@ -68,9 +100,7 @@
   border-color: #0d6efd;
   box-shadow: 0 0 0 2px rgba(13,110,253,0.2);
 }
-.room-card.editing {
-  border-color: #0d6efd;
-}
+.room-card.editing { border-color: #0d6efd; }
 .room-card-name {
   font-size: 0.88rem;
   font-weight: 600;
@@ -85,15 +115,8 @@
   margin-bottom: 0.4rem;
   flex: 1;
 }
-.room-note-text.empty {
-  color: #adb5bd;
-  font-style: italic;
-}
-.room-note-meta {
-  font-size: 0.72rem;
-  color: #adb5bd;
-  margin-top: auto;
-}
+.room-note-text.empty { color: #adb5bd; font-style: italic; }
+.room-note-meta { font-size: 0.72rem; color: #adb5bd; margin-top: auto; }
 .room-card-view {
   display: flex;
   flex-direction: column;
@@ -109,37 +132,246 @@
   transition: opacity 0.1s;
 }
 .room-card:hover .room-edit-btn,
-.room-card.room-selected .room-edit-btn {
-  opacity: 1;
-}
-.room-card-editor {
-  display: none;
-  padding: 0.65rem 0.75rem;
-}
-.room-card.editing .room-card-view {
-  display: none;
-}
-.room-card.editing .room-card-editor {
-  display: block;
-}
-.room-note-input {
-  font-size: 0.85rem;
-  resize: vertical;
-}
-.room-save-status {
-  font-size: 0.8rem;
-}
+.room-card.room-selected .room-edit-btn { opacity: 1; }
+.room-card-editor { display: none; padding: 0.65rem 0.75rem; }
+.room-card.editing .room-card-view { display: none; }
+.room-card.editing .room-card-editor { display: block; }
+.room-note-input { font-size: 0.85rem; resize: vertical; }
+.room-save-status { font-size: 0.8rem; }
 .room-save-status.success { color: #198754; }
 .room-save-status.error   { color: #dc3545; }
 
 /* ── Summary bar ─────────────────────────────────────────── */
-#rooms-summary {
+#rooms-summary { font-size: 0.82rem; color: #6c757d; margin-bottom: 1rem; }
+
+/* ── Zone cards (loft) ───────────────────────────────────── */
+.zone-card {
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.zone-card.zone-selected {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 2px rgba(13,110,253,0.2);
+}
+.zone-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.75rem 0.4rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+.zone-card-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #212529;
+  margin: 0;
+}
+.zone-section-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+  background: #e9ecef;
+  color: #495057;
+}
+.zone-section-badge.raised { background: #fde8c8; color: #5a3820; }
+.zone-section-badge.low    { background: #cce5ff; color: #004085; }
+
+/* Note sub-section */
+.zone-note-section { padding: 0.5rem 0.75rem; border-bottom: 1px solid #f0f0f0; }
+.zone-note-view { display: flex; align-items: flex-start; gap: 0.5rem; }
+.zone-note-body {
   font-size: 0.82rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  flex: 1;
+  color: #495057;
+}
+.zone-note-body.empty { color: #adb5bd; font-style: italic; }
+.zone-note-edit-btn {
+  font-size: 0.72rem;
+  padding: 0.1rem 0.4rem;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+.zone-card:hover .zone-note-edit-btn,
+.zone-card.zone-selected .zone-note-edit-btn { opacity: 1; }
+.zone-note-editor { display: none; margin-top: 0.4rem; }
+.zone-note-input { font-size: 0.82rem; resize: vertical; }
+.zone-note-meta { font-size: 0.68rem; color: #adb5bd; margin-top: 0.2rem; }
+
+/* Items sub-section */
+.zone-items-section { padding: 0.5rem 0.75rem 0.65rem; }
+.zone-items-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: #6c757d;
-  margin-bottom: 1rem;
+  margin-bottom: 0.4rem;
+}
+.loft-item-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #f8f9fa;
+}
+.loft-item-row:last-child { border-bottom: none; }
+.loft-item-body { flex: 1; min-width: 0; }
+.loft-item-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #212529;
+}
+.loft-item-desc {
+  font-size: 0.78rem;
+  color: #6c757d;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-top: 0.1rem;
+}
+.loft-item-meta { font-size: 0.68rem; color: #adb5bd; margin-top: 0.2rem; }
+.loft-item-photos { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
+.loft-photo-thumb {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: #e9ecef;
+}
+.loft-photo-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.loft-photo-delete-btn {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  border: none;
+  border-radius: 2px;
+  font-size: 0.65rem;
+  padding: 0 3px;
+  line-height: 1.5;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+.loft-photo-thumb:hover .loft-photo-delete-btn { opacity: 1; }
+.loft-photo-upload-btn {
+  width: 64px;
+  height: 64px;
+  border: 2px dashed #ced4da;
+  border-radius: 3px;
+  background: none;
+  cursor: pointer;
+  color: #adb5bd;
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.1s, color 0.1s;
+}
+.loft-photo-upload-btn:hover { border-color: #0d6efd; color: #0d6efd; }
+.loft-item-delete-btn {
+  font-size: 0.72rem;
+  padding: 0.1rem 0.4rem;
+  flex-shrink: 0;
+  color: #dc3545;
+  border-color: #dc3545;
 }
 
-/* ── No-JS fallback: show edit buttons always ────────────── */
+/* Add item form */
+.item-add-form {
+  display: none;
+  background: #f8f9fa;
+  border-radius: 4px;
+  padding: 0.6rem;
+  margin-top: 0.5rem;
+}
+.item-add-form .item-name-input { font-size: 0.85rem; }
+.item-add-form .item-desc-input { font-size: 0.82rem; resize: vertical; }
+.item-new-btn {
+  font-size: 0.78rem;
+  margin-top: 0.4rem;
+  padding: 0.2rem 0.6rem;
+}
+.save-status { font-size: 0.75rem; }
+.save-status.success { color: #198754; }
+.save-status.error   { color: #dc3545; }
+
+/* ── Area photos ─────────────────────────────────────────── */
+.area-photo-wrap {
+  position: relative;
+  display: block;
+  margin-top: 0.5rem;
+  width: 100%;
+  cursor: pointer;
+}
+.area-photo-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 3px;
+}
+.area-photo-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(0,0,0,0.45);
+  opacity: 0;
+  transition: opacity 0.1s;
+  border-radius: 3px;
+  pointer-events: none;
+}
+.area-photo-wrap:hover .area-photo-overlay { opacity: 1; }
+.area-photo-action-btn {
+  background: rgba(255,255,255,0.92);
+  border: none;
+  border-radius: 2px;
+  font-size: 0.68rem;
+  padding: 2px 6px;
+  cursor: pointer;
+  color: #212529;
+  font-weight: 500;
+  pointer-events: auto;
+}
+.area-photo-action-btn:hover { background: #fff; }
+.area-photo-upload-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px dashed #ced4da;
+  border-radius: 3px;
+  background: none;
+  cursor: pointer;
+  color: #adb5bd;
+  font-size: 0.75rem;
+  transition: border-color 0.1s, color 0.1s;
+}
+.area-photo-upload-btn:hover { border-color: #0d6efd; color: #0d6efd; }
+
+/* ── No-JS fallback ──────────────────────────────────────── */
+@media (scripting: none) {
+  .room-card-view .room-edit-btn { opacity: 1; }
+}
 </style>
 
 <h1 class="h3 mb-3">Building Map</h1>
@@ -148,78 +380,201 @@
   <a href="{% url 'toolkit-index' %}" class="btn btn-sm btn-outline-secondary">&#8592; Back to Toolkit</a>
 </p>
 
-<div id="floorplan-container">
-  <div id="floorplan-loading">Loading floorplan&hellip;</div>
+<div class="map-tabs" role="tablist">
+  <button class="map-tab-btn active" id="tab-groundfloor-btn"
+          role="tab" aria-selected="true" aria-controls="groundfloor-panel">
+    Ground floor
+  </button>
+  <button class="map-tab-btn" id="tab-loft-btn"
+          role="tab" aria-selected="false" aria-controls="loft-panel">
+    Loft
+  </button>
 </div>
-<p class="text-muted mt-2 mb-0" style="font-size:0.82rem;">
+
+<div id="floorplan-container">
+  <div id="floorplan-loading">Loading map&hellip;</div>
+</div>
+<p class="text-muted mt-2 mb-0" id="map-hint" style="font-size:0.82rem;">
   Click a room on the map to jump to its note card. Underlined labels have notes.
 </p>
 
 <hr class="my-4">
 
-<p id="rooms-summary"></p>
-
-{% for section in room_sections %}
-<h2 class="rooms-section-heading">
-  {{ section.label }}
-  <span class="section-note-count badge bg-secondary ms-1" data-section="{{ section.key }}"></span>
-</h2>
-<div class="row g-2 mb-4">
-  {% for room in section.rooms %}
-  <div class="col-sm-6 col-md-4 col-xl-3 d-flex">
-    <div class="room-card card w-100" data-room-id="{{ room.id }}" data-section="{{ section.key }}">
-
-      {# View mode #}
-      <div class="room-card-view">
-        <div class="room-card-name">{{ room.name }}</div>
-        {# Future: room photo thumbnail goes here #}
-        <div class="room-note-text empty" aria-label="Note for {{ room.name }}">No note yet</div>
-        <div class="room-note-meta"></div>
-        <button class="btn btn-sm btn-outline-secondary room-edit-btn"
-                aria-label="Edit note for {{ room.name }}">Edit</button>
-      </div>
-
-      {# Edit mode #}
-      <div class="room-card-editor">
-        <div class="room-card-name">{{ room.name }}</div>
-        <label for="note-{{ room.id }}" class="sr-only">Note for {{ room.name }}</label>
-        <textarea id="note-{{ room.id }}" class="form-control room-note-input mt-1"
-                  rows="4" placeholder="Add a note about this room&hellip;"></textarea>
-        <div class="room-note-meta-edit text-muted mt-1" style="font-size:0.72rem;"></div>
-        <div class="d-flex align-items-center mt-2" style="gap:0.4rem; flex-wrap:wrap;">
-          <button class="btn btn-primary btn-sm room-save-btn">Save</button>
-          <button class="btn btn-outline-secondary btn-sm room-clear-btn">Clear</button>
-          <button class="btn btn-link btn-sm room-cancel-btn p-0" style="font-size:0.82rem;">Cancel</button>
-          <span class="room-save-status" style="display:none;"></span>
+{# ── GROUND FLOOR PANEL ───────────────────────────────────── #}
+<div id="groundfloor-panel" role="tabpanel" aria-labelledby="tab-groundfloor-btn">
+  <p id="rooms-summary"></p>
+  {% for section in room_sections %}
+  <h2 class="rooms-section-heading">
+    {{ section.label }}
+    <span class="section-note-count badge bg-secondary ms-1" data-section="{{ section.key }}"></span>
+  </h2>
+  <div class="row g-2 mb-4">
+    {% for room in section.rooms %}
+    <div class="col-sm-6 col-md-4 col-xl-3 d-flex mb-3 mb-sm-0">
+      <div class="room-card card w-100" data-room-id="{{ room.id }}" data-section="{{ section.key }}">
+        {# View mode #}
+        <div class="room-card-view">
+          <div class="room-card-name">{{ room.name }}</div>
+          <div class="room-note-text empty" aria-label="Note for {{ room.name }}">No note yet</div>
+          <div class="room-note-meta"></div>
+          <div class="area-photo-container"></div>
+          <button class="btn btn-sm btn-outline-secondary room-edit-btn"
+                  aria-label="Edit note for {{ room.name }}">Edit</button>
+        </div>
+        {# Edit mode #}
+        <div class="room-card-editor">
+          <div class="room-card-name">{{ room.name }}</div>
+          <label for="note-{{ room.id }}" class="sr-only">Note for {{ room.name }}</label>
+          <textarea id="note-{{ room.id }}" class="form-control room-note-input mt-1"
+                    rows="4" placeholder="Add a note about this room&hellip;"></textarea>
+          <div class="room-note-meta-edit text-muted mt-1" style="font-size:0.72rem;"></div>
+          <div class="d-flex align-items-center mt-2" style="gap:0.4rem; flex-wrap:wrap;">
+            <button class="btn btn-primary btn-sm room-save-btn">Save</button>
+            <button class="btn btn-outline-secondary btn-sm room-clear-btn">Clear</button>
+            <button class="btn btn-link btn-sm room-cancel-btn p-0" style="font-size:0.82rem;">Cancel</button>
+            <span class="room-save-status" style="display:none;"></span>
+          </div>
         </div>
       </div>
-
     </div>
+    {% endfor %}
   </div>
   {% endfor %}
 </div>
-{% endfor %}
+
+{# ── LOFT PANEL ───────────────────────────────────────────── #}
+<div id="loft-panel" role="tabpanel" aria-labelledby="tab-loft-btn" style="display:none;">
+  <p id="loft-summary" class="text-muted" style="font-size:0.82rem;"></p>
+  {% for section in loft_zone_sections %}
+  <h2 class="rooms-section-heading">{{ section.label }}</h2>
+  <div class="row g-3 mb-4">
+    {% for zone in section.zones %}
+    <div class="col-12 col-sm-6 col-lg-4 mb-3 mb-sm-0">
+      <div class="zone-card" data-zone-id="{{ zone.id }}" data-section="{{ section.key }}">
+        <div class="zone-card-header">
+          <h3 class="zone-card-name">{{ zone.name }}</h3>
+          <span class="zone-section-badge {{ section.key }}">{{ section.key|capfirst }}</span>
+        </div>
+        <div class="zone-note-section">
+          <div class="zone-note-view">
+            <div class="zone-note-body empty">No note yet</div>
+            <button class="btn btn-sm btn-outline-secondary zone-note-edit-btn"
+                    aria-label="Edit note for {{ zone.name }}">Edit</button>
+          </div>
+          <div class="zone-note-editor">
+            <label for="zone-note-{{ zone.id }}" class="sr-only">Note for {{ zone.name }}</label>
+            <textarea id="zone-note-{{ zone.id }}" class="form-control zone-note-input"
+                      rows="3" placeholder="Zone note&hellip;"></textarea>
+            <div class="zone-note-meta"></div>
+            <div class="d-flex align-items-center mt-2" style="gap:0.4rem;">
+              <button class="btn btn-primary btn-sm zone-note-save-btn">Save</button>
+              <button class="btn btn-link btn-sm zone-note-cancel-btn p-0" style="font-size:0.82rem;">Cancel</button>
+              <span class="save-status" style="display:none;"></span>
+            </div>
+          </div>
+          <div class="area-photo-container" style="padding: 0 0 0.4rem;"></div>
+        </div>
+        <div class="zone-items-section">
+          <div class="zone-items-label">Items</div>
+          <div class="loft-items-list"></div>
+          <div class="item-add-form">
+            <input type="text" class="form-control item-name-input mb-1"
+                   placeholder="Item name (required)" maxlength="200">
+            <textarea class="form-control item-desc-input mb-2" rows="2"
+                      placeholder="Description (optional)"></textarea>
+            <div class="d-flex align-items-center" style="gap:0.4rem;">
+              <button class="btn btn-primary btn-sm item-save-btn">Add</button>
+              <button class="btn btn-link btn-sm item-cancel-btn p-0" style="font-size:0.82rem;">Cancel</button>
+              <span class="save-status" style="display:none;"></span>
+            </div>
+          </div>
+          <button class="btn btn-outline-secondary btn-sm item-new-btn">+ Add item</button>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+
+<input type="file" id="photo-file-input" accept="image/*" style="display:none;">
+<input type="file" id="area-photo-input" accept="image/*" capture="environment" style="display:none;">
 
 <script>
 (function () {
   var notes = {{ notes_json|safe }};
+  var loftItems = {{ loft_items_json|safe }};
+  var areaPhotos = {{ area_photos_json|safe }};
   var CSRF = "{{ csrf_token }}";
   var NOTE_URL_BASE = "{% url 'labs-room-note' 'ROOM_ID' %}".replace("/ROOM_ID/", "/");
+  var ITEM_CREATE_BASE = "{% url 'labs-loft-item-create' 'ZONE_ID' %}".replace("/ZONE_ID/", "/");
+  var ITEM_BASE = "{% url 'labs-loft-item' 0 %}".replace("/0/", "/");
+  var ITEM_PHOTO_BASE = "{% url 'labs-loft-item-photo' 0 %}".replace("/0/", "/");
+  var PHOTO_DELETE_BASE = "{% url 'labs-loft-photo-delete' 0 %}".replace("/0/", "/");
+  var AREA_PHOTO_TMPL = "{% url 'labs-area-photo-upload' 'AREA_ID' %}";
+  var AREA_PHOTO_DELETE_TMPL = "{% url 'labs-area-photo-delete' 'AREA_ID' %}";
+
   var svgEl = null;
-  var selectedMapRoomId = null;
-  var activeCardRoomId = null;
+  var selectedMapId = null;
+  var activeTab = "groundfloor";
+  var pendingPhotoUpload = null;
+  var pendingAreaPhotoId = null;
 
   function noteUrl(id) { return NOTE_URL_BASE + id + "/"; }
+  function itemCreateUrl(zoneId) { return ITEM_CREATE_BASE + zoneId + "/items/"; }
+  function itemUrl(id) { return ITEM_BASE + id + "/"; }
+  function itemPhotoUrl(id) { return ITEM_PHOTO_BASE + id + "/photo/"; }
+  function photoDeleteUrl(id) { return PHOTO_DELETE_BASE + id + "/delete/"; }
+  function areaPhotoUrl(areaId) { return AREA_PHOTO_TMPL.replace("AREA_ID", areaId); }
+  function areaPhotoDeleteUrl(areaId) { return AREA_PHOTO_DELETE_TMPL.replace("AREA_ID", areaId); }
 
-  function formatMeta(note) {
+  function fmtDate(iso) {
+    if (!iso) return "";
+    return new Date(iso).toLocaleString("en-GB", {dateStyle: "medium", timeStyle: "short"});
+  }
+  function fmtMeta(note) {
     if (!note || !note.updated_at) return "";
-    var d = new Date(note.updated_at);
-    var who = note.updated_by ? " by " + note.updated_by : "";
-    return "Updated " + d.toLocaleString("en-GB", {dateStyle: "medium", timeStyle: "short"}) + who;
+    return "Updated " + fmtDate(note.updated_at) + (note.updated_by ? " by " + note.updated_by : "");
   }
 
-  /* ── Card population ──────────────────────────────────── */
-  function populateCard(card) {
+  /* ══════════════════════════════════════════════════════════
+     TAB SWITCHING
+  ══════════════════════════════════════════════════════════ */
+  function switchTab(tab) {
+    activeTab = tab;
+    document.getElementById("groundfloor-panel").style.display = tab === "groundfloor" ? "" : "none";
+    document.getElementById("loft-panel").style.display = tab === "loft" ? "" : "none";
+    document.getElementById("tab-groundfloor-btn").classList.toggle("active", tab === "groundfloor");
+    document.getElementById("tab-loft-btn").classList.toggle("active", tab === "loft");
+    document.getElementById("tab-groundfloor-btn").setAttribute("aria-selected", tab === "groundfloor");
+    document.getElementById("tab-loft-btn").setAttribute("aria-selected", tab === "loft");
+    document.getElementById("map-hint").textContent = tab === "groundfloor"
+      ? "Click a room on the map to jump to its note card. Underlined labels have notes."
+      : "Click a zone on the map to jump to its card.";
+
+    if (svgEl) {
+      var layer3 = svgEl.getElementById("layer3");
+      var layer4 = svgEl.getElementById("layer4");
+      var layer5 = svgEl.getElementById("layer5");
+      if (layer3) layer3.style.display = tab === "groundfloor" ? "inline" : "none";
+      if (layer4) layer4.style.display = tab === "groundfloor" ? "inline" : "none";
+      if (layer5) layer5.style.display = tab === "loft" ? "inline" : "none";
+    }
+
+    if (selectedMapId) {
+      var prev = svgEl && svgEl.getElementById(selectedMapId);
+      if (prev) prev.classList.remove("map-selected");
+      selectedMapId = null;
+    }
+  }
+
+  document.getElementById("tab-groundfloor-btn").addEventListener("click", function () { switchTab("groundfloor"); });
+  document.getElementById("tab-loft-btn").addEventListener("click", function () { switchTab("loft"); });
+
+  /* ══════════════════════════════════════════════════════════
+     GROUND FLOOR: card population + editing (unchanged logic)
+  ══════════════════════════════════════════════════════════ */
+  function populateRoomCard(card) {
     var roomId = card.dataset.roomId;
     var note = notes[roomId];
     var noteText = card.querySelector(".room-note-text");
@@ -227,7 +582,7 @@
     if (note && note.body) {
       noteText.textContent = note.body;
       noteText.classList.remove("empty");
-      meta.textContent = formatMeta(note);
+      meta.textContent = fmtMeta(note);
     } else {
       noteText.textContent = "No note yet";
       noteText.classList.add("empty");
@@ -235,10 +590,10 @@
     }
   }
 
-  function populateAll() {
-    document.querySelectorAll(".room-card").forEach(populateCard);
+  function populateAllRooms() {
+    document.querySelectorAll(".room-card").forEach(populateRoomCard);
     updateSectionCounts();
-    updateSummary();
+    updateRoomSummary();
   }
 
   function updateSectionCounts() {
@@ -249,45 +604,45 @@
       cards.forEach(function (c) {
         if (notes[c.dataset.roomId] && notes[c.dataset.roomId].body) count++;
       });
-      var total = cards.length;
-      badge.textContent = count + "/" + total;
+      badge.textContent = count + "/" + cards.length;
       badge.style.display = count > 0 ? "" : "none";
     });
   }
 
-  function updateSummary() {
+  function updateRoomSummary() {
     var total = document.querySelectorAll(".room-card").length;
-    var noted = Object.keys(notes).filter(function (k) { return notes[k].body; }).length;
+    var noted = Object.keys(notes).filter(function (k) {
+      return notes[k].body && k.indexOf("loft-") !== 0;
+    }).length;
     var el = document.getElementById("rooms-summary");
-    if (noted === 0) {
-      el.textContent = "No rooms have notes yet. Click Edit on any card to add one.";
-    } else {
-      el.textContent = noted + " of " + total + " rooms have notes.";
-    }
+    el.textContent = noted === 0
+      ? "No rooms have notes yet. Click Edit on any card to add one."
+      : noted + " of " + total + " rooms have notes.";
   }
 
-  /* ── Card editing ─────────────────────────────────────── */
-  function openCard(card) {
-    if (activeCardRoomId && activeCardRoomId !== card.dataset.roomId) {
-      var prev = document.querySelector('.room-card[data-room-id="' + activeCardRoomId + '"]');
-      if (prev) closeCard(prev);
+  var activeRoomCardId = null;
+
+  function openRoomCard(card) {
+    if (activeRoomCardId && activeRoomCardId !== card.dataset.roomId) {
+      var prev = document.querySelector('.room-card[data-room-id="' + activeRoomCardId + '"]');
+      if (prev) closeRoomCard(prev);
     }
     var roomId = card.dataset.roomId;
-    activeCardRoomId = roomId;
+    activeRoomCardId = roomId;
     var note = notes[roomId] || {};
     card.querySelector(".room-note-input").value = note.body || "";
-    card.querySelector(".room-note-meta-edit").textContent = formatMeta(note);
+    card.querySelector(".room-note-meta-edit").textContent = fmtMeta(note);
     card.querySelector(".room-save-status").style.display = "none";
     card.classList.add("editing");
     card.querySelector(".room-note-input").focus();
   }
 
-  function closeCard(card) {
+  function closeRoomCard(card) {
     card.classList.remove("editing");
-    if (activeCardRoomId === card.dataset.roomId) activeCardRoomId = null;
+    if (activeRoomCardId === card.dataset.roomId) activeRoomCardId = null;
   }
 
-  function saveCard(card, body) {
+  function saveRoomCard(card, body) {
     var roomId = card.dataset.roomId;
     var status = card.querySelector(".room-save-status");
     status.style.display = "none";
@@ -300,18 +655,16 @@
     .then(function (data) {
       if (data.error) throw new Error(data.error);
       notes[roomId] = data;
-      populateCard(card);
-      card.querySelector(".room-note-meta-edit").textContent = formatMeta(data);
+      populateRoomCard(card);
+      card.querySelector(".room-note-meta-edit").textContent = fmtMeta(data);
       updateSectionCounts();
-      updateSummary();
-      if (svgEl) {
-        body ? addStar(svgEl, roomId) : removeStar(svgEl, roomId);
-      }
+      updateRoomSummary();
+      if (svgEl) { body ? addRoomUnderline(svgEl, roomId) : removeRoomUnderline(svgEl, roomId); }
       status.textContent = body ? "Saved" : "Cleared";
-      status.className = "room-save-status " + (body ? "success" : "success");
+      status.className = "room-save-status success";
       status.style.display = "inline";
       setTimeout(function () { status.style.display = "none"; }, 2500);
-      if (!body) closeCard(card);
+      if (!body) closeRoomCard(card);
     })
     .catch(function () {
       status.textContent = "Error saving";
@@ -320,38 +673,417 @@
     });
   }
 
-  /* ── Wire up card buttons ─────────────────────────────── */
   document.querySelectorAll(".room-card").forEach(function (card) {
     card.querySelector(".room-edit-btn").addEventListener("click", function (e) {
       e.stopPropagation();
-      openCard(card);
-      highlightMapRoom(card.dataset.roomId);
+      openRoomCard(card);
+      highlightMap(card.dataset.roomId);
     });
     card.querySelector(".room-save-btn").addEventListener("click", function () {
-      saveCard(card, card.querySelector(".room-note-input").value.trim());
+      saveRoomCard(card, card.querySelector(".room-note-input").value.trim());
     });
     card.querySelector(".room-clear-btn").addEventListener("click", function () {
-      if (confirm("Clear the note for this room?")) saveCard(card, "");
+      if (confirm("Clear the note for this room?")) saveRoomCard(card, "");
     });
     card.querySelector(".room-cancel-btn").addEventListener("click", function () {
-      closeCard(card);
+      closeRoomCard(card);
     });
     card.querySelector(".room-note-input").addEventListener("keydown", function (e) {
       if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-        saveCard(card, card.querySelector(".room-note-input").value.trim());
+        saveRoomCard(card, card.querySelector(".room-note-input").value.trim());
       }
-      if (e.key === "Escape") closeCard(card);
+      if (e.key === "Escape") closeRoomCard(card);
     });
   });
 
-  /* ── SVG helpers ──────────────────────────────────────── */
+  /* ══════════════════════════════════════════════════════════
+     LOFT: zone notes
+  ══════════════════════════════════════════════════════════ */
+  function populateZoneNote(card) {
+    var zoneId = card.dataset.zoneId;
+    var note = notes[zoneId];
+    var body = card.querySelector(".zone-note-body");
+    var meta = card.querySelector(".zone-note-meta");
+    if (note && note.body) {
+      body.textContent = note.body;
+      body.classList.remove("empty");
+      if (meta) meta.textContent = fmtMeta(note);
+    } else {
+      body.textContent = "No note yet";
+      body.classList.add("empty");
+      if (meta) meta.textContent = "";
+    }
+  }
+
+  document.querySelectorAll(".zone-card").forEach(function (card) {
+    var zoneId = card.dataset.zoneId;
+
+    card.querySelector(".zone-note-edit-btn").addEventListener("click", function (e) {
+      e.stopPropagation();
+      var editor = card.querySelector(".zone-note-editor");
+      var view = card.querySelector(".zone-note-view");
+      var note = notes[zoneId] || {};
+      card.querySelector(".zone-note-input").value = note.body || "";
+      card.querySelector(".zone-note-meta").textContent = fmtMeta(note);
+      view.style.display = "none";
+      editor.style.display = "block";
+      card.querySelector(".zone-note-input").focus();
+    });
+
+    card.querySelector(".zone-note-cancel-btn").addEventListener("click", function () {
+      card.querySelector(".zone-note-editor").style.display = "none";
+      card.querySelector(".zone-note-view").style.display = "";
+    });
+
+    card.querySelector(".zone-note-save-btn").addEventListener("click", function () {
+      var body = card.querySelector(".zone-note-input").value.trim();
+      var status = card.querySelector(".zone-note-editor .save-status");
+      status.style.display = "none";
+      fetch(noteUrl(zoneId), {
+        method: "POST",
+        headers: {"Content-Type": "application/json", "X-CSRFToken": CSRF},
+        body: JSON.stringify({body: body})
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        notes[zoneId] = data;
+        populateZoneNote(card);
+        card.querySelector(".zone-note-editor").style.display = "none";
+        card.querySelector(".zone-note-view").style.display = "";
+      })
+      .catch(function () {
+        status.textContent = "Error saving";
+        status.className = "save-status error";
+        status.style.display = "inline";
+      });
+    });
+  });
+
+  /* ══════════════════════════════════════════════════════════
+     LOFT: item rendering + CRUD
+  ══════════════════════════════════════════════════════════ */
+  function renderItems(card) {
+    var zoneId = card.dataset.zoneId;
+    var items = loftItems[zoneId] || [];
+    var list = card.querySelector(".loft-items-list");
+    list.innerHTML = "";
+
+    items.forEach(function (item) {
+      var row = document.createElement("div");
+      row.className = "loft-item-row";
+      row.dataset.itemId = item.id;
+
+      var body = document.createElement("div");
+      body.className = "loft-item-body";
+
+      var name = document.createElement("div");
+      name.className = "loft-item-name";
+      name.textContent = item.name;
+      body.appendChild(name);
+
+      if (item.description) {
+        var desc = document.createElement("div");
+        desc.className = "loft-item-desc";
+        desc.textContent = item.description;
+        body.appendChild(desc);
+      }
+
+      var meta = document.createElement("div");
+      meta.className = "loft-item-meta";
+      meta.textContent = "Added" + (item.added_by ? " by " + item.added_by : "") + " · " + fmtDate(item.added_at);
+      body.appendChild(meta);
+
+      // Photos
+      var photos = document.createElement("div");
+      photos.className = "loft-item-photos";
+      (item.photos || []).forEach(function (p) {
+        photos.appendChild(makePhotoThumb(p, item.id, zoneId));
+      });
+
+      // Upload button
+      var uploadBtn = document.createElement("button");
+      uploadBtn.className = "loft-photo-upload-btn";
+      uploadBtn.title = "Add photo";
+      uploadBtn.setAttribute("aria-label", "Upload photo for " + item.name);
+      uploadBtn.textContent = "+";
+      uploadBtn.addEventListener("click", function () {
+        pendingPhotoUpload = {itemId: item.id, zoneId: zoneId};
+        document.getElementById("photo-file-input").click();
+      });
+      photos.appendChild(uploadBtn);
+      body.appendChild(photos);
+
+      row.appendChild(body);
+
+      // Delete item button
+      var del = document.createElement("button");
+      del.className = "btn btn-sm btn-outline-danger loft-item-delete-btn";
+      del.textContent = "✕";
+      del.setAttribute("aria-label", "Delete " + item.name);
+      del.addEventListener("click", function () {
+        if (!confirm('Delete "' + item.name + '" from the inventory?')) return;
+        fetch(itemUrl(item.id), {
+          method: "DELETE",
+          headers: {"X-CSRFToken": CSRF}
+        })
+        .then(function (r) { return r.json(); })
+        .then(function () {
+          loftItems[zoneId] = loftItems[zoneId].filter(function (i) { return i.id !== item.id; });
+          renderItems(card);
+          updateLoftSummary();
+        });
+      });
+      row.appendChild(del);
+
+      list.appendChild(row);
+    });
+
+    if (items.length === 0) {
+      var empty = document.createElement("p");
+      empty.className = "text-muted mb-1";
+      empty.style.fontSize = "0.8rem";
+      empty.style.fontStyle = "italic";
+      empty.textContent = "No items logged yet.";
+      list.appendChild(empty);
+    }
+  }
+
+  function makePhotoThumb(photo, itemId, zoneId) {
+    var wrap = document.createElement("div");
+    wrap.className = "loft-photo-thumb";
+    var img = document.createElement("img");
+    img.src = photo.url;
+    img.alt = photo.caption || "Loft photo";
+    img.loading = "lazy";
+    wrap.appendChild(img);
+    var del = document.createElement("button");
+    del.className = "loft-photo-delete-btn";
+    del.textContent = "✕";
+    del.setAttribute("aria-label", "Delete photo");
+    del.addEventListener("click", function () {
+      if (!confirm("Delete this photo?")) return;
+      fetch(photoDeleteUrl(photo.id), {
+        method: "POST",
+        headers: {"X-CSRFToken": CSRF}
+      })
+      .then(function (r) { return r.json(); })
+      .then(function () {
+        var item = (loftItems[zoneId] || []).find(function (i) { return i.id === itemId; });
+        if (item) item.photos = item.photos.filter(function (p) { return p.id !== photo.id; });
+        var card = document.querySelector('.zone-card[data-zone-id="' + zoneId + '"]');
+        if (card) renderItems(card);
+      });
+    });
+    wrap.appendChild(del);
+    return wrap;
+  }
+
+  // Photo file input handler
+  document.getElementById("photo-file-input").addEventListener("change", function (e) {
+    var file = e.target.files[0];
+    if (!file || !pendingPhotoUpload) return;
+    var p = pendingPhotoUpload;
+    pendingPhotoUpload = null;
+    e.target.value = "";
+    var fd = new FormData();
+    fd.append("image", file);
+    fetch(itemPhotoUrl(p.itemId), {
+      method: "POST",
+      headers: {"X-CSRFToken": CSRF},
+      body: fd
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.error) { alert("Upload failed: " + data.error); return; }
+      var item = (loftItems[p.zoneId] || []).find(function (i) { return i.id === p.itemId; });
+      if (item) item.photos.push(data);
+      var card = document.querySelector('.zone-card[data-zone-id="' + p.zoneId + '"]');
+      if (card) renderItems(card);
+    })
+    .catch(function () { alert("Upload failed."); });
+  });
+
+  // Add item form
+  document.querySelectorAll(".zone-card").forEach(function (card) {
+    var zoneId = card.dataset.zoneId;
+
+    card.querySelector(".item-new-btn").addEventListener("click", function () {
+      card.querySelector(".item-add-form").style.display = "block";
+      card.querySelector(".item-new-btn").style.display = "none";
+      card.querySelector(".item-name-input").focus();
+    });
+
+    card.querySelector(".item-cancel-btn").addEventListener("click", function () {
+      card.querySelector(".item-add-form").style.display = "none";
+      card.querySelector(".item-new-btn").style.display = "";
+      card.querySelector(".item-name-input").value = "";
+      card.querySelector(".item-desc-input").value = "";
+    });
+
+    card.querySelector(".item-save-btn").addEventListener("click", function () {
+      var name = card.querySelector(".item-name-input").value.trim();
+      if (!name) { card.querySelector(".item-name-input").focus(); return; }
+      var desc = card.querySelector(".item-desc-input").value.trim();
+      var status = card.querySelector(".item-add-form .save-status");
+      status.style.display = "none";
+      fetch(itemCreateUrl(zoneId), {
+        method: "POST",
+        headers: {"Content-Type": "application/json", "X-CSRFToken": CSRF},
+        body: JSON.stringify({name: name, description: desc})
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.error) throw new Error(data.error);
+        if (!loftItems[zoneId]) loftItems[zoneId] = [];
+        loftItems[zoneId].push(data);
+        renderItems(card);
+        updateLoftSummary();
+        card.querySelector(".item-add-form").style.display = "none";
+        card.querySelector(".item-new-btn").style.display = "";
+        card.querySelector(".item-name-input").value = "";
+        card.querySelector(".item-desc-input").value = "";
+      })
+      .catch(function () {
+        status.textContent = "Error adding item";
+        status.className = "save-status error";
+        status.style.display = "inline";
+      });
+    });
+  });
+
+  function updateLoftSummary() {
+    var total = 0;
+    Object.values(loftItems).forEach(function (items) { total += items.length; });
+    var el = document.getElementById("loft-summary");
+    el.textContent = total === 0
+      ? "No items logged yet. Use the zone cards below to document what’s in the loft."
+      : total + " item" + (total === 1 ? "" : "s") + " logged across all zones.";
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     AREA PHOTOS
+  ══════════════════════════════════════════════════════════ */
+  function renderAreaPhoto(container, areaId) {
+    container.innerHTML = "";
+    var photo = areaPhotos[areaId];
+    if (photo) {
+      var wrap = document.createElement("div");
+      wrap.className = "area-photo-wrap";
+      wrap.addEventListener("click", function () { window.open(photo.url, "_blank"); });
+      var img = document.createElement("img");
+      img.src = photo.url;
+      img.alt = "Photo of area";
+      img.className = "area-photo-img";
+      img.loading = "lazy";
+      wrap.appendChild(img);
+      var overlay = document.createElement("div");
+      overlay.className = "area-photo-overlay";
+      var changeBtn = document.createElement("button");
+      changeBtn.className = "area-photo-action-btn";
+      changeBtn.textContent = "Change";
+      changeBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        pendingAreaPhotoId = areaId;
+        document.getElementById("area-photo-input").click();
+      });
+      var delBtn = document.createElement("button");
+      delBtn.className = "area-photo-action-btn";
+      delBtn.style.color = "#dc3545";
+      delBtn.textContent = "Delete";
+      delBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        e.preventDefault();
+        if (!confirm("Delete the photo for this area?")) return;
+        fetch(areaPhotoDeleteUrl(areaId), {
+          method: "POST",
+          headers: {"X-CSRFToken": CSRF}
+        })
+        .then(function (r) { return r.json(); })
+        .then(function () {
+          delete areaPhotos[areaId];
+          document.querySelectorAll(".area-photo-container").forEach(function (c) {
+            var el = c.closest("[data-room-id], [data-zone-id]");
+            if (el) {
+              var id = el.dataset.roomId || el.dataset.zoneId;
+              if (id === areaId) renderAreaPhoto(c, areaId);
+            }
+          });
+        });
+      });
+      overlay.appendChild(changeBtn);
+      overlay.appendChild(delBtn);
+      wrap.appendChild(overlay);
+      container.appendChild(wrap);
+    } else {
+      var btn = document.createElement("button");
+      btn.className = "area-photo-upload-btn";
+      btn.setAttribute("aria-label", "Add photo for this area");
+      btn.innerHTML = "&#128247; Add photo";
+      btn.addEventListener("click", function () {
+        pendingAreaPhotoId = areaId;
+        document.getElementById("area-photo-input").click();
+      });
+      container.appendChild(btn);
+    }
+  }
+
+  function populateAllAreaPhotos() {
+    document.querySelectorAll(".area-photo-container").forEach(function (container) {
+      var el = container.closest("[data-room-id], [data-zone-id]");
+      if (!el) return;
+      var areaId = el.dataset.roomId || el.dataset.zoneId;
+      renderAreaPhoto(container, areaId);
+    });
+  }
+
+  document.getElementById("area-photo-input").addEventListener("change", function (e) {
+    var file = e.target.files[0];
+    if (!file || !pendingAreaPhotoId) return;
+    var areaId = pendingAreaPhotoId;
+    pendingAreaPhotoId = null;
+    e.target.value = "";
+    var fd = new FormData();
+    fd.append("image", file);
+    fetch(areaPhotoUrl(areaId), {
+      method: "POST",
+      headers: {"X-CSRFToken": CSRF},
+      body: fd
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.error) { alert("Upload failed: " + data.error); return; }
+      areaPhotos[areaId] = data;
+      document.querySelectorAll(".area-photo-container").forEach(function (c) {
+        var el = c.closest("[data-room-id], [data-zone-id]");
+        if (el) {
+          var id = el.dataset.roomId || el.dataset.zoneId;
+          if (id === areaId) renderAreaPhoto(c, areaId);
+        }
+      });
+    })
+    .catch(function () { alert("Upload failed."); });
+  });
+
+  /* ══════════════════════════════════════════════════════════
+     SVG: load + wire up both room and zone interaction
+  ══════════════════════════════════════════════════════════ */
+  function highlightMap(id) {
+    if (!svgEl) return;
+    if (selectedMapId) {
+      var prev = svgEl.getElementById(selectedMapId);
+      if (prev) prev.classList.remove("map-selected");
+    }
+    selectedMapId = id;
+    var el = svgEl.getElementById(id);
+    if (el) el.classList.add("map-selected");
+  }
+
   function getLabelEl(roomId) {
     return svgEl ? svgEl.getElementById(roomId.replace(/^room-/, "label-")) : null;
   }
-
   function underlineId(roomId) { return "note-ul-" + roomId; }
 
-  function addStar(svg, roomId) {
+  function addRoomUnderline(svg, roomId) {
     if (svg.getElementById(underlineId(roomId))) return;
     var label = getLabelEl(roomId);
     if (!label) return;
@@ -367,38 +1099,30 @@
     label.parentNode.insertBefore(bar, label.nextSibling);
   }
 
-  function removeStar(svg, roomId) {
+  function removeRoomUnderline(svg, roomId) {
     var el = svg.getElementById(underlineId(roomId));
     if (el) el.parentNode.removeChild(el);
   }
 
-  function highlightMapRoom(roomId) {
-    if (!svgEl) return;
-    if (selectedMapRoomId) {
-      var prev = svgEl.getElementById(selectedMapRoomId);
-      if (prev) prev.classList.remove("map-selected");
-    }
-    selectedMapRoomId = roomId;
-    var el = svgEl.getElementById(roomId);
-    if (el) el.classList.add("map-selected");
-  }
-
-  /* ── Map room click → scroll to card ─────────────────── */
-  function selectFromMap(roomId, roomEl) {
-    highlightMapRoom(roomId);
-    var card = document.querySelector('.room-card[data-room-id="' + roomId + '"]');
+  function selectFromMap(id) {
+    highlightMap(id);
+    var isLoft = id.indexOf("loft-") === 0;
+    var selector = isLoft
+      ? '.zone-card[data-zone-id="' + id + '"]'
+      : '.room-card[data-room-id="' + id + '"]';
+    var card = document.querySelector(selector);
     if (!card) return;
-
-    /* Mark card as selected even before editing */
-    document.querySelectorAll(".room-card").forEach(function (c) {
-      c.classList.remove("room-selected");
-    });
-    card.classList.add("room-selected");
+    if (isLoft) {
+      document.querySelectorAll(".zone-card").forEach(function (c) { c.classList.remove("zone-selected"); });
+      card.classList.add("zone-selected");
+    } else {
+      document.querySelectorAll(".room-card").forEach(function (c) { c.classList.remove("room-selected"); });
+      card.classList.add("room-selected");
+      openRoomCard(card);
+    }
     card.scrollIntoView({behavior: "smooth", block: "center"});
-    openCard(card);
   }
 
-  /* ── Load SVG ─────────────────────────────────────────── */
   fetch("{% static 'labs/floorplan.svg' %}")
     .then(function (r) { return r.text(); })
     .then(function (svgText) {
@@ -409,39 +1133,91 @@
       svgEl.removeAttribute("height");
       svgEl.setAttribute("preserveAspectRatio", "xMidYMid meet");
 
+      // Apply layer visibility based on whichever tab is already active
+      var layer3 = svgEl.getElementById("layer3");
+      var layer4 = svgEl.getElementById("layer4");
+      var layer5 = svgEl.getElementById("layer5");
+      if (layer3) layer3.style.display = activeTab === "groundfloor" ? "inline" : "none";
+      if (layer4) layer4.style.display = activeTab === "groundfloor" ? "inline" : "none";
+      if (layer5) layer5.style.display = activeTab === "loft" ? "inline" : "none";
+
+      // Underline rooms that already have notes
       Object.keys(notes).forEach(function (roomId) {
-        if (notes[roomId].body) addStar(svgEl, roomId);
+        if (notes[roomId].body && roomId.indexOf("loft-") !== 0) {
+          addRoomUnderline(svgEl, roomId);
+        }
       });
 
-      function getRoomTitle(el) {
+      function getTitle(el) {
         var t = el.querySelector("title");
-        return t ? t.textContent.trim() : el.id.replace(/^room-/, "").replace(/-/g, " ");
+        return t ? t.textContent.trim() : el.id.replace(/^(room|loft)-/, "").replace(/-/g, " ");
       }
 
+      // Wire ground floor rooms
       svgEl.querySelectorAll("[id^='room-']").forEach(function (el) {
         el.setAttribute("tabindex", "0");
         el.setAttribute("role", "button");
-        el.setAttribute("aria-label", getRoomTitle(el));
-        el.addEventListener("click", function () { selectFromMap(el.id, el); });
+        el.setAttribute("aria-label", getTitle(el));
+        el.addEventListener("click", function () { selectFromMap(el.id); });
         el.addEventListener("keydown", function (e) {
-          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectFromMap(el.id, el); }
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectFromMap(el.id); }
         });
       });
-
-      svgEl.querySelectorAll("[id^='label-']").forEach(function (labelEl) {
+      svgEl.querySelectorAll("[id^='label-']:not([id^='label-loft'])").forEach(function (labelEl) {
         var roomId = labelEl.id.replace(/^label-/, "room-");
-        var roomEl = svgEl.getElementById(roomId);
-        if (!roomEl) return;
+        if (!svgEl.getElementById(roomId)) return;
         labelEl.style.cursor = "pointer";
-        labelEl.addEventListener("click", function () { selectFromMap(roomId, roomEl); });
+        labelEl.addEventListener("click", function () { selectFromMap(roomId); });
+      });
+
+      // Wire loft zones
+      svgEl.querySelectorAll("[id^='loft-']:not([id^='loft-entry'])").forEach(function (el) {
+        if (!el.dataset.zone) return;
+        el.addEventListener("click", function () {
+          if (activeTab !== "loft") switchTab("loft");
+          selectFromMap(el.id);
+        });
+        el.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            if (activeTab !== "loft") switchTab("loft");
+            selectFromMap(el.id);
+          }
+        });
+      });
+      svgEl.querySelectorAll("[id^='label-loft']").forEach(function (labelEl) {
+        var zoneId = labelEl.id.replace(/^label-/, "");
+        if (!svgEl.getElementById(zoneId)) return;
+        labelEl.style.cursor = "pointer";
+        labelEl.addEventListener("click", function () {
+          if (activeTab !== "loft") switchTab("loft");
+          selectFromMap(zoneId);
+        });
       });
     })
     .catch(function () {
-      document.getElementById("floorplan-loading").textContent = "Failed to load floorplan.";
+      document.getElementById("floorplan-loading").textContent = "Failed to load map.";
     });
 
-  /* ── Initialise cards ─────────────────────────────────── */
-  populateAll();
+  /* ══════════════════════════════════════════════════════════
+     INITIALISE
+  ══════════════════════════════════════════════════════════ */
+  populateAllRooms();
+  document.querySelectorAll(".zone-card").forEach(function (card) {
+    populateZoneNote(card);
+    renderItems(card);
+  });
+  updateLoftSummary();
+  populateAllAreaPhotos();
+
+  // Restore tab from URL hash
+  if (window.location.hash === "#loft") switchTab("loft");
+  document.getElementById("tab-groundfloor-btn").addEventListener("click", function () {
+    history.replaceState(null, "", window.location.pathname);
+  });
+  document.getElementById("tab-loft-btn").addEventListener("click", function () {
+    history.replaceState(null, "", window.location.pathname + "#loft");
+  });
 
 }());
 </script>
