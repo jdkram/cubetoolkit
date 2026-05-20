@@ -13,10 +13,7 @@
   .config-section .card-header {
     font-weight: 600;
   }
-  .config-section .form-group {
-    margin-bottom: 1rem;
-  }
-  .config-section .form-text {
+.config-section .form-text {
     color: #666;
     font-size: 0.85em;
   }
@@ -65,7 +62,7 @@
       <div class="card-header">{{ label }}</div>
       <div class="card-body">
         {% for field in fields %}
-          <div class="form-group">
+          <div class="mb-3">
             {% if field.field.widget.input_type == "checkbox" %}
               <div class="form-check">
                 {{ field }}

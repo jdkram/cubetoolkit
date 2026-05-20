@@ -152,7 +152,7 @@
     {# ---- Identity ---- #}
     <div class="field-section">
       <h3>Identity</h3>
-      <div class="form-group row">
+      <div class="mb-3 row">
         <label class="col-sm-2 col-form-label" for="{{ form.name.id_for_label }}">Name</label>
         <div class="col-sm-6">{{ form.name }}</div>
         {% if form.name.errors %}<div class="col-sm-4 text-danger">{{ form.name.errors }}</div>{% endif %}
@@ -205,7 +205,7 @@
 
       <button type="button" id="add-role-row" class="btn btn-secondary btn-sm">+ Add role</button>
 
-      <div class="form-group row mt-3">
+      <div class="mb-3 row mt-3">
         <label class="col-sm-2 col-form-label" for="{{ form.rota_notes.id_for_label }}">Rota notes</label>
         <div class="col-sm-10">
           {{ form.rota_notes }}
@@ -236,18 +236,18 @@
       <div class="link-row">
         {% if lform.non_field_errors %}<div class="text-danger small mb-1">{{ lform.non_field_errors }}</div>{% endif %}
         <div class="form-row align-items-start">
-          <div class="form-group col-md-4 mb-1">
+          <div class="mb-3 col-md-4 mb-1">
             <label class="small font-weight-bold" for="{{ lform.label.id_for_label }}">Link name</label>
             {{ lform.label }}
             {% if lform.label.errors %}<div class="text-danger small">{{ lform.label.errors }}</div>{% endif %}
           </div>
-          <div class="form-group col-md-7 mb-1">
+          <div class="mb-3 col-md-7 mb-1">
             <label class="small font-weight-bold" for="{{ lform.url.id_for_label }}">URL</label>
             {{ lform.url }}
             {% if lform.url.errors %}<div class="text-danger small">{{ lform.url.errors }}</div>{% endif %}
           </div>
           {% if lform.instance.pk %}
-          <div class="form-group col-md-1 mb-1 pt-4">
+          <div class="mb-3 col-md-1 mb-1 pt-4">
             <label class="link-delete-label" for="{{ lform.DELETE.id_for_label }}">
               {{ lform.DELETE }} Delete
             </label>
@@ -266,22 +266,22 @@
     {# ---- Event details ---- #}
     <div class="field-section">
       <h3>Event details</h3>
-      <div class="form-group row">
+      <div class="mb-3 row">
         <label class="col-sm-2 col-form-label" for="{{ form.tags.id_for_label }}">Tags</label>
         <div class="col-sm-10">{{ form.tags }}</div>
         {% if form.tags.errors %}<div class="col-sm-10 offset-sm-2 text-danger">{{ form.tags.errors }}</div>{% endif %}
       </div>
-      <div class="form-group row">
+      <div class="mb-3 row">
         <label class="col-sm-2 col-form-label" for="{{ form.pricing.id_for_label }}">Pricing</label>
         <div class="col-sm-6">{{ form.pricing }}</div>
         {% if form.pricing.errors %}<div class="col-sm-4 text-danger">{{ form.pricing.errors }}</div>{% endif %}
       </div>
-      <div class="form-group row">
+      <div class="mb-3 row">
         <label class="col-sm-2 col-form-label" for="{{ form.film_information.id_for_label }}">Film info</label>
         <div class="col-sm-6">{{ form.film_information }}</div>
         {% if form.film_information.errors %}<div class="col-sm-4 text-danger">{{ form.film_information.errors }}</div>{% endif %}
       </div>
-      <div class="form-group row">
+      <div class="mb-3 row">
         <div class="col-sm-10 offset-sm-2">
           <div class="form-check">
             {{ form.private }}
@@ -298,7 +298,7 @@
     {# ---- Copy ---- #}
     <div class="field-section">
       <h3>Copy</h3>
-      <div class="form-group row">
+      <div class="mb-3 row">
         <label class="col-sm-2 col-form-label" for="{{ form.copy_summary.id_for_label }}">Summary</label>
         <div class="col-sm-10">
           {{ form.copy_summary }}
@@ -306,7 +306,7 @@
         </div>
         {% if form.copy_summary.errors %}<div class="col-sm-10 offset-sm-2 text-danger">{{ form.copy_summary.errors }}</div>{% endif %}
       </div>
-      <div class="form-group row">
+      <div class="mb-3 row">
         <label class="col-sm-2 col-form-label" for="{{ form.copy.id_for_label }}">Full copy</label>
         <div class="col-sm-10">{{ form.copy }}</div>
         {% if form.copy.errors %}<div class="col-sm-10 offset-sm-2 text-danger">{{ form.copy.errors }}</div>{% endif %}
@@ -316,7 +316,7 @@
     {# ---- Terms ---- #}
     <div class="field-section">
       <h3>Terms</h3>
-      <div class="form-group row">
+      <div class="mb-3 row">
         <label class="col-sm-2 col-form-label" for="{{ form.terms.id_for_label }}">Terms</label>
         <div class="col-sm-10">{{ form.terms }}</div>
         {% if form.terms.errors %}<div class="col-sm-10 offset-sm-2 text-danger">{{ form.terms.errors }}</div>{% endif %}

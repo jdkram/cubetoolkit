@@ -157,7 +157,7 @@ canvas { display: none; }
 <script>
 $(document).ready(function() {
     setupPage();
-    $('[data-toggle="tooltip"]').tooltip();
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) { new bootstrap.Tooltip(el); });
 {% if volunteer.id %}
     setupTraining({
         csrf_token: '{{ csrf_token }}',
@@ -280,7 +280,7 @@ $(document).ready(function() {
 <!-- ── Status ──────────────────────────────────────────────────── -->
 <div class="vol-section" id="vol-status">
   <h4>Volunteer status
-    <span class="field-tip" data-toggle="tooltip" data-placement="right"
+    <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
       title="Status controls whether this person appears on the rota and receives mailouts. It does not affect login access — use the Permissions section for that.">ⓘ</span>
   </h4>
   <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 0.3rem;">
@@ -289,13 +289,13 @@ $(document).ready(function() {
       <label style="font-weight: normal; cursor: pointer;">
         {{ radio.tag }} {{ radio.choice_label }}
         {% if radio.choice_value == "active" %}
-          <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
             title="Appears on the rota, receives mailouts. Down the line, programming events will require a sustained track record of volunteering — Active is the baseline that makes that visible.">ⓘ</span>
         {% elif radio.choice_value == "dormant" %}
-          <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
             title="Taking a break or lapsed. Hidden from the rota and mailouts but stays in the system. Useful for GDPR housekeeping — people we still have data on but who are no longer engaged. Can be reactivated if they return.">ⓘ</span>
         {% elif radio.choice_value == "retired" %}
-          <span class="field-tip" data-toggle="tooltip" data-placement="right"
+          <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
             title="Has permanently left the volunteer team. Hidden from the rota and mailouts. For GDPR purposes, consider whether their data still needs to be held, or whether anonymisation is appropriate.">ⓘ</span>
         {% endif %}
       </label>
@@ -419,19 +419,19 @@ $(document).ready(function() {
     <div class="danger-row">
       {{ user_form.is_active }}
       <label for="{{ user_form.is_active.id_for_label }}">Login enabled</label>
-      <span class="field-tip" data-toggle="tooltip" data-placement="right"
+      <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
         title="Controls whether this volunteer can log into the toolkit. Disable rather than deleting the account.">ⓘ</span>
     </div>
     <div class="danger-row">
       {{ user_form.programmer }}
       <label for="{{ user_form.programmer.id_for_label }}">Programmer</label>
-      <span class="field-tip" data-toggle="tooltip" data-placement="right"
+      <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
         title="Can create and edit events, showings, roles, and tags. Cannot access volunteer or member personal data.">ⓘ</span>
     </div>
     <div class="danger-row">
       {{ user_form.is_superuser }}
       <label for="{{ user_form.is_superuser.id_for_label }}">Panopticon access</label>
-      <span class="field-tip" data-toggle="tooltip" data-placement="right"
+      <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
         title="Full access: CMS editing, all volunteer and member personal data (names, emails, addresses, notes), mailout sending. Assign with care.">ⓘ</span>
     </div>
     <hr style="margin:0.6rem 0 0.4rem;">

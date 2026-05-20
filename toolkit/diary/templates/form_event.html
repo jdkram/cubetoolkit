@@ -31,7 +31,7 @@ Event Details for {{ event.name }}
     #be-toggle { cursor: pointer; user-select: none; }
     #be-toggle:hover { background: #e9ecef; }
     .be-arrow { display: inline-block; transition: transform .15s; margin-right: 5px; font-size: 0.8em; }
-    #be-inputs .form-group { margin-bottom: 0.5rem; }
+    #be-inputs .mb-3 { margin-bottom: 0.5rem !important; }
     #be-inputs label { font-weight: normal; }
     #be-inputs .be-section-heading { font-weight: bold; margin-top: 0.75rem; margin-bottom: 0.25rem; color: #495057; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.03em; }
     #be-inputs input[type=number] { max-width: 120px; }
@@ -280,13 +280,13 @@ $(document).ready(function () {
         if ($label.length) {
             $label.append(
                 $('<span>').addClass('field-tip')
-                    .attr({'data-toggle': 'tooltip', 'data-placement': 'right', 'title': tipText})
+                    .attr({'data-bs-toggle': 'tooltip', 'data-bs-placement': 'right', 'title': tipText})
                     .text('\u24d8')
             );
         }
     });
 
-    $('[data-toggle="tooltip"]').tooltip();
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) { new bootstrap.Tooltip(el); });
 
     // Poster generation AJAX
     (function() {
@@ -387,65 +387,65 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
 
     {# Break-even calculator — advisory only, not submitted. Inputs use form="be-scratchpad" to decouple from main form validation. #}
     <div class="card mb-3" id="be-card">
-        <div class="card-header p-2" id="be-toggle" data-toggle="collapse" data-target="#be-collapse" aria-expanded="false" aria-controls="be-collapse">
+        <div class="card-header p-2" id="be-toggle" data-bs-toggle="collapse" data-bs-target="#be-collapse" aria-expanded="false" aria-controls="be-collapse">
             <span class="be-arrow">&#9658;</span>
             <strong>Break-even calculator</strong>
-            <small class="text-muted ml-2">optional &mdash; not saved</small>
+            <small class="text-muted ms-2">optional &mdash; not saved</small>
         </div>
         <div id="be-collapse" class="collapse">
             <div class="card-body" id="be-inputs">
                 <div class="row">
                     <div class="col-md-6">
                         <div class="be-section-heading">Costs</div>
-                        <div class="form-group row">
+                        <div class="mb-3 row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-hire">Hire cost</label>
                             <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-hire" value="0" min="0" step="1" form="be-scratchpad"></div></div>
                         </div>
-                        <div class="form-group row">
+                        <div class="mb-3 row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-technical">Technical costs</label>
                             <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-technical" value="0" min="0" step="1" form="be-scratchpad"></div></div>
                         </div>
-                        <div class="form-group row">
+                        <div class="mb-3 row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-artist-mg">Artist fee / min. guarantee</label>
                             <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-artist-mg" value="0" min="0" step="1" form="be-scratchpad"></div><small class="form-text text-muted">Flat fee for gigs; or MG for film licences</small></div>
                         </div>
-                        <div class="form-group row">
+                        <div class="mb-3 row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-artist-pct">Artist&rsquo;s gross %</label>
                             <div class="col-sm-7"><div class="input-group input-group-sm"><input type="number" class="form-control" id="be-artist-pct" value="0" min="0" max="100" step="5" form="be-scratchpad"><div class="input-group-append"><span class="input-group-text">%</span></div></div><small class="form-text text-muted">If fee &amp; % both set: whichever is greater applies</small></div>
                         </div>
-                        <div class="form-group row">
+                        <div class="mb-3 row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-accommodation">Accommodation</label>
                             <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-accommodation" value="0" min="0" step="1" form="be-scratchpad"></div></div>
                         </div>
-                        <div class="form-group row">
+                        <div class="mb-3 row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-travel">Travel</label>
                             <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-travel" value="0" min="0" step="1" form="be-scratchpad"></div></div>
                         </div>
-                        <div class="form-group row">
+                        <div class="mb-3 row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-food">Volunteer food</label>
                             <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-food" value="0" min="0" step="1" form="be-scratchpad"></div></div>
                         </div>
-                        <div class="form-group row">
+                        <div class="mb-3 row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-other">Other</label>
                             <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-other" value="0" min="0" step="1" form="be-scratchpad"></div></div>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="be-section-heading">Room &amp; pricing</div>
-                        <div class="form-group row">
+                        <div class="mb-3 row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-capacity">Room capacity</label>
                             <div class="col-sm-7"><div class="input-group input-group-sm"><input type="number" class="form-control" id="be-capacity" value="80" min="1" step="1" form="be-scratchpad"><div class="input-group-append"><span class="input-group-text">people</span></div></div></div>
                         </div>
-                        <div class="form-group row">
+                        <div class="mb-3 row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-ticket-price">Ticket price</label>
                             <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-ticket-price" value="5" min="0" step="0.01" form="be-scratchpad"></div><small class="form-text text-muted">For gigs, use the average expected ticket price</small></div>
                         </div>
                         <div class="be-section-heading mt-2">Bar / caf&eacute; revenue</div>
-                        <div class="form-group row">
+                        <div class="mb-3 row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-bar-drinks">Avg. drinks per person</label>
                             <div class="col-sm-7"><div class="input-group input-group-sm"><input type="number" class="form-control" id="be-bar-drinks" value="0" min="0" step="0.5" form="be-scratchpad"></div><small class="form-text text-muted">Leave 0 to ignore bar revenue</small></div>
                         </div>
-                        <div class="form-group row">
+                        <div class="mb-3 row">
                             <label class="col-sm-5 col-form-label col-form-label-sm" for="be-bar-profit">Avg. profit per drink</label>
                             <div class="col-sm-7"><div class="input-group input-group-sm"><div class="input-group-prepend"><span class="input-group-text">&pound;</span></div><input type="number" class="form-control" id="be-bar-profit" value="1.50" min="0" step="0.10" form="be-scratchpad"></div><small class="form-text text-muted">~50% margin typical &mdash; e.g. £3 drink &rarr; £1.50 profit</small></div>
                         </div>
@@ -466,7 +466,7 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
     <input type="hidden" name="generated_media_id" id="generated_media_id" value="">
 
     {# Media file field with generate button #}
-    <div class="form-group row" id="media_file_group">
+    <div class="mb-3 row" id="media_file_group">
         <label for="id_media_file" class="col-sm-2 col-form-label">Image file</label>
         <div class="col-sm-10">
             {# Existing file input or clear checkbox #}
@@ -487,7 +487,7 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
                     <div class="d-flex align-items-center flex-wrap gap-2">
                         <label for="poster-accent-colour" class="mb-0" style="font-size: 0.9em;">Accent colour:</label>
                         <input type="color" id="poster-accent-colour" class="form-control form-control-sm" style="width: 60px; height: 30px; padding: 2px;" value="{% if event.tags.first.colour %}{{ event.tags.first.colour }}{% else %}#b42828{% endif %}">
-                        <button type="button" id="generate-poster-btn" class="btn btn-outline-secondary btn-sm ml-2">
+                        <button type="button" id="generate-poster-btn" class="btn btn-outline-secondary btn-sm ms-2">
                             <span aria-hidden="true">&#x1F3A8;</span> Generate poster
                         </button>
                     </div>
@@ -501,12 +501,12 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
     </div>
 
     {# Preview area for generated image #}
-    <div class="form-group row" id="generated-preview" style="display: none;">
+    <div class="mb-3 row" id="generated-preview" style="display: none;">
         <label class="col-sm-2 col-form-label">Generated image</label>
         <div class="col-sm-10">
             <div class="d-flex align-items-center">
                 <img id="generated-preview-img" src="" alt="Generated poster preview" style="max-height: 150px; max-width: 300px; border: 1px solid #ddd; border-radius: 4px;">
-                <div class="ml-3">
+                <div class="ms-3">
                     <p class="mb-1"><strong id="generated-filename"></strong></p>
                     <button type="button" id="remove-generated-btn" class="btn btn-outline-danger btn-sm">
                         Remove and upload a file instead
@@ -520,7 +520,7 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
     {# Rest of media form fields (alt_text, credit) #}
     {% for field in media_form %}
         {% if field.name != 'media_file' %}
-            <div class="form-group row{% if field.errors %} has-error{% endif %}">
+            <div class="mb-3 row{% if field.errors %} has-error{% endif %}">
                 <label for="{{ field.id_for_label }}" class="col-sm-2 col-form-label">{{ field.label }}</label>
                 <div class="col-sm-10">
                     {{ field }}
