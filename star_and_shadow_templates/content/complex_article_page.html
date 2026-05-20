@@ -3,6 +3,7 @@
 
 {% block body %}
 {{ block.super }}
+<div class="article-page article-page--wide">
 <div class="programme copy">
     <div class="grid-sizer"></div>
     <div class="gutter-sizer"></div>
@@ -13,5 +14,6 @@
         {% include_block block.value.content %}
     </div>
     {% endfor %}
+</div>
 </div>
 {% endblock %}

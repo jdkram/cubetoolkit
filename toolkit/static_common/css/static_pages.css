@@ -390,3 +390,63 @@ p.action {
     .grid-item--width5 { width: 1390px; }
     .grid-item--width5 > .event_image { width: 1380px; }
 }
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * Basic article pages (basic_article_page.html)
+ * Reading-width column, centred within the content area.
+ * ───────────────────────────────────────────────────────────────────── */
+
+.article-page {
+    max-width: 640px;
+    margin: 2.5rem auto 3rem;
+    padding: 0 1.5rem;
+    overflow: hidden; /* contain floated figures */
+}
+
+.article-page h3 {
+    margin: 0 0 0.75rem;
+}
+
+.article-page .copy p {
+    margin-top: 1.2em;
+}
+
+.article-page .copy p:first-of-type {
+    margin-top: 0;
+}
+
+.article-page__figure {
+    margin: 0 0 1.25rem;
+}
+
+.article-page__figure img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Side-by-side image alignment: only float on wider screens */
+@media screen and (min-width: 600px) {
+    .article-page__figure--l {
+        float: left;
+        width: 45%;
+        margin-right: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .article-page__figure--r {
+        float: right;
+        width: 45%;
+        margin-left: 1.5rem;
+        margin-bottom: 1rem;
+    }
+}
+
+/* Complex article pages (complex_article_page.html)
+ * Wider max-width to accommodate multi-column masonry blocks. */
+.article-page--wide {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
