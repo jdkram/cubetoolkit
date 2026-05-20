@@ -282,7 +282,7 @@
 
     /* ── Empty slot highlight ────────────────────────────────────────── */
     li.rota-empty-slot {
-        background: #fff3cd;
+        background: #fde68a;
         border-radius: 3px;
     }
 
@@ -583,6 +583,17 @@
     /* scroll-margin-top: navbar (~3.6rem) + sticky day header (~2.5rem) + breathing room */
     .rota-showing { scroll-margin-top: 7rem; }
 
+    /* ── My-shift / starred-event row highlights ────────────────────────── */
+    /* "Mine" (signed up) takes colour precedence over "starred". */
+    .rota-showing--mine {
+        background: rgba(76, 175, 80, 0.07);
+        border-radius: 2px;
+    }
+    .rota-showing--starred {
+        background: rgba(232, 160, 0, 0.07);
+        border-radius: 2px;
+    }
+
     /* Deep-link highlight: permanent amber left bar, background fades over 5s */
     @keyframes rota-linked-bg {
         0%   { background-color: rgba(255, 193, 7, 0.22); }
@@ -821,6 +832,12 @@ edit_rota(
         {% else %}
         var onlyStarred     = false;
         {% endif %}
+        {% if current_volunteer_pk %}
+        var onlyMine        = $("#rota-filter-mine").is(":checked");
+        var myVolPk         = "{{ current_volunteer_pk }}";
+        {% else %}
+        var onlyMine        = false;
+        {% endif %}
 
         $(".rota-showing").each(function() {
             var showing = $(this);
@@ -860,6 +877,16 @@ edit_rota(
                 showing.hide(); return;
             }
 
+            if (onlyMine) {
+                var signedUp = false;
+                showing.find(".rota_name[data-volunteer-id]").each(function() {
+                    if ($(this).attr("data-volunteer-id") === myVolPk) {
+                        signedUp = true; return false;
+                    }
+                });
+                if (!signedUp) { showing.hide(); return; }
+            }
+
             if (searchTerm) {
                 var name = foldAccents(showing.find(".showing-event-name").text().toLowerCase());
                 if (name.indexOf(foldAccents(searchTerm)) === -1) { showing.hide(); return; }
@@ -893,6 +920,7 @@ edit_rota(
         btn.attr("title", MARK_TITLE[markType]);
         showing.attr("data-mark", markType);
         showing.toggleClass("rota-mooned", markType === "shadow");
+        applyShowingHighlights();
     }
 
     function initMarkButtons() {
@@ -1013,6 +1041,33 @@ edit_rota(
         }
     }
 
+    // ── Per-showing highlights: my shifts (green) and starred (amber) ────
+    // "Mine" takes precedence — if both apply, only --mine is set.
+    function applyShowingHighlights() {
+        {% if current_volunteer_pk %}
+        var myVolPk = "{{ current_volunteer_pk }}";
+        {% endif %}
+        $(".rota-showing").each(function() {
+            var showing = $(this);
+            showing.removeClass("rota-showing--mine rota-showing--starred");
+            {% if current_volunteer_pk %}
+            var isMine = false;
+            showing.find(".rota_name[data-volunteer-id]").each(function() {
+                if ($(this).attr("data-volunteer-id") === myVolPk) {
+                    isMine = true;
+                    return false;
+                }
+            });
+            if (isMine) { showing.addClass("rota-showing--mine"); return; }
+            {% endif %}
+            {% if can_mark_events %}
+            if (showing.attr("data-mark") === "star") {
+                showing.addClass("rota-showing--starred");
+            }
+            {% endif %}
+        });
+    }
+
     function updateDayHeaderOffset() {
         var navbarHeight = document.querySelector('.navbar.fixed-top').offsetHeight;
         var firstDayHeader = document.querySelector('.rota-day-group-header');
@@ -1055,6 +1110,7 @@ edit_rota(
         applyCriticalSlotWarnings();
         setupRoleDescriptions();
         {% if can_mark_events %}initMarkButtons();{% endif %}
+        applyShowingHighlights();
 
         // Clicking a tag badge on any showing activates that tag in the
         // filter bar at the top, exactly as if the user had clicked the
@@ -1072,7 +1128,7 @@ edit_rota(
         });
 
         $("#rota-filter-role, #rota-filter-empty, " +
-          "#rota-filter-beginner, #rota-filter-vacancies{% if can_mark_events %}, #rota-filter-starred{% endif %}")
+          "#rota-filter-beginner, #rota-filter-vacancies{% if can_mark_events %}, #rota-filter-starred{% endif %}{% if current_volunteer_pk %}, #rota-filter-mine{% endif %}")
             .on("change", applyFilters);
 
         // Re-apply empty-slot highlights and keyholder warnings after a sign-up or clear.
@@ -1080,6 +1136,7 @@ edit_rota(
             applyEmptyHighlight($("#rota-filter-empty").is(":checked"));
             applyCriticalSlotWarnings();
             applyFilters();
+            applyShowingHighlights();
         });
 
         $("#rota-search").on("input", debounce(applyFilters, 200));
@@ -1148,6 +1205,12 @@ edit_rota(
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="rota-filter-starred">
                     <label class="form-check-label" for="rota-filter-starred">Starred ★</label>
+                </div>
+                {% endif %}
+                {% if current_volunteer_pk %}
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="rota-filter-mine">
+                    <label class="form-check-label" for="rota-filter-mine">My shifts</label>
                 </div>
                 {% endif %}
                 <span class="filter-section-divider" aria-hidden="true"></span>
