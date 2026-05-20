@@ -28,6 +28,8 @@ function setup_page(index_page) {
             $(toggle_el).toggleClass("open-sidebar");
             $("#sidebar").toggleClass("sidebar-open");
             $(".black_overlay").toggleClass("active-search-bg");
+            var expanded = $(toggle_el).hasClass("open-sidebar");
+            $(this).attr("aria-expanded", expanded ? "true" : "false");
         });
 
         $(".black_overlay").swipe({

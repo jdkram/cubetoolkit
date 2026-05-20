@@ -35,12 +35,10 @@ html { font-size: 100%; overflow-y: scroll; -webkit-text-size-adjust: 100%; -ms-
 figure { margin: 10% 0; }
 figcaption { text-align: center; }
 img { border: 0; max-width: 100%; height: auto; -ms-interpolation-mode: bicubic; }
-a:hover, a:active, a:focus { outline: none; -moz-outline-style: none;}
+a:hover, a:active { outline: none; }
+a:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 input {-webkit-border-radius:0; border-radius:0;}
-::-webkit-input-placeholder {color: rgba(255, 255, 255, .66);}
-:-moz-placeholder {color: rgba(255, 255, 255, .66);}
-::-moz-placeholder {color: rgba(255, 255, 255, .66);}
-:-ms-input-placeholder {color: rgba(255, 255, 255, .66);}
+::placeholder { color: rgba(255, 255, 255, 0.85); }
 *, *:before, *:after {-webkit-box-sizing: border-box; -moz-box-sizing: border-box; box-sizing: border-box;}
 
 /* Clearfix */
@@ -80,8 +78,7 @@ body {
     margin: 0;
 }
 
-a:focus { outline: 0; }
-a:active, a:hover { outline: 0; }
+a:focus:not(:focus-visible) { outline: none; }
 
 h1 { font-size: 2em; margin: 0.67em 0; }
 h2 { font-size: 1.5em; margin: 0.83em 0; }
@@ -231,6 +228,12 @@ a {
     display: block;
     text-align: left;
     z-index: 100;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
 }
 #mobile-menu-btn:before {/
     display: inline-block;
@@ -393,6 +396,13 @@ a {
 .grid {
     display: flex;
     min-height: 70vh;
+    flex-direction: column;
+}
+
+/* <main> is a flex child of .grid; pass flex growth down to .programme */
+main#main-content {
+    flex: 1;
+    display: flex;
     flex-direction: column;
 }
 
@@ -791,4 +801,28 @@ a {
     opacity: 0.7;
     font-size: 0.9em;
     cursor: default;
+}
+
+/* Skip link — hidden until focused by keyboard navigation */
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+.skip-link:focus {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    z-index: 10000;
+    background: #082080;
+    color: #fff;
+    padding: 8px 16px;
+    text-decoration: none;
+    font-weight: bold;
 }

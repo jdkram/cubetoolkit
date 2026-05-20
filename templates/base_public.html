@@ -25,6 +25,7 @@
 
 {% block header %}
 {{ block.super }}
+<a href="#main-content" class="skip-link">Skip to main content</a>
 <div id="container" class="body">
     <div id="sidebar" class="panel">
       <div class="nav-wrap">
@@ -41,7 +42,7 @@
               {% endcapture %}
           </div><!-- end #site-description -->
       </div><!-- end .nav-wrap -->
-      <nav id="site-nav" class="clearfix">
+      <nav id="site-nav" aria-label="Main navigation" class="clearfix">
           <div id="navmenu" class="menu-wrap">
             {% include "fragment_navmenu.html" %}
             {% block navmenu-footer %}
@@ -54,18 +55,20 @@
         <div class="black_overlay"></div>
         <div class="navigation-wrap">
             <div class="mobile-wrap">
-              <a href="#nav-mobile" data-toggle=".grid" id="mobile-menu-btn"><i class="fa-solid fa-bars"></i><span>Menu</span></a>
+              <button id="mobile-menu-btn" data-toggle=".grid" aria-expanded="false" aria-controls="site-nav" aria-label="Toggle navigation menu"><i class="fa-solid fa-bars" aria-hidden="true"></i><span>Menu</span></button>
             </div><!-- end #mobile-wrap -->
-            <div id="site-title" class="clearfix">
+            <div id="site-title-mobile" class="clearfix">
                 {% retrieve navmenu-title %}
-            </div><!-- end #site-title -->
+            </div><!-- end #site-title-mobile -->
             <div class="site-description">
               {% retrieve site-description %}
             </div><!-- end .site-description -->
         </div><!-- end .nav-wrap -->
+<main id="main-content">
 {% endblock header%}
 
 {% block footer %}
+</main>
     </div><!-- end .grid -->
 </div><!-- end #container .body -->
 

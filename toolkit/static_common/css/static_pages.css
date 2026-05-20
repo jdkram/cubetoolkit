@@ -34,7 +34,6 @@
     overflow: hidden;
     width: 310px;
     width: 96.875%;
-    background-color: #fff;
 }
 
 .event-image {
@@ -136,7 +135,6 @@ p.action {
     background: #fff !important;
     border: 0.1em solid black;
     border-radius: 0 !important;
-    outline: none;
     font-size: .714285714em;
     line-height: 1.4;
     font-weight: 400;
