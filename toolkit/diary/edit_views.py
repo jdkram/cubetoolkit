@@ -1622,28 +1622,34 @@ class EditRotaView(PermissionRequiredMixin, View):
                 "Invalid request", status=400, content_type="text/plain"
             )
 
-        # Resolve the logged-in user's volunteer record (None for superusers
-        # and accounts that aren't linked to a volunteer).
+        # Resolve the current user's volunteer record (all users are volunteers).
         linked_volunteer = None
-        if not request.user.is_superuser:
-            try:
-                linked_volunteer = request.user.volunteer
-            except Exception:
-                pass
+        try:
+            linked_volunteer = request.user.volunteer
+        except Exception:
+            pass
 
-        if linked_volunteer and name:
-            # Volunteer signing up: ignore typed text, use their canonical name
-            # and link the FK so rota history is reliably attributable.
+        if name == "signup":
+            # Tap-to-toggle self-signup for any user tier (superusers included).
+            # Superusers use their [e] button for free-text edits, which sends the
+            # typed name rather than the 'signup' sentinel.
+            if not linked_volunteer:
+                return HttpResponse("No volunteer account linked", status=400)
             rota_entry.volunteer = linked_volunteer
             rota_entry.name = linked_volunteer.member.name
-        elif linked_volunteer and not name:
-            # Volunteer clearing their slot
-            rota_entry.volunteer = None
-            rota_entry.name = ""
-        else:
-            # Superuser or non-volunteer account: free text, no FK
+        elif linked_volunteer and name and not request.user.is_superuser:
+            # Non-superuser volunteer submitting text (e.g. direct API call):
+            # coerce to canonical name regardless of what was typed.
+            rota_entry.volunteer = linked_volunteer
+            rota_entry.name = linked_volunteer.member.name
+        elif name:
+            # Superuser free-text edit via [e] button, or non-volunteer account.
             rota_entry.volunteer = None
             rota_entry.name = name
+        else:
+            # Clearing a slot.
+            rota_entry.volunteer = None
+            rota_entry.name = ""
 
         logger.info(
             "Update role id {0} (#{1}) for showing {2} '{3}' -> '{4}' ({5})".format(
