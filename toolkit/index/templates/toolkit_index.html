@@ -107,7 +107,7 @@
     </div>
   </div>
 </div>
-<div class="row gy-4 mb-2">
+<div id="dash-cards-row" class="row gy-4 mb-2">
 
   {# Upcoming shifts — all volunteers with a linked account #}
   {% if has_volunteer %}
@@ -244,17 +244,32 @@
   {% endif %}
 
 </div>
-<hr class="mt-0 mb-4">
+<hr id="dash-hr" class="mt-0 mb-4">
 <script>
 (function() {
     var KEYS = ['dash_upcoming_shifts','dash_starred_events','dash_new_showings','dash_rota_gaps','dash_unconfirmed','dash_training'];
+    // Cards hidden by default for new users (programmer-focused noise for volunteers).
+    ['dash_new_showings','dash_unconfirmed'].forEach(function(key) {
+        if (localStorage.getItem(key) === null) { localStorage.setItem(key, 'hidden'); }
+    });
     // Apply saved visibility — runs here, after widget divs are in the DOM.
+    // Uses d-none (display:none !important) so it overrides Bootstrap's d-flex.
     KEYS.forEach(function(key) {
         if (localStorage.getItem(key) === 'hidden') {
             var el = document.getElementById(key);
-            if (el) el.style.display = 'none';
+            if (el) el.classList.add('d-none');
         }
     });
+    function updateDashboardFrame() {
+        var anyVisible = KEYS.some(function(key) {
+            var el = document.getElementById(key);
+            return el && !el.classList.contains('d-none');
+        });
+        var row = document.getElementById('dash-cards-row');
+        var hr  = document.getElementById('dash-hr');
+        if (row) row.classList.toggle('d-none', !anyVisible);
+        if (hr)  hr.classList.toggle('d-none', !anyVisible);
+    }
     function syncCheckboxes() {
         document.querySelectorAll('.dash-toggle').forEach(function(cb) {
             var key = cb.getAttribute('data-key');
@@ -267,19 +282,21 @@
             var el = document.getElementById(key);
             if (cb.checked) {
                 localStorage.removeItem(key);
-                if (el) el.style.display = '';
+                if (el) el.classList.remove('d-none');
             } else {
                 localStorage.setItem(key, 'hidden');
-                if (el) el.style.display = 'none';
+                if (el) el.classList.add('d-none');
             }
+            updateDashboardFrame();
         });
     });
     syncCheckboxes();
+    updateDashboardFrame();
 })();
 </script>
 {% endif %}
 
-<div class="row">
+<div class="row gy-4">
 
   {# Rota — all users #}
   <div class="col-md-6 d-flex">
