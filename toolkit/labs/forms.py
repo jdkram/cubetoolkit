@@ -1,8 +1,9 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]; status: "#ai-written"
 from django import forms
+from django.forms import inlineformset_factory
 from django.utils.html import mark_safe
 from crispy_forms.helper import FormHelper
-from .models import Collective, DonationItem, Job, COLLECTIVE_PALETTE
+from .models import Collective, CollectiveLink, DonationItem, Job, COLLECTIVE_PALETTE
 
 
 class ColourPickerWidget(forms.TextInput):
@@ -102,6 +103,26 @@ class CollectiveForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_tag = False
+
+
+CollectiveLinkFormSet = inlineformset_factory(
+    Collective,
+    CollectiveLink,
+    fields=("label", "url"),
+    extra=3,
+    max_num=3,
+    can_delete=True,
+    widgets={
+        "label": forms.TextInput(attrs={
+            "placeholder": "e.g. WhatsApp group",
+            "class": "form-control form-control-sm",
+        }),
+        "url": forms.URLInput(attrs={
+            "placeholder": "https://...",
+            "class": "form-control form-control-sm",
+        }),
+    },
+)
 
 
 class JobForm(forms.ModelForm):

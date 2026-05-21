@@ -3619,8 +3619,9 @@ Both links should be visually low-key (not CTAs) so they don't distract public v
 
 **Context:** The current "Working groups" page at `/toolkit/working-groups/` is a live Wagtail `ComplexArticlePage` with `show_in_menus=False` (unlisted — access by URL only). It embeds mailing list signup forms via `raw_html` blocks — almost certainly Mailman subscription form embeds. It has been live since 2017 and is widely shared in rota notes and at inductions.
 
+**Update (May 2026):** The `/toolkit/working-groups/` URL is confirmed login-gated on the live site — the entire `/toolkit/` prefix requires authentication. The auth concern below is no longer a driver for this migration; the remaining problems still stand.
+
 The problems with the current setup:
-- It is **publicly accessible** — anyone with the URL can sign up to internal volunteer mailing lists, no auth required
 - It lives in the CMS, which makes it awkward to maintain consistently and easy to accidentally publish to the nav
 - It belongs in the toolkit proper alongside other volunteer-only pages, not hidden in the Wagtail tree
 
@@ -4513,7 +4514,9 @@ A page (login required) listing volunteers who have opted in, with granular cont
 
 ---
 
-### 9.87 — Collectives → simplelists email list sync 🟡 M (design first)
+### 9.87 — Collectives → simplelists email list sync 🟡 M (design first) — PARKED
+
+**Status (May 2026): parked — requires live site access to implement and test properly. Developer no longer has prod access. Do not attempt without someone who can test against the real simplelists instance and verify the subscribe/unsubscribe forms accept programmatic POSTs.**
 
 When a volunteer joins or leaves a collective, automatically subscribe or unsubscribe them from the corresponding simplelists mailing list.
 
@@ -4539,31 +4542,36 @@ When a volunteer joins or leaves a collective, automatically subscribe or unsubs
 - `barlicencing@lists.starandshadow.org.uk` — bar licencing
 - `chat@lists.starandshadow.org.uk` — chat
 
-**Integration approach:** simplelists has no API key — the only interface is the subscribe/unsubscribe form at `https://www.simplelists.com/subscribe.php`. Server-side POSTing this form should work (it's a standard HTML form). Needs testing with a real collective + list pairing.
+**Integration approach:** Simplelists has a REST API at `https://www.simplelists.com/api/2/` (documented at `simplelists.com/api/docs/2/protocol/`). Auth is HTTP Basic with an API key generated from the Simplelists admin panel. Key operations:
 
-**Collective → list mapping:** New `Collective.simplelists_address` optional field. Mapping is opt-in per collective. Lists without a mapping are unaffected.
+- Subscribe: `POST /api/2/membership/` with `{"list": "listname", "email": "...", "digest": false}`
+- Unsubscribe: `DELETE /api/2/membership/:id/` (requires knowing the membership ID — fetch it first via `GET /api/2/membership/?list=listname&email=...`)
+- The API returns JSON; errors include an `is_error` flag and a message.
+
+**Prerequisite:** Someone with access to the S+S Simplelists admin account must generate an API key and store it in settings (e.g. `SIMPLELISTS_API_KEY`). Without this the feature cannot be built or tested.
+
+**Collective → list mapping:** New `Collective.simplelists_list` optional field (the list name slug, e.g. `filmprogramming`). Mapping is opt-in per collective. Lists without a mapping are unaffected.
 
 **Sync policy:**
-- Join collective → subscribe to list (POST `action=subscribe`)
-- Leave collective → unsubscribe from list (POST `action=unsubscribe`)
-- Existing manual subscriptions (people who subscribed via the form but aren't in the toolkit collective) are never touched — we can't discover them without list owner access.
-- Failure tolerance: failed POST logs a warning but doesn't block the collective join/leave. Collective membership is the source of truth.
+- Join collective → subscribe to list
+- Leave collective → unsubscribe from list
+- Existing manual subscriptions (people who subscribed via the form but aren't in the toolkit collective) are never touched — we can only manage what we create.
+- Failure tolerance: failed API call logs a warning but doesn't block the collective join/leave. Collective membership is the source of truth.
 
-**Design questions to resolve:**
-1. Can simplelists handle programmatic POSTs without CAPTCHA? Needs testing.
-2. Should we use `digest` mode by default? Probably default off (matches form default).
-3. Does leaving the collective always warrant unsubscribing, or should it be a prompt? The user wants automatic unsubscribe on leave — this is the chosen policy.
-4. Who to use as the subscriber name? `member.name` from the volunteer record.
+**Design questions (resolved):**
+- `digest` mode: off by default (matches form default).
+- Automatic unsubscribe on leave: yes, this is the chosen policy.
+- Subscriber name: `member.name` from the volunteer record.
 
 **Sizing:**
 
 | Component | Est. |
 |---|---|
-| `Collective.simplelists_address` field + admin | 1h |
-| `post_save`/`m2m_changed` signal for collective membership | 2h |
-| simplelists form POST helper + error handling | 2h |
-| Tests (mock the POST) | 2h |
-| **Total** | **~7–9h** (after design questions resolved) |
+| `Collective.simplelists_list` field + admin | 1h |
+| `m2m_changed` signal for collective membership | 2h |
+| Simplelists API client helper + error handling | 2h |
+| Tests (mock the HTTP calls) | 2h |
+| **Total** | **~7h** (after API key is in hand) |
 
 ---
 

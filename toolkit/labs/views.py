@@ -103,8 +103,47 @@ _ROOM_SECTIONS = [
 
 @login_required
 def collectives(request):
-    items = Collective.objects.filter(active=True).select_related("updated_by")
-    return render(request, "labs/collectives.html", {"collectives": items})
+    items = Collective.objects.filter(active=True).select_related("updated_by").prefetch_related("links")
+    try:
+        user_collective_slugs = frozenset(
+            request.user.volunteer.collectives.values_list("slug", flat=True)
+        )
+        user_is_volunteer = True
+    except Exception:
+        user_collective_slugs = frozenset()
+        user_is_volunteer = False
+    return render(request, "labs/collectives.html", {
+        "collectives": items,
+        "user_collective_slugs": user_collective_slugs,
+        "user_is_volunteer": user_is_volunteer,
+    })
+
+
+@login_required
+@require_POST
+def collective_join(request, slug):
+    collective = get_object_or_404(Collective, slug=slug, active=True)
+    if collective.invite_only:
+        messages.error(request, f"{collective.name} is invite-only — membership is managed by admins.")
+        return redirect("labs-collectives")
+    try:
+        request.user.volunteer.collectives.add(collective)
+        messages.success(request, f"You've joined {collective.name}.")
+    except Exception:
+        messages.error(request, "You need a volunteer profile to join a collective.")
+    return redirect("labs-collectives")
+
+
+@login_required
+@require_POST
+def collective_leave(request, slug):
+    collective = get_object_or_404(Collective, slug=slug, active=True)
+    try:
+        request.user.volunteer.collectives.remove(collective)
+        messages.success(request, f"You've left {collective.name}.")
+    except Exception:
+        messages.error(request, "You need a volunteer profile to leave a collective.")
+    return redirect("labs-collectives")
 
 
 @login_required
@@ -119,15 +158,22 @@ def collective_edit(request, slug):
     collective = get_object_or_404(Collective, slug=slug, active=True)
     if request.method == "POST":
         form = lab_forms.CollectiveForm(request.POST, instance=collective)
-        if form.is_valid():
+        links_formset = lab_forms.CollectiveLinkFormSet(request.POST, instance=collective)
+        if form.is_valid() and links_formset.is_valid():
             obj = form.save(commit=False)
             obj.updated_by = request.user
             obj.save()
+            links_formset.save()
             messages.success(request, f"'{collective.name}' updated.")
             return redirect("labs-collectives")
     else:
         form = lab_forms.CollectiveForm(instance=collective)
-    return render(request, "labs/collective_edit.html", {"collective": collective, "form": form})
+        links_formset = lab_forms.CollectiveLinkFormSet(instance=collective)
+    return render(request, "labs/collective_edit.html", {
+        "collective": collective,
+        "form": form,
+        "links_formset": links_formset,
+    })
 
 
 @login_required
