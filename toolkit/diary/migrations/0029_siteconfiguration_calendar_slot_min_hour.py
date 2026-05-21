@@ -37,6 +37,8 @@ def _drop_column(apps, schema_editor):
 
 class Migration(migrations.Migration):
 
+    atomic = False  # MariaDB DDL is non-transactional; IF NOT EXISTS guards against partial runs
+
     dependencies = [
         ('diary', '0028_rotaentry_volunteer_fk'),
     ]
