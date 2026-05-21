@@ -427,6 +427,79 @@ $(document).ready(function() {
   </ul>
 </div>
 
+<!-- ── Emergency contact (panopticon-visible, inside main form) ─── -->
+{% if request.user.is_superuser %}
+<div class="vol-section" id="vol-emergency">
+  <h4>Emergency contact
+    <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
+      title="Visible to Panopticon users only. Not included in the volunteer directory.">ⓘ</span>
+  </h4>
+  <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+    <div>
+      <label for="{{ vol_form.emergency_contact_name.id_for_label }}" style="font-weight:500; display:block;">Name</label>
+      {{ vol_form.emergency_contact_name.errors }}{{ vol_form.emergency_contact_name }}
+    </div>
+    <div>
+      <label for="{{ vol_form.emergency_contact_relationship.id_for_label }}" style="font-weight:500; display:block;">Relationship</label>
+      {{ vol_form.emergency_contact_relationship.errors }}{{ vol_form.emergency_contact_relationship }}
+    </div>
+    <div>
+      <label for="{{ vol_form.emergency_contact_phone.id_for_label }}" style="font-weight:500; display:block;">Phone</label>
+      {{ vol_form.emergency_contact_phone.errors }}{{ vol_form.emergency_contact_phone }}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Panopticon danger zones (GDPR + permissions, inside main form) -->
+{% if request.user.is_superuser or VENUE.show_user_management and user_form %}
+<div id="vol-danger">
+
+  {% if request.user.is_superuser %}
+  <div class="vol-section danger-zone">
+    <h4>GDPR right to erasure</h4>
+    <p style="font-size:0.88em; color:#555; margin:0.25rem 0 0.6rem;">
+      Permanently remove all personal data for this volunteer. Irreversible — use only in response to a verified erasure request.
+    </p>
+    <a href="{% url 'anonymise-volunteer' volunteer.id %}" class="btn btn-sm btn-outline-danger">Anonymise this volunteer…</a>
+  </div>
+  {% endif %}
+
+  {% if VENUE.show_user_management and user_form %}
+  <div class="vol-section danger-zone">
+    <h4>Permissions</h4>
+    <div class="danger-row">
+      {{ user_form.is_active }}
+      <label for="{{ user_form.is_active.id_for_label }}">Login enabled</label>
+      <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
+        title="Controls whether this volunteer can log into the toolkit. Disable rather than deleting the account.">ⓘ</span>
+    </div>
+    <div class="danger-row">
+      {{ user_form.programmer }}
+      <label for="{{ user_form.programmer.id_for_label }}">Programmer</label>
+      <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
+        title="Can create and edit events, showings, roles, and tags. Cannot access volunteer or member personal data.">ⓘ</span>
+    </div>
+    <div class="danger-row">
+      {{ user_form.is_superuser }}
+      <label for="{{ user_form.is_superuser.id_for_label }}">Panopticon access</label>
+      <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
+        title="Full access: CMS editing, all volunteer and member personal data (names, emails, addresses, notes), mailout sending. Assign with care.">ⓘ</span>
+    </div>
+    <hr style="margin:0.6rem 0 0.4rem;">
+    <div style="font-size:0.85em; color:#666;">
+      Username: <strong>{{ user_form.instance.username|default:"—" }}</strong>
+      &nbsp;<a href="#" onclick="this.closest('.danger-zone').querySelector('.username-row').style.display='block'; this.style.display='none'; return false;">change</a>
+      <div class="username-row" style="display:none; margin-top:0.3rem;">
+        {{ user_form.username.errors }}{{ user_form.username }}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div><!-- #vol-danger -->
+{% endif %}
+
 <p><input type="submit" value="Save changes"> <a href="{% url "view-volunteer-list" %}">Cancel</a></p>
 </form>
 
@@ -486,113 +559,42 @@ $(document).ready(function() {
 </div>
 {% endif %}
 
-<!-- ── Emergency contact (panopticon-visible) ───────────────────── -->
-{% if request.user.is_superuser %}
-<div class="vol-section" id="vol-emergency">
-  <h4>Emergency contact
-    <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
-      title="Visible to Panopticon users only. Not included in the volunteer directory.">ⓘ</span>
-  </h4>
-  <div style="display:flex; gap:1rem; flex-wrap:wrap;">
-    <div>
-      <label for="{{ vol_form.emergency_contact_name.id_for_label }}" style="font-weight:500; display:block;">Name</label>
-      {{ vol_form.emergency_contact_name.errors }}{{ vol_form.emergency_contact_name }}
-    </div>
-    <div>
-      <label for="{{ vol_form.emergency_contact_relationship.id_for_label }}" style="font-weight:500; display:block;">Relationship</label>
-      {{ vol_form.emergency_contact_relationship.errors }}{{ vol_form.emergency_contact_relationship }}
-    </div>
-    <div>
-      <label for="{{ vol_form.emergency_contact_phone.id_for_label }}" style="font-weight:500; display:block;">Phone</label>
-      {{ vol_form.emergency_contact_phone.errors }}{{ vol_form.emergency_contact_phone }}
-    </div>
+<!-- ── Password management (separate forms, panopticon only) ────── -->
+{# Kept outside main form to avoid nesting — POSTs to their own URLs. #}
+{% if request.user.is_superuser and VENUE.show_user_management and volunteer.id %}
+<div class="vol-section danger-zone" style="margin-top:1.5rem;">
+  <h4>Password</h4>
+  <div style="margin-top:0.4rem; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+    <form method="post" action="{% url 'send-volunteer-password-reset' volunteer.pk %}" style="margin:0;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-secondary"
+              onclick="return confirm('Send a password reset email to {{ volunteer.member.name }}?')">
+        Send reset email
+      </button>
+    </form>
+    <a href="#set-password-form" class="btn btn-sm btn-outline-secondary"
+       onclick="document.getElementById('set-password-form').style.display='block'; this.style.display='none'; return false;">
+      Set password directly…
+    </a>
+  </div>
+  <div id="set-password-form" style="display:none; margin-top:0.75rem;">
+    <form method="post" action="{% url 'set-volunteer-password' volunteer.pk %}">
+      {% csrf_token %}
+      <div style="margin-bottom:0.4rem;">
+        <label style="display:block; font-weight:500; margin-bottom:0.2rem;" for="id_new_password1">New password</label>
+        <input type="password" name="new_password1" id="id_new_password1" class="form-control form-control-sm" style="max-width:260px;" autocomplete="new-password">
+      </div>
+      <div style="margin-bottom:0.5rem;">
+        <label style="display:block; font-weight:500; margin-bottom:0.2rem;" for="id_new_password2">Confirm password</label>
+        <input type="password" name="new_password2" id="id_new_password2" class="form-control form-control-sm" style="max-width:260px;" autocomplete="new-password">
+      </div>
+      <button type="submit" class="btn btn-sm btn-warning">Set password</button>
+      <a href="#" class="btn btn-sm btn-link"
+         onclick="document.getElementById('set-password-form').style.display='none'; document.querySelector('[href=\'#set-password-form\']').style.display=''; return false;">
+        Cancel
+      </a>
+    </form>
   </div>
 </div>
-{% endif %}
-
-<!-- ── Panopticon danger zones (GDPR + permissions) ────────────── -->
-{% if request.user.is_superuser or VENUE.show_user_management and user_form %}
-<div id="vol-danger">
-
-  {% if request.user.is_superuser %}
-  <div class="vol-section danger-zone">
-    <h4>GDPR right to erasure</h4>
-    <p style="font-size:0.88em; color:#555; margin:0.25rem 0 0.6rem;">
-      Permanently remove all personal data for this volunteer. Irreversible — use only in response to a verified erasure request.
-    </p>
-    <a href="{% url 'anonymise-volunteer' volunteer.id %}" class="btn btn-sm btn-outline-danger">Anonymise this volunteer…</a>
-  </div>
-  {% endif %}
-
-  {% if VENUE.show_user_management and user_form %}
-  <div class="vol-section danger-zone">
-    <h4>Permissions</h4>
-    <div class="danger-row">
-      {{ user_form.is_active }}
-      <label for="{{ user_form.is_active.id_for_label }}">Login enabled</label>
-      <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
-        title="Controls whether this volunteer can log into the toolkit. Disable rather than deleting the account.">ⓘ</span>
-    </div>
-    <div class="danger-row">
-      {{ user_form.programmer }}
-      <label for="{{ user_form.programmer.id_for_label }}">Programmer</label>
-      <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
-        title="Can create and edit events, showings, roles, and tags. Cannot access volunteer or member personal data.">ⓘ</span>
-    </div>
-    <div class="danger-row">
-      {{ user_form.is_superuser }}
-      <label for="{{ user_form.is_superuser.id_for_label }}">Panopticon access</label>
-      <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
-        title="Full access: CMS editing, all volunteer and member personal data (names, emails, addresses, notes), mailout sending. Assign with care.">ⓘ</span>
-    </div>
-    <hr style="margin:0.6rem 0 0.4rem;">
-    <div style="font-size:0.85em; color:#666;">
-      Username: <strong>{{ user_form.instance.username|default:"—" }}</strong>
-      &nbsp;<a href="#" onclick="this.closest('.danger-zone').querySelector('.username-row').style.display='block'; this.style.display='none'; return false;">change</a>
-      <div class="username-row" style="display:none; margin-top:0.3rem;">
-        {{ user_form.username.errors }}{{ user_form.username }}
-      </div>
-    </div>
-    {% if request.user.is_superuser %}
-    <hr style="margin:0.6rem 0 0.4rem;">
-    <div style="font-size:0.85em;">
-      <strong>Password</strong>
-      <div style="margin-top:0.4rem; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-        <form method="post" action="{% url 'send-volunteer-password-reset' volunteer.pk %}" style="margin:0;">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-sm btn-outline-secondary"
-                  onclick="return confirm('Send a password reset email to {{ volunteer.member.name }}?')">
-            Send reset email
-          </button>
-        </form>
-        <a href="#set-password-form" class="btn btn-sm btn-outline-secondary"
-           onclick="document.getElementById('set-password-form').style.display='block'; this.style.display='none'; return false;">
-          Set password directly…
-        </a>
-      </div>
-      <div id="set-password-form" style="display:none; margin-top:0.75rem;">
-        <form method="post" action="{% url 'set-volunteer-password' volunteer.pk %}">
-          {% csrf_token %}
-          <div style="margin-bottom:0.4rem;">
-            <label style="display:block; font-weight:500; margin-bottom:0.2rem;" for="id_new_password1">New password</label>
-            <input type="password" name="new_password1" id="id_new_password1" class="form-control form-control-sm" style="max-width:260px;" autocomplete="new-password">
-          </div>
-          <div style="margin-bottom:0.5rem;">
-            <label style="display:block; font-weight:500; margin-bottom:0.2rem;" for="id_new_password2">Confirm password</label>
-            <input type="password" name="new_password2" id="id_new_password2" class="form-control form-control-sm" style="max-width:260px;" autocomplete="new-password">
-          </div>
-          <button type="submit" class="btn btn-sm btn-warning">Set password</button>
-          <a href="#" class="btn btn-sm btn-link"
-             onclick="document.getElementById('set-password-form').style.display='none'; document.querySelector('[href=\'#set-password-form\']').style.display=''; return false;">
-            Cancel
-          </a>
-        </form>
-      </div>
-    </div>
-    {% endif %}
-  </div>
-  {% endif %}
-
-</div><!-- #vol-danger -->
 {% endif %}
 {% endblock %}

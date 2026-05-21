@@ -311,7 +311,7 @@ def edit_volunteer(request, volunteer_id, create_new=False):
             request.POST, request.FILES, instance=volunteer
         )
         mem_form = MemberFormWithoutNotes(request.POST, instance=member)
-        show_user_mgmt = settings.VENUE.get("show_user_management") and user is not None
+        show_user_mgmt = settings.VENUE.get("show_user_management") and user is not None and request.user.is_superuser
         user_form = UserForm(request.POST, instance=user) if show_user_mgmt else None
         forms_valid = vol_form.is_valid() and mem_form.is_valid()
         if user_form is not None:
@@ -382,7 +382,7 @@ def edit_volunteer(request, volunteer_id, create_new=False):
     else:
         vol_form = VolunteerForm(instance=volunteer)
         mem_form = MemberFormWithoutNotes(instance=volunteer.member)
-        show_user_mgmt = settings.VENUE.get("show_user_management") and user is not None
+        show_user_mgmt = settings.VENUE.get("show_user_management") and user is not None and request.user.is_superuser
         user_form = UserForm(instance=user) if show_user_mgmt else None
 
     if new_training_record:
