@@ -308,7 +308,8 @@ def edit_volunteer(request, volunteer_id, create_new=False):
     if request.method == "POST":
         # Three forms, one for each set of data
         vol_form = VolunteerForm(
-            request.POST, request.FILES, instance=volunteer
+            request.POST, request.FILES, instance=volunteer,
+            is_superuser=request.user.is_superuser,
         )
         mem_form = MemberFormWithoutNotes(request.POST, instance=member)
         show_user_mgmt = settings.VENUE.get("show_user_management") and user is not None and request.user.is_superuser
@@ -380,7 +381,7 @@ def edit_volunteer(request, volunteer_id, create_new=False):
             # Go to the volunteer list view:
             return HttpResponseRedirect(reverse("view-volunteer-summary"))
     else:
-        vol_form = VolunteerForm(instance=volunteer)
+        vol_form = VolunteerForm(instance=volunteer, is_superuser=request.user.is_superuser)
         mem_form = MemberFormWithoutNotes(instance=volunteer.member)
         show_user_mgmt = settings.VENUE.get("show_user_management") and user is not None and request.user.is_superuser
         user_form = UserForm(instance=user) if show_user_mgmt else None
