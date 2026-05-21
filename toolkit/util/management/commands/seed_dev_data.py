@@ -320,6 +320,33 @@ class Command(BaseCommand):
             volunteer, _ = Volunteer.objects.get_or_create(
                 member=member, defaults={"user": user}
             )
+
+            # Sync directory / access rider / emergency contact fields on every run.
+            _bool_fields = {"dir_share_pronouns", "dir_share_email", "dir_share_phone", "dir_share_access_rider", "dir_share_collectives"}
+            _str_defaults = {"dir_share_name": Volunteer.DIR_SHARE_NONE}
+            vol_dirty = False
+            for field in (
+                "access_intro", "access_needs", "access_links",
+                "emergency_contact_name", "emergency_contact_relationship",
+                "emergency_contact_phone",
+                "dir_share_name", "dir_share_pronouns", "dir_share_email",
+                "dir_share_phone", "dir_share_access_rider", "dir_share_collectives",
+            ):
+                default = False if field in _bool_fields else _str_defaults.get(field, "")
+                val = vol_data.get(field, default)
+                if getattr(volunteer, field) != val:
+                    setattr(volunteer, field, val)
+                    vol_dirty = True
+            if vol_dirty:
+                volunteer.save()
+
+            # Sync collective memberships.
+            from toolkit.labs.models import Collective as CollectiveModel
+            wanted_slugs = vol_data.get("collectives", [])
+            wanted_collectives = list(CollectiveModel.objects.filter(slug__in=wanted_slugs))
+            if set(volunteer.collectives.values_list("slug", flat=True)) != set(wanted_slugs):
+                volunteer.collectives.set(wanted_collectives)
+
             volunteer_objects[vol_data["name"]] = volunteer
 
         programmers_group, _ = Group.objects.get_or_create(name="Programmers")

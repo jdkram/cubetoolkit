@@ -6,92 +6,187 @@
 name = "Cleo Marchetti"
 email = "cleo.marchetti@example.com"
 pronouns = "she/her"
+collectives = ["film-programming", "cafe-collective"]
+dir_share_name = "full"
+dir_share_pronouns = true
+dir_share_email = true
+dir_share_collectives = true
+dir_share_access_rider = true
+access_intro = "Deaf volunteer, BSL user."
+access_needs = "Please use text or email rather than calling. I lip-read reasonably well in good lighting — face me when speaking. Subtitles or captions on any screening I'm projecting are helpful."
+access_links = "https://bda.org.uk"
+emergency_contact_name = "Sofia Marchetti"
+emergency_contact_relationship = "Sister"
+emergency_contact_phone = "07700 900001"
 
 [[volunteers]]
 name = "Elia Silveira"
 email = "elia.silveira@example.com"
 pronouns = "they/them"
+collectives = ["film-projection-tech", "caretaking-operations"]
+dir_share_name = "full"
+dir_share_pronouns = true
+dir_share_collectives = true
 
 [[volunteers]]
 name = "Marta Voss"
 email = "marta.voss@example.com"
 pronouns = "she/her"
+collectives = ["safer-spaces", "facilitation"]
+dir_share_name = "initial"
+dir_share_pronouns = true
+dir_share_access_rider = true
+access_needs = "I'm a wheelchair user. I need the ramp for the Cinema entrance and access to the accessible toilet before long shifts. Please let me know in advance if either is out of action."
+emergency_contact_name = "Klaus Voss"
+emergency_contact_relationship = "Partner"
+emergency_contact_phone = "07700 900002"
 
 [[volunteers]]
 name = "Rex Hollis"
 email = "rex.hollis@example.com"
 pronouns = "he/him"
+collectives = ["bar-collective", "keyholder"]
+dir_share_name = "full"
+dir_share_pronouns = true
+dir_share_email = true
+dir_share_collectives = true
+emergency_contact_name = "Priya Hollis"
+emergency_contact_relationship = "Wife"
+emergency_contact_phone = "07700 900003"
 
 [[volunteers]]
 name = "Phoebe Lund"
 email = "phoebe.lund@example.com"
+collectives = ["community-kitchen"]
+dir_share_name = "full"
+dir_share_collectives = true
 
 [[volunteers]]
 name = "Kalani Horita"
 email = "kalani.horita@example.com"
 pronouns = "they/them"
+collectives = ["art-club", "canny-little-library"]
+dir_share_name = "full"
+dir_share_pronouns = true
+dir_share_collectives = true
+dir_share_access_rider = true
+access_intro = "Autistic volunteer."
+access_needs = "I work best when I know what to expect. A brief rundown of the shift at the start helps a lot. Loud unplanned sounds are hard — I wear ear defenders for busy events, which is fine."
+emergency_contact_name = "Yuki Horita"
+emergency_contact_relationship = "Parent"
+emergency_contact_phone = "07700 900004"
 
 [[volunteers]]
 name = "Vera Deschamps"
 email = "vera.deschamps@example.com"
+collectives = ["finance"]
+# opted out of directory entirely
 
 [[volunteers]]
 name = "Remy Okafor"
 email = "remy.okafor@example.com"
 pronouns = "he/they"
+collectives = ["film-programming", "safer-spaces"]
+dir_share_name = "initial"
+dir_share_pronouns = true
+dir_share_collectives = true
 
 [[volunteers]]
 name = "Jules Travers"
 email = "jules.travers@example.com"
 pronouns = "they/them"
+collectives = ["facilitation", "keyholder"]
+dir_share_name = "full"
+dir_share_pronouns = true
+dir_share_email = true
+dir_share_collectives = true
+emergency_contact_name = "Adrienne Travers"
+emergency_contact_relationship = "Parent"
+emergency_contact_phone = "07700 900005"
 
 [[volunteers]]
 name = "Lena Barrow"
 email = "lena.barrow@example.com"
+# opted out of directory entirely
+emergency_contact_name = "Marcus Barrow"
+emergency_contact_relationship = "Husband"
+emergency_contact_phone = "07700 900006"
 
 [[volunteers]]
 name = "Sasha Pryce"
 email = "sasha.pryce@example.com"
 pronouns = "she/they"
+collectives = ["cafe-collective", "community-kitchen"]
+dir_share_name = "full"
+dir_share_pronouns = true
+dir_share_collectives = true
 
 [[volunteers]]
 name = "Tomás Ferreira"
 email = "tomas.ferreira@example.com"
 pronouns = "he/him"
+collectives = ["film-projection-tech"]
+dir_share_name = "full"
+dir_share_pronouns = true
+dir_share_email = true
 
 [[volunteers]]
 name = "Nell Arundel"
 email = "nell.arundel@example.com"
+collectives = ["caretaking-operations", "bar-collective"]
+dir_share_name = "initial"
+dir_share_access_rider = true
+access_intro = "Chronic pain condition — varies day to day."
+access_needs = "Standing for long periods is difficult. A stool behind the bar or at the door makes a big difference. Happy to swap to a seated role if needed."
 
 [[volunteers]]
 name = "Ivan Solis"
 email = "ivan.solis@example.com"
+# opted out of directory entirely
 
 [[volunteers]]
 name = "Ana Fonseca"
 email = "ana.fonseca@example.com"
 pronouns = "she/her"
+collectives = ["art-club", "finance"]
+dir_share_name = "full"
+dir_share_pronouns = true
+dir_share_email = true
+dir_share_collectives = true
 
 # Single-name volunteers
 
 [[volunteers]]
 name = "Beef"
 email = "beef@example.com"
+collectives = ["keyholder", "bar-collective"]
+dir_share_name = "full"
+dir_share_collectives = true
 
 [[volunteers]]
 name = "Sparks"
 email = "sparks@example.com"
 pronouns = "ze/zir"
+collectives = ["film-projection-tech"]
+dir_share_name = "full"
+dir_share_pronouns = true
 
 [[volunteers]]
 name = "Cheddar"
 email = "cheddar@example.com"
+# opted out of directory entirely
 
 [[volunteers]]
 name = "Moth"
 email = "moth@example.com"
 pronouns = "they/them"
+collectives = ["safer-spaces", "canny-little-library"]
+dir_share_name = "initial"
+dir_share_pronouns = true
+dir_share_collectives = true
 
 [[volunteers]]
 name = "Fig"
 email = "fig@example.com"
+collectives = ["community-kitchen"]
+dir_share_name = "full"

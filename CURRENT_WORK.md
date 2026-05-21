@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-05-20 (WCAG 2.1 AA structural accessibility pass; Wagtail article page layout + colour; rota per-volunteer shift highlights + "My shifts" filter)
+**Last updated:** 2026-05-21 (Bug AE static-file cache-busting; 9.86 volunteer directory + access rider + collectives; fix volunteer edit form not saving in S+S)
 
 **Current phase:** Phase 1 — Stable foundation
 **See also:** [ROADMAP.md](docs/ROADMAP.md) (wave-by-wave sequencing) · [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
