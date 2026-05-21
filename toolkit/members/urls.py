@@ -16,6 +16,7 @@ from toolkit.members.volunteer_views import (
     set_volunteer_password,
     send_volunteer_password_reset,
     clear_login_inactive,
+    view_volunteer_directory,
 )
 
 from toolkit.members.member_views import (
@@ -121,6 +122,7 @@ volunteer_urls = [
         name="inactivate-volunteer",
         kwargs={"set_active": False},
     ),
+    re_path(r"^directory/$", view_volunteer_directory, name="volunteer-directory"),
 ]
 
 # Members:

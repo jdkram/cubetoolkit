@@ -1,0 +1,163 @@
+{% extends 'base_admin.html' %}
+
+{% block title %}Volunteer directory{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+.dir-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(28rem, 100%), 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+.dir-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+}
+.dir-card h5 {
+    margin: 0 0 0.2rem;
+    font-size: 1rem;
+}
+.dir-card .pronouns {
+    color: #666;
+    font-size: 0.88em;
+    margin-left: 0.3rem;
+}
+.dir-meta {
+    font-size: 0.88em;
+    color: #444;
+    margin: 0.3rem 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem 1rem;
+}
+.dir-collectives {
+    margin-top: 0.4rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+.dir-collectives .badge {
+    font-weight: normal;
+    font-size: 0.8em;
+}
+.dir-rider {
+    margin-top: 0.6rem;
+    font-size: 0.88em;
+    border-top: 1px solid #eee;
+    padding-top: 0.5rem;
+}
+.dir-rider-intro {
+    color: #555;
+    font-style: italic;
+    margin-bottom: 0.3rem;
+}
+.dir-rider-needs {
+    white-space: pre-line;
+}
+.dir-rider-links {
+    margin-top: 0.3rem;
+    color: #666;
+    word-break: break-all;
+}
+.dir-search {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.dir-search input[type="search"] {
+    padding: 0.3rem 0.6rem;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 0.95em;
+    width: 18rem;
+    max-width: 100%;
+}
+.dir-count {
+    font-size: 0.88em;
+    color: #666;
+}
+</style>
+{% endblock %}
+
+{% block body %}
+<h3>Volunteer directory</h3>
+<p style="font-size:0.9em; color:#555; margin-bottom:0.75rem;">
+  Only volunteers who have opted in appear here.
+  {% if own_volunteer_pk %}
+    Update your own sharing preferences on your
+    <a href="{% url "edit-volunteer" own_volunteer_pk %}#dir-section">volunteer profile</a>.
+  {% endif %}
+</p>
+
+<form method="get" class="dir-search" role="search">
+  <label for="dir-q" class="visually-hidden">Search by name</label>
+  <input type="search" id="dir-q" name="q" value="{{ query|default:'' }}"
+         placeholder="Search by name" autocomplete="off">
+  <button type="submit" class="btn btn-sm btn-outline-secondary">Search</button>
+  {% if query %}<a href="{% url "volunteer-directory" %}" class="btn btn-sm btn-link">Clear</a>{% endif %}
+  <span class="dir-count">{{ volunteers|length }} volunteer{{ volunteers|length|pluralize }} listed</span>
+</form>
+
+{% if volunteers %}
+<div class="dir-grid" aria-label="Volunteer directory">
+  {% for v in volunteers %}
+  <div class="dir-card">
+    <h5>
+      {{ v.directory_display_name }}
+      {% if v.dir_share_pronouns and v.member.personal_pronouns %}
+        <span class="pronouns">({{ v.member.personal_pronouns }})</span>
+      {% endif %}
+    </h5>
+
+    <div class="dir-meta">
+      {% if v.dir_share_email and v.member.email %}
+        <span><a href="mailto:{{ v.member.email }}">{{ v.member.email }}</a></span>
+      {% endif %}
+      {% if v.dir_share_phone and v.member.phone %}
+        <span>{{ v.member.phone }}</span>
+      {% endif %}
+    </div>
+
+    {% if v.dir_share_collectives %}
+      {% with cols=v.collectives.all %}
+        {% if cols %}
+        <div class="dir-collectives">
+          {% for c in cols %}
+            <span class="badge" style="background-color:{{ c.colour }}; color:#fff;">{{ c.name }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      {% endwith %}
+    {% endif %}
+
+    {% if v.dir_share_access_rider %}
+      {% if v.access_intro or v.access_needs or v.access_links %}
+      <div class="dir-rider">
+        {% if v.access_intro %}
+          <p class="dir-rider-intro">{{ v.access_intro }}</p>
+        {% endif %}
+        {% if v.access_needs %}
+          <div class="dir-rider-needs">{{ v.access_needs }}</div>
+        {% endif %}
+        {% if v.access_links %}
+          <div class="dir-rider-links">{{ v.access_links }}</div>
+        {% endif %}
+      </div>
+      {% endif %}
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<p style="margin-top:1rem; color:#666;">
+  {% if query %}No volunteers match "{{ query }}".{% else %}No volunteers have opted in to the directory yet.{% endif %}
+</p>
+{% endif %}
+
+{% endblock %}
