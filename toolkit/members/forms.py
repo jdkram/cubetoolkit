@@ -119,23 +119,38 @@ class VolunteerForm(forms.ModelForm):
         widget=forms.RadioSelect(),
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, is_superuser=False, **kwargs):
         super().__init__(*args, **kwargs)
+        self._is_superuser = is_superuser
 
         # Force ordering of roles list to be by "standard" role type, then name
         self.fields["roles"].queryset = self.fields["roles"].queryset.order_by(
             "-standard", "name"
         )
 
-        # Force ordering of collectives list
+        # Collectives: superusers see all; others see only open collectives.
         from toolkit.labs.models import Collective
-        self.fields["collectives"].queryset = Collective.objects.filter(active=True).order_by("display_order", "name")
+        qs = Collective.objects.filter(active=True).order_by("display_order", "name")
+        if not is_superuser:
+            qs = qs.filter(invite_only=False)
+        self.fields["collectives"].queryset = qs
 
     def clean_dir_share_name(self):
         value = self.cleaned_data.get("dir_share_name")
         if not value:
             return toolkit.members.models.Volunteer.DIR_SHARE_NONE
         return value
+
+    def clean_collectives(self):
+        selected = list(self.cleaned_data.get("collectives", []))
+        # Non-superusers can't see invite-only collectives in the form, but if
+        # they're already a member of one we must not silently drop it on save.
+        if not self._is_superuser and self.instance.pk:
+            existing_pks = {c.pk for c in selected}
+            for c in self.instance.collectives.filter(invite_only=True):
+                if c.pk not in existing_pks:
+                    selected.append(c)
+        return selected
 
     class Meta:
         model = toolkit.members.models.Volunteer
