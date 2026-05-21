@@ -110,6 +110,15 @@ class VolunteerForm(forms.ModelForm):
     # MemberFormWithoutNotes
     prefix = "vol"
 
+    # dir_share_name has choices; make it non-required so existing code that
+    # submits minimal POST data doesn't fail — clean_dir_share_name defaults it.
+    dir_share_name = forms.ChoiceField(
+        choices=toolkit.members.models.Volunteer.DIR_SHARE_NAME_CHOICES,
+        required=False,
+        initial=toolkit.members.models.Volunteer.DIR_SHARE_NONE,
+        widget=forms.RadioSelect(),
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -118,13 +127,34 @@ class VolunteerForm(forms.ModelForm):
             "-standard", "name"
         )
 
+        # Force ordering of collectives list
+        from toolkit.labs.models import Collective
+        self.fields["collectives"].queryset = Collective.objects.filter(active=True).order_by("display_order", "name")
+
+    def clean_dir_share_name(self):
+        value = self.cleaned_data.get("dir_share_name")
+        if not value:
+            return toolkit.members.models.Volunteer.DIR_SHARE_NONE
+        return value
+
     class Meta:
         model = toolkit.members.models.Volunteer
-        fields = ("portrait", "notes", "roles", "status")
+        fields = (
+            "portrait", "notes", "roles", "status",
+            "access_intro", "access_needs", "access_links",
+            "emergency_contact_name", "emergency_contact_relationship", "emergency_contact_phone",
+            "dir_share_name", "dir_share_pronouns", "dir_share_email",
+            "dir_share_phone", "dir_share_access_rider", "dir_share_collectives",
+            "collectives",
+        )
         widgets = {
-            "notes": forms.Textarea(attrs={"wrap": "soft"}),
+            "notes": forms.Textarea(attrs={"wrap": "soft", "rows": 4}),
             "roles": forms.CheckboxSelectMultiple(),
             "status": forms.RadioSelect(),
+            "access_intro": forms.Textarea(attrs={"rows": 3, "maxlength": 500}),
+            "access_needs": forms.Textarea(attrs={"rows": 5}),
+            "access_links": forms.Textarea(attrs={"rows": 3, "maxlength": 500}),
+            "collectives": forms.CheckboxSelectMultiple(),
         }
 
     def _parse_data_uri(self, image_data):

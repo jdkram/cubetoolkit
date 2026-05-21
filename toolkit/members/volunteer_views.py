@@ -638,11 +638,24 @@ def anonymise_volunteer(request, volunteer_id):
 
             # Anonymise the Volunteer record
             volunteer.notes = ""
+            volunteer.access_intro = ""
+            volunteer.access_needs = ""
+            volunteer.access_links = ""
+            volunteer.emergency_contact_name = ""
+            volunteer.emergency_contact_relationship = ""
+            volunteer.emergency_contact_phone = ""
+            volunteer.dir_share_name = Volunteer.DIR_SHARE_NONE
+            volunteer.dir_share_pronouns = False
+            volunteer.dir_share_email = False
+            volunteer.dir_share_phone = False
+            volunteer.dir_share_access_rider = False
+            volunteer.dir_share_collectives = False
             if volunteer.portrait:
                 volunteer.portrait.delete(save=False)
                 volunteer.portrait = None
             volunteer.status = Volunteer.STATUS_RETIRED
             volunteer.roles.clear()
+            volunteer.collectives.clear()
             volunteer.save()
 
             # Anonymise the Django User account
@@ -768,3 +781,31 @@ def clear_login_inactive(request, volunteer_id):
     )
     messages.success(request, f"Inactivity flag cleared for {volunteer.member.name}.")
     return HttpResponseRedirect(reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id}))
+
+
+@login_required
+@require_safe
+def view_volunteer_directory(request):
+    query = request.GET.get("q", "").strip()
+
+    volunteers = (
+        Volunteer.objects.filter(status=Volunteer.STATUS_ACTIVE)
+        .exclude(dir_share_name=Volunteer.DIR_SHARE_NONE)
+        .select_related("member")
+        .prefetch_related("collectives")
+        .order_by("member__name")
+    )
+
+    if query:
+        volunteers = volunteers.filter(member__name__icontains=query)
+
+    try:
+        own_volunteer_pk = request.user.volunteer.pk
+    except Volunteer.DoesNotExist:
+        own_volunteer_pk = None
+
+    return render(
+        request,
+        "volunteer_directory.html",
+        {"volunteers": volunteers, "query": query, "own_volunteer_pk": own_volunteer_pk},
+    )

@@ -243,6 +243,48 @@ class Volunteer(models.Model):
         Role, db_table="Volunteer_Roles", blank=True
     )
 
+    # Collective memberships
+    collectives = models.ManyToManyField(
+        "labs.Collective", blank=True, related_name="volunteers"
+    )
+
+    # Access rider
+    access_intro = models.TextField(
+        blank=True, max_length=500,
+        help_text="A sentence or two about yourself for context (optional).",
+    )
+    access_needs = models.TextField(
+        blank=True,
+        help_text="What you need to participate in shifts and events at the venue.",
+    )
+    access_links = models.TextField(
+        blank=True, max_length=500,
+        help_text="Links to further information about your access needs (optional).",
+    )
+
+    # Emergency contact (panopticon-visible only; not included in the directory)
+    emergency_contact_name = models.CharField(max_length=128, blank=True)
+    emergency_contact_relationship = models.CharField(max_length=64, blank=True)
+    emergency_contact_phone = models.CharField(max_length=64, blank=True)
+
+    # Directory sharing controls — all opt-in, default off
+    DIR_SHARE_FULL = "full"
+    DIR_SHARE_INITIAL = "initial"
+    DIR_SHARE_NONE = "none"
+    DIR_SHARE_NAME_CHOICES = [
+        (DIR_SHARE_FULL, "Full name"),
+        (DIR_SHARE_INITIAL, "First name + initial"),
+        (DIR_SHARE_NONE, "Not listed"),
+    ]
+    dir_share_name = models.CharField(
+        max_length=10, choices=DIR_SHARE_NAME_CHOICES, default=DIR_SHARE_NONE,
+    )
+    dir_share_pronouns = models.BooleanField(default=False)
+    dir_share_email = models.BooleanField(default=False)
+    dir_share_phone = models.BooleanField(default=False)
+    dir_share_access_rider = models.BooleanField(default=False)
+    dir_share_collectives = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -283,6 +325,17 @@ class Volunteer(models.Model):
             )
         except (OSError, ValueError):
             self.__original_portrait = None
+
+    def directory_display_name(self):
+        """Name string to show in the directory, honouring dir_share_name."""
+        if self.dir_share_name == self.DIR_SHARE_FULL:
+            return self.member.name
+        if self.dir_share_name == self.DIR_SHARE_INITIAL:
+            parts = self.member.name.split()
+            if len(parts) >= 2:
+                return f"{parts[0]} {parts[-1][0]}."
+            return self.member.name
+        return ""
 
     def is_old(self):
         return (

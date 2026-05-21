@@ -1,5 +1,6 @@
 {% extends 'base_admin.html' %}
 {% load thumbnail_l %}
+{% load static %}
 
 {% block title %}{{ pagetitle }} {{ volunteer.member.name }}{% endblock %}
 
@@ -152,8 +153,8 @@ canvas { display: none; }
 
 {% block script %}
 {{ block.super }}
-<script src="{{ STATIC_URL }}members/js/webcam.js"></script>
-<script src="{{ STATIC_URL }}members/js/form_volunteer.js"></script>
+<script src="{% static 'members/js/webcam.js' %}"></script>
+<script src="{% static 'members/js/form_volunteer.js' %}"></script>
 <script>
 $(document).ready(function() {
     setupPage();
@@ -317,6 +318,92 @@ $(document).ready(function() {
   {{ vol_form.notes.errors }}{{ vol_form.notes }}
 </div>
 
+<!-- ── Access rider (full width) ───────────────────────────────── -->
+<div class="vol-section" id="vol-access">
+  <h4>Access rider
+    <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
+      title="Optional information about what you need to participate. Can be shared in the volunteer directory if you choose.">ⓘ</span>
+  </h4>
+  <p style="font-size:0.85em; color:#666; margin:0 0 0.6rem;">
+    Fill in what feels useful. This is your own record — you control whether it appears in the directory.
+  </p>
+  <div style="margin-bottom:0.5rem;">
+    <label for="{{ vol_form.access_intro.id_for_label }}" style="font-weight:500;">Introduction</label>
+    <p style="font-size:0.82em; color:#888; margin:0 0 0.2rem;">A sentence or two about yourself for context (optional).</p>
+    {{ vol_form.access_intro.errors }}
+    {{ vol_form.access_intro }}
+  </div>
+  <div style="margin-bottom:0.5rem;">
+    <label for="{{ vol_form.access_needs.id_for_label }}" style="font-weight:500;">Access needs</label>
+    <p style="font-size:0.82em; color:#888; margin:0 0 0.2rem;">What you need to participate in shifts and events at the venue.</p>
+    {{ vol_form.access_needs.errors }}
+    {{ vol_form.access_needs }}
+  </div>
+  <div>
+    <label for="{{ vol_form.access_links.id_for_label }}" style="font-weight:500;">Supporting links</label>
+    <p style="font-size:0.82em; color:#888; margin:0 0 0.2rem;">URLs or links to further information (optional).</p>
+    {{ vol_form.access_links.errors }}
+    {{ vol_form.access_links }}
+  </div>
+</div>
+
+<!-- ── Collectives + directory sharing ─────────────────────────── -->
+<div class="vol-section" id="dir-section">
+  <h4>Collectives and directory
+    <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
+      title="Which collectives you're part of, and what to share in the volunteer directory. All options default to off — nothing is shared unless you opt in.">ⓘ</span>
+  </h4>
+
+  <div style="margin-bottom:0.75rem;">
+    <strong style="font-size:0.92em;">Collectives</strong>
+    <p style="font-size:0.82em; color:#888; margin:0 0 0.3rem;">Which Star and Shadow collectives are you part of?</p>
+    {{ vol_form.collectives.errors }}
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:2px 1rem;">
+      {% for cb in vol_form.collectives %}
+        <label style="font-weight:normal; cursor:pointer;">{{ cb.tag }} {{ cb.choice_label }}</label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div>
+    <strong style="font-size:0.92em;">Directory sharing</strong>
+    <p style="font-size:0.82em; color:#888; margin:0 0 0.4rem;">
+      Choose what to share in the <a href="{% url "volunteer-directory" %}">volunteer directory</a>.
+      All options default to off.
+    </p>
+
+    <div style="margin-bottom:0.4rem;">
+      <label style="font-weight:500;">Name visibility</label>
+      <div style="display:flex; gap:1.5rem; flex-wrap:wrap; margin-top:0.2rem;">
+        {% for radio in vol_form.dir_share_name %}
+          <label style="font-weight:normal; cursor:pointer;">{{ radio.tag }} {{ radio.choice_label }}</label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div style="display:flex; flex-wrap:wrap; gap:0.4rem 1.5rem; margin-top:0.4rem;">
+      <label style="font-weight:normal; cursor:pointer;">
+        {{ vol_form.dir_share_pronouns }} Share pronouns
+      </label>
+      <label style="font-weight:normal; cursor:pointer;">
+        {{ vol_form.dir_share_email }} Share email
+      </label>
+      <label style="font-weight:normal; cursor:pointer;">
+        {{ vol_form.dir_share_phone }} Share phone number
+      </label>
+      <label style="font-weight:normal; cursor:pointer;">
+        {{ vol_form.dir_share_collectives }} Show collectives
+      </label>
+      <label style="font-weight:normal; cursor:pointer;">
+        {{ vol_form.dir_share_access_rider }} Show access rider
+      </label>
+    </div>
+    {{ vol_form.dir_share_pronouns.errors }}{{ vol_form.dir_share_email.errors }}
+    {{ vol_form.dir_share_phone.errors }}{{ vol_form.dir_share_collectives.errors }}
+    {{ vol_form.dir_share_access_rider.errors }}
+  </div>
+</div>
+
 <!-- ── Event & other roles (full width) ────────────────────────── -->
 <div class="vol-section" id="roles">
   {{ vol_form.roles.errors }}
@@ -396,6 +483,30 @@ $(document).ready(function() {
     <tr><td colspan="5"><input type="submit" value="Add training record"></td></tr>
   </table>
   </form>
+</div>
+{% endif %}
+
+<!-- ── Emergency contact (panopticon-visible) ───────────────────── -->
+{% if request.user.is_superuser %}
+<div class="vol-section" id="vol-emergency">
+  <h4>Emergency contact
+    <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
+      title="Visible to Panopticon users only. Not included in the volunteer directory.">ⓘ</span>
+  </h4>
+  <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+    <div>
+      <label for="{{ vol_form.emergency_contact_name.id_for_label }}" style="font-weight:500; display:block;">Name</label>
+      {{ vol_form.emergency_contact_name.errors }}{{ vol_form.emergency_contact_name }}
+    </div>
+    <div>
+      <label for="{{ vol_form.emergency_contact_relationship.id_for_label }}" style="font-weight:500; display:block;">Relationship</label>
+      {{ vol_form.emergency_contact_relationship.errors }}{{ vol_form.emergency_contact_relationship }}
+    </div>
+    <div>
+      <label for="{{ vol_form.emergency_contact_phone.id_for_label }}" style="font-weight:500; display:block;">Phone</label>
+      {{ vol_form.emergency_contact_phone.errors }}{{ vol_form.emergency_contact_phone }}
+    </div>
+  </div>
 </div>
 {% endif %}
 

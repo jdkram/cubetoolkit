@@ -1320,3 +1320,119 @@ class TestAnonymiseVolunteer(MembersTestsMixin, TestCase):
         log = AnonymisationLog.objects.first()
         self.assertEqual(log.volunteer_pk, self.vol_1.pk)
         self.assertIsNotNone(log.performed_by)
+
+
+from toolkit.labs.models import Collective
+
+
+class TestVolunteerDirectory(MembersTestsMixin, TestCase):
+    def setUp(self):
+        super().setUp()
+        self.dir_url = reverse("volunteer-directory")
+
+    def test_requires_login(self):
+        response = self.client.get(self.dir_url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response["Location"])
+
+    def test_loads_for_any_logged_in_user(self):
+        self.client.login(username="no_perm", password="T3stPassword!2")
+        response = self.client.get(self.dir_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "volunteer_directory.html")
+
+    def test_opted_out_volunteer_not_listed(self):
+        self.client.login(username="admin", password="T3stPassword!")
+        response = self.client.get(self.dir_url)
+        self.assertNotContains(response, "Volunteer One")
+
+    def test_opted_in_full_name_shown(self):
+        self.vol_1.dir_share_name = Volunteer.DIR_SHARE_FULL
+        self.vol_1.save()
+        self.client.login(username="admin", password="T3stPassword!")
+        response = self.client.get(self.dir_url)
+        self.assertContains(response, "Volunteer One")
+
+    def test_opted_in_initial_only(self):
+        self.vol_1.dir_share_name = Volunteer.DIR_SHARE_INITIAL
+        self.vol_1.save()
+        self.client.login(username="admin", password="T3stPassword!")
+        response = self.client.get(self.dir_url)
+        self.assertContains(response, "Volunteer O.")
+        self.assertNotContains(response, "Volunteer One")
+
+    def test_search_filters_by_name(self):
+        self.vol_1.dir_share_name = Volunteer.DIR_SHARE_FULL
+        self.vol_1.save()
+        self.vol_2.dir_share_name = Volunteer.DIR_SHARE_FULL
+        self.vol_2.save()
+        self.client.login(username="admin", password="T3stPassword!")
+        response = self.client.get(self.dir_url + "?q=One")
+        self.assertContains(response, "Volunteer One")
+        self.assertNotContains(response, "Volunteer Two")
+
+    def test_pronouns_shown_when_opted_in(self):
+        self.vol_1.dir_share_name = Volunteer.DIR_SHARE_FULL
+        self.vol_1.dir_share_pronouns = True
+        self.vol_1.save()
+        self.mem_4.personal_pronouns = "they/them"
+        self.mem_4.save()
+        self.client.login(username="admin", password="T3stPassword!")
+        response = self.client.get(self.dir_url)
+        self.assertContains(response, "they/them")
+
+    def test_access_rider_shown_when_opted_in(self):
+        self.vol_1.dir_share_name = Volunteer.DIR_SHARE_FULL
+        self.vol_1.dir_share_access_rider = True
+        self.vol_1.access_needs = "Please provide a chair."
+        self.vol_1.save()
+        self.client.login(username="admin", password="T3stPassword!")
+        response = self.client.get(self.dir_url)
+        self.assertContains(response, "Please provide a chair.")
+
+    def test_access_rider_hidden_when_not_opted_in(self):
+        self.vol_1.dir_share_name = Volunteer.DIR_SHARE_FULL
+        self.vol_1.dir_share_access_rider = False
+        self.vol_1.access_needs = "Please provide a chair."
+        self.vol_1.save()
+        self.client.login(username="admin", password="T3stPassword!")
+        response = self.client.get(self.dir_url)
+        self.assertNotContains(response, "Please provide a chair.")
+
+    def test_collectives_shown_when_opted_in(self):
+        collective = Collective.objects.create(name="Film Collective", slug="film", colour="#000000")
+        self.vol_1.dir_share_name = Volunteer.DIR_SHARE_FULL
+        self.vol_1.dir_share_collectives = True
+        self.vol_1.collectives.add(collective)
+        self.vol_1.save()
+        self.client.login(username="admin", password="T3stPassword!")
+        response = self.client.get(self.dir_url)
+        self.assertContains(response, "Film Collective")
+
+    def test_email_not_shown_when_not_opted_in(self):
+        self.vol_1.dir_share_name = Volunteer.DIR_SHARE_FULL
+        self.vol_1.dir_share_email = False
+        self.vol_1.save()
+        self.client.login(username="admin", password="T3stPassword!")
+        response = self.client.get(self.dir_url)
+        self.assertNotContains(response, "volon@cube.test")
+
+
+class TestVolunteerDirectoryDisplayName(MembersTestsMixin, TestCase):
+    def test_full_name(self):
+        self.vol_1.dir_share_name = Volunteer.DIR_SHARE_FULL
+        self.assertEqual(self.vol_1.directory_display_name(), "Volunteer One")
+
+    def test_initial_multi_word(self):
+        self.vol_1.dir_share_name = Volunteer.DIR_SHARE_INITIAL
+        self.assertEqual(self.vol_1.directory_display_name(), "Volunteer O.")
+
+    def test_initial_single_word(self):
+        self.mem_4.name = "Mononym"
+        self.mem_4.save()
+        self.vol_1.dir_share_name = Volunteer.DIR_SHARE_INITIAL
+        self.assertEqual(self.vol_1.directory_display_name(), "Mononym")
+
+    def test_none_returns_empty(self):
+        self.vol_1.dir_share_name = Volunteer.DIR_SHARE_NONE
+        self.assertEqual(self.vol_1.directory_display_name(), "")
