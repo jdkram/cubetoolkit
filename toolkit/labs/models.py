@@ -2,6 +2,8 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+from toolkit.diary.validators import validate_event_link_url
+
 COLLECTIVE_PALETTE = [
     # Blues & navies
     ("#0d2b45", "Deep Navy"),
@@ -123,6 +125,10 @@ class Collective(models.Model):
         max_length=256, blank=True, default="",
         help_text="Contact email or address shown at the bottom of the card.",
     )
+    invite_only = models.BooleanField(
+        default=False,
+        help_text="If set, volunteers cannot self-join — membership is managed by admins only.",
+    )
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(
         User, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
@@ -134,6 +140,35 @@ class Collective(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class CollectiveLink(models.Model):
+    """A named link attached to a collective — WhatsApp group, Linktree, shared pad, etc.
+
+    Uses the same domain allowlist as EventLink to keep things consistent.
+    Max 3 per collective enforced by the formset.
+    """
+
+    collective = models.ForeignKey(
+        Collective,
+        on_delete=models.CASCADE,
+        related_name="links",
+    )
+    label = models.CharField(
+        max_length=80,
+        help_text="Short name shown on the link chip, e.g. 'WhatsApp group' or 'Linktree'.",
+    )
+    url = models.URLField(
+        max_length=500,
+        validators=[validate_event_link_url],
+    )
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "pk"]
+
+    def __str__(self):
+        return f"{self.label} ({self.collective_id})"
 
 
 class Job(models.Model):

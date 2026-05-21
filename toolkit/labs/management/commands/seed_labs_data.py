@@ -14,7 +14,7 @@ from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from toolkit.labs.models import Collective, DonationItem, Job, RoomNote, COLLECTIVE_PALETTE
+from toolkit.labs.models import Collective, CollectiveLink, DonationItem, Job, RoomNote, COLLECTIVE_PALETTE
 
 DATA_DIR = Path(__file__).parent / "seed_data"
 
@@ -65,10 +65,21 @@ class Command(BaseCommand):
         palette_hexes = [hex_val for hex_val, _ in COLLECTIVE_PALETTE]
         created = 0
         for item in data["collectives"]:
+            links = item.pop("links", [])
             item.setdefault("colour", random.choice(palette_hexes))
-            _, made = Collective.objects.get_or_create(slug=item["slug"], defaults=item)
+            collective, made = Collective.objects.get_or_create(slug=item["slug"], defaults=item)
             if made:
                 created += 1
+            else:
+                # Sync invite_only on re-runs (defaults= only applies at creation).
+                invite_only = item.get("invite_only", False)
+                if collective.invite_only != invite_only:
+                    collective.invite_only = invite_only
+                    collective.save(update_fields=["invite_only"])
+            # Sync links: clear and recreate so TOML is always the source of truth.
+            collective.links.all().delete()
+            for order, link in enumerate(links):
+                CollectiveLink.objects.create(collective=collective, order=order, **link)
         return created
 
     def _seed_donations(self):

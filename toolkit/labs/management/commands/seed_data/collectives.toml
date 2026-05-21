@@ -24,6 +24,10 @@ organising = "Meetings in person every couple of months, organised through the b
 proud_of = ""
 get_involved = "As alcohol sales are licensed, you'll need to complete a bar induction before doing a shift. Once inducted, you'll be added to the bar mailing list and can sign up for any bar role on the rota. Please arrive 45–60 minutes before the listed time to set up."
 contact = ""
+links = [
+  {label = "Bar folder (Nextcloud)", url = "https://nextcloud.com/s/sns-bar-example"},
+  {label = "WhatsApp group", url = "https://chat.whatsapp.com/snsbarexample"},
+]
 
 [[collectives]]
 name = "Cafe Collective"
@@ -84,6 +88,11 @@ organising = "Monthly online meetings and an active WhatsApp community. Planning
 proud_of = ""
 get_involved = "There is an email list and WhatsApp groups — anyone can join, no induction needed. There is also a comprehensive guide called 'How to Programme a Film' for new programmers. Note: you don't need to project a film you programme."
 contact = ""
+links = [
+  {label = "Programming folder (Nextcloud)", url = "https://nextcloud.com/s/sns-filmprog-example"},
+  {label = "Linktree", url = "https://linktr.ee/sns_film_programming"},
+  {label = "WhatsApp group", url = "https://chat.whatsapp.com/snsfilmprogexample"},
+]
 
 [[collectives]]
 name = "Film Projection / Tech Collective"
@@ -113,6 +122,7 @@ contact = ""
 name = "Keyholder Collective"
 slug = "keyholder"
 display_order = 100
+invite_only = true
 volunteer_count = ""
 about = "The Keyholder group is made up of volunteers trained to perform the keyholder role. There must be at least one keyholder on shift for every event. Keyholders open up the building for volunteers and the public, and have many responsibilities from cashing up to taking care of everyone's safety and comfort."
 roles = "Keyholders are first in, last out. They are responsible for the security of the building, timely access for staff, the safety and comfort of volunteers and the public, supervision of the safe and tills, management of emergency situations, and the set of keys registered to them."
@@ -120,11 +130,16 @@ organising = "Communication via a keyholder WhatsApp group and email list. Two k
 proud_of = ""
 get_involved = "Keyholders must be regular volunteers who have volunteered for at least one year, and must be punctual, reliable, and communicative. Prospective keyholders can nominate themselves at a Caretaking Meeting."
 contact = ""
+links = [
+  {label = "Keyholder docs (Nextcloud)", url = "https://nextcloud.com/s/sns-keyholder-example"},
+  {label = "WhatsApp group", url = "https://chat.whatsapp.com/snskeyholderexample"},
+]
 
 [[collectives]]
 name = "Safer Spaces Collective"
 slug = "safer-spaces"
 display_order = 110
+invite_only = true
 volunteer_count = ""
 about = "The Safer Spaces Collective supports the Star and Shadow in being a welcoming, inclusive, and accountable community. It maintains and embeds the Safer Spaces & Anti-Oppression Policy, which outlines the shared commitment to treating one another with care, respect, and fairness."
 roles = "Creating resources to help volunteers navigate the non-hierarchical set-up. Running workshops such as Listening Skills training. A smaller group within Safer Spaces acts as mediators and helps people talk when communication has broken down."
@@ -144,3 +159,6 @@ organising = "A WhatsApp chat for communication. Volunteers meet irregularly, wh
 proud_of = ""
 get_involved = "Get in touch via the library contact email with a bit about why you'd like to get involved. If you'd like to donate books, please contact the library first — space is limited."
 contact = ""
+links = [
+  {label = "WhatsApp chat", url = "https://chat.whatsapp.com/snslibraryexample"},
+]

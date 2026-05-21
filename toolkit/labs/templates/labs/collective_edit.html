@@ -25,10 +25,57 @@
   <form method="post">
     {% csrf_token %}
     {% crispy form %}
+
+    <hr style="margin: 2rem 0 1.5rem;">
+    <h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem;">Links</h2>
+    <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1rem;">
+      Up to 3 links shown on the collective's card — WhatsApp group, Linktree, shared pad, etc.
+      Only approved domains are accepted (riseup.net, linktr.ee, chat.whatsapp.com, nextcloud.com/org).
+    </p>
+
+    {{ links_formset.management_form }}
+    <table class="table table-sm" style="font-size: 0.875rem;" id="links-table">
+      <thead>
+        <tr>
+          <th style="width: 30%;">Label</th>
+          <th>URL</th>
+          <th style="width: 5%; text-align: center;">Delete</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for link_form in links_formset %}
+        <tr>
+          <td>{{ link_form.label }}{{ link_form.id }}{% if link_form.label.errors %}<div class="text-danger" style="font-size:0.8rem;">{{ link_form.label.errors }}</div>{% endif %}</td>
+          <td>{{ link_form.url }}{% if link_form.url.errors %}<div class="text-danger" style="font-size:0.8rem;">{{ link_form.url.errors }}</div>{% endif %}</td>
+          <td style="text-align: center; vertical-align: middle;">{% if link_form.instance.pk %}{{ link_form.DELETE }}{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
     <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem; align-items: center;">
       <button type="submit" class="btn btn-primary">Save changes</button>
       <a href="{% url 'labs-collectives' %}" class="btn btn-outline-secondary">Cancel</a>
     </div>
   </form>
+
+<script>
+(function () {
+  var hints = [
+    { label: "e.g. Collective folder", url: "https://nextcloud.com/s/..." },
+    { label: "e.g. Linktree",          url: "https://linktr.ee/..."      },
+    { label: "e.g. WhatsApp group",    url: "https://chat.whatsapp.com/..." },
+  ];
+  var rows = document.querySelectorAll("#links-table tbody tr");
+  rows.forEach(function (row, i) {
+    var hint = hints[i];
+    if (!hint) return;
+    var labelInput = row.querySelector("input[id$='-label']");
+    var urlInput   = row.querySelector("input[id$='-url']");
+    if (labelInput && !labelInput.value) labelInput.placeholder = hint.label;
+    if (urlInput   && !urlInput.value)   urlInput.placeholder   = hint.url;
+  });
+})();
+</script>
 </div>
 {% endblock %}
