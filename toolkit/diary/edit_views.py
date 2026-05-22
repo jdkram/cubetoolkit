@@ -1788,7 +1788,20 @@ def edit_site_configuration(request):
         ),
         (
             "Bulletins",
-            ["bulletin_default_expiry_days", "bulletin_guidance"],
+            ["bulletin_default_expiry_days", "bulletin_guidance", "bulletin_post_permission"],
+        ),
+        (
+            "Public site navigation",
+            ["show_donations_in_public_nav"],
+        ),
+        (
+            "Site-wide banner",
+            [
+                "banner_active",
+                "banner_level",
+                "banner_text",
+                "banner_dismissible",
+            ],
         ),
     ]
 

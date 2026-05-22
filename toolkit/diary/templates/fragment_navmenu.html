@@ -2,7 +2,7 @@
 {% wagtail_site as current_site %}
 <ul>
     <li><a href="/">Home</a></li>
-    <li><a href="{% url "programme-view" %}">Programme</a>
+    <li><a href="{% url "programme-view" %}" aria-haspopup="true">Programme <i class="fa fa-caret-down" aria-hidden="true"></i></a>
         <ul class="sub-menu">
             {% for tag in promoted_tags %}
             <li><a href="{% url "type-view" tag.slug %}"><span>{{ tag.name|title }}</span></a></li>
@@ -14,7 +14,7 @@
     {% for top_level_child in current_site.root_page.get_children.live.in_menu %}
       {% if top_level_child.content_type.model == "sectionrootwithlinks" %}
     {# Don't actually link to the top_level_child content (as there isn't any!) #}
-    <li><a href="#">{{ top_level_child.seo_title|default:top_level_child.title }}</a>
+    <li><a href="#" aria-haspopup="true">{{ top_level_child.seo_title|default:top_level_child.title }} <i class="fa fa-caret-down" aria-hidden="true"></i></a>
         <ul class="sub-menu">
             {% for child in top_level_child.get_children.live.in_menu %}
             <li><a href="{% pageurl child %}">{{ child.seo_title|default:child.title }}</a></li>
@@ -29,12 +29,15 @@
     <li><a href="{% pageurl top_level_child %}">{{ top_level_child.seo_title|default:top_level_child.title }}</a>
       {% endif %}
     {% endfor %}
+    {% if site_config.show_donations_in_public_nav %}
+    <li><a href="{% url "labs-donations" %}">Donations wishlist</a></li>
+    {% endif %}
     {% if user.is_authenticated %}
     <li class="nav-vol-divider" aria-hidden="true"></li>
     <li><a href="{% url "toolkit-index" %}">Toolkit</a></li>
     <li><a href="{% url "rota-edit" %}">Rota</a></li>
     {% if perms.toolkit.read %}<li><a href="{% url "default-edit" %}">Diary</a></li>{% endif %}
-    <li><a href="#">Labs</a>
+    <li><a href="#" aria-haspopup="true">Labs <i class="fa fa-caret-down" aria-hidden="true"></i></a>
         <ul class="sub-menu">
             <li><a href="{% url "labs-bulletins" %}"><span>Bulletins</span></a></li>
             <li><a href="{% url "labs-floorplan" %}"><span>Building Map</span></a></li>
