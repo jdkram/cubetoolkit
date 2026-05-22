@@ -137,6 +137,42 @@
 </div>
 <div id="dash-cards-row" class="row gy-4 mb-2">
 
+  {# Unread bulletins — all logged-in users. Full-width so 5 cards tessellate. #}
+  {% if recent_bulletins %}
+  <div id="dash_bulletins" class="col-12 d-flex">
+    <div class="card w-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Bulletins</strong>
+        <span class="d-flex align-items-center" style="gap:0.5rem">
+          <form method="post" action="{% url "labs-bulletins-read-all" %}" class="m-0">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-secondary">Mark all as read</button>
+          </form>
+          <a href="{% url "labs-bulletins" %}" style="font-size:0.85em">All bulletins &rarr;</a>
+        </span>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for b in recent_bulletins %}
+        <li class="list-group-item bulletin-item-unread py-2 d-flex align-items-baseline">
+          <div style="min-width:0; flex:1;">
+            <strong>{{ b.title }}</strong>
+            {% if b.pinned %}<span class="badge text-bg-warning" style="font-size:0.7em">pinned</span>{% endif %}
+            <span class="bulletin-body-inline">{{ b.body|linebreaksbr }}</span>
+            <span class="text-muted ms-1" style="font-size:0.82em; white-space:nowrap;">
+              {{ b.created_at|date:"j M" }}{% if b.author %} &middot; {{ b.author.get_full_name|default:b.author.username }}{% endif %}
+            </span>
+          </div>
+          <form method="post" action="{% url "labs-bulletin-read" bulletin_id=b.id %}" class="ms-2">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-primary">Got it</button>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endif %}
+
   {# Upcoming shifts — all volunteers with a linked account #}
   {% if has_volunteer %}
   <div id="dash_upcoming_shifts" class="col-md-6 d-flex">
@@ -252,42 +288,6 @@
   </div>
   {% endif %}
 
-  {# Unread bulletins — all logged-in users. Full-width so 5 cards tessellate. #}
-  {% if recent_bulletins %}
-  <div id="dash_bulletins" class="col-12 d-flex">
-    <div class="card w-100">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <strong>Bulletins</strong>
-        <span class="d-flex align-items-center" style="gap:0.5rem">
-          <form method="post" action="{% url "labs-bulletins-read-all" %}" class="m-0">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-sm btn-outline-secondary">Mark all as read</button>
-          </form>
-          <a href="{% url "labs-bulletins" %}" style="font-size:0.85em">All bulletins &rarr;</a>
-        </span>
-      </div>
-      <ul class="list-group list-group-flush">
-        {% for b in recent_bulletins %}
-        <li class="list-group-item bulletin-item-unread py-2 d-flex align-items-baseline">
-          <div style="min-width:0; flex:1;">
-            <strong>{{ b.title }}</strong>
-            {% if b.pinned %}<span class="badge text-bg-warning" style="font-size:0.7em">pinned</span>{% endif %}
-            <span class="bulletin-body-inline">{{ b.body|linebreaksbr }}</span>
-            <span class="text-muted ms-1" style="font-size:0.82em; white-space:nowrap;">
-              {{ b.created_at|date:"j M" }}{% if b.author %} &middot; {{ b.author.get_full_name|default:b.author.username }}{% endif %}
-            </span>
-          </div>
-          <form method="post" action="{% url "labs-bulletin-read" bulletin_id=b.id %}" class="ms-2">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-sm btn-outline-primary">Got it</button>
-          </form>
-        </li>
-        {% endfor %}
-      </ul>
-    </div>
-  </div>
-  {% endif %}
-
   {# Upcoming inductions & training — all logged-in users #}
   {% if upcoming_training %}
   <div id="dash_training" class="col-md-6 d-flex">
@@ -311,7 +311,7 @@
 <hr id="dash-hr" class="mt-0 mb-4">
 <script>
 (function() {
-    var KEYS = ['dash_upcoming_shifts','dash_starred_events','dash_new_showings','dash_rota_gaps','dash_unconfirmed','dash_training','dash_bulletins'];
+    var KEYS = ['dash_bulletins','dash_upcoming_shifts','dash_starred_events','dash_new_showings','dash_rota_gaps','dash_unconfirmed','dash_training'];
     var ORDER_KEY = 'dash_order';
     var row = document.getElementById('dash-cards-row');
 
