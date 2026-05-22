@@ -792,6 +792,9 @@ class SiteConfigurationForm(forms.ModelForm):
             "rota_gap_min_pct",
             "image_copyright_guidance_url",
             "alt_text_guidance_url",
+            "access_rider_guidance_url",
+            "bulletin_default_expiry_days",
+            "bulletin_guidance",
         )
         widgets = {
             "films_start_on_time_banner_text": forms.Textarea(

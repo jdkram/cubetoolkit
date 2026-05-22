@@ -580,6 +580,21 @@ class Command(BaseCommand):
         # Toolkit index links
         counts["index_links"] = self._seed_index_links()
 
+        # Sample bulletin (9.95)
+        from toolkit.labs.models import Bulletin
+
+        Bulletin.objects.get_or_create(
+            title="Keyholders list now open to all volunteers",
+            defaults={
+                "body": (
+                    "You can now contact the keyholders list directly at "
+                    "totally_real@list.name if you need a keyholder for an upcoming event. "
+                    "No need to ask around individually."
+                ),
+                "author": None,
+            },
+        )
+
         # Bulk test volunteers (performance testing only)
         if options["bulk_volunteers"] > 0:
             counts["volunteers"] += self._seed_bulk_volunteers(

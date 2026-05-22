@@ -1220,6 +1220,30 @@ class SiteConfiguration(models.Model):
         max_length=500,
         help_text="Link shown next to the alt-text field — e.g. a guide to writing good alt text.",
     )
+    access_rider_guidance_url = models.URLField(
+        blank=True,
+        default="https://weareunlimited.org.uk/resource/creating-your-own-access-rider/",
+        max_length=500,
+        help_text="Link shown in the Access Rider section of the volunteer profile — guidance on writing an access rider. Leave blank to hide the link.",
+    )
+
+    # --- Bulletins ---
+    bulletin_default_expiry_days = models.PositiveSmallIntegerField(
+        default=30,
+        help_text=(
+            "How many days a bulletin stays active if no explicit expiry is set. "
+            "Default is 30. Set to 0 to keep bulletins active indefinitely by default."
+        ),
+    )
+    bulletin_guidance = models.TextField(
+        blank=True,
+        default="",
+        help_text=(
+            "Guidance shown on the 'Post a bulletin' form. Use this to set local "
+            "conventions: what kinds of notices belong here, how to write them, "
+            "and examples of good and bad bulletins."
+        ),
+    )
 
     _CACHE_KEY = "diary.site_config.v1"
 

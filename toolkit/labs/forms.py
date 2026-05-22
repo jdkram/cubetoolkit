@@ -3,7 +3,7 @@ from django import forms
 from django.forms import inlineformset_factory
 from django.utils.html import mark_safe
 from crispy_forms.helper import FormHelper
-from .models import Collective, CollectiveLink, DonationItem, Job, COLLECTIVE_PALETTE
+from .models import Bulletin, Collective, CollectiveLink, DonationItem, Job, COLLECTIVE_PALETTE
 
 
 class ColourPickerWidget(forms.TextInput):
@@ -149,6 +149,68 @@ class JobForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_tag = False
+
+
+BULLETIN_BODY_MAX = 2000
+
+# Characters to strip from bulletin text on save:
+# - C0/C1 controls (except \n and \t)
+# - Bidi-override / direction marks (used for homoglyph-style URL spoofing)
+# - Zero-width spaces / joiners and the byte-order mark
+_BULLETIN_STRIP_CHARS = (
+    set(range(0x00, 0x09)) | {0x0B} | set(range(0x0E, 0x20))  # C0 minus \t\n
+    | set(range(0x7F, 0xA0))                                  # DEL + C1
+    | {0x200B, 0x200C, 0x200D, 0x200E, 0x200F, 0xFEFF}        # ZW marks + LRM/RLM + BOM
+    | set(range(0x202A, 0x202F))                              # LRE/RLE/PDF/LRO/RLO
+    | set(range(0x2066, 0x206A))                              # LRI/RLI/FSI/PDI
+)
+
+
+def _scrub_bulletin_text(value: str) -> str:
+    return "".join(c for c in value if ord(c) not in _BULLETIN_STRIP_CHARS)
+
+
+class BulletinForm(forms.ModelForm):
+    class Meta:
+        model = Bulletin
+        fields = ("title", "body")
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "form-control", "maxlength": 200}),
+            "body": forms.Textarea(attrs={
+                "rows": 4, "class": "form-control", "maxlength": BULLETIN_BODY_MAX,
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        self.fields["body"].help_text = (
+            f"Plain text. Max {BULLETIN_BODY_MAX} characters. URLs stay as plain "
+            "text — readers must copy-paste to follow them."
+        )
+
+    def clean_title(self):
+        return _scrub_bulletin_text(self.cleaned_data["title"]).strip()
+
+    def clean_body(self):
+        body = _scrub_bulletin_text(self.cleaned_data["body"]).strip()
+        if len(body) > BULLETIN_BODY_MAX:
+            raise forms.ValidationError(
+                f"Body is too long ({len(body)} chars; max {BULLETIN_BODY_MAX})."
+            )
+        return body
+
+
+class BulletinExpiryForm(forms.ModelForm):
+    class Meta:
+        model = Bulletin
+        fields = ("expires_at",)
+        widgets = {
+            "expires_at": forms.DateTimeInput(
+                attrs={"type": "datetime-local", "class": "form-control"}
+            ),
+        }
 
 
 class DonationItemForm(forms.ModelForm):

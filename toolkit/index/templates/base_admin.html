@@ -80,6 +80,7 @@ body {
             <div class="dropdown-menu" aria-labelledby="dropdown-labs">
               <a class="dropdown-item" href="{% url "labs-collectives" %}">Collectives</a>
               <a class="dropdown-item" href="{% url "volunteer-directory" %}">Volunteer directory</a>
+              <a class="dropdown-item" href="{% url "labs-bulletins" %}">Bulletins</a>
               <div class="dropdown-divider"></div>
               <a class="dropdown-item" href="{% url "labs-floorplan" %}">Building Map</a>
               <a class="dropdown-item" href="{% url "labs-jobs" %}">Jobs board</a>
@@ -148,6 +149,7 @@ body {
 
     <div class="container">
         <div class="admin-template">
+        {% include "messages.html" %}
 {% endblock %}
 
 {% block body %}

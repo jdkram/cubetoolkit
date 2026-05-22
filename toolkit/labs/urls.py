@@ -25,4 +25,12 @@ urlpatterns = [
     re_path(r"^loft/photo/(?P<photo_id>\d+)/delete/$", views.loft_photo_delete, name="labs-loft-photo-delete"),
     re_path(r"^area/(?P<area_id>[\w-]+)/photo/$", views.area_photo_upload, name="labs-area-photo-upload"),
     re_path(r"^area/(?P<area_id>[\w-]+)/photo/delete/$", views.area_photo_delete, name="labs-area-photo-delete"),
+    re_path(r"^bulletins/$", views.bulletin_list, name="labs-bulletins"),
+    re_path(r"^bulletins/archive/$", views.bulletin_archive, name="labs-bulletins-archive"),
+    re_path(r"^bulletins/add/$", views.bulletin_add, name="labs-bulletin-add"),
+    re_path(r"^bulletins/read-all/$", views.bulletin_read_all, name="labs-bulletins-read-all"),
+    re_path(r"^bulletins/(?P<bulletin_id>\d+)/read/$", views.bulletin_read, name="labs-bulletin-read"),
+    re_path(r"^bulletins/(?P<bulletin_id>\d+)/pin/$", views.bulletin_pin, name="labs-bulletin-pin"),
+    re_path(r"^bulletins/(?P<bulletin_id>\d+)/expire/$", views.bulletin_expire, name="labs-bulletin-expire"),
+    re_path(r"^bulletins/(?P<bulletin_id>\d+)/delete/$", views.bulletin_delete, name="labs-bulletin-delete"),
 ]

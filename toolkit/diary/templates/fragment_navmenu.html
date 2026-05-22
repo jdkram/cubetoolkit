@@ -36,6 +36,7 @@
     {% if perms.toolkit.read %}<li><a href="{% url "default-edit" %}">Diary</a></li>{% endif %}
     <li><a href="#">Labs</a>
         <ul class="sub-menu">
+            <li><a href="{% url "labs-bulletins" %}"><span>Bulletins</span></a></li>
             <li><a href="{% url "labs-floorplan" %}"><span>Building Map</span></a></li>
             <li><a href="{% url "labs-jobs" %}"><span>Jobs board</span></a></li>
             <li><a href="{% url "labs-donations" %}"><span>Donations wishlist</span></a></li>

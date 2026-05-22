@@ -1,0 +1,105 @@
+{% extends "base_admin.html" %}
+
+{% block title %}{% if is_archive %}Bulletins archive{% else %}Bulletins{% endif %}{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+  .bulletin-card {
+    border-left: 4px solid #dee2e6;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+    background: #fff;
+  }
+  .bulletin-card.unread { border-left-color: #0d6efd; background: #f8fbff; }
+  .bulletin-card.pinned { border-left-color: #ffc107; }
+  .bulletin-meta {
+    font-size: 0.85em;
+    color: #666;
+    margin-top: 0.4rem;
+  }
+  .bulletin-title { margin: 0 0 0.4rem 0; font-size: 1.05rem; }
+  .bulletin-body { white-space: pre-wrap; margin: 0; }
+  .bulletin-controls { margin-top: 0.5rem; }
+  .bulletin-controls form { display: inline; margin-right: 0.5rem; }
+  .pin-badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 3px;
+    background: #ffc107;
+    color: #333;
+    margin-left: 0.4rem;
+    vertical-align: middle;
+  }
+  .unread-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 0.05rem 0.35rem;
+    border-radius: 3px;
+    background: #0d6efd;
+    color: #fff;
+    margin-left: 0.4rem;
+    vertical-align: middle;
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="d-flex justify-content-between align-items-baseline mb-3">
+  <h1 class="mb-0">{% if is_archive %}Bulletins archive{% else %}Bulletins{% endif %}</h1>
+  <div>
+    {% if is_archive %}
+      <a class="btn btn-sm btn-outline-secondary" href="{% url "labs-bulletins" %}">&larr; Active bulletins</a>
+    {% else %}
+      <a class="btn btn-sm btn-primary" href="{% url "labs-bulletin-add" %}">Post a bulletin</a>
+      <a class="btn btn-sm btn-outline-secondary" href="{% url "labs-bulletins-archive" %}">Archive</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if not is_archive and guidance %}
+<div class="alert alert-light border" style="white-space:pre-wrap">{{ guidance }}</div>
+{% endif %}
+
+{% if not bulletins %}
+<p class="text-muted">No {% if is_archive %}expired{% else %}active{% endif %} bulletins.</p>
+{% endif %}
+
+{% for b in bulletins %}
+<div class="bulletin-card {% if b.pinned %}pinned{% endif %} {% if not b.is_read and not is_archive %}unread{% endif %}">
+  <h2 class="bulletin-title">
+    {{ b.title }}
+    {% if b.pinned %}<span class="pin-badge">pinned</span>{% endif %}
+    {% if not b.is_read and not is_archive %}<span class="unread-badge">unread</span>{% endif %}
+  </h2>
+  <p class="bulletin-body">{{ b.body }}</p>
+  <div class="bulletin-meta">
+    Posted {{ b.created_at|date:"j M Y, H:i" }}
+    {% if b.author %}by {{ b.author.get_full_name|default:b.author.username }}{% else %}by the system{% endif %}
+    {% if b.expires_at %}&middot; expires {{ b.expires_at|date:"j M Y" }}{% endif %}
+  </div>
+  <div class="bulletin-controls">
+    {% if not is_archive and not b.is_read %}
+    <form method="post" action="{% url "labs-bulletin-read" bulletin_id=b.id %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-primary">Got it</button>
+    </form>
+    {% endif %}
+    {% if can_curate %}
+    <form method="post" action="{% url "labs-bulletin-pin" bulletin_id=b.id %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-secondary">{% if b.pinned %}Unpin{% else %}Pin{% endif %}</button>
+    </form>
+    <a class="btn btn-sm btn-outline-secondary" href="{% url "labs-bulletin-expire" bulletin_id=b.id %}">Set expiry</a>
+    {% endif %}
+    {% if can_delete %}
+    <form method="post" action="{% url "labs-bulletin-delete" bulletin_id=b.id %}" onsubmit="return confirm('Delete this bulletin?');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

@@ -1,4 +1,6 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]; status: "#ai-written"
+import datetime
+
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -279,6 +281,79 @@ class AreaPhoto(models.Model):
 
     def __str__(self) -> str:
         return f"Photo for {self.area_id}"
+
+
+class Bulletin(models.Model):
+    """Operational notice shown on the labs bulletin board and dashboard banner.
+
+    Posted by any logged-in user; pinned / expired by Programmer+; deleted by
+    Panopticon. Acknowledgement is tracked per-User (not Volunteer) via
+    BulletinRead.
+    """
+
+    title = models.CharField(max_length=200)
+    body = models.TextField()
+    author = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=(
+            "Leave blank to use the site default (bulletin_default_expiry_days). "
+            "Set explicitly to override."
+        ),
+    )
+    pinned = models.BooleanField(
+        default=False,
+        help_text=(
+            "Pinned bulletins appear at the top of the board regardless of date. "
+            "Programmer+ only."
+        ),
+    )
+
+    class Meta:
+        db_table = "labs_bulletins"
+        ordering = ["-pinned", "-created_at"]
+
+    def __str__(self):
+        return self.title
+
+    def effective_expiry(self):
+        """Return the datetime at which this bulletin becomes inactive, or None
+        if it never expires (site default is 0 and no explicit expiry).
+        """
+        from django.utils import timezone
+        from toolkit.diary.models import get_site_config
+
+        if self.expires_at:
+            return self.expires_at
+        days = get_site_config().bulletin_default_expiry_days
+        if days == 0:
+            return None
+        return self.created_at + datetime.timedelta(days=days)
+
+    def is_active(self):
+        from django.utils import timezone
+
+        expiry = self.effective_expiry()
+        if expiry is None:
+            return True
+        return expiry > timezone.now()
+
+
+class BulletinRead(models.Model):
+    bulletin = models.ForeignKey(Bulletin, on_delete=models.CASCADE, related_name="reads")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="+")
+    read_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "labs_bulletin_reads"
+        unique_together = [("bulletin", "user")]
+
+    def __str__(self):
+        return f"{self.user} read {self.bulletin_id} at {self.read_at:%Y-%m-%d %H:%M}"
 
 
 class LoftItemPhoto(models.Model):

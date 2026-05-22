@@ -1,0 +1,23 @@
+{% extends "base_admin.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if expiry_mode %}Set bulletin expiry{% else %}Post a bulletin{% endif %}{% endblock %}
+
+{% block body %}
+<h1>{% if expiry_mode %}Set expiry{% else %}Post a bulletin{% endif %}</h1>
+
+{% if expiry_mode %}
+<p class="text-muted">Bulletin: <strong>{{ bulletin.title }}</strong></p>
+{% else %}
+  {% if guidance %}
+  <div class="alert alert-light border" style="white-space:pre-wrap">{{ guidance }}</div>
+  {% endif %}
+{% endif %}
+
+<form method="post">
+  {% csrf_token %}
+  {{ form|crispy }}
+  <button type="submit" class="btn btn-primary">Save</button>
+  <a class="btn btn-outline-secondary" href="{% url "labs-bulletins" %}">Cancel</a>
+</form>
+{% endblock %}
