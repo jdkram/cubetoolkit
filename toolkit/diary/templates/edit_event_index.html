@@ -245,7 +245,6 @@ function filter_events() {
   </details>
 </div>
 
-{% include "messages.html" %}
 
 {% for day, time_groups in dates.items %}
   {% ifchanged day|date:"Y-m" %}

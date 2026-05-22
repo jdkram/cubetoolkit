@@ -78,7 +78,6 @@ $(document).ready(function() {
 
 {% block body %}
 <h2>{{ VENUE.name }} Volunteers</h2>
-{% include "messages.html" %}
 <p>
 <a href="{% url "view-volunteer-summary" %}" title="volunteers summary">volunteers summary</a> &#xb7;
 <a href="{% url "add-volunteer" %}" title="add new volunteer">add volunteer</a> &#xb7;
