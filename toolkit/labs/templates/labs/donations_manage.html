@@ -82,8 +82,14 @@
 </style>
 {% endblock %}
 
+{% block css %}
+{{ block.super }}
+{{ intro_form.media.css }}
+{% endblock %}
+
 {% block script %}
 {{ block.super }}
+{{ intro_form.media.js }}
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     document.querySelectorAll(".donation-summary").forEach(function(summary) {
@@ -112,7 +118,20 @@ document.addEventListener("DOMContentLoaded", function() {
 <p>
   <a href="{% url "labs-donations" %}" class="btn btn-sm btn-outline-secondary">View public page</a>
 </p>
-{% include "messages.html" %}
+
+<div class="card mb-4">
+  <div class="card-header"><strong>Page introduction</strong></div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="_action" value="save_intro">
+      {{ intro_form.intro }}
+      <div class="mt-2">
+        <button type="submit" class="btn btn-sm btn-primary">Save introduction</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center">
