@@ -322,14 +322,26 @@ class Command(BaseCommand):
             )
 
             # Sync directory / access rider / emergency contact fields on every run.
-            _bool_fields = {"dir_share_pronouns", "dir_share_email", "dir_share_phone", "dir_share_access_rider", "dir_share_collectives"}
-            _str_defaults = {"dir_share_name": Volunteer.DIR_SHARE_NONE}
+            # Translate the legacy "dir_share_name" enum (full/initial/none) from
+            # TOML data into the new dir_share_listed + dir_share_name_style pair.
+            legacy_name = vol_data.get("dir_share_name")
+            if legacy_name is not None:
+                vol_data = dict(vol_data)
+                vol_data["dir_share_listed"] = legacy_name != "none"
+                vol_data["dir_share_name_style"] = (
+                    Volunteer.NAME_STYLE_INITIAL if legacy_name == "initial"
+                    else Volunteer.NAME_STYLE_FULL
+                )
+
+            _bool_fields = {"dir_share_listed", "dir_share_pronouns", "dir_share_email", "dir_share_phone", "dir_share_access_rider", "dir_share_collectives"}
+            _str_defaults = {"dir_share_name_style": Volunteer.NAME_STYLE_FULL}
             vol_dirty = False
             for field in (
                 "access_intro", "access_needs", "access_links",
                 "emergency_contact_name", "emergency_contact_relationship",
                 "emergency_contact_phone",
-                "dir_share_name", "dir_share_pronouns", "dir_share_email",
+                "dir_share_listed", "dir_share_name_style",
+                "dir_share_pronouns", "dir_share_email",
                 "dir_share_phone", "dir_share_access_rider", "dir_share_collectives",
             ):
                 default = False if field in _bool_fields else _str_defaults.get(field, "")
@@ -708,6 +720,7 @@ class Command(BaseCommand):
                 pricing=film.get("pricing", "£7/£5/£3/£0"),
                 image_url=film.get("image_url"),
                 minute=minute,
+                trailer_url=film.get("trailer_url", ""),
             )
 
         # Varied start times for Thursday films — slightly earlier/later
@@ -735,6 +748,7 @@ class Command(BaseCommand):
                 pricing=film.get("pricing", "£7/£5/£3/£0"),
                 image_url=film.get("image_url"),
                 minute=minute,
+                trailer_url=film.get("trailer_url", ""),
             )
 
         # Seed monthly events
@@ -918,6 +932,7 @@ class Command(BaseCommand):
         pricing="£7/£5/£3/£0",
         image_url=None,
         minute=0,
+        trailer_url="",
     ):
         event, created = Event.objects.get_or_create(
             name=title,
@@ -930,6 +945,7 @@ class Command(BaseCommand):
                 "outside_hire": False,
                 "terms": "",
                 "duration": datetime.time(2, 0),
+                "trailer_url": trailer_url,
             },
         )
         if created:
