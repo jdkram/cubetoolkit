@@ -267,17 +267,18 @@ class Volunteer(models.Model):
     emergency_contact_relationship = models.CharField(max_length=64, blank=True)
     emergency_contact_phone = models.CharField(max_length=64, blank=True)
 
-    # Directory sharing controls — all opt-in, default off
-    DIR_SHARE_FULL = "full"
-    DIR_SHARE_INITIAL = "initial"
-    DIR_SHARE_NONE = "none"
-    DIR_SHARE_NAME_CHOICES = [
-        (DIR_SHARE_FULL, "Full name"),
-        (DIR_SHARE_INITIAL, "First name + initial"),
-        (DIR_SHARE_NONE, "Not listed"),
+    # Directory sharing controls — all opt-in, default off.
+    # `dir_share_listed` is the master toggle (am I in the directory at all?).
+    # When listed, `dir_share_name_style` chooses how the name appears.
+    NAME_STYLE_FULL = "full"
+    NAME_STYLE_INITIAL = "initial"
+    NAME_STYLE_CHOICES = [
+        (NAME_STYLE_FULL, "Full name"),
+        (NAME_STYLE_INITIAL, "First name + initial"),
     ]
-    dir_share_name = models.CharField(
-        max_length=10, choices=DIR_SHARE_NAME_CHOICES, default=DIR_SHARE_NONE,
+    dir_share_listed = models.BooleanField(default=False)
+    dir_share_name_style = models.CharField(
+        max_length=10, choices=NAME_STYLE_CHOICES, default=NAME_STYLE_FULL,
     )
     dir_share_pronouns = models.BooleanField(default=False)
     dir_share_email = models.BooleanField(default=False)
@@ -327,15 +328,14 @@ class Volunteer(models.Model):
             self.__original_portrait = None
 
     def directory_display_name(self):
-        """Name string to show in the directory, honouring dir_share_name."""
-        if self.dir_share_name == self.DIR_SHARE_FULL:
-            return self.member.name
-        if self.dir_share_name == self.DIR_SHARE_INITIAL:
+        """Name string to show in the directory, honouring sharing prefs."""
+        if not self.dir_share_listed:
+            return ""
+        if self.dir_share_name_style == self.NAME_STYLE_INITIAL:
             parts = self.member.name.split()
             if len(parts) >= 2:
                 return f"{parts[0]} {parts[-1][0]}."
-            return self.member.name
-        return ""
+        return self.member.name
 
     def is_old(self):
         return (

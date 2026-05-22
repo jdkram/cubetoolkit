@@ -649,7 +649,8 @@ def anonymise_volunteer(request, volunteer_id):
             volunteer.emergency_contact_name = ""
             volunteer.emergency_contact_relationship = ""
             volunteer.emergency_contact_phone = ""
-            volunteer.dir_share_name = Volunteer.DIR_SHARE_NONE
+            volunteer.dir_share_listed = False
+            volunteer.dir_share_name_style = Volunteer.NAME_STYLE_FULL
             volunteer.dir_share_pronouns = False
             volunteer.dir_share_email = False
             volunteer.dir_share_phone = False
@@ -795,7 +796,7 @@ def view_volunteer_directory(request):
 
     volunteers = (
         Volunteer.objects.filter(status=Volunteer.STATUS_ACTIVE)
-        .exclude(dir_share_name=Volunteer.DIR_SHARE_NONE)
+        .filter(dir_share_listed=True)
         .select_related("member")
         .prefetch_related("collectives")
         .order_by("member__name")
