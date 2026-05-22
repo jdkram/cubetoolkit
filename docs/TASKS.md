@@ -5354,3 +5354,223 @@ Each card's wrapper `<div>` gets an `id` matching its key (e.g. `id="dash_rota_g
 | Customise panel UI + toggle JS | 1h |
 | Tests (JS is minimal; test the rendered `id` attributes) | 0.5h |
 | **Total** | **~2–2.5h** |
+
+---
+
+### 9.95 — Bulletins: operational notice board with dashboard banner 🔵 S (12–18h)
+
+**Context:** Operational notices (process changes, access updates, venue announcements) currently have no dedicated home inside the toolkit. They end up buried in `rota_notes` on whatever showing happened to be edited at the time, or posted to WhatsApp where they're missed by anyone not in the relevant group. A standing notice visible on the internal dashboard gives coordinators somewhere to put information that applies venue-wide rather than to a specific event.
+
+**Channel proliferation risk:** Adding a new information channel only works if coordinators use it instead of WhatsApp, not alongside it. If bulletins become a third place to check, they make things worse. This is an organisational adoption problem as much as a technical one. The feature should be designed to be lower-friction than a WhatsApp message: short, plaintext, and one click to dismiss. The weekly digest integration (§9.89) gives it reach even for volunteers who don't log in often.
+
+---
+
+#### Two components
+
+**A. Bulletin board** (Labs feature, `/toolkit/labs/bulletins/`)
+
+A chronological list of active notices. Lives in the `labs` app alongside collectives -- it is exploratory infrastructure with collective buy-in needed before it becomes fully core.
+
+**B. Dashboard banner** (`/toolkit/`)
+
+Shows the most recent unread bulletin for the logged-in volunteer. A "Got it" button marks it read. If there are multiple unread bulletins, the banner shows the count and links to the full board.
+
+---
+
+#### Who can do what
+
+| Action | Permission |
+|---|---|
+| View bulletins | Any logged-in user |
+| Post a new bulletin | Any logged-in user |
+| Pin a bulletin (keeps it at top past sort order) | Programmer+ |
+| Set or override expiry | Programmer+ |
+| Delete a bulletin | Panopticon only |
+
+Any volunteer can post -- consistent with the non-hierarchical ethos and keeping friction low. Programmer+ can curate (pin, adjust expiry) without gatekeeping creation.
+
+---
+
+#### Data model additions
+
+```python
+# labs/models.py
+
+class Bulletin(models.Model):
+    title = models.CharField(max_length=200)
+    body = models.TextField()
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Leave blank to use the site default (bulletin_default_expiry_days). "
+                  "Set explicitly to override.",
+    )
+    pinned = models.BooleanField(
+        default=False,
+        help_text="Pinned bulletins appear at the top of the board regardless of date. "
+                  "Programmer+ only.",
+    )
+
+    def is_active(self):
+        from django.utils import timezone
+        if self.expires_at:
+            return self.expires_at > timezone.now()
+        # fall back to site config default
+        from toolkit.diary.models import get_site_config
+        days = get_site_config().bulletin_default_expiry_days
+        return (timezone.now() - self.created_at).days < days
+
+
+class BulletinRead(models.Model):
+    bulletin = models.ForeignKey(Bulletin, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE
+    )
+    read_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("bulletin", "user")]
+```
+
+Acknowledgement is stored against `User` rather than `Volunteer` -- simpler, and the banner is shown to all logged-in users (Programmers and Panopticons who have no `Volunteer` record still benefit from dismissing it).
+
+---
+
+#### SiteConfiguration additions
+
+Two new fields on the `SiteConfiguration` singleton (edited via `/toolkit/site-config/`):
+
+```python
+# --- Bulletins ---
+bulletin_default_expiry_days = models.PositiveSmallIntegerField(
+    default=30,
+    help_text=(
+        "How many days a bulletin stays active if no explicit expiry is set. "
+        "Default is 30. Set to 0 to keep bulletins active indefinitely by default."
+    ),
+)
+bulletin_guidance = models.TextField(
+    blank=True,
+    default="",
+    help_text=(
+        "Guidance shown on the 'Post a bulletin' form. Use this to set local "
+        "conventions: what kinds of notices belong here, how to write them, "
+        "and examples of good and bad bulletins."
+    ),
+)
+```
+
+The `bulletin_guidance` text is rendered above the form on the add-bulletin page. This is the mechanism for collective self-governance of the board: coordinators set the guidance; the system doesn't enforce content rules.
+
+**Suggested default guidance text** (for seed data and onboarding docs -- not hardcoded):
+
+```
+Bulletins are for short operational notices that affect all active volunteers.
+
+Good uses:
+- Access changes ("The keyholder list is now open to all volunteers")
+- Venue notices ("The bar fridge is broken -- use the kitchen fridge")
+- Process changes ("Please add rota notes when booking a room")
+- Time-limited announcements ("Induction on Saturday 7 June -- sign up in the rota")
+
+Not a good fit:
+- Notices that only apply to one event -- use rota_notes instead
+- Ongoing discussion or debate -- use the mailing list
+- Personal messages
+
+Keep it short: one or two sentences is ideal. If it needs more, it probably
+belongs in a mailing list post or a NextCloud document, with a short bulletin
+linking to it.
+```
+
+---
+
+#### Dashboard banner behaviour
+
+- Queries active `Bulletin` records (not expired) with no `BulletinRead` for the current user
+- Pinned bulletins appear first
+- If one unread: shows title + first 120 chars of body + "Got it" button
+- If multiple unread: "You have N unread bulletins" + link to board
+- "Got it" creates a `BulletinRead` via a small POST (htmx or plain fetch; no full page reload)
+- If the user has no `Volunteer` record, the banner still shows but "Got it" still records the read (against `User` -- no `Volunteer` needed)
+
+---
+
+#### Bulletin board (`/toolkit/labs/bulletins/`)
+
+- Pinned bulletins at top, then active bulletins reverse-chron
+- Each item shows: title, body, author name, date posted, expiry date (if set), pin badge (if pinned)
+- Programmer+ sees "Pin" / "Unpin" and "Set expiry" controls inline
+- Panopticon sees "Delete" in addition
+- An "Archive" tab shows expired bulletins (useful for volunteers returning after absence)
+- "Post a bulletin" button at top, visible to all logged-in users
+
+---
+
+#### Seed data
+
+`seed_dev_data` should create one sample bulletin:
+
+```python
+Bulletin.objects.get_or_create(
+    title="Keyholders list now open to all volunteers",
+    defaults={
+        "body": (
+            "You can now contact the keyholders list directly at "
+            "totally_real@list.name if you need a keyholder for an upcoming event. "
+            "No need to ask around individually."
+        ),
+        "author": None,  # system bulletin
+    },
+)
+```
+
+---
+
+#### Integration with §9.89 weekly digest
+
+When the weekly digest is built, include an "Unread notices" section: active bulletins that have no `BulletinRead` record for the recipient user. This gives the digest another reason to be useful and ensures bulletins reach volunteers who don't log in frequently.
+
+```text
+UNREAD NOTICES
+--------------
+Keyholders list now open to all volunteers [posted 2026-05-22]
+You can now contact the keyholders list at totally_real@list.name if you need a keyholder for an upcoming event.
+```
+
+---
+
+#### URL structure
+
+| URL | Purpose |
+|---|---|
+| `/toolkit/labs/bulletins/` | Active bulletin board |
+| `/toolkit/labs/bulletins/archive/` | Expired bulletins |
+| `/toolkit/labs/bulletins/add/` | Post a new bulletin |
+| `/toolkit/labs/bulletins/<id>/read/` | POST: mark as read (returns 204) |
+| `/toolkit/labs/bulletins/<id>/pin/` | POST: toggle pin (Programmer+) |
+| `/toolkit/labs/bulletins/<id>/expire/` | POST: set expiry (Programmer+) |
+| `/toolkit/labs/bulletins/<id>/delete/` | POST: delete (Panopticon) |
+
+---
+
+#### Sizing
+
+| Component | Est. |
+|---|---|
+| `Bulletin` + `BulletinRead` models + migration | 1h |
+| `SiteConfiguration` fields + migration | 0.5h |
+| Bulletin board view + template | 2h |
+| Archive view | 0.5h |
+| Add bulletin form + view (with guidance display) | 1.5h |
+| Pin / expire controls (Programmer+) | 1h |
+| Delete (Panopticon) | 0.5h |
+| Dashboard banner (query + htmx "Got it") | 2h |
+| Seed data bulletin | 0.25h |
+| Digest integration (§9.89 section) | 1h |
+| Tests | 4h |
+| **Total** | **~14–15h** |

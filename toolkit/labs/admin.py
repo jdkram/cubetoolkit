@@ -1,6 +1,6 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]; status: "#ai-written"
 from django.contrib import admin
-from .models import Collective, DonationItem, Job
+from .models import Bulletin, Collective, DonationItem, Job
 
 
 @admin.register(Collective)
@@ -22,6 +22,14 @@ class DonationItemAdmin(admin.ModelAdmin):
     list_filter = ("status", "category", "active")
     list_editable = ("status", "active", "display_order")
     ordering = ("category", "display_order", "name")
+
+
+@admin.register(Bulletin)
+class BulletinAdmin(admin.ModelAdmin):
+    list_display = ("title", "author", "pinned", "created_at", "expires_at")
+    list_filter = ("pinned",)
+    search_fields = ("title", "body")
+    ordering = ("-pinned", "-created_at")
 
 
 @admin.register(Job)

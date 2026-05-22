@@ -1784,7 +1784,11 @@ def edit_site_configuration(request):
         ),
         (
             "Guidance URLs",
-            ["image_copyright_guidance_url", "alt_text_guidance_url"],
+            ["image_copyright_guidance_url", "alt_text_guidance_url", "access_rider_guidance_url"],
+        ),
+        (
+            "Bulletins",
+            ["bulletin_default_expiry_days", "bulletin_guidance"],
         ),
     ]
 

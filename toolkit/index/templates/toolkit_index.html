@@ -72,6 +72,28 @@
         font-size: 0.85em;
         margin-left: 0.4em;
     }
+    .bulletin-item-unread {
+        background: #f8fbff;
+        border-left: 3px solid #0d6efd;
+    }
+    .bulletin-body-inline {
+        margin-left: 0.4em;
+        color: #333;
+        font-size: 0.92em;
+    }
+    .bulletin-body-inline br {
+        line-height: 1.4;
+    }
+    #dash-cards-row > [id^="dash_"] .card-header {
+        cursor: grab;
+    }
+    #dash-cards-row > [id^="dash_"].dash-dragging {
+        opacity: 0.4;
+    }
+    #dash-cards-row > [id^="dash_"].dash-drop-target > .card {
+        outline: 2px dashed #0d6efd;
+        outline-offset: -2px;
+    }
 </style>
 {% endblock %}
 
@@ -79,14 +101,17 @@
 {% block body %}
 <h1>{{ VENUE.longname }} Toolkit</h1>
 
-{% if has_volunteer or new_showings or showings_with_gaps or unconfirmed_showings or upcoming_training %}
+{% if has_volunteer or new_showings or showings_with_gaps or unconfirmed_showings or upcoming_training or recent_bulletins %}
 <div class="d-flex justify-content-between align-items-baseline mb-2">
   <h2 class="h5 mb-0">Dashboard</h2>
   <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#dash-customise" aria-expanded="false">Customise</button>
 </div>
 <div class="collapse mb-2" id="dash-customise">
   <div class="card card-body py-2">
-    <p class="mb-1 text-muted" style="font-size:0.85em">Choose which cards to show. Preferences are saved in this browser.</p>
+    <p class="mb-1 text-muted" style="font-size:0.85em">
+      Choose which cards to show, and drag a card's header to reorder. Preferences are saved in this browser.
+      <button type="button" class="btn btn-sm btn-link p-0 align-baseline" id="dash-reset-order" style="font-size:0.85em">Reset order</button>
+    </p>
     <div class="d-flex flex-wrap" style="gap:0.5rem">
       {% if has_volunteer %}
       <label class="mb-0"><input type="checkbox" class="dash-toggle" data-key="dash_upcoming_shifts" checked> Upcoming shifts</label>
@@ -103,6 +128,9 @@
       {% endif %}
       {% if upcoming_training %}
       <label class="mb-0"><input type="checkbox" class="dash-toggle" data-key="dash_training" checked> Inductions & training</label>
+      {% endif %}
+      {% if recent_bulletins %}
+      <label class="mb-0"><input type="checkbox" class="dash-toggle" data-key="dash_bulletins" checked> Bulletins</label>
       {% endif %}
     </div>
   </div>
@@ -224,6 +252,42 @@
   </div>
   {% endif %}
 
+  {# Unread bulletins — all logged-in users. Full-width so 5 cards tessellate. #}
+  {% if recent_bulletins %}
+  <div id="dash_bulletins" class="col-12 d-flex">
+    <div class="card w-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Bulletins</strong>
+        <span class="d-flex align-items-center" style="gap:0.5rem">
+          <form method="post" action="{% url "labs-bulletins-read-all" %}" class="m-0">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-secondary">Mark all as read</button>
+          </form>
+          <a href="{% url "labs-bulletins" %}" style="font-size:0.85em">All bulletins &rarr;</a>
+        </span>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for b in recent_bulletins %}
+        <li class="list-group-item bulletin-item-unread py-2 d-flex align-items-baseline">
+          <div style="min-width:0; flex:1;">
+            <strong>{{ b.title }}</strong>
+            {% if b.pinned %}<span class="badge text-bg-warning" style="font-size:0.7em">pinned</span>{% endif %}
+            <span class="bulletin-body-inline">{{ b.body|linebreaksbr }}</span>
+            <span class="text-muted ms-1" style="font-size:0.82em; white-space:nowrap;">
+              {{ b.created_at|date:"j M" }}{% if b.author %} &middot; {{ b.author.get_full_name|default:b.author.username }}{% endif %}
+            </span>
+          </div>
+          <form method="post" action="{% url "labs-bulletin-read" bulletin_id=b.id %}" class="ms-2">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-primary">Got it</button>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endif %}
+
   {# Upcoming inductions & training — all logged-in users #}
   {% if upcoming_training %}
   <div id="dash_training" class="col-md-6 d-flex">
@@ -247,7 +311,10 @@
 <hr id="dash-hr" class="mt-0 mb-4">
 <script>
 (function() {
-    var KEYS = ['dash_upcoming_shifts','dash_starred_events','dash_new_showings','dash_rota_gaps','dash_unconfirmed','dash_training'];
+    var KEYS = ['dash_upcoming_shifts','dash_starred_events','dash_new_showings','dash_rota_gaps','dash_unconfirmed','dash_training','dash_bulletins'];
+    var ORDER_KEY = 'dash_order';
+    var row = document.getElementById('dash-cards-row');
+
     // Cards hidden by default for new users (programmer-focused noise for volunteers).
     ['dash_new_showings','dash_unconfirmed'].forEach(function(key) {
         if (localStorage.getItem(key) === null) { localStorage.setItem(key, 'hidden'); }
@@ -260,6 +327,79 @@
             if (el) el.classList.add('d-none');
         }
     });
+
+    // Apply saved card order. Unknown / missing keys are skipped; new cards
+    // not in the saved order land at the end in their template order.
+    function applyOrder() {
+        if (!row) return;
+        var saved;
+        try { saved = JSON.parse(localStorage.getItem(ORDER_KEY) || '[]'); }
+        catch (_) { saved = []; }
+        saved.forEach(function(key) {
+            var el = document.getElementById(key);
+            if (el && el.parentNode === row) row.appendChild(el);
+        });
+    }
+    function saveOrder() {
+        if (!row) return;
+        var order = Array.from(row.children)
+            .map(function(c) { return c.id; })
+            .filter(function(id) { return id && KEYS.indexOf(id) !== -1; });
+        localStorage.setItem(ORDER_KEY, JSON.stringify(order));
+    }
+    applyOrder();
+
+    // Drag-to-reorder. Drag handle is the card header (cursor: grab in CSS);
+    // making the whole column draggable lets the browser drag the column
+    // rectangle as a single block.
+    var dragged = null;
+    function clearDropTargets() {
+        document.querySelectorAll('#dash-cards-row .dash-drop-target')
+            .forEach(function(el) { el.classList.remove('dash-drop-target'); });
+    }
+    if (row) {
+        Array.from(row.children).forEach(function(card) {
+            if (!card.id || KEYS.indexOf(card.id) === -1) return;
+            card.setAttribute('draggable', 'true');
+            card.addEventListener('dragstart', function(e) {
+                dragged = card;
+                card.classList.add('dash-dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                // Firefox requires data to be set for drag to start.
+                try { e.dataTransfer.setData('text/plain', card.id); } catch (_) {}
+            });
+            card.addEventListener('dragend', function() {
+                card.classList.remove('dash-dragging');
+                clearDropTargets();
+                dragged = null;
+                saveOrder();
+            });
+            card.addEventListener('dragover', function(e) {
+                if (!dragged || dragged === card) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                var rect = card.getBoundingClientRect();
+                var before = (e.clientY - rect.top) < rect.height / 2;
+                if (before) {
+                    if (card.previousSibling !== dragged) {
+                        row.insertBefore(dragged, card);
+                    }
+                } else {
+                    if (card.nextSibling !== dragged) {
+                        row.insertBefore(dragged, card.nextSibling);
+                    }
+                }
+            });
+        });
+    }
+
+    var resetBtn = document.getElementById('dash-reset-order');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            localStorage.removeItem(ORDER_KEY);
+            location.reload();
+        });
+    }
     function updateDashboardFrame() {
         var anyVisible = KEYS.some(function(key) {
             var el = document.getElementById(key);

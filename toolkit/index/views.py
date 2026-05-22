@@ -142,6 +142,13 @@ class ToolkitIndexView(ListView):
         if upcoming_training:
             context["upcoming_training"] = upcoming_training
 
+        # Recent bulletins card (9.95). Only shows bulletins the current user
+        # hasn't dismissed — "Got it" removes them from the dashboard entirely.
+        from toolkit.labs.views import _unread_bulletins_for
+        unread = list(_unread_bulletins_for(user)[:5])
+        if unread:
+            context["recent_bulletins"] = unread
+
         return context
 
 
