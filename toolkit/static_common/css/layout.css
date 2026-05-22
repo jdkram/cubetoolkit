@@ -211,9 +211,9 @@ a {
     border-left-width: 0px;
     border-spacing: 0px;
     padding-top: 37px;
-    padding-right: 0;
+    padding-right: 12px;
     padding-bottom: 20px;
-    padding-left: 10px;
+    padding-left: 22px;
 }
 .mobile-wrap {
     position: relative;
@@ -317,7 +317,6 @@ a {
     display: block;
     position: relative;
     font-weight: 400;
-    text-transform: uppercase;
     padding: 0;
     margin: 0;
     font-size: 0.7857em;
@@ -329,7 +328,6 @@ a {
 .site-description h4 {
     font-size: 0.7857em;
     font-weight: 400;
-    text-transform: lowercase;
     line-height: 1.4;
     color: #000000;
     margin: 0;
@@ -427,7 +425,7 @@ main#main-content {
 /* 360px — large smartphones portrait */
 @media screen and (min-width: 360px) {
     .navigation-wrap {
-        padding-left: 12px;
+        padding-left: 24px;
     }
     #site-title h1, .site-description h4, .grid-switcher, .social-media, .print-media, #site-nav ul li a {
         font-size: 0.892754em;
@@ -441,7 +439,7 @@ main#main-content {
 /* 475px — smartphones landscape */
 @media screen and (min-width: 475px) {
     .navigation-wrap {
-        padding-left: 14px;
+        padding-left: 26px;
     }
 }
 
@@ -522,7 +520,6 @@ main#main-content {
     }
     #site-title h1 {
         font-weight: 400;
-        text-transform: uppercase;
         padding: 0;
         margin: 0;
         font-size: 0.7142em;
@@ -534,7 +531,6 @@ main#main-content {
     .site-description h4 {
         font-size: 0.7142em;
         font-weight: 400;
-        text-transform: lowercase;
         line-height: 1.4;
         color: #000000;
         margin: 0;
@@ -698,6 +694,28 @@ a {
     background: #e3cae3 !important;
     border: 0.1em solid black;
     border-radius: 0 !important;
+}
+
+.film-info {
+    font-size: 0.8em;
+    opacity: 0.75;
+    margin-bottom: 0.25em;
+}
+
+.trailer-link {
+    margin-top: 0.25em;
+    font-size: 0.85em;
+}
+
+.trailer-link a {
+    color: inherit;
+    text-decoration: none;
+    opacity: 0.75;
+}
+
+.trailer-link a:hover {
+    opacity: 1;
+    text-decoration: underline;
 }
 
 
