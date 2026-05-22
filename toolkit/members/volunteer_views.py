@@ -124,6 +124,8 @@ def export_volunteers_as_csv(request):
 @permission_required("toolkit.read")
 @require_safe
 def view_volunteer_summary(request):
+    if not request.user.is_superuser:
+        raise PermissionDenied
 
     order = request.GET.get("order", "name")
 
@@ -378,8 +380,10 @@ def edit_volunteer(request, volunteer_id, create_new=False):
                         vols_admin,
                         fail_silently=False,
                     )
-            # Go to the volunteer list view:
-            return HttpResponseRedirect(reverse("view-volunteer-summary"))
+            # Go to the volunteer list view (summary for panopticon, list for others):
+            if request.user.is_superuser:
+                return HttpResponseRedirect(reverse("view-volunteer-summary"))
+            return HttpResponseRedirect(reverse("view-volunteer-list"))
     else:
         vol_form = VolunteerForm(instance=volunteer, is_superuser=request.user.is_superuser)
         mem_form = MemberFormWithoutNotes(instance=volunteer.member)
