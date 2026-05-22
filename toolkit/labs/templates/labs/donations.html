@@ -83,9 +83,7 @@
 
 <div class="donation-intro">
   <h1>What {{ VENUE.name }} needs</h1>
-  <p>The most valuable things you can give us are your time, energy, and ideas. If you want to get involved, the best place to start is by volunteering at events or joining one of our working groups.</p>
-  <p>That said, we do sometimes need physical things too, and this page lists what's currently useful. Before bringing anything, please check the status: <strong>Wanted</strong> means yes please; <strong>Check first</strong> means it might work but talk to us first; <strong>Not needed</strong> means we're already well supplied or can't use it.</p>
-  <p><u>One of our most precious resources as a DIY space is space itself.</u> We share the building across a lot of different groups and uses, and it's much easier to add things than to remove them. Please don't drop anything off without checking first, even if it seems obviously useful.</p>
+  {{ donations_intro|safe }}
 </div>
 
 {% if not categories %}

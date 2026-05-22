@@ -282,8 +282,10 @@ def donation_list(request):
     for item in items:
         cat = item.category or "General"
         categories.setdefault(cat, []).append(item)
+    cfg = get_site_config()
     return render(request, "labs/donations.html", {
         "categories": categories,
+        "donations_intro": cfg.donations_intro,
         "STATUS_WANTED": DonationItem.STATUS_WANTED,
         "STATUS_CHECK_FIRST": DonationItem.STATUS_CHECK_FIRST,
         "STATUS_NOT_NEEDED": DonationItem.STATUS_NOT_NEEDED,
@@ -291,12 +293,23 @@ def donation_list(request):
 
 
 @login_required
+@permission_required("toolkit.write", raise_exception=True)
 def donation_manage(request):
     items = DonationItem.objects.select_related("last_edited_by").order_by("category", "display_order", "name")
+    cfg = get_site_config()
+
     if request.method == "POST":
         action = request.POST.get("_action")
 
-        if action == "add":
+        if action == "save_intro":
+            intro_form = lab_forms.DonationsIntroForm(request.POST)
+            if intro_form.is_valid():
+                cfg.donations_intro = intro_form.cleaned_data["intro"]
+                cfg.save()
+                messages.success(request, "Page introduction updated.")
+            return redirect("labs-donations-manage")
+
+        elif action == "add":
             form = lab_forms.DonationItemForm(request.POST)
             if form.is_valid():
                 item = form.save(commit=False)
@@ -305,9 +318,12 @@ def donation_manage(request):
                 messages.success(request, f"'{item.name}' added.")
                 return redirect("labs-donations-manage")
             else:
+                add_form = form
+                intro_form = lab_forms.DonationsIntroForm(initial={"intro": cfg.donations_intro})
                 return render(request, "labs/donations_manage.html", {
                     "items": items,
-                    "add_form": form,
+                    "intro_form": intro_form,
+                    "add_form": add_form,
                     "STATUS_CHOICES": DonationItem.STATUS_CHOICES,
                 })
 
@@ -331,8 +347,10 @@ def donation_manage(request):
             return redirect("labs-donations-manage")
 
     add_form = lab_forms.DonationItemForm()
+    intro_form = lab_forms.DonationsIntroForm(initial={"intro": cfg.donations_intro})
     return render(request, "labs/donations_manage.html", {
         "items": items,
+        "intro_form": intro_form,
         "add_form": add_form,
         "STATUS_CHOICES": DonationItem.STATUS_CHOICES,
         "STATUS_WANTED": DonationItem.STATUS_WANTED,

@@ -3,6 +3,7 @@ from django import forms
 from django.forms import inlineformset_factory
 from django.utils.html import mark_safe
 from crispy_forms.helper import FormHelper
+from toolkit.diary.form_widgets import HtmlTextarea
 from .models import Bulletin, Collective, CollectiveLink, DonationItem, Job, COLLECTIVE_PALETTE
 
 
@@ -221,6 +222,14 @@ class DonationItemForm(forms.ModelForm):
             "notes": forms.Textarea(attrs={"rows": 3}),
             "internal_notes": forms.Textarea(attrs={"rows": 3}),
         }
+
+
+class DonationsIntroForm(forms.Form):
+    intro = forms.CharField(
+        required=False,
+        widget=HtmlTextarea(attrs={"id": "id_intro"}),
+        label="Page introduction",
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
