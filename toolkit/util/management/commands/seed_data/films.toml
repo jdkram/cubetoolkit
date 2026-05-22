@@ -12,6 +12,7 @@ film_information = "Dir. Amber Collective, GB 1985"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/ptlBtpecd39gYVDNbMpVIg7gYsd.jpg"
+trailer_url = ""
 
 [[sunday_films]]
 name = "Born in Flames"
@@ -21,6 +22,7 @@ film_information = "Dir. Lizzie Borden, US 1983"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/uV8R8B8m5rp1NFvuodWk4ZuCXY0.jpg"
+trailer_url = "https://www.youtube.com/watch?v=_yUYIbUSgFs"
 
 [[sunday_films]]
 name = "Handsworth Songs"
@@ -30,6 +32,7 @@ film_information = "Dir. Black Audio Film Collective, GB 1986"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/xyw4V9MbUGujMunBj4latxLSVya.jpg"
+trailer_url = "https://www.youtube.com/watch?v=gmQB7jU2m04"
 
 [[sunday_films]]
 name = "Titane"
@@ -39,6 +42,7 @@ film_information = "Dir. Julia Ducournau, FR 2021"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/mBlpouG3gqB8WLdP65LCOXb3jFb.jpg"
+trailer_url = "https://www.youtube.com/watch?v=wsM8LXHJBko"
 
 [[sunday_films]]
 name = "News from Home"
@@ -48,6 +52,7 @@ film_information = "Dir. Chantal Akerman, BE / FR 1977"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/nWqWaEySdo8hAKJsd1IS9mdnZpF.jpg"
+trailer_url = "https://www.youtube.com/watch?v=Mse-d_O4szw"
 
 [[sunday_films]]
 name = "Sambizanga"
@@ -57,6 +62,7 @@ film_information = "Dir. Sarah Maldoror, AO / FR 1972"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/isnDnTWjOE9EJqsKXvCwZQrIkeE.jpg"
+trailer_url = "https://www.youtube.com/watch?v=byG185NFpLQ"
 
 [[sunday_films]]
 name = "The Arbor"
@@ -66,6 +72,7 @@ film_information = "Dir. Clio Barnard, GB 2010"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/1ILtGNSUTyrZi8LAco4zkMWXM3q.jpg"
+trailer_url = "https://www.youtube.com/watch?v=TyNqRdM0Y4g"
 
 [[sunday_films]]
 name = "Shirkers"
@@ -75,6 +82,7 @@ film_information = "Dir. Sandi Tan, SG / US 2018"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/spd1fZNePSQFRhNam66jx3ZMoxF.jpg"
+trailer_url = "https://www.youtube.com/watch?v=u3wPWCj2L6I"
 
 [[sunday_films]]
 name = "Under the Skin"
@@ -84,6 +92,7 @@ film_information = "Dir. Jonathan Glazer, GB 2013"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/55wmcXJIDYITr7JDijJTdvwSaAv.jpg"
+trailer_url = "https://www.youtube.com/watch?v=7S1yhSp5jaI"
 
 [[sunday_films]]
 name = "Black Girl"
@@ -93,6 +102,7 @@ film_information = "Dir. Ousmane Sembene, SN / FR 1966"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/hYYAk9I9KkscSr8DC30KyDjzsVu.jpg"
+trailer_url = "https://www.youtube.com/watch?v=BoKAOfcQGgo"
 
 [[sunday_films]]
 name = "A Girl Walks Home Alone at Night"
@@ -102,6 +112,7 @@ film_information = "Dir. Ana Lily Amirpour, US / IR 2014"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/cd2rCE1nun7CESjBI8PGNEof1tb.jpg"
+trailer_url = "https://www.youtube.com/watch?v=5WSMrSucjGA"
 
 [[sunday_films]]
 name = "The Last Angel of History"
@@ -111,6 +122,7 @@ film_information = "Dir. John Akomfrah, GB 1996"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/5okDKgtOyFfnD3m62dsmozGzl0f.jpg"
+trailer_url = "https://www.youtube.com/watch?v=iYe_nj7xfQM"
 
 [[sunday_films]]
 name = "Wanda"
@@ -120,6 +132,7 @@ film_information = "Dir. Barbara Loden, US 1970"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/izuJ7cUhcihFnTpfsdSnkMCHsRQ.jpg"
+trailer_url = "https://www.youtube.com/watch?v=We-00D9ClhI"
 
 [[sunday_films]]
 name = "The Spirit of the Beehive"
@@ -129,6 +142,7 @@ film_information = "Dir. Victor Erice, ES 1973"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/p2wx4EWasQaPGxnbS2IsW74ewVN.jpg"
+trailer_url = "https://www.youtube.com/watch?v=aqvpMJNlqxE"
 
 [[sunday_films]]
 name = "Poly Styrene: I Am a Cliche"
@@ -138,6 +152,7 @@ film_information = "Dir. Celeste Bell / Paul Smeeton, GB 2021"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/o8XVze793XRJQiAI5NFZB9iZp3O.jpg"
+trailer_url = "https://www.youtube.com/watch?v=cXKC5-0jGwc"
 
 [[sunday_films]]
 name = "Eden Valley"
@@ -147,6 +162,7 @@ film_information = "Dir. Amber Collective, GB 1994"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/nIxue1z7Mc8SdkIj1LFVYWIq2pF.jpg"
+trailer_url = "https://www.youtube.com/watch?v=4-DTg4rLVh4"
 
 [[sunday_films]]
 name = "Bait"
@@ -156,6 +172,7 @@ film_information = "Dir. Mark Jenkin, GB 2019"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/cr6T1ygg5jD3zyqmbR7l2TPaHkN.jpg"
+trailer_url = "https://www.youtube.com/watch?v=rWPi3CZLnfU"
 
 [[sunday_films]]
 name = "Tongues Untied"
@@ -165,6 +182,7 @@ film_information = "Dir. Marlon Riggs, US 1989"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/wbrcRd695aB8D6pkWh0hSurKRbO.jpg"
+trailer_url = "https://www.youtube.com/watch?v=Lk7HbfPeI-g"
 
 [[sunday_films]]
 name = "Faya Dayi"
@@ -174,6 +192,7 @@ film_information = "Dir. Jessica Beshir, ET / US 2021"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/4rtrsTBlxaX92soR1nUMjAXUcpP.jpg"
+trailer_url = "https://www.youtube.com/watch?v=Q5OrQDjtmHg"
 
 [[sunday_films]]
 name = "Atlantique"
@@ -183,6 +202,7 @@ film_information = "Dir. Mati Diop, SN / FR 2019"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/zRnZM6HqglFK31MYyrTSQVlj1dQ.jpg"
+trailer_url = "https://www.youtube.com/watch?v=vhcXyK8s-io"
 
 [[sunday_films]]
 name = "Sorry to Bother You"
@@ -192,6 +212,7 @@ film_information = "Dir. Boots Riley, US 2018"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/peTl1V04E9ppvhgvNmSX0r2ALqO.jpg"
+trailer_url = "https://www.youtube.com/watch?v=enH3xA4mYcY"
 
 [[sunday_films]]
 name = "Hundreds of Beavers"
@@ -201,6 +222,7 @@ film_information = "Dir. Mike Cheslik, US 2022"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/jBg64OA2QEWL0zaOFMoAGipeGjJ.jpg"
+trailer_url = "https://www.youtube.com/watch?v=JZ8NEwAgsjQ"
 
 [[sunday_films]]
 name = "Bacurau"
@@ -210,6 +232,7 @@ film_information = "Dir. Kleber Mendonca Filho, BR 2019"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/tBa4zMGzZUco26XT3WfZZCwQ76i.jpg"
+trailer_url = "https://www.youtube.com/watch?v=OMjj7WbtQ0o"
 
 [[sunday_films]]
 name = "Neptune Frost"
@@ -219,6 +242,7 @@ film_information = "Dir. Saul Williams & Anisia Uzeyman, RW / US 2021"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/emlTdAiMcJDomw6Tjz2lFCSen8W.jpg"
+trailer_url = "https://www.youtube.com/watch?v=acfBNIXovww"
 
 # ── Thursday films (prestige arthouse) ───────────────────────────────────
 
@@ -230,6 +254,7 @@ film_information = "Dir. Joe Cornish, GB 2011"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/wzCMnA6NDruLzgWeqMcLPDrGAdF.jpg"
+trailer_url = "https://www.youtube.com/watch?v=fcTnvU7nFY4"
 
 [[thursday_films]]
 name = "Perfect Blue"
@@ -239,6 +264,7 @@ film_information = "Dir. Satoshi Kon, JP 1997"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/6WTiOCfDPP8XV4jqfloiVWf7KHq.jpg"
+trailer_url = "https://www.youtube.com/watch?v=RrWausp8zDQ"
 
 [[thursday_films]]
 name = "Snowpiercer"
@@ -248,6 +274,7 @@ film_information = "Dir. Bong Joon-ho, KR / US 2013"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/kw6YQudA0TMcNmGUGy5XIw7zbnV.jpg"
+trailer_url = "https://www.youtube.com/watch?v=bFpfJNiUDpY"
 
 [[thursday_films]]
 name = "Tangerine"
@@ -257,6 +284,7 @@ film_information = "Dir. Sean Baker, US 2015"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/EKLR5c61XQzBTeMokFrmS3kdt8.jpg"
+trailer_url = "https://www.youtube.com/watch?v=gpltOu4iUfI"
 
 [[thursday_films]]
 name = "La Haine"
@@ -266,6 +294,7 @@ film_information = "Dir. Mathieu Kassovitz, FR 1995"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/8rgPyWjYZhsphSSxbXguMnhN7H0.jpg"
+trailer_url = "https://www.youtube.com/watch?v=cy5TaO6qTBU"
 
 [[thursday_films]]
 name = "Tetsuo: The Iron Man"
@@ -275,6 +304,7 @@ film_information = "Dir. Shinya Tsukamoto, JP 1989"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/8cj8ozXIGxWbY3VdfPDhyfKDMZ0.jpg"
+trailer_url = "https://www.youtube.com/watch?v=mT3Nhci8HgY"
 
 [[thursday_films]]
 name = "The Transformers: The Movie"
@@ -284,6 +314,7 @@ film_information = "Dir. Nelson Shin, US / JP 1986"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/xJ5W0mOAWCVaXmU0pBZh4NjSRv2.jpg"
+trailer_url = "https://www.youtube.com/watch?v=JAzdgNLByjw"
 
 [[thursday_films]]
 name = "The Good, the Bad, the Weird"
@@ -293,6 +324,7 @@ film_information = "Dir. Kim Jee-woon, KR 2008"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/lbPZ0aNoF0cHisg6DubFO2eS8so.jpg"
+trailer_url = "https://www.youtube.com/watch?v=rKE22XvyLDM"
 
 [[thursday_films]]
 name = "House (Hausu)"
@@ -302,6 +334,7 @@ film_information = "Dir. Nobuhiko Obayashi, JP 1977"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/myMnHnG6kxYaQYknnW76VCHBpYT.jpg"
+trailer_url = "https://www.youtube.com/watch?v=g-K9XKObU5E"
 
 [[thursday_films]]
 name = "RoboCop"
@@ -311,6 +344,7 @@ film_information = "Dir. Paul Verhoeven, US 1987"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/esmAU0fCO28FbS6bUBKLAzJrohZ.jpg"
+trailer_url = "https://www.youtube.com/watch?v=IqvRDhW-XVA"
 
 [[thursday_films]]
 name = "High and Low"
@@ -320,6 +354,7 @@ film_information = "Dir. Akira Kurosawa, JP 1963"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/tgNjemQPG96uIezpiUiXFcer5ga.jpg"
+trailer_url = "https://www.youtube.com/watch?v=ELsgPvgDBoY"
 
 [[thursday_films]]
 name = "Danger: Diabolik"
@@ -329,6 +364,7 @@ film_information = "Dir. Mario Bava, IT 1968"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/ozU1Qgu3CqWg2MWz8God3P6PoF3.jpg"
+trailer_url = "https://www.youtube.com/watch?v=0w7BewJIpx0"
 
 [[thursday_films]]
 name = "The Holy Mountain"
@@ -338,6 +374,7 @@ film_information = "Dir. Alejandro Jodorowsky, MX 1973"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/mP5FGQbNjFkrjcZ6AVHrvokPRe5.jpg"
+trailer_url = "https://www.youtube.com/watch?v=bdXGhsAynGI"
 
 [[thursday_films]]
 name = "Stalker"
@@ -347,6 +384,7 @@ film_information = "Dir. Andrei Tarkovsky, SU 1979"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/1qhOyf5C4s9ZdvY8d5JDx9DFMeT.jpg"
+trailer_url = "https://www.youtube.com/watch?v=nFLQEuQuNKM"
 
 [[thursday_films]]
 name = "Tampopo"
@@ -356,6 +394,7 @@ film_information = "Dir. Juzo Itami, JP 1985"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/ArYdSuX3zY9fMsE4LqmBl7xJq5R.jpg"
+trailer_url = "https://www.youtube.com/watch?v=owkghAcYbDs"
 
 [[thursday_films]]
 name = "The Battle of Algiers"
@@ -365,6 +404,7 @@ film_information = "Dir. Gillo Pontecorvo, IT / DZ 1966"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/2p3AFtOHFvP6OeVMqlnL1zLKOqL.jpg"
+trailer_url = "https://www.youtube.com/watch?v=hFL65Zd6mzc"
 
 [[thursday_films]]
 name = "A Matter of Life and Death"
@@ -374,6 +414,7 @@ film_information = "Dir. Powell & Pressburger, GB 1946"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/H74LWKnhOeIFSk9gNjBcPjIov3.jpg"
+trailer_url = "https://www.youtube.com/watch?v=PjBxiiYmCRQ"
 
 [[thursday_films]]
 name = "Sorcerer"
@@ -383,6 +424,7 @@ film_information = "Dir. William Friedkin, US 1977"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/2b7oexm173SF1FSEq0DdgxZZNRH.jpg"
+trailer_url = "https://www.youtube.com/watch?v=aYef0dDWX74"
 
 [[thursday_films]]
 name = "Fantastic Planet"
@@ -392,6 +434,7 @@ film_information = "Dir. Rene Laloux, FR / CS 1973"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/prq0j1S0K07UjwLZLF6oMGflRUI.jpg"
+trailer_url = "https://www.youtube.com/watch?v=LE3AaxGKaEg"
 
 [[thursday_films]]
 name = "Akira"
@@ -401,6 +444,7 @@ film_information = "Dir. Katsuhiro Otomo, JP 1988"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/neZ0ykEsPqxamsX6o5QNUFILQrz.jpg"
+trailer_url = "https://www.youtube.com/watch?v=pC6Qk5XxGIY"
 
 [[thursday_films]]
 name = "Primer"
@@ -410,6 +454,7 @@ film_information = "Dir. Shane Carruth, US 2004"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/xEoq2WmDzpzxhkHEsmOYOg6BPg6.jpg"
+trailer_url = "https://www.youtube.com/watch?v=-vD-yj9o664"
 
 [[thursday_films]]
 name = "Funeral Parade of Roses"
@@ -419,6 +464,7 @@ film_information = "Dir. Toshio Matsumoto, JP 1969"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/7cRQ6rSGajW2soWDr3voEN2rgYO.jpg"
+trailer_url = "https://www.youtube.com/watch?v=pdiK8e31eps"
 
 [[thursday_films]]
 name = "Delicatessen"
@@ -428,6 +474,7 @@ film_information = "Dir. Marc Caro & Jean-Pierre Jeunet, FR 1991"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/gNtOgQHxE5B8e08zuNRAdDpmK5Z.jpg"
+trailer_url = "https://www.youtube.com/watch?v=3RtGq58LZnE"
 
 [[thursday_films]]
 name = "Coherence"
@@ -437,6 +484,7 @@ film_information = "Dir. James Ward Byrkit, US 2013"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/ezUtb9m5DeLwL2gxi4gktzNCvQv.jpg"
+trailer_url = "https://www.youtube.com/watch?v=sEceDz1Rodc"
 
 [[thursday_films]]
 name = "Suspiria"
@@ -446,6 +494,7 @@ film_information = "Dir. Dario Argento, IT 1977"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/sEcvc9h1X3hYZdFgtiiKMm6RB3f.jpg"
+trailer_url = "https://www.youtube.com/watch?v=hPs2ExUL_bc"
 
 [[thursday_films]]
 name = "A Scanner Darkly"
@@ -455,6 +504,7 @@ film_information = "Dir. Richard Linklater, US 2006"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/lUKudOpHICDj6A6SO7DdaZM4W48.jpg"
+trailer_url = "https://www.youtube.com/watch?v=hkjDUERgCQw"
 
 [[thursday_films]]
 name = "Hard Boiled"
@@ -464,6 +514,7 @@ film_information = "Dir. John Woo, HK 1992"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/oMqr4CGGqVlfI8DdrSelK1e9aFM.jpg"
+trailer_url = "https://www.youtube.com/watch?v=J_HPNU5oJMI"
 
 [[thursday_films]]
 name = "The Night of the Hunter"
@@ -473,6 +524,7 @@ film_information = "Dir. Charles Laughton, US 1955"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/rBka0nFWiHxabHRLr0KfIA8Yiaq.jpg"
+trailer_url = "https://www.youtube.com/watch?v=P4YR3zq69oE"
 
 [[thursday_films]]
 name = "Possession"
@@ -482,4 +534,5 @@ film_information = "Dir. Andrzej Zulawski, FR / DE 1981"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/lUFZsUuJ0YyhBXH8D2BFUd6wODm.jpg"
+trailer_url = "https://www.youtube.com/watch?v=aLXW-oVbTxE"
 
