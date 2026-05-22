@@ -44,7 +44,7 @@
   border-bottom-color: #dee2e6;
 }
 
-/* ── Directory-shared badge on labels ──────────────────────────── */
+/* ── Directory-shared badge on section headings ─────────────────── */
 .dir-badge {
   display: none;
   font-size: 0.7em;
@@ -58,6 +58,23 @@
   white-space: nowrap;
 }
 .dir-badge.visible { display: inline; }
+
+/* ── Directory-shared indicator on form labels ──────────────────── */
+/* Uses visibility (not display) so the space is always reserved,   */
+/* preventing layout shift when the label column changes width.      */
+.dir-indicator {
+  visibility: hidden;
+  font-size: 0.7em;
+  font-weight: normal;
+  color: #6c757d;
+  border: 1px solid #ced4da;
+  border-radius: 3px;
+  padding: 0 0.3em;
+  margin-left: 0.35em;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.dir-indicator.visible { visibility: visible; }
 
 /* ── Danger zone ───────────────────────────────────────────────── */
 .danger-zone {
@@ -244,6 +261,7 @@ $(document).ready(function() {
       </h4>
       <p style="font-size:0.85em; color:#666; margin:0 0 0.6rem;">
         Fill in what feels useful. This is your own record — you control whether it appears in the directory.
+        {% if site_config.access_rider_guidance_url %}Not sure where to start? <a href="{{ site_config.access_rider_guidance_url }}" target="_blank" rel="noopener noreferrer">See here for guidance.</a>{% endif %}
       </p>
       <div style="margin-bottom:0.5rem;">
         <label for="{{ vol_form.access_intro.id_for_label }}" style="font-weight:500;">Introduction</label>
@@ -661,21 +679,23 @@ document.addEventListener('DOMContentLoaded', function () {
   // ── Directory-shared badges ───────────────────────────────────
   // Badges are injected after each input field (not into labels),
   // so they appear to the right of the text box.
-  var BADGE_HTML = '<span class="dir-badge" data-dir-field="%KEY%"><i class="fa fa-eye"></i> shared</span>';
+  var INDICATOR_HTML = '<span class="dir-indicator" data-dir-field="%KEY%"><i class="fa fa-eye"></i> shared</span>';
 
-  // Map badge key → input element ID in the contact details table
+  // Map indicator key → input element ID in the contact details table
   var fieldIds = {
     'name':     'id_mem-name',
-    'pronouns': 'id_mem-pronouns',
+    'pronouns': 'id_mem-personal_pronouns',
     'email':    'id_mem-email',
     'phone':    'id_mem-phone',
   };
 
-  // Inject badges after each input on load
+  // Inject a fixed-width indicator into each label. Using visibility:hidden
+  // (not display:none) so the space is always reserved — no layout shift when
+  // "Personal pronouns" or any other long label gains the badge.
   Object.keys(fieldIds).forEach(function (key) {
-    var input = document.getElementById(fieldIds[key]);
-    if (input) {
-      input.insertAdjacentHTML('afterend', BADGE_HTML.replace('%KEY%', key));
+    var label = document.querySelector('label[for="' + fieldIds[key] + '"]');
+    if (label) {
+      label.insertAdjacentHTML('beforeend', INDICATOR_HTML.replace('%KEY%', key));
     }
   });
   // Access rider and collectives headings already have badge spans in HTML
@@ -708,8 +728,8 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function toggleBadgesFor(key, visible) {
-    var badge = document.querySelector('.dir-badge[data-dir-field="' + key + '"]');
-    if (badge) badge.classList.toggle('visible', visible);
+    var indicator = document.querySelector('.dir-indicator[data-dir-field="' + key + '"]');
+    if (indicator) indicator.classList.toggle('visible', visible);
   }
 
   function setBadge(id, visible) {
