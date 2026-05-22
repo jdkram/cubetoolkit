@@ -18,7 +18,7 @@ setup_page(true);
 {% endblock script-page-setup %}
 
 {% block navmenu-title %}
-<h1><a href="{% url "default-view" %}" title= "{{ VENUE.name }} Programme">{{ VENUE.name }} Programme</a></h1>
+<h1>{{ VENUE.name }} Programme</h1>
 {% endblock %}
 
 {% block site-description %}
@@ -121,7 +121,9 @@ setup_page(true);
                     {% if showing.discounted %}<abbr class="discounted" title="* cheap night">*</abbr>{% endif %}<br>
                     {% endfor %}
             </p>
+            {% if event.film_information %}<p class="film-info">{{ event.film_information }}</p>{% endif %}
             <p class="copy">{{ event.copy_summary|truncatewords:16 }} [<a class="more" href="{% url "single-event-view-with-slug" event_id=event.id event_slug=event_slug %}">more</a>]</p>
+            {% if event.trailer_url %}<p class="trailer-link"><a href="{{ event.trailer_url }}" rel="noopener noreferrer" target="_blank"><i class="fa-solid fa-circle-play" aria-hidden="true"></i> Trailer</a></p>{% endif %}
         </div>{% endwith %}
     </div>{% endfor %}<!-- end .showing -->
 </div><!-- end #programme -->

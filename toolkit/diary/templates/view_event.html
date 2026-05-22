@@ -46,6 +46,7 @@
             {% else %}
                 {{ showing.start|date:"D j F " }}//{{ showing.start|date:" H:i" }}
             {% endif %}
+            {% if showing.doors_time %}(doors {{ showing.doors_time|time:"H:i" }}){% endif %}
             {% if MULTIROOM_ENABLED %}{% with rd=showing.rooms_display %}{% if rd %}/ {{ rd }}{% endif %}{% endwith %}{% endif %}
             {% if showing.cancelled %}</span> (cancelled){% endif %}
             {% if showing.sold_out %}</span> (SOLD OUT){% endif %}
@@ -54,11 +55,17 @@
             <br>
             {% endfor %}
         </div>
+        {% if event.age_restriction %}
+        <p class="age-restriction">{{ event.get_age_restriction_display }}</p>
+        {% endif %}
         {% if event.pricing %}
             <p class="tickets">Tickets: {{ event.pricing }}</p>
         {% endif %}
         {% if event.ticket_link and not all_showings_finished %}
            <p class="action"><a href="{{ event.ticket_link }}" rel="noopener noreferrer" target="_blank">Book tickets</a></p>
+        {% endif %}
+        {% if event.trailer_url %}
+           <p class="action"><a href="{{ event.trailer_url }}" rel="noopener noreferrer" target="_blank"><i class="fa-solid fa-circle-play" aria-hidden="true"></i> Watch trailer</a></p>
         {% endif %}
         <div class="copy">
             {{ event.copy_html }}
