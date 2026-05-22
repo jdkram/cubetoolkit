@@ -25,8 +25,20 @@ from .models import (
     LoftItem,
     LoftItemPhoto,
 )
-from toolkit.diary.models import get_site_config
+from toolkit.diary.models import SiteConfiguration, get_site_config
 from . import forms as lab_forms
+
+
+def _user_can_post_bulletin(user):
+    cfg = get_site_config()
+    level = cfg.bulletin_post_permission
+    if level == SiteConfiguration.BULLETIN_POST_ALL:
+        return True
+    if level == SiteConfiguration.BULLETIN_POST_PROGRAMMER:
+        return user.has_perm("toolkit.write")
+    if level == SiteConfiguration.BULLETIN_POST_PANOPTICON:
+        return user.is_superuser
+    return False
 
 
 _FLOORPLAN_ROOMS = [
@@ -573,6 +585,7 @@ def bulletin_list(request):
         "bulletins": bulletins,
         "guidance": cfg.bulletin_guidance,
         "is_archive": False,
+        "can_post": _user_can_post_bulletin(request.user),
         "can_curate": request.user.has_perm("toolkit.write"),
         "can_delete": request.user.is_superuser,
     })
@@ -600,6 +613,7 @@ def bulletin_archive(request):
         "bulletins": bulletins,
         "guidance": "",
         "is_archive": True,
+        "can_post": _user_can_post_bulletin(request.user),
         "can_curate": request.user.has_perm("toolkit.write"),
         "can_delete": request.user.is_superuser,
     })
@@ -611,6 +625,8 @@ BULLETIN_RATE_LIMIT_PER_HOUR = 5
 @login_required
 @require_http_methods(["GET", "POST"])
 def bulletin_add(request):
+    if not _user_can_post_bulletin(request.user):
+        return HttpResponseForbidden("You don't have permission to post bulletins.")
     if request.method == "POST":
         form = lab_forms.BulletinForm(request.POST)
         # Rate limit: cap recent posts per author to defend against a

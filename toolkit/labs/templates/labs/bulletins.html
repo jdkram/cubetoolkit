@@ -52,7 +52,7 @@
     {% if is_archive %}
       <a class="btn btn-sm btn-outline-secondary" href="{% url "labs-bulletins" %}">&larr; Active bulletins</a>
     {% else %}
-      <a class="btn btn-sm btn-primary" href="{% url "labs-bulletin-add" %}">Post a bulletin</a>
+      {% if can_post %}<a class="btn btn-sm btn-primary" href="{% url "labs-bulletin-add" %}">Post a bulletin</a>{% endif %}
       <a class="btn btn-sm btn-outline-secondary" href="{% url "labs-bulletins-archive" %}">Archive</a>
     {% endif %}
   </div>
