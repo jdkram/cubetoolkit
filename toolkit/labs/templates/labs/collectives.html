@@ -23,10 +23,39 @@
   color: #fff;
   padding: 0.7rem 1rem;
 }
+.collective-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
 .collective-card-header h2 {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
+}
+.collective-card-header h2 a {
+  color: inherit;
+  text-decoration: none;
+}
+.collective-card-header h2 a:hover {
+  text-decoration: underline;
+}
+.collective-anchor-link {
+  color: inherit;
+  opacity: 0.75;
+  font-size: 0.85rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.collective-anchor-link:hover {
+  opacity: 1;
+  color: inherit;
+  text-decoration: underline;
+}
+.collective-card:target {
+  outline: 2px solid #0d6efd;
+  outline-offset: 2px;
 }
 .collective-card-body {
   padding: 1rem;
@@ -150,15 +179,16 @@
     To add or remove a collective, or change its ordering, use the
     <a href="/toolkit/admin/labs/collective/">Django admin</a>.
     {% else %}
-    To add a new collective or change ordering, ask a superuser to use the admin panel.
+    To add a new collective or change ordering, ask a Panopticon user to use the admin panel.
     {% endif %}
   </div>
 
   <div class="collectives-grid">
     {% for c in collectives %}
-    <div class="collective-card">
+    <div class="collective-card" id="collective-{{ c.slug }}">
       <div class="collective-card-header" style="background: {{ c.colour }};">
-        <h2>{{ c.name }}</h2>
+        <h2><a href="#collective-{{ c.slug }}">{{ c.name }}</a></h2>
+        <a class="collective-anchor-link" href="#collective-{{ c.slug }}" title="Link to {{ c.name }}" aria-label="Link to {{ c.name }}"><i class="fa fa-link" aria-hidden="true"></i></a>
       </div>
       <div class="collective-card-body">
         <dl>
