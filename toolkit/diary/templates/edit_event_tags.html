@@ -164,13 +164,12 @@ function updateOrdering() {
 {% block body %}
 <div class="container-fluid mt-3">
 
-  {% include "messages.html" %}
 
   <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
       <h4 class="mb-0">Event Tags</h4>
       <small class="text-muted">
-        <strong>Programme nav</strong> tags appear as filter links under "Programme" in the public website navigation.
+        <strong>Nav</strong> tags appear as filter links under "Programme" in the public website navigation.
       </small>
     </div>
     <div class="card-body p-0" style="overflow-x: auto;">
@@ -207,7 +206,7 @@ function updateOrdering() {
             <span class="tag-options">
               {% if form.id.value %}
                 <label title="Show this tag as a filter link under 'Programme' in the public website navigation">
-                  {{ form.promoted }} Programme nav
+                  {{ form.promoted }} Nav
                 </label>
                 {% if not form.instance.read_only %}
                   {{ form.id }}
@@ -227,7 +226,7 @@ function updateOrdering() {
         </ul>
 
         <div class="card-footer d-flex justify-content-between align-items-center">
-          <small class="text-muted">Tick <strong>Programme nav</strong> to show a tag as a filter link. Drag any row to set its order.</small>
+          <small class="text-muted">Tick <strong>Nav</strong> to show a tag as a filter link. Drag any row to set its order.</small>
           <button type="submit" class="btn btn-primary">Save all changes</button>
         </div>
       </form>
