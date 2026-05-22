@@ -281,9 +281,34 @@ class Event(models.Model):
     # Free text pricing info:
     pricing = models.CharField(max_length=256, null=False, blank=True)
     ticket_link = models.URLField(max_length=256, null=False, blank=True)
+    trailer_url = models.URLField(
+        max_length=500,
+        blank=True,
+        verbose_name="Trailer URL",
+        help_text="Link to a trailer (e.g. YouTube or Vimeo). Shown as a 'Watch trailer' link on the public event page.",
+    )
 
     # Free text film information:
     film_information = models.CharField(max_length=256, null=False, blank=True)
+
+    AGE_UNSET = ""
+    AGE_ALL = "all_ages"
+    AGE_16_PLUS = "16_plus"
+    AGE_18_PLUS = "18_plus"
+    AGE_RESTRICTION_CHOICES = [
+        ("", "Not stated"),
+        ("all_ages", "All ages welcome"),
+        ("16_plus", "16+ only"),
+        ("18_plus", "18+ only"),
+    ]
+    age_restriction = models.CharField(
+        max_length=16,
+        blank=True,
+        choices=AGE_RESTRICTION_CHOICES,
+        default="",
+        verbose_name="Age restriction",
+        help_text="Under 18s must be accompanied by an adult at all events. Use this field to flag family-friendly events ('All ages welcome') or events with a minimum admission age.",
+    )
 
     copy = models.TextField(max_length=8192, null=True, blank=True)
     copy_summary = models.TextField(max_length=4096, null=True, blank=True)
