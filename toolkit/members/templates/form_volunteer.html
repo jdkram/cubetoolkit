@@ -438,45 +438,55 @@ $(document).ready(function() {
 
     <!-- Directory sharing — its own distinct box -->
     <div class="vol-section vol-section-dir" id="dir-section">
-      <h4>Directory sharing
-        <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
-          title="All options default to off — nothing appears in the volunteer directory unless you explicitly opt in.">ⓘ</span>
-      </h4>
-      <p style="font-size:0.82em; color:#666; margin:0 0 0.75rem;">
-        Choose what to share in the <a href="{% url "volunteer-directory" %}">volunteer directory</a>.
-        Fields marked <span style="font-size:0.85em; color:#6c757d; border:1px solid #ced4da; border-radius:3px; padding:0 0.3em;"><i class="fa fa-eye"></i> shared</span>
-        above are currently visible to other volunteers.
-      </p>
+      <h4>Volunteer directory</h4>
 
-      <div style="margin-bottom:0.6rem;">
-        <label style="font-weight:500; display:block; margin-bottom:0.2rem;">Name visibility</label>
-        <div style="display:flex; gap:1.25rem; flex-wrap:wrap;">
-          {% for radio in vol_form.dir_share_name %}
-            <label style="font-weight:normal; cursor:pointer;">{{ radio.tag }} {{ radio.choice_label }}</label>
-          {% endfor %}
+      <label style="font-weight:500; cursor:pointer; display:block; margin-bottom:0.4rem;">
+        {{ vol_form.dir_share_listed }} List me in the
+        <a href="{% url "volunteer-directory" %}">volunteer directory</a>
+      </label>
+
+      <div id="dir_listed_options" style="margin-left:1.5rem;">
+        <div style="margin-bottom:0.6rem;">
+          <label style="font-weight:500; display:block; margin-bottom:0.2rem;">Display my name as:</label>
+          <div style="display:flex; gap:1.25rem; flex-wrap:wrap;">
+            {% for radio in vol_form.dir_share_name_style %}
+              <label style="font-weight:normal; cursor:pointer;">{{ radio.tag }} {{ radio.choice_label }}</label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:0.3rem;">
+          <label style="font-weight:normal; cursor:pointer;">
+            {{ vol_form.dir_share_pronouns }} Share pronouns
+          </label>
+          <label style="font-weight:normal; cursor:pointer;">
+            {{ vol_form.dir_share_email }} Share email
+          </label>
+          <label style="font-weight:normal; cursor:pointer;">
+            {{ vol_form.dir_share_phone }} Share phone number
+          </label>
+          <label style="font-weight:normal; cursor:pointer;">
+            {{ vol_form.dir_share_collectives }} Show collectives
+          </label>
+          <label style="font-weight:normal; cursor:pointer;">
+            {{ vol_form.dir_share_access_rider }} Show access rider
+          </label>
         </div>
       </div>
-
-      <div style="display:flex; flex-direction:column; gap:0.3rem;">
-        <label style="font-weight:normal; cursor:pointer;">
-          {{ vol_form.dir_share_pronouns }} Share pronouns
-        </label>
-        <label style="font-weight:normal; cursor:pointer;">
-          {{ vol_form.dir_share_email }} Share email
-        </label>
-        <label style="font-weight:normal; cursor:pointer;">
-          {{ vol_form.dir_share_phone }} Share phone number
-        </label>
-        <label style="font-weight:normal; cursor:pointer;">
-          {{ vol_form.dir_share_collectives }} Show collectives
-        </label>
-        <label style="font-weight:normal; cursor:pointer;">
-          {{ vol_form.dir_share_access_rider }} Show access rider
-        </label>
-      </div>
+      {{ vol_form.dir_share_listed.errors }}{{ vol_form.dir_share_name_style.errors }}
       {{ vol_form.dir_share_pronouns.errors }}{{ vol_form.dir_share_email.errors }}
       {{ vol_form.dir_share_phone.errors }}{{ vol_form.dir_share_collectives.errors }}
       {{ vol_form.dir_share_access_rider.errors }}
+
+      <script>
+      (function() {
+        var listMe = document.getElementById('{{ vol_form.dir_share_listed.id_for_label }}');
+        var options = document.getElementById('dir_listed_options');
+        function sync() { options.style.display = listMe.checked ? '' : 'none'; }
+        listMe.addEventListener('change', sync);
+        sync();
+      })();
+      </script>
     </div>
 
     <!-- Emergency contact (superuser only) -->
@@ -702,12 +712,9 @@ document.addEventListener('DOMContentLoaded', function () {
   // (id="dir-badge-access-rider" / id="dir-badge-collectives")
 
   function updateBadges() {
-    // Name: shared if dir_share_name != "none"
-    var nameShared = false;
-    document.querySelectorAll('input[name="{{ vol_form.prefix }}-dir_share_name"]').forEach(function (r) {
-      if (r.checked && r.value !== 'none') nameShared = true;
-    });
-    toggleBadgesFor('name', nameShared);
+    // Name: shared if the "list me" checkbox is on
+    var cbListed = document.getElementById('{{ vol_form.dir_share_listed.id_for_label }}');
+    toggleBadgesFor('name', cbListed && cbListed.checked);
 
     // Simple checkboxes
     var checks = {
@@ -739,7 +746,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Wire up all dir_share controls
   var allDirInputs = document.querySelectorAll(
-    '[name="{{ vol_form.prefix }}-dir_share_name"],' +
+    '#{{ vol_form.dir_share_listed.id_for_label }},' +
     '#{{ vol_form.dir_share_pronouns.id_for_label }},' +
     '#{{ vol_form.dir_share_email.id_for_label }},' +
     '#{{ vol_form.dir_share_phone.id_for_label }},' +

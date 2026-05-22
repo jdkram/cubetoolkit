@@ -110,12 +110,12 @@ class VolunteerForm(forms.ModelForm):
     # MemberFormWithoutNotes
     prefix = "vol"
 
-    # dir_share_name has choices; make it non-required so existing code that
-    # submits minimal POST data doesn't fail — clean_dir_share_name defaults it.
-    dir_share_name = forms.ChoiceField(
-        choices=toolkit.members.models.Volunteer.DIR_SHARE_NAME_CHOICES,
+    # Name style is only meaningful when listed; default to "full" so toggling
+    # the listed checkbox on gives a sane name.
+    dir_share_name_style = forms.ChoiceField(
+        choices=toolkit.members.models.Volunteer.NAME_STYLE_CHOICES,
         required=False,
-        initial=toolkit.members.models.Volunteer.DIR_SHARE_NONE,
+        initial=toolkit.members.models.Volunteer.NAME_STYLE_FULL,
         widget=forms.RadioSelect(),
     )
 
@@ -135,10 +135,10 @@ class VolunteerForm(forms.ModelForm):
             qs = qs.filter(invite_only=False)
         self.fields["collectives"].queryset = qs
 
-    def clean_dir_share_name(self):
-        value = self.cleaned_data.get("dir_share_name")
+    def clean_dir_share_name_style(self):
+        value = self.cleaned_data.get("dir_share_name_style")
         if not value:
-            return toolkit.members.models.Volunteer.DIR_SHARE_NONE
+            return toolkit.members.models.Volunteer.NAME_STYLE_FULL
         return value
 
     def clean_collectives(self):
@@ -158,7 +158,8 @@ class VolunteerForm(forms.ModelForm):
             "portrait", "notes", "roles", "status",
             "access_intro", "access_needs", "access_links",
             "emergency_contact_name", "emergency_contact_relationship", "emergency_contact_phone",
-            "dir_share_name", "dir_share_pronouns", "dir_share_email",
+            "dir_share_listed", "dir_share_name_style",
+            "dir_share_pronouns", "dir_share_email",
             "dir_share_phone", "dir_share_access_rider", "dir_share_collectives",
             "collectives",
         )
