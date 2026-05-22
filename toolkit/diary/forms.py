@@ -797,6 +797,12 @@ class SiteConfigurationForm(forms.ModelForm):
             "access_rider_guidance_url",
             "bulletin_default_expiry_days",
             "bulletin_guidance",
+            "bulletin_post_permission",
+            "show_donations_in_public_nav",
+            "banner_active",
+            "banner_level",
+            "banner_text",
+            "banner_dismissible",
         )
         widgets = {
             "films_start_on_time_banner_text": forms.Textarea(
@@ -804,6 +810,9 @@ class SiteConfigurationForm(forms.ModelForm):
             ),
             "images_start_date": forms.DateInput(
                 attrs={"type": "date", "class": "form-control"}
+            ),
+            "banner_text": forms.Textarea(
+                attrs={"rows": 3, "class": "form-control"}
             ),
         }
 

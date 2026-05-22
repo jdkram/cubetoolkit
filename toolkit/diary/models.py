@@ -1252,6 +1252,74 @@ class SiteConfiguration(models.Model):
         help_text="Link shown in the Access Rider section of the volunteer profile — guidance on writing an access rider. Leave blank to hide the link.",
     )
 
+    # --- Donations page ---
+    donations_intro = models.TextField(
+        blank=True,
+        default=(
+            "<p>The most valuable things you can give us are your time, energy, and ideas. "
+            "If you want to get involved, the best place to start is by volunteering at events "
+            "or joining one of our working groups.</p>"
+            "<p>That said, we do sometimes need physical things too, and this page lists what’s "
+            "currently useful. Before bringing anything, please check the status: "
+            "<strong>Wanted</strong> means yes please; <strong>Check first</strong> means it might "
+            "work but talk to us first; <strong>Not needed</strong> means we’re already well "
+            "supplied or can’t use it.</p>"
+            "<p>One of our most precious resources as a DIY space is space itself. We share the "
+            "building across a lot of different groups and uses, and it’s much easier to add "
+            "things than to remove them. Please don’t drop anything off without checking first, "
+            "even if it seems obviously useful.</p>"
+        ),
+        help_text="Introductory copy shown at the top of the public donations page. HTML.",
+    )
+
+    # --- Public site navigation ---
+    show_donations_in_public_nav = models.BooleanField(
+        default=False,
+        help_text=(
+            "Show a 'Donations wishlist' link in the public site navigation, "
+            "pointing at the labs donations list. Off by default."
+        ),
+    )
+
+    # --- Site-wide banner ---
+    banner_active = models.BooleanField(
+        default=False,
+        help_text=(
+            "Show a site-wide announcement banner at the top of every page "
+            "(public and toolkit) for important notices."
+        ),
+    )
+    BANNER_LEVEL_INFO = "info"
+    BANNER_LEVEL_WARNING = "warning"
+    BANNER_LEVEL_CRITICAL = "critical"
+    BANNER_LEVEL_CHOICES = [
+        (BANNER_LEVEL_INFO, "Info (blue)"),
+        (BANNER_LEVEL_WARNING, "Warning (amber)"),
+        (BANNER_LEVEL_CRITICAL, "Critical (red)"),
+    ]
+    banner_level = models.CharField(
+        max_length=10,
+        choices=BANNER_LEVEL_CHOICES,
+        default=BANNER_LEVEL_INFO,
+        help_text="Colour scheme for the banner.",
+    )
+    banner_text = models.TextField(
+        blank=True,
+        default="",
+        help_text=(
+            "Banner content. Plain text; line breaks are preserved. "
+            "Edit this and re-save to issue an updated notice — visitors who "
+            "previously dismissed the banner will see the new version."
+        ),
+    )
+    banner_dismissible = models.BooleanField(
+        default=True,
+        help_text=(
+            "Allow visitors to dismiss the banner. Their choice is stored in "
+            "their browser only, and resets when the banner text changes."
+        ),
+    )
+
     # --- Bulletins ---
     bulletin_default_expiry_days = models.PositiveSmallIntegerField(
         default=30,
@@ -1268,6 +1336,20 @@ class SiteConfiguration(models.Model):
             "conventions: what kinds of notices belong here, how to write them, "
             "and examples of good and bad bulletins."
         ),
+    )
+    BULLETIN_POST_ALL = "all"
+    BULLETIN_POST_PROGRAMMER = "programmer"
+    BULLETIN_POST_PANOPTICON = "panopticon"
+    BULLETIN_POST_CHOICES = [
+        (BULLETIN_POST_ALL, "All volunteers"),
+        (BULLETIN_POST_PROGRAMMER, "Programmers and Panopticon"),
+        (BULLETIN_POST_PANOPTICON, "Panopticon only"),
+    ]
+    bulletin_post_permission = models.CharField(
+        max_length=12,
+        choices=BULLETIN_POST_CHOICES,
+        default=BULLETIN_POST_PROGRAMMER,
+        help_text="Who can post new bulletins.",
     )
 
     _CACHE_KEY = "diary.site_config.v1"

@@ -1,0 +1,69 @@
+{% if site_config.banner_active and site_config.banner_text %}
+<div id="site-banner"
+     class="site-banner site-banner--{{ site_config.banner_level }}"
+     data-banner-version="{{ site_config.banner_text|length }}-{{ site_config.banner_text|slice:':40'|slugify }}"
+     data-dismissible="{% if site_config.banner_dismissible %}1{% else %}0{% endif %}"
+     role="region"
+     aria-label="Site announcement">
+  <div class="site-banner__body">{{ site_config.banner_text|linebreaksbr }}</div>
+  {% if site_config.banner_dismissible %}
+  <button type="button" class="site-banner__close" aria-label="Dismiss announcement">&times;</button>
+  {% endif %}
+</div>
+<style>
+.site-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 1100;
+}
+.site-banner__body { flex: 1; }
+.site-banner__close {
+  background: transparent;
+  border: 0;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.4rem;
+  color: inherit;
+  opacity: 0.7;
+}
+.site-banner__close:hover { opacity: 1; }
+.site-banner--info     { background: #cfe2ff; color: #052c65; }
+.site-banner--warning  { background: #fff3cd; color: #664d03; }
+.site-banner--critical { background: #f8d7da; color: #58151c; }
+</style>
+<script>
+(function() {
+  var banner = document.getElementById('site-banner');
+  if (!banner) return;
+  var version = banner.getAttribute('data-banner-version');
+  var dismissible = banner.getAttribute('data-dismissible') === '1';
+  var storageKey = 'site_banner_dismissed_v1';
+
+  if (dismissible) {
+    try {
+      var dismissed = localStorage.getItem(storageKey);
+      if (dismissed === version) { banner.style.display = 'none'; return; }
+    } catch (e) {}
+  }
+
+  // If the admin shell uses a fixed navbar, give the body extra top padding.
+  if (document.body) document.body.classList.add('has-site-banner');
+
+  var closeBtn = banner.querySelector('.site-banner__close');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', function() {
+      try { localStorage.setItem(storageKey, version); } catch (e) {}
+      banner.style.display = 'none';
+      if (document.body) document.body.classList.remove('has-site-banner');
+    });
+  }
+})();
+</script>
+{% endif %}
