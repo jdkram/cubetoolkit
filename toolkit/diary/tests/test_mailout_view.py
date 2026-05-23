@@ -23,6 +23,9 @@ class QueueMailoutTests(TestCase, fixtures.TestWithFixtures):
         self.time_mock = self.time_patch.start()
         self.time_mock.return_value = FAKE_NOW
 
+    def tearDown(self):
+        self.time_patch.stop()
+
     def test_get_denied(self) -> None:
         url = reverse("queue-members-mailout")
         response = self.client.get(url)

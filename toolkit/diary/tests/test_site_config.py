@@ -75,6 +75,7 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
             "show_archive_images": "on",
             "images_start_date": "",
             "max_count_per_role": "20",
+            "max_showing_dates_shown": str(config.max_showing_dates_shown),
             "programme_copy_summary_max_chars": str(
                 config.programme_copy_summary_max_chars
             ),
@@ -93,6 +94,12 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
             "rota_gap_min_pct": str(config.rota_gap_min_pct),
             "image_copyright_guidance_url": "",
             "alt_text_guidance_url": "",
+            "access_rider_guidance_url": "",
+            "bulletin_default_expiry_days": str(config.bulletin_default_expiry_days),
+            "bulletin_guidance": "",
+            "bulletin_post_permission": config.bulletin_post_permission,
+            "banner_level": config.banner_level,
+            "banner_text": "",
         }
         response = self.client.post(self.url, post_data)
         self.assertEqual(response.status_code, 302)
