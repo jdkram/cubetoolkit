@@ -5,6 +5,7 @@ from . import views
 
 urlpatterns = [
     re_path(r"^collectives/$", views.collectives, name="labs-collectives"),
+    re_path(r"^collectives/public/$", views.collectives_public, name="labs-collectives-public"),
     re_path(r"^collectives/(?P<slug>[\w-]+)/edit/$", views.collective_edit, name="labs-collective-edit"),
     re_path(r"^collectives/(?P<slug>[\w-]+)/join/$", views.collective_join, name="labs-collective-join"),
     re_path(r"^collectives/(?P<slug>[\w-]+)/leave/$", views.collective_leave, name="labs-collective-leave"),

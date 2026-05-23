@@ -1,0 +1,53 @@
+{% extends "base_public.html" %}
+
+{% block title %}Collectives — {{ VENUE.name }}{% endblock %}
+
+{% block script-page-setup %}
+<script>
+setup_page(false);
+</script>
+{% endblock script-page-setup %}
+
+{% block body %}
+{{ block.super }}
+<div class="grid">
+  <div class="grid-item">
+    <h1 style="font-size: 1.5rem; margin-bottom: 0.75rem;">Collectives</h1>
+
+    {% if collectives_intro %}
+    <p style="margin-bottom: 1rem; max-width: 38rem;">{{ collectives_intro }}</p>
+    {% else %}
+    <p style="margin-bottom: 1rem; max-width: 38rem;">
+      {{ VENUE.name }} is run entirely by volunteers organised into working collectives.
+      Each collective looks after a different part of what we do.
+    </p>
+    {% endif %}
+
+    <div style="background: #f0e8df; border-left: 4px solid #8b5e3c; padding: 0.75rem 1rem; margin-bottom: 2rem; max-width: 38rem; font-size: 0.9rem;">
+      <strong>New to the Star and Shadow?</strong>
+      To get involved you'll need to become a volunteer first and attend an induction night.
+      Find out more on the <a href="/get-involved/">get involved page</a>, or come along to any event and chat to a volunteer.
+    </div>
+
+    {% if collectives %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(22rem, 100%), 1fr)); gap: 1.5rem;">
+      {% for collective in collectives %}
+      <div style="border-left: 4px solid {{ collective.colour }}; padding: 1rem 1rem 1rem 1.25rem; background: #f8f4ef;">
+        <h2 style="font-size: 1.1rem; margin: 0 0 0.5rem; color: {{ collective.colour }};">{{ collective.name }}</h2>
+        <p style="margin: 0 0 0.75rem; font-size: 0.95rem;">{{ collective.public_copy }}</p>
+        {% if collective.get_involved %}
+        <p style="margin: 0 0 0.5rem; font-size: 0.875rem;"><strong>How to join:</strong> {{ collective.get_involved }}</p>
+        {% endif %}
+        {% if collective.contact %}
+        <p style="margin: 0; font-size: 0.875rem;"><strong>Contact:</strong> {{ collective.contact }}</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p>No collectives are listed here yet — check back soon.</p>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

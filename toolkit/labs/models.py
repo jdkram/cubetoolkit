@@ -131,6 +131,15 @@ class Collective(models.Model):
         default=False,
         help_text="If set, volunteers cannot self-join — membership is managed by admins only.",
     )
+    listed_publicly = models.BooleanField(
+        default=False,
+        help_text="Include this collective on the public /labs/collectives/public/ page. Requires public_copy to be set.",
+    )
+    public_copy = models.TextField(
+        blank=True, default="",
+        verbose_name="Public description",
+        help_text="Short description for the public directory (100–300 characters). Leave blank to exclude from the public page even if listed_publicly is checked.",
+    )
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(
         User, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
