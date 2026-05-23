@@ -614,3 +614,123 @@ span.tags {
     color: inherit;
     text-decoration: underline;
 }
+
+.showing-overflow-hint {
+    font-style: italic;
+    opacity: 0.65;
+}
+
+
+/* ─── Programme header row (volunteer notice + search) ──────────────────── */
+
+/* Flex row: volunteer notice on the left, search bar on the right.
+ * When no volunteer notice is shown, the search bar sits at the left. */
+.programme-header-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin: 16px 1.5625% 20px;
+}
+
+/* Volunteer notice loses its standalone margin inside the row */
+.programme-header-row .volunteer-notice {
+    margin: 0;
+    flex: 1 1 auto;
+}
+
+/* Search bar: compact, right-aligned within the row */
+.programme-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+}
+
+#programme-search {
+    width: 180px;
+    padding: 0.28em 0.55em;
+    border: 1px solid #888;
+    background: rgba(255, 255, 255, 0.92);
+    color: #222;
+    font: inherit;
+    font-size: 0.75em;
+    outline-offset: 2px;
+}
+
+#programme-search:focus {
+    outline: 2px solid rgba(32, 32, 128, 0.7);
+}
+
+.filter-reset-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.75em;
+    color: #666;
+    text-decoration: underline;
+}
+
+.filter-reset-btn:hover {
+    color: #000;
+}
+
+/* Cards hidden by the search filter */
+.showing.filter-hidden {
+    display: none;
+}
+
+/* Reduce the programme grid's top margin — the header row already provides
+ * top spacing, and its own margin-bottom handles the gap to the tiles. */
+.programme-header-row + .programme {
+    margin-top: 0;
+}
+
+@media screen and (min-width: 475px) {
+    .programme-header-row {
+        margin-left: 1.0526%;
+        margin-right: 1.0526%;
+    }
+}
+
+@media screen and (min-width: 600px) {
+    .programme-header-row {
+        margin-left: 0.625%;
+        margin-right: 0.625%;
+        margin-bottom: 20px;
+    }
+    .programme-header-row + .programme {
+        margin-top: 0;
+    }
+}
+
+@media screen and (min-width: 1000px) {
+    .programme-header-row {
+        width: 820px;
+        margin-left: 6px;
+        margin-right: 6px;
+    }
+}
+
+@media screen and (min-width: 1260px) {
+    .programme-header-row {
+        width: 1090px;
+    }
+}
+
+@media screen and (min-width: 1600px) {
+    .programme-header-row {
+        width: 1356px;
+    }
+}
+
+@media screen and (min-width: 1900px) {
+    .programme-header-row {
+        width: 1670px;
+        margin-left: 10px;
+        margin-right: 10px;
+    }
+}
