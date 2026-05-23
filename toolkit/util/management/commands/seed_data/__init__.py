@@ -53,6 +53,14 @@ films_data = _load_toml("films.toml")
 SUNDAY_FILMS = films_data.get("sunday_films", [])
 THURSDAY_FILMS = films_data.get("thursday_films", [])
 
+# Collectives
+collectives_data = _load_toml("collectives.toml")
+COLLECTIVES = collectives_data["collectives"]
+
+# Donation items
+donations_data = _load_toml("donations.toml")
+DONATION_ITEMS = donations_data["items"]
+
 # Generic cinema image used for all recurring film events
 _RECURRING_FILM_IMAGE_URL = "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=800"
 
@@ -70,4 +78,6 @@ __all__ = [
     "SUNDAY_FILMS",
     "THURSDAY_FILMS",
     "_RECURRING_FILM_IMAGE_URL",
+    "COLLECTIVES",
+    "DONATION_ITEMS",
 ]

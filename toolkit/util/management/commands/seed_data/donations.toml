@@ -1,0 +1,152 @@
+# Donation item seed data for the Star and Shadow.
+# status: "wanted" | "check_first" | "not_needed"
+
+# ── Kitchen ──────────────────────────────────────────────────────────────────
+
+[[items]]
+category = "Kitchen"
+name = "Large stock pots (8L+)"
+status = "wanted"
+notes = "For community kitchen events. We need at least two more."
+display_order = 1
+
+[[items]]
+category = "Kitchen"
+name = "Catering baking trays"
+status = "wanted"
+notes = "Full-size (60×40cm). Lightweight aluminium preferred."
+display_order = 2
+
+[[items]]
+category = "Kitchen"
+name = "Chopping boards (large)"
+status = "check_first"
+notes = "We have some but they're getting worn. Message the kitchen collective before donating."
+display_order = 3
+
+[[items]]
+category = "Kitchen"
+name = "Kitchen scales"
+status = "not_needed"
+notes = "We have two sets in good condition."
+display_order = 4
+
+[[items]]
+category = "Kitchen"
+name = "Tupperware / food containers"
+status = "wanted"
+notes = "Especially stackable ones with lids. We lose lids at an alarming rate."
+display_order = 5
+
+# ── Tech & AV ─────────────────────────────────────────────────────────────────
+
+[[items]]
+category = "Tech & AV"
+name = "HDMI cables (2m+)"
+status = "wanted"
+notes = "Always useful backstage and in the meeting room."
+display_order = 1
+
+[[items]]
+category = "Tech & AV"
+name = "Extension leads (surge-protected)"
+status = "check_first"
+notes = "We have several — check with caretaking first as storage is limited."
+display_order = 2
+
+[[items]]
+category = "Tech & AV"
+name = "USB-C hubs / adapters"
+status = "wanted"
+notes = "For laptop connections in the projection booth and meeting room."
+display_order = 3
+
+[[items]]
+category = "Tech & AV"
+name = "Ethernet cable (Cat6)"
+status = "wanted"
+notes = "Longer runs (10m+) particularly useful. We're gradually replacing WiFi reliance."
+display_order = 4
+
+[[items]]
+category = "Tech & AV"
+name = "Wireless keyboard and mouse"
+status = "not_needed"
+notes = "Well stocked."
+display_order = 5
+
+# ── Furniture & Fixtures ──────────────────────────────────────────────────────
+
+[[items]]
+category = "Furniture & Fixtures"
+name = "Folding tables"
+status = "wanted"
+notes = "Lightweight ones for events — 6ft rectangular preferred."
+display_order = 1
+
+[[items]]
+category = "Furniture & Fixtures"
+name = "Stackable chairs"
+status = "check_first"
+notes = "Storage space is the constraint. Talk to caretaking before bringing any in."
+display_order = 2
+
+[[items]]
+category = "Furniture & Fixtures"
+name = "Bookshelves / shelving units"
+status = "wanted"
+notes = "For the library. Freestanding, ideally adjustable shelves."
+display_order = 3
+
+[[items]]
+category = "Furniture & Fixtures"
+name = "Coat hooks / rail"
+status = "wanted"
+notes = "For the café entrance. Wall-mounted preferred."
+display_order = 4
+
+# ── Art Supplies ──────────────────────────────────────────────────────────────
+
+[[items]]
+category = "Art Supplies"
+name = "Picture hanging hardware"
+status = "wanted"
+notes = "D-rings, mirror plates, wire, and wall plugs for the gallery. Always running low."
+display_order = 1
+
+[[items]]
+category = "Art Supplies"
+name = "Rolls of lining paper"
+status = "wanted"
+notes = "For covering existing wall décor before exhibitions."
+display_order = 2
+
+[[items]]
+category = "Art Supplies"
+name = "Paint (emulsion, white or off-white)"
+status = "check_first"
+notes = "Useful for touching up gallery walls between shows. Check with art club on specific shade."
+display_order = 3
+
+# ── Office & Admin ────────────────────────────────────────────────────────────
+
+[[items]]
+category = "Office & Admin"
+name = "Lever arch folders"
+status = "not_needed"
+notes = "We have a lifetime's supply."
+display_order = 1
+
+[[items]]
+category = "Office & Admin"
+name = "Printer paper (A4)"
+status = "wanted"
+notes = "We get through a lot. Recycled preferred."
+display_order = 2
+
+[[items]]
+category = "Office & Admin"
+name = "Whiteboard markers"
+status = "wanted"
+notes = "Dry-erase. We have the boards, not the pens."
+display_order = 3

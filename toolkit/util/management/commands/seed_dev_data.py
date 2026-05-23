@@ -52,6 +52,8 @@ from toolkit.util.management.commands.seed_data import (
     MONTHLY_EVENTS,
     SUNDAY_FILMS,
     THURSDAY_FILMS,
+    COLLECTIVES,
+    DONATION_ITEMS,
 )
 
 try:
@@ -225,6 +227,8 @@ class Command(BaseCommand):
             "event_links": 0,
             "cms_pages": 0,
             "index_links": 0,
+            "collectives": 0,
+            "donation_items": 0,
         }
 
         # Roles
@@ -592,6 +596,47 @@ class Command(BaseCommand):
         # Toolkit index links
         counts["index_links"] = self._seed_index_links()
 
+        # Collectives
+        from toolkit.labs.models import Collective, DonationItem
+
+        for c in COLLECTIVES:
+            collective, created = Collective.objects.get_or_create(
+                slug=c["slug"],
+                defaults={
+                    "name": c["name"],
+                    "colour": c.get("colour", "#343a40"),
+                    "display_order": c.get("display_order", 0),
+                    "volunteer_count": c.get("volunteer_count", ""),
+                    "about": c.get("about", ""),
+                    "roles": c.get("roles", ""),
+                    "organising": c.get("organising", ""),
+                    "proud_of": c.get("proud_of", ""),
+                    "get_involved": c.get("get_involved", ""),
+                    "contact": c.get("contact", ""),
+                    "invite_only": c.get("invite_only", False),
+                    "listed_publicly": c.get("listed_publicly", False),
+                    "public_copy": c.get("public_copy", ""),
+                },
+            )
+            if created:
+                counts["collectives"] += 1
+
+        # Donation items
+        for item in DONATION_ITEMS:
+            _, created = DonationItem.objects.get_or_create(
+                name=item["name"],
+                defaults={
+                    "category": item.get("category", ""),
+                    "status": item.get("status", DonationItem.STATUS_WANTED),
+                    "notes": item.get("notes", ""),
+                    "internal_notes": item.get("internal_notes", ""),
+                    "contact": item.get("contact", ""),
+                    "display_order": item.get("display_order", 0),
+                },
+            )
+            if created:
+                counts["donation_items"] += 1
+
         # Sample bulletin (9.95)
         from toolkit.labs.models import Bulletin
 
@@ -627,6 +672,8 @@ class Command(BaseCommand):
                 f"  Event links:     {counts['event_links']} new\n"
                 f"  CMS pages:       {counts['cms_pages']} new\n"
                 f"  Index links:     {counts['index_links']} new\n"
+                f"  Collectives:     {counts['collectives']} new\n"
+                f"  Donation items:  {counts['donation_items']} new\n"
             )
         )
 
