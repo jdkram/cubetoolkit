@@ -15,6 +15,10 @@
 setup_page(true);
 </script>
 {% endblock script-page-setup %}
+{% block script %}
+{{ block.super }}
+<script src="{{ STATIC_URL }}diary/js/programme.js"></script>
+{% endblock script %}
 
 {% block site-description %}
 {% if event_type %}
@@ -51,34 +55,42 @@ setup_page(true);
 
 {% block body %}
 {{ block.super }}
-{% if is_volunteer %}
-<div class="volunteer-notice">You&#8217;re logged in as a volunteer &#8212; private events are shown. <form method="post" action="{% url 'logout' %}" style="display:inline;margin:0">{% csrf_token %}<button type="submit" class="volunteer-signout-btn">Sign out</button></form></div>
-{% endif %}
+<div class="programme-header-row">
+    {% if is_volunteer %}
+    <div class="volunteer-notice">You&#8217;re logged in as a volunteer &#8212; private events are shown. <form method="post" action="{% url 'logout' %}" style="display:inline;margin:0">{% csrf_token %}<button type="submit" class="volunteer-signout-btn">Sign out</button></form></div>
+    {% endif %}
+    <div class="programme-filter-bar">
+        <input type="search" id="programme-search" placeholder="Search events…" autocomplete="off" aria-label="Search events">
+        <button type="button" id="filter-reset" class="filter-reset-btn" hidden>Clear</button>
+    </div>
+</div>
 <div class="programme">
     <div class="showing-sizer"></div>
     <div class="gutter-sizer"></div>
 {% for event, showings in events.items %}
-    <div class="showing{% if is_volunteer and event.private or is_volunteer and showings.0.hide_in_programme %} showing-internal{% endif %}" id="event_{{ event.id }}">
+    <div class="showing{% if is_volunteer and event.private or is_volunteer and showings.0.hide_in_programme %} showing-internal{% endif %}" id="event_{{ event.id }}"
+         data-search-text="{{ event.pre_title }} {{ event.name }} {{ event.post_title }} {{ event.copy_summary|striptags|truncatewords:50 }}{% for tag in event.tags.all %} {{ tag.name }}{% endfor %}"
+         data-tags="{% for tag in event.tags.all %}{% if not forloop.first %} {% endif %}{{ tag.slug }}{% endfor %}">
 
         <div class="event_image">
             {% with media_item=event.media.all.0 event_slug=event.name|slugify %}
             {% if is_volunteer and event.private or is_volunteer and showings.0.hide_in_programme %}
-              {% url "rota-edit" as event_detail_url %}
+              {% url "rota-edit-month" year=showings.0.start.year month=showings.0.start.month as event_detail_url %}
             {% else %}
               {% url "single-event-view-with-slug" event_id=event.id event_slug=event_slug as event_detail_url %}
             {% endif %}
-            {% if media_item %}<a href="{{ event_detail_url }}">
+            {% if media_item %}<a href="{{ event_detail_url }}{% if is_volunteer and event.private or is_volunteer and showings.0.hide_in_programme %}#showing-{{ showings.0.pk }}{% endif %}">
                 <img src="{{ media_item.media_file|thumbnail_url:'indexview' }}" alt="{% if media_item.alt_text %}{{ media_item.alt_text }}{% else %}Picture for event {{ event.name }}{% endif %}"></a>
             {% endif %}
             {% if event.tags.all %}
                 <span class="tags">
                     {% for tag in event.tags.all %}
-                       <a href="{% url "type-view" tag.slug %}" class="tag_{{tag.name}}">{{tag.name}}</a>
+                       <a href="{% url "type-view" tag.slug %}" class="tag_{{tag.name}}" data-slug="{{ tag.slug }}">{{tag.name}}</a>
                     {% endfor %}
                 </span>
             {% endif %}
         </div><!-- div event_image -->
-        <a href="{{ event_detail_url }}">
+        <a href="{{ event_detail_url }}{% if is_volunteer and event.private or is_volunteer and showings.0.hide_in_programme %}#showing-{{ showings.0.pk }}{% endif %}">
             <p><span class="pre_title">
                 {{ event.pre_title }}
             </span></p>
@@ -92,14 +104,17 @@ setup_page(true);
                 {% for showing in showings %}
                     {% if showing.sold_out %}<span class="sold_out">{% endif %}
                     {% if showing.cancelled %}<span class="cancelled">{% endif %}
+                    {% if showing == showings.next_showing %}<strong>{% endif %}
                     {{ showing.start|date:"D j F " }}//{{ showing.start|date:" H:i" }}
+                    {% if showing == showings.next_showing %}</strong>{% endif %}
                     {% if showing.cancelled %}</span> (cancelled){% endif %}
                     {% if showing.sold_out %}</span> (SOLD OUT){% endif %}
                     {% if showing.discounted %}<abbr class="discounted" title="* cheap night">*</abbr>{% endif %}<br>
                     {% endfor %}
+                {% if showings.overflow_count %}<span class="showing-overflow-hint">+{{ showings.overflow_count }} more date{{ showings.overflow_count|pluralize }}</span>{% endif %}
             </p>
             {% if event.film_information %}<p class="film-info">{{ event.film_information }}</p>{% endif %}
-            <p class="copy">{{ event.copy_summary|truncatewords:16 }} [<a class="more" href="{{ event_detail_url }}" aria-label="More about {{ event.name }}">more</a>]</p>
+            <p class="copy">{{ event.copy_summary|truncatewords:16 }} [<a class="more" href="{{ event_detail_url }}{% if is_volunteer and event.private or is_volunteer and showings.0.hide_in_programme %}#showing-{{ showings.0.pk }}{% endif %}" aria-label="More about {{ event.name }}">more</a>]</p>
             {% if event.trailer_url %}<p class="trailer-link"><a href="{{ event.trailer_url }}" rel="noopener noreferrer" target="_blank"><i class="fa-solid fa-circle-play" aria-hidden="true"></i> Trailer</a></p>{% endif %}
         </div>{% endwith %}
     </div>{% endfor %}<!-- end .showing -->
@@ -115,7 +130,7 @@ setup_page(true);
     {% endifchanged %}
     <span class="time">{{showing.start|date:"H:i"}}</span> ....
     {% if is_volunteer and showing.hide_in_programme or is_volunteer and showing.event.private %}
-        <a href="{% url "rota-edit" %}" class="event-internal-link">{{ showing.event.name|capfirst }}</a></p>
+        <a href="{% url "rota-edit-month" year=showing.start.year month=showing.start.month %}#showing-{{ showing.pk }}" class="event-internal-link">{{ showing.event.name|capfirst }}</a></p>
     {% elif not showing.hide_in_programme and not showing.event.private %}
         <a href="{% url "single-event-view" event_id=showing.event_id %}">{{ showing.event.pre_title|title }} {{ showing.event.name|capfirst }} {{ showing.event.post_title|title }}{% if showing.cancelled %} (CANCELLED){% endif %}{% if showing.sold_out %} (SOLD OUT){% endif %}{% if showing.discounted %} *{% endif %}</a></p>
     {% endif %}
