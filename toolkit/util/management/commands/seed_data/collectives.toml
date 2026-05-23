@@ -1,0 +1,183 @@
+# Star and Shadow collectives — seed data.
+# Slug must match the values used in volunteers.toml.
+# get_involved text is shown on the public /labs/collectives/public/ page.
+# No mailing list addresses here — external people can't email our lists anyway.
+
+[[collectives]]
+slug = "film-programming"
+name = "Film Programming"
+colour = "#c0392b"
+display_order = 1
+volunteer_count = "6–10 programmers"
+about = "We choose what films and events go on at the Star and Shadow. Programming meetings happen monthly and anyone can bring ideas. We curate a mix of new releases, archive, and local productions."
+roles = "Attending programming meetings, researching films, contacting distributors, writing programme copy, reporting box office take."
+organising = "Monthly programming meetings (usually the first Tuesday), Zoom call."
+proud_of = "The breadth of what we screen: from world cinema to self-distributed shorts from people round the corner."
+get_involved = "Come to a screening a little early and chat to whoever's running it — we're usually around before while people trickle in. Programming meetings are open to all volunteers."
+contact = ""
+listed_publicly = true
+public_copy = "We decide what goes on screen. If you love film and want a say in what the Star and Shadow shows, this is where it happens. All tastes welcome — from silent era to last year's festival circuit."
+
+[[collectives]]
+slug = "film-projection-tech"
+name = "Film Projection & Tech"
+colour = "#2c3e50"
+display_order = 2
+volunteer_count = "5–8 active projectionists"
+about = "We keep the projection booth running — 35mm, DCP, Blu-ray, and the odd mp4."
+roles = "Running projection on screening nights, maintaining the projector and DCP server, making sure films are working well ahead of screenings, training new projectionists."
+organising = "Informal. We coordinate via a group chat and there's always someone on the booking."
+proud_of = "Being one of the few grassroots venues in the north east still regularly screening 35mm."
+get_involved = "No experience needed — we train from scratch. After completing a projection induction, you'll need to shadow a few shifts before flying solo."
+contact = ""
+listed_publicly = true
+public_copy = "Projectionists, and people who like pressing buttons. We run the tech on every screening night — DCP, 35mm, and the rest. Trainee projectionists always welcome."
+
+[[collectives]]
+slug = "cafe-collective"
+name = "Café Collective"
+colour = "#e67e22"
+display_order = 3
+volunteer_count = "20–30 café volunteers"
+about = "We run the Star and Shadow café — serving drinks and food before screenings and at events. The café is a core part of keeping the building welcoming, and a part of the community."
+roles = "Front-of-house shifts, cooking, washing up, ordering supplies, keeping the kitchen clean and compliant."
+organising = "Rota via the toolkit. Occasional meetings when big decisions come up. Primarily communicate via the mailing list."
+proud_of = "The vibe: it genuinely feels like a neighbourhood café run by people who care."
+get_involved = "Once you've done your café induction, sign up for a shift on the rota. First shift is always a shadow so someone's there to show you round."
+contact = ""
+listed_publicly = true
+public_copy = "The café keep the tea and vegan baked goods flowing. We make drinks, serve food, and generally make the building feel like somewhere people want to be. Flexible shifts, good company."
+
+[[collectives]]
+slug = "bar-collective"
+name = "Bar Collective"
+colour = "#8e44ad"
+display_order = 4
+volunteer_count = "30 active (120 on the list)"
+about = "We run the bar on event nights. Mostly evenings."
+roles = "Bar shifts on event nights — serving drinks, keeping the bar stocked, tidy, and legally compliant."
+organising = "Rota via the toolkit. Mailing list callouts if numbers are looking sparse."
+proud_of = "Making a lot of the money that keeps the space going, highlights including EXAMPLES."
+get_involved = "Come to an event, find someone behind the bar, and ask. Look out for bar induction after you've had your general volunteer induction."
+contact = ""
+listed_publicly = true
+public_copy = "We run the bar on screening and event nights. Good hours, good company, half price drinks after your shift."
+
+[[collectives]]
+slug = "community-kitchen"
+name = "Community Kitchen"
+colour = "#27ae60"
+display_order = 5
+volunteer_count = "~20 kitchen volunteers"
+about = "We run pop-up community meals at the Star and Shadow, second Weds of every month. Seasonal deliciousness and a chance for folks to break bread together."
+roles = "Cooking, prep, sourcing food, washing up, front of house at meal events."
+organising = "Monthly meetings, WhatsApp group for communication."
+proud_of = "Feeding 180 people on a tight budget."
+get_involved = "Come to a community meal as a guest first — you'll get a feel for the scale and the vibe. Then come back and help wash up. That's usually how it starts."
+contact = ""
+listed_publicly = true
+public_copy = "Monthly community meals on the second Wednesday — pay-what-you-can, big pots, seasonal. We cook for around 180 people at a time. If you like cooking (or washing up) at scale, come find us."
+
+[[collectives]]
+slug = "caretaking-operations"
+name = "Caretaking & Operations"
+colour = "#7f8c8d"
+display_order = 6
+volunteer_count = "30 active caretakers"
+about = "We keep the building in working order — cleaning, maintenance, moving stuff around, making sure things don't fall apart between events."
+roles = "Regular cleaning rotas, minor repairs, coordinating bigger maintenance jobs, keyholder cover."
+organising = "Rota for cleaning; ad hoc for maintenance. Caretakers' chat on Signal."
+proud_of = "Keeping a volunteer-rebuilt space functional on a shoestring — this was a derelict warehouse until we made it what it is."
+get_involved = "This is one of the most useful things you can do. Talk to anyone involved in running events — they'll point you to whoever's coordinating caretaking that week."
+contact = ""
+listed_publicly = true
+public_copy = "We keep the building running. Cleaning, fixing, shifting, maintaining. Practical work, flexible timing, and you'll know every corner of the building within a month."
+
+[[collectives]]
+slug = "safer-spaces"
+name = "Safer Spaces"
+colour = "#e74c3c"
+display_order = 7
+volunteer_count = "4–6 members"
+about = "We maintain and develop the Star and Shadow's safer spaces policy, handle concerns, and make sure the building is genuinely welcoming to everyone."
+roles = "Responding to concerns, reviewing and updating the safer spaces policy, training other volunteers, presence at events when needed."
+organising = "Meetings every 6–8 weeks, Signal group."
+proud_of = "Handling difficult situations with care and without drama."
+get_involved = "Membership is by introduction rather than open sign-up. If you're interested, talk to someone already in the collective — usually at a monthly meeting or after an event."
+invite_only = true
+listed_publicly = true
+public_copy = "We maintain the Star and Shadow's safer spaces policy and handle concerns when they arise. Membership is by introduction rather than open sign-up. If you're interested, talk to someone already in the collective."
+
+[[collectives]]
+slug = "facilitation"
+name = "Facilitation & Decision-Making"
+colour = "#3498db"
+display_order = 8
+volunteer_count = "4–6 facilitators"
+about = "We facilitate the Star and Shadow's collective decision-making processes — monthly meetings, working groups, and any time the collective needs to make a big decision together."
+roles = "Facilitating meetings, keeping notes, helping working groups reach decisions, training others in facilitation techniques."
+organising = "Ad hoc, usually by whoever's facilitating the next meeting."
+proud_of = "Making consensus actually work."
+get_involved = "Come to a monthly collective meeting and watch how it runs. If you want to learn to facilitate, introduce yourself afterwards — we usually have people shadowing experienced facilitators."
+listed_publicly = true
+public_copy = "We facilitate the Star and Shadow's collective decision-making — monthly meetings, working groups, big decisions. If you're interested in how non-hierarchical organisations actually function in practice, this is the group."
+
+[[collectives]]
+slug = "finance"
+name = "Finance Collective"
+colour = "#f39c12"
+display_order = 9
+volunteer_count = "3–5 members"
+about = "We manage the Star and Shadow's finances — bookkeeping, grant applications, financial reporting, and making sure we stay solvent."
+roles = "Bookkeeping, grant writing, financial reporting, processing invoices, helping programmers understand the financial implications of their events."
+organising = "Monthly meetings, shared spreadsheets, Signal group."
+proud_of = "Keeping a grassroots venue financially independent for over a decade."
+get_involved = "Finance experience is useful but not essential — we can teach the specifics. Bring it up at a monthly meeting or with whoever's chairing it."
+invite_only = true
+listed_publicly = true
+public_copy = "We keep the Star and Shadow financially solvent — bookkeeping, grant applications, financial reporting. Finance experience is useful but not essential. Membership is by introduction."
+
+[[collectives]]
+slug = "keyholder"
+name = "Keyholders"
+colour = "#34495e"
+display_order = 10
+volunteer_count = "12–18 active keyholders"
+about = "Keyholders can open and close the building independently. This is a responsibility role — keyholders are the people who make everything else possible."
+roles = "Opening and closing the building for events, covering unplanned access needs, being contactable when you're listed on the keyholder rota."
+organising = "Keyholder rota in the toolkit. Signal group for emergencies."
+proud_of = "The building being available when it needs to be."
+get_involved = "Keyholders are nominated by existing volunteers after you've been around a while. Keep showing up, get comfortable with the building, and someone will raise it with you."
+invite_only = true
+listed_publicly = true
+public_copy = "Keyholders open and close the building for events and cover unplanned access needs. It's a responsibility role you're nominated for after you've been around a while and know the building well."
+
+[[collectives]]
+slug = "canny-little-library"
+name = "Canny Little Library"
+colour = "#16a085"
+display_order = 11
+volunteer_count = "3–5 volunteers"
+about = "We run the Star and Shadow's free library — organising donations, keeping shelves tidy, running occasional book swaps and reading groups."
+roles = "Sorting donations, cataloguing, running the space during events, occasional book swap events."
+organising = "Informal. Group chat when things need doing."
+proud_of = "A genuinely free library that just works."
+get_involved = "Drop in during an event and browse — you'll usually find someone nearby who can tell you more. One of the more relaxed ways to get started."
+contact = ""
+listed_publicly = true
+public_copy = "We run the Star and Shadow's free lending library. Sorting books, keeping shelves organised, occasional reading groups and swaps. One of the more relaxed ways to get involved."
+
+[[collectives]]
+slug = "art-club"
+name = "Art Club"
+colour = "#9b59b6"
+display_order = 12
+volunteer_count = "5–10 members"
+about = "We look after the gallery and exhibition spaces, curate shows, and provide a home for visual artists in the building."
+roles = "Curating and hanging exhibitions, coordinating with artists, maintaining the gallery space."
+organising = "Meetings when a show is going up. Signal group."
+proud_of = "Giving local artists a wall without a commercial gatekeeping function."
+get_involved = "Come to an opening night. Have a look around, talk to people. That's the usual entry point."
+contact = ""
+listed_publicly = true
+public_copy = "We curate exhibitions and look after the gallery spaces. If you work with visual art — or just want to help hang things on walls without a commercial brief — come to an opening night and introduce yourself."
