@@ -782,6 +782,7 @@ class SiteConfigurationForm(forms.ModelForm):
             "show_archive_images",
             "images_start_date",
             "max_count_per_role",
+            "max_showing_dates_shown",
             "programme_copy_summary_max_chars",
             "programme_event_terms_min_words",
             "programme_media_max_size_mb",
@@ -798,6 +799,7 @@ class SiteConfigurationForm(forms.ModelForm):
             "bulletin_default_expiry_days",
             "bulletin_guidance",
             "bulletin_post_permission",
+            "collectives_intro",
             "show_donations_in_public_nav",
             "banner_active",
             "banner_level",
@@ -813,6 +815,9 @@ class SiteConfigurationForm(forms.ModelForm):
             ),
             "banner_text": forms.Textarea(
                 attrs={"rows": 3, "class": "form-control"}
+            ),
+            "collectives_intro": forms.Textarea(
+                attrs={"rows": 4, "class": "form-control"}
             ),
         }
 
