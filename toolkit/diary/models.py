@@ -1172,6 +1172,14 @@ class SiteConfiguration(models.Model):
         default=8,
         help_text="Maximum number of slots per role on a single showing's rota.",
     )
+    max_showing_dates_shown = models.PositiveSmallIntegerField(
+        default=5,
+        help_text=(
+            "Maximum number of future showing dates to display on the public event "
+            "detail page before collapsing extras into a 'Show more' section. "
+            "Set to 0 to always show all dates."
+        ),
+    )
     programme_copy_summary_max_chars = models.PositiveSmallIntegerField(
         default=450,
         help_text="Maximum length of an event's copy summary (the listing blurb).",
@@ -1250,6 +1258,16 @@ class SiteConfiguration(models.Model):
         default="https://weareunlimited.org.uk/resource/creating-your-own-access-rider/",
         max_length=500,
         help_text="Link shown in the Access Rider section of the volunteer profile — guidance on writing an access rider. Leave blank to hide the link.",
+    )
+
+    # --- Collectives public page ---
+    collectives_intro = models.TextField(
+        blank=True,
+        default="",
+        help_text=(
+            "Introductory copy shown at the top of the public /labs/collectives/ page. "
+            "Plain text. Leave blank to use the built-in default."
+        ),
     )
 
     # --- Donations page ---
