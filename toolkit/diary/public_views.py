@@ -22,6 +22,32 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
+class _EventShowings:
+    """Wraps the list of showings for one event on the programme index page.
+
+    Iterates and indexes like a plain list (so existing template loops work
+    unchanged), but also exposes .next_showing and .overflow_count so the
+    template can bold the next date and show a "N more" disclosure without
+    needing a custom template filter or a separate lookup dict.
+    """
+
+    __slots__ = ("_showings", "next_showing", "overflow_count")
+
+    def __init__(self, showings, next_showing, overflow_count):
+        self._showings = showings
+        self.next_showing = next_showing
+        self.overflow_count = overflow_count
+
+    def __iter__(self):
+        return iter(self._showings)
+
+    def __getitem__(self, index):
+        return self._showings[index]
+
+    def __len__(self):
+        return len(self._showings)
+
+
 def _show_archive_images(request, showings):
     """
     Return True if the event image should be shown on the public event page.
@@ -83,10 +109,36 @@ def _view_diary(request, startdate, enddate, tag=None, extra_title=None):
     if tag:
         showings_qs = showings_qs.filter(event__tags__slug=tag)
 
-    # Build a list of events for that list of showings:
-    events = OrderedDict()
+    # Build a list of events for that list of showings, filtering out past
+    # dates and capping to max_showing_dates_shown per event.
+    now = timezone.now()
+    limit = get_site_config().max_showing_dates_shown
+
+    # Only filter past showings when the date range is current or future.
+    # For archive ranges (the whole range is already past), show all showings
+    # as-is so historical browsing still works.
+    is_current_or_future_range = enddate >= now
+
+    raw_events: dict = OrderedDict()
     for showing in showings_qs:
-        events.setdefault(showing.event, list()).append(showing)
+        raw_events.setdefault(showing.event, []).append(showing)
+
+    events = OrderedDict()
+    for event, all_showings in raw_events.items():
+        if is_current_or_future_range:
+            display = [s for s in all_showings if not s.in_past()]
+            if not display:
+                continue  # All showings in this range have passed — skip the card
+        else:
+            display = all_showings
+        next_showing = display[0] if display else None
+        if limit and len(display) > limit:
+            visible = display[:limit]
+            overflow_count = len(display) - limit
+        else:
+            visible = display
+            overflow_count = 0
+        events[event] = _EventShowings(visible, next_showing, overflow_count)
 
     context = {
         "cms_pages": cms_pages,
@@ -269,7 +321,7 @@ def view_event(request, event_id=None, legacy_id=None, event_slug=None):
         raise Http404("Event not found")
 
     media = event.get_main_mediaitem()
-    showings = event.showings.public()
+    showings = list(event.showings.public().order_by("start"))
     now = timezone.now()
 
     if event.private or len(showings) == 0:
@@ -280,13 +332,29 @@ def view_event(request, event_id=None, legacy_id=None, event_slug=None):
     has_film_tag = event.tags.filter(name="film").exists()
     show_films_banner = site_config.films_start_on_time and has_film_tag
 
+    # Split showings into future and past for display purposes.
+    # Past showings are hidden from the public page — visitors want upcoming dates.
+    future_showings = [s for s in showings if not s.in_past()]
+    next_showing = future_showings[0] if future_showings else None
+
+    limit = site_config.max_showing_dates_shown
+    if limit and len(future_showings) > limit:
+        visible_showings = future_showings[:limit]
+        overflow_showings = future_showings[limit:]
+    else:
+        visible_showings = future_showings
+        overflow_showings = []
+
     context = {
         "event": event,
         "showings": showings,
+        "visible_showings": visible_showings,
+        "overflow_showings": overflow_showings,
+        "next_showing": next_showing,
         "current_year": timezone.now().year,
-        "all_showings_cancelled": all([s.cancelled for s in showings]),
-        "all_showings_sold_out": all([s.sold_out for s in showings]),
-        "all_showings_finished": all([s.start < now for s in showings]),
+        "all_showings_cancelled": all(s.cancelled for s in showings),
+        "all_showings_sold_out": all(s.sold_out for s in showings),
+        "all_showings_finished": all(s.start < now for s in showings),
         "media": {event.id: media},
         "media_url": settings.MEDIA_URL,
         "show_archive_images": _show_archive_images(request, showings),

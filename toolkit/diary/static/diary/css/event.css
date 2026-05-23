@@ -442,3 +442,32 @@ p.action {
     border-top: 1px solid rgba(0, 0, 0, 0.15);
     font-size: 0.9em;
 }
+
+/* Next showing: bold to draw the eye */
+.showing-date--next {
+    font-weight: 700;
+}
+
+/* Past-event notice */
+.showing-date--past-event {
+    font-style: italic;
+    opacity: 0.7;
+}
+
+/* "N more dates" disclosure */
+.showings-overflow summary {
+    cursor: pointer;
+    opacity: 0.75;
+    font-style: italic;
+    margin-top: 0.25em;
+    list-style: none;
+}
+.showings-overflow summary::-webkit-details-marker {
+    display: none;
+}
+.showings-overflow summary::before {
+    content: "+ ";
+}
+.showings-overflow[open] summary::before {
+    content: "– ";
+}
