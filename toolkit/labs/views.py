@@ -129,6 +129,21 @@ _ROOM_SECTIONS = [
 ]
 
 
+def collectives_public(request):
+    from toolkit.diary.models import get_site_config
+    items = (
+        Collective.objects
+        .filter(active=True, listed_publicly=True)
+        .exclude(public_copy="")
+        .order_by("display_order", "name")
+    )
+    config = get_site_config()
+    return render(request, "collectives_public.html", {
+        "collectives": items,
+        "collectives_intro": config.collectives_intro,
+    })
+
+
 @login_required
 def collectives(request):
     items = Collective.objects.filter(active=True).select_related("updated_by").prefetch_related("links")

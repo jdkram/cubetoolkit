@@ -3,6 +3,7 @@ from django import forms
 from django.forms import inlineformset_factory
 from django.utils.html import mark_safe
 from crispy_forms.helper import FormHelper
+from crispy_forms.layout import Layout, HTML
 from toolkit.diary.form_widgets import HtmlTextarea
 from .models import Bulletin, Collective, CollectiveLink, DonationItem, Job, COLLECTIVE_PALETTE
 
@@ -90,7 +91,7 @@ class ColourPickerWidget(forms.TextInput):
 class CollectiveForm(forms.ModelForm):
     class Meta:
         model = Collective
-        fields = ("colour", "volunteer_count", "about", "roles", "organising", "proud_of", "get_involved", "contact")
+        fields = ("colour", "volunteer_count", "about", "roles", "organising", "proud_of", "get_involved", "contact", "listed_publicly", "public_copy")
         widgets = {
             "colour": ColourPickerWidget(),
             "about": forms.Textarea(attrs={"rows": 5}),
@@ -98,12 +99,25 @@ class CollectiveForm(forms.ModelForm):
             "organising": forms.Textarea(attrs={"rows": 4}),
             "proud_of": forms.Textarea(attrs={"rows": 4}),
             "get_involved": forms.Textarea(attrs={"rows": 5}),
+            "public_copy": forms.Textarea(attrs={"rows": 4}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_tag = False
+        self.helper.layout = Layout(
+            "colour", "volunteer_count", "about", "roles", "organising", "proud_of", "get_involved", "contact",
+            HTML(
+                '<hr style="margin: 1.5rem 0 1rem;">'
+                '<h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem;">Public directory</h2>'
+                '<p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1rem;">'
+                'Controls whether this collective appears on the public <code>/labs/collectives/public/</code> page. '
+                'Both the checkbox and a non-empty public description are required to be listed.</p>'
+            ),
+            "listed_publicly",
+            "public_copy",
+        )
 
 
 CollectiveLinkFormSet = inlineformset_factory(
