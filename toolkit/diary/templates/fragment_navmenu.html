@@ -29,16 +29,22 @@
     <li><a href="{% pageurl top_level_child %}">{{ top_level_child.seo_title|default:top_level_child.title }}</a>
       {% endif %}
     {% endfor %}
+    <li><a href="{% url "labs-collectives-public" %}">Collectives</a></li>
     {% if site_config.show_donations_in_public_nav %}
     <li><a href="{% url "labs-donations" %}">Donations wishlist</a></li>
     {% endif %}
     {% if user.is_authenticated %}
     <li class="nav-vol-divider" aria-hidden="true"></li>
     <li><a href="{% url "toolkit-index" %}">Toolkit</a></li>
+    {% if perms.toolkit.write %}
+    <li><a href="{% url "default-edit" %}">Diary</a></li>
+    <li><a href="{% url "diary-edit-calendar" %}">Calendar</a></li>
+    {% endif %}
     <li><a href="{% url "rota-edit" %}">Rota</a></li>
-    {% if perms.toolkit.read %}<li><a href="{% url "default-edit" %}">Diary</a></li>{% endif %}
     <li><a href="#" aria-haspopup="true">Labs <i class="fa fa-caret-down" aria-hidden="true"></i></a>
         <ul class="sub-menu">
+            <li><a href="{% url "labs-collectives" %}"><span>Collectives</span></a></li>
+            <li><a href="{% url "volunteer-directory" %}"><span>Volunteer directory</span></a></li>
             <li><a href="{% url "labs-bulletins" %}"><span>Bulletins</span></a></li>
             <li><a href="{% url "labs-floorplan" %}"><span>Building Map</span></a></li>
             <li><a href="{% url "labs-jobs" %}"><span>Jobs board</span></a></li>
@@ -46,6 +52,41 @@
             <li><a href="{% url "labs-donations-manage" %}"><span>Manage donations</span></a></li>
         </ul>
     </li>
+    {% if perms.toolkit.write %}
+    <li><a href="#" aria-haspopup="true">Meta <i class="fa fa-caret-down" aria-hidden="true"></i></a>
+        <ul class="sub-menu">
+            <li><a href="{% url "edit_event_tags" %}"><span>Tags</span></a></li>
+            <li><a href="{% url "edit_event_templates" %}"><span>Templates</span></a></li>
+            <li><a href="{% url "edit_rooms" %}"><span>Rooms</span></a></li>
+            {% if user.is_superuser %}
+            <li><a href="{% url "edit_roles" %}"><span>Roles</span></a></li>
+            {% endif %}
+        </ul>
+    </li>
+    {% endif %}
+    {% if user.is_superuser %}
+    <li><a href="#" aria-haspopup="true">Members <i class="fa fa-caret-down" aria-hidden="true"></i></a>
+        <ul class="sub-menu">
+            <li><a href="{% url "add-member" %}"><span>Add Member</span></a></li>
+            <li><a href="{% url "search-members" %}"><span>Search Members</span></a></li>
+            <li><a href="{% url "member-statistics" %}"><span>Statistics</span></a></li>
+            <li><a href="{% url "member-duplicates" %}"><span>Duplicates</span></a></li>
+            {% if MEMBERSHIP_EXPIRY_ENABLED %}<li><a href="{% url "member-expired" %}"><span>Expired</span></a></li>{% endif %}
+        </ul>
+    </li>
+    <li><a href="#" aria-haspopup="true">Volunteers <i class="fa fa-caret-down" aria-hidden="true"></i></a>
+        <ul class="sub-menu">
+            <li><a href="{% url "view-volunteer-summary" %}"><span>Summary</span></a></li>
+            <li><a href="{% url "view-volunteer-list" %}"><span>Profiles</span></a></li>
+            <li><a href="{% url "add-volunteer" %}"><span>Add volunteer</span></a></li>
+            <li><a href="{% url "retire-select-volunteer" %}"><span>Retire volunteer</span></a></li>
+            <li><a href="{% url "view-volunteer-export" %}"><span>Export CSV</span></a></li>
+            <li><a href="{% url "view-volunteer-role-report" %}"><span>Role report</span></a></li>
+            <li><a href="{% url "view-volunteer-training-report" %}"><span>Training report</span></a></li>
+        </ul>
+    </li>
+    <li><a href="{% url "edit-site-configuration" %}">Site settings</a></li>
+    {% endif %}
     <li>
         <form method="post" action="{% url 'logout' %}">
             {% csrf_token %}
