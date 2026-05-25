@@ -464,7 +464,7 @@ def job_unclaim(request, job_id):
 def job_resolve(request, job_id):
     job = get_object_or_404(Job, pk=job_id)
     job.resolved = True
-    job.resolved_at = datetime.datetime.now()
+    job.resolved_at = timezone.now()
     job.save()
     messages.success(request, f"'{job.title}' marked as resolved.")
     return redirect("labs-jobs")
