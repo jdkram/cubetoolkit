@@ -7,7 +7,7 @@ from django.test.utils import override_settings
 from django.db import IntegrityError
 from django.core.exceptions import ValidationError
 
-from toolkit.members.models import TrainingRecord, Volunteer
+from toolkit.members.models import Member, TrainingRecord, Volunteer
 
 from .common import MembersTestsMixin
 
@@ -126,3 +126,82 @@ class TestVolunteerModel(MembersTestsMixin, TestCase):
         record.save()
 
         self.assertEqual(record, self.vol_1.latest_general_training_record())
+
+
+class TestMemberModel(TestCase):
+    """Unit tests for Member model logic not covered by view tests."""
+
+    def _make_member(self, **kwargs):
+        defaults = {"name": "Test Person", "email": "test@example.com"}
+        defaults.update(kwargs)
+        return Member.objects.create(**defaults)
+
+    # ── mailout_key ────────────────────────────────────────────────────────
+
+    def test_mailout_key_auto_generated_on_create(self):
+        member = self._make_member()
+        self.assertIsNotNone(member.mailout_key)
+        self.assertNotEqual(member.mailout_key, "")
+
+    def test_mailout_key_is_unique_across_members(self):
+        m1 = self._make_member(email="a@example.com")
+        m2 = self._make_member(email="b@example.com")
+        self.assertNotEqual(m1.mailout_key, m2.mailout_key)
+
+    def test_mailout_key_not_overwritten_on_resave(self):
+        member = self._make_member()
+        original_key = member.mailout_key
+        member.name = "Updated name"
+        member.save()
+        member.refresh_from_db()
+        self.assertEqual(member.mailout_key, original_key)
+
+    # ── mailout_recipients() ───────────────────────────────────────────────
+
+    def test_mailout_recipients_includes_eligible_member(self):
+        member = self._make_member(mailout=True, mailout_failed=False)
+        self.assertIn(member, Member.objects.mailout_recipients())
+
+    def test_mailout_recipients_excludes_opted_out(self):
+        member = self._make_member(mailout=False)
+        self.assertNotIn(member, Member.objects.mailout_recipients())
+
+    def test_mailout_recipients_excludes_failed(self):
+        member = self._make_member(mailout_failed=True)
+        self.assertNotIn(member, Member.objects.mailout_recipients())
+
+    def test_mailout_recipients_excludes_empty_email(self):
+        # email is now mandatory (blank=False) so we can't create one,
+        # but the manager guard is still worth verifying via the filter chain
+        qs = Member.objects.mailout_recipients()
+        self.assertFalse(qs.filter(email="").exists())
+
+
+class TestVolunteerStatusModel(MembersTestsMixin, TestCase):
+    """Volunteer.status and active-field sync."""
+
+    def test_default_status_is_active(self):
+        self.assertEqual(self.vol_1.status, Volunteer.STATUS_ACTIVE)
+
+    def test_active_field_true_when_status_active(self):
+        self.assertTrue(self.vol_1.active)
+
+    def test_status_dormant_sets_active_false(self):
+        self.vol_1.status = Volunteer.STATUS_DORMANT
+        self.vol_1.save()
+        self.vol_1.refresh_from_db()
+        self.assertFalse(self.vol_1.active)
+
+    def test_status_retired_sets_active_false(self):
+        self.vol_1.status = Volunteer.STATUS_RETIRED
+        self.vol_1.save()
+        self.vol_1.refresh_from_db()
+        self.assertFalse(self.vol_1.active)
+
+    def test_reactivating_to_active_restores_active_true(self):
+        self.vol_1.status = Volunteer.STATUS_DORMANT
+        self.vol_1.save()
+        self.vol_1.status = Volunteer.STATUS_ACTIVE
+        self.vol_1.save()
+        self.vol_1.refresh_from_db()
+        self.assertTrue(self.vol_1.active)

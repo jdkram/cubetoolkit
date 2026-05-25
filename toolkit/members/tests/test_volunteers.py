@@ -262,7 +262,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
             },
             follow=True,
         )
-        self.assertRedirects(response, reverse("view-volunteer-summary"))
+        self.assertRedirects(response, reverse("view-volunteer-list"))
 
         self.assertContains(
             response,
@@ -309,7 +309,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
             follow=True,
         )
 
-        self.assertRedirects(response, reverse("view-volunteer-summary"))
+        self.assertRedirects(response, reverse("view-volunteer-list"))
 
         self.assertContains(
             response,
@@ -373,7 +373,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
             data={"mem-name": "Renam\u018fd Vol", "mem-email": "volon@cube.test", "vol-status": "active"},
             follow=True,
         )
-        self.assertRedirects(response, reverse("view-volunteer-summary"))
+        self.assertRedirects(response, reverse("view-volunteer-list"))
 
         self.assertContains(
             response,
@@ -441,7 +441,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
             follow=True,
         )
 
-        self.assertRedirects(response, reverse("view-volunteer-summary"))
+        self.assertRedirects(response, reverse("view-volunteer-list"))
 
         self.assertContains(
             response,
@@ -532,7 +532,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
                 "vol-status": "active",
             },
         )
-        self.assertRedirects(response, reverse("view-volunteer-summary"))
+        self.assertRedirects(response, reverse("view-volunteer-list"))
 
         vol = Volunteer.objects.get(id=1)
         self.assertEqual(vol.member.name, "Pictureless Person")
@@ -584,7 +584,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
                 },
             )
 
-        self.assertRedirects(response, reverse("view-volunteer-summary"))
+        self.assertRedirects(response, reverse("view-volunteer-list"))
 
         vol = Volunteer.objects.get(id=1)
         self.assertEqual(vol.member.name, "Pictureless Person")
@@ -631,7 +631,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
             },
         )
 
-        self.assertRedirects(response, reverse("view-volunteer-summary"))
+        self.assertRedirects(response, reverse("view-volunteer-list"))
 
         vol = Volunteer.objects.get(id=1)
         self.assertEqual(vol.member.name, "Pictureless Person")
