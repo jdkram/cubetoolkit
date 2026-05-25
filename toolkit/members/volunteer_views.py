@@ -4,6 +4,7 @@ from datetime import datetime
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import SetPasswordForm
 from django.contrib.auth.tokens import default_token_generator
+from django.core.signing import BadSignature, Signer
 from django.db import transaction
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, render
@@ -815,3 +816,30 @@ def view_volunteer_directory(request):
         "volunteer_directory.html",
         {"volunteers": volunteers, "query": query, "own_volunteer_pk": own_volunteer_pk},
     )
+
+
+@require_safe
+def volunteer_digest_unsubscribe(request):
+    """One-click unsubscribe from the weekly volunteer digest. No login required.
+
+    Token format: <pk>:<hmac> — the pk is in the query string as the first
+    segment so we can look up the volunteer before verifying the signature.
+    """
+    raw = request.GET.get("token", "")
+    try:
+        pk_str, token = raw.split(":", 1)
+        pk = int(pk_str)
+    except (ValueError, AttributeError):
+        return render(request, "volunteer_digest_unsubscribe.html", {"error": True})
+
+    signer = Signer(salt="volunteer-digest-unsubscribe")
+    try:
+        signer.unsign(f"{pk}:{token}")
+    except BadSignature:
+        return render(request, "volunteer_digest_unsubscribe.html", {"error": True})
+
+    volunteer = get_object_or_404(Volunteer, pk=pk)
+    volunteer.weekly_digest = False
+    volunteer.save(update_fields=["weekly_digest"])
+
+    return render(request, "volunteer_digest_unsubscribe.html", {"success": True})

@@ -495,6 +495,60 @@ The canonical version string is in the [`VERSION`](../VERSION) file at the repo 
 
 ---
 
+## Scheduled Tasks (production)
+
+The following management commands are intended to run on a schedule in production via systemd timers (or cron). They are not triggered by the web UI.
+
+### Weekly volunteer digest email
+
+Sends a personalised plain-text summary to each opted-in active volunteer: upcoming shifts, new programme items, and starred events.
+
+```bash
+python manage.py send_volunteer_digest
+```
+
+Example systemd timer (`/etc/systemd/system/volunteer-digest.timer`):
+
+```ini
+[Unit]
+Description=Weekly volunteer digest email
+
+[Timer]
+OnCalendar=Thu 09:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+Companion service (`/etc/systemd/system/volunteer-digest.service`):
+
+```ini
+[Unit]
+Description=Weekly volunteer digest email
+
+[Service]
+Type=oneshot
+ExecStart=/path/to/venv/bin/python manage.py send_volunteer_digest
+WorkingDirectory=/path/to/toolkit
+EnvironmentFile=/path/to/.env
+```
+
+Enable and start:
+
+```bash
+systemctl enable --now volunteer-digest.timer
+```
+
+### Other scheduled commands
+
+| Command | Purpose | Suggested schedule |
+|---|---|---|
+| `auto_dormancy` | Flags volunteers who haven't logged in recently | Monthly |
+| `email_vols_rota_vacancies` | Emails rota vacancy report | Weekly |
+
+---
+
 ## Key Concepts and Patterns
 
 **Custom QuerySet methods on models:** Rather than scattering filtering logic across views, models define named query methods. For example, `Showing.objects.public().start_in_future()` chains filters to get upcoming public showings. Look for `QuerySet` subclasses in `models.py` files.

@@ -17,6 +17,7 @@ from toolkit.members.volunteer_views import (
     send_volunteer_password_reset,
     clear_login_inactive,
     view_volunteer_directory,
+    volunteer_digest_unsubscribe,
 )
 
 from toolkit.members.member_views import (
@@ -123,6 +124,7 @@ volunteer_urls = [
         kwargs={"set_active": False},
     ),
     re_path(r"^directory/$", view_volunteer_directory, name="volunteer-directory"),
+    re_path(r"^digest/unsubscribe/$", volunteer_digest_unsubscribe, name="volunteer-digest-unsubscribe"),
 ]
 
 # Members:

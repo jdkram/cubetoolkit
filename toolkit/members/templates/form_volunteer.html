@@ -489,6 +489,16 @@ $(document).ready(function() {
       </script>
     </div>
 
+    <!-- Weekly digest email -->
+    <div class="vol-section" id="vol-digest">
+      <h4>Weekly digest email</h4>
+      <p style="margin-bottom:0.6rem;">A weekly summary sent every Thursday morning: your upcoming shifts, what's new on the programme, and your starred events.</p>
+      <label style="font-weight:500; cursor:pointer; display:block;">
+        {{ vol_form.weekly_digest }} Send me the weekly digest
+      </label>
+      {{ vol_form.weekly_digest.errors }}
+    </div>
+
     <!-- Emergency contact (superuser only) -->
     {% if request.user.is_superuser %}
     <div class="vol-section" id="vol-emergency">

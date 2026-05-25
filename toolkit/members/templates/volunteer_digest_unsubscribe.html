@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Weekly digest — unsubscribe{% endblock %}
+
+{% block body %}
+{{ block.super }}
+<div class="container mt-4">
+  {% if success %}
+    <h2>You've been unsubscribed</h2>
+    <p>You won't receive any more weekly digest emails. You can re-enable them at any time from your volunteer profile.</p>
+  {% elif error %}
+    <h2>Invalid unsubscribe link</h2>
+    <p>This link is invalid or has expired. To unsubscribe, log in and untick "Send me the weekly digest" on your volunteer profile.</p>
+  {% endif %}
+</div>
+{% endblock %}

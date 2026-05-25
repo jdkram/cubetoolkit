@@ -286,6 +286,16 @@ class Volunteer(models.Model):
     dir_share_access_rider = models.BooleanField(default=False)
     dir_share_collectives = models.BooleanField(default=False)
 
+    # Weekly digest email opt-in
+    weekly_digest = models.BooleanField(
+        default=False,
+        help_text="Send a weekly email summary of upcoming shifts, new programme items, and starred events.",
+    )
+    last_digest_sent_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Set automatically after each digest send. Used to compute the 'new on programme' lookback window.",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

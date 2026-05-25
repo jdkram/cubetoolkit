@@ -206,6 +206,7 @@ class VolunteerForm(forms.ModelForm):
             "dir_share_pronouns", "dir_share_email",
             "dir_share_phone", "dir_share_access_rider", "dir_share_collectives",
             "collectives",
+            "weekly_digest",
         )
         widgets = {
             "notes": forms.Textarea(attrs={"wrap": "soft", "rows": 4}),

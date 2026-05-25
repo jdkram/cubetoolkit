@@ -1,0 +1,23 @@
+Hi {{ volunteer_name }},
+
+Here's your weekly summary for the week of {{ week_of }}.
+{% if shifts %}
+
+YOUR UPCOMING SHIFTS (next 7 days)
+-----------------------------------
+{% for line in shifts %}{{ line }}
+{% endfor %}{% endif %}{% if new_programme %}
+
+NEW ON THE PROGRAMME
+---------------------
+{% for line in new_programme %}{{ line }}
+{% endfor %}{% endif %}{% if starred %}
+
+YOUR STARRED EVENTS (next 30 days)
+------------------------------------
+{% for line in starred %}{{ line }}
+{% endfor %}{% endif %}
+
+---
+You're receiving this because you opted in at {{ toolkit_url }}.
+To stop receiving these emails, visit: {{ unsubscribe_url }}
