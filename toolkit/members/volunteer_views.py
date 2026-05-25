@@ -347,7 +347,7 @@ def edit_volunteer(request, volunteer_id, create_new=False):
             vol_form.save()
 
             if user_form is not None:
-                user_form.save()
+                user_form.save(granted_by=request.user)
 
             logger.info(
                 f"Saving changes to volunteer '{volunteer.member.name}' (id: {str(volunteer.pk)})"

@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.urls import reverse
 
 from toolkit.index.models import IndexLink, IndexCategory
-from toolkit.index.views import ToolkitIndexView, health
+from toolkit.index.views import ToolkitIndexView, health, toolkit_access, mark_panopticon_reviewed
 
 write_decorator = permission_required("toolkit.write")
 
@@ -16,6 +16,12 @@ root_urlpatterns = [
         r"^toolkit/$",
         login_required(ToolkitIndexView.as_view()),
         name="toolkit-index",
+    ),
+    re_path(r"^toolkit/access/$", toolkit_access, name="toolkit-access"),
+    re_path(
+        r"^toolkit/access/(?P<grant_id>\d+)/review/$",
+        mark_panopticon_reviewed,
+        name="toolkit-access-review",
     ),
 ]
 

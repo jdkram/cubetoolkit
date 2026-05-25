@@ -71,6 +71,12 @@ class UserForm(forms.ModelForm):
         label="Programmer status",
         help_text="Grants permission to create and edit events and showings.",
     )
+    panopticon_reason = forms.CharField(
+        required=False,
+        label="Reason for Panopticon access",
+        help_text="Required when granting Panopticon access. Shown on the access transparency page.",
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
 
     class Meta:
         model = User
@@ -80,22 +86,60 @@ class UserForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["is_superuser"].label = "Panopticon access"
         if self.instance and self.instance.pk:
-            self.fields["programmer"].initial = self.instance.groups.filter(
-                name="Programmers"
-            ).exists()
+            self._was_superuser = self.instance.is_superuser
+            self._was_programmer = self.instance.groups.filter(name="Programmers").exists()
+            self.fields["programmer"].initial = self._was_programmer
+        else:
+            self._was_superuser = False
+            self._was_programmer = False
 
-    def save(self, commit=True):
+    def clean(self):
+        cleaned = super().clean()
+        was_superuser = self.instance and self.instance.pk and self.instance.is_superuser
+        will_be_superuser = cleaned.get("is_superuser", False)
+        if will_be_superuser and not was_superuser:
+            if not cleaned.get("panopticon_reason", "").strip():
+                self.add_error(
+                    "panopticon_reason",
+                    "A reason is required when granting Panopticon access.",
+                )
+        return cleaned
+
+    def save(self, granted_by=None, commit=True):
+        from django.contrib.auth.models import Group
+        from toolkit.members.models import PanopticonGrant, ProgrammerGrant
+
+        was_superuser = self._was_superuser
+        was_programmer = self._was_programmer
+
         user = super().save(commit=False)
-        # Django admin requires is_staff; mirror is_superuser
         user.is_staff = user.is_superuser
         user.save()
-        from django.contrib.auth.models import Group
 
         programmers = Group.objects.get_or_create(name="Programmers")[0]
-        if self.cleaned_data.get("programmer"):
+        will_be_programmer = bool(self.cleaned_data.get("programmer"))
+        if will_be_programmer:
             user.groups.add(programmers)
+            if not was_programmer:
+                ProgrammerGrant.objects.get_or_create(
+                    user=user,
+                    defaults={"granted_by": granted_by},
+                )
         else:
             user.groups.remove(programmers)
+            if was_programmer:
+                ProgrammerGrant.objects.filter(user=user).delete()
+
+        will_be_superuser = user.is_superuser
+        if will_be_superuser and not was_superuser:
+            reason = self.cleaned_data.get("panopticon_reason", "").strip()
+            PanopticonGrant.objects.update_or_create(
+                user=user,
+                defaults={"reason": reason, "granted_by": granted_by},
+            )
+        elif not will_be_superuser and was_superuser:
+            PanopticonGrant.objects.filter(user=user).delete()
+
         return user
 
 

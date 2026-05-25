@@ -1,13 +1,22 @@
+import datetime
 from datetime import timedelta
 
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User, Group
+from django.contrib import messages
 from django.db import connection, OperationalError
 from django.db.models import Count, ExpressionWrapper, F, IntegerField, Min, Q
-from django.http import HttpResponse, HttpResponseServerError
+from django.http import HttpResponse, HttpResponseServerError, HttpResponseRedirect
+from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 from django.views.generic import ListView
 
 from toolkit.diary.models import RotaEntry, Showing, VolunteerEventMark, get_site_config
 from toolkit.index.models import IndexLink
+from toolkit.members.models import PanopticonGrant
+from toolkit.toolkit_auth.decorators import panopticon_required
 
 
 class ToolkitIndexView(ListView):
@@ -158,3 +167,45 @@ def health(request):
     except OperationalError:
         return HttpResponseServerError("db unavailable")
     return HttpResponse("ok")
+
+
+@login_required
+def toolkit_access(request):
+    """Access transparency page: who holds elevated permissions and why.
+
+    All logged-in volunteers can see this page.  It explains the three access
+    tiers in plain language and lists current Panopticon and Programmer users.
+    """
+    panopticon_users = (
+        User.objects.filter(is_superuser=True, is_active=True)
+        .select_related("panopticon_grant")
+        .order_by("panopticon_grant__granted_at", "username")
+    )
+    programmer_group = Group.objects.filter(name="Programmers").first()
+    programmer_users = (
+        programmer_group.user_set
+        .filter(is_active=True)
+        .select_related("programmer_grant")
+        .order_by("username")
+    ) if programmer_group else User.objects.none()
+
+    return render(
+        request,
+        "toolkit_access.html",
+        {
+            "panopticon_users": panopticon_users,
+            "programmer_users": programmer_users,
+        },
+    )
+
+
+@panopticon_required
+@require_POST
+def mark_panopticon_reviewed(request, grant_id):
+    """Mark a PanopticonGrant as reviewed today."""
+    grant = get_object_or_404(PanopticonGrant, pk=grant_id)
+    grant.last_reviewed_at = datetime.date.today()
+    grant.reviewed_by = request.user
+    grant.save()
+    messages.success(request, f"Marked {grant.user.username}'s access as reviewed.")
+    return HttpResponseRedirect(reverse("toolkit-access"))

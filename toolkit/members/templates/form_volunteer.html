@@ -535,6 +535,26 @@ $(document).ready(function() {
         <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
           title="Full access: CMS editing, all volunteer and member personal data (names, emails, addresses, notes), mailout sending. Assign with care.">ⓘ</span>
       </div>
+      <div id="panopticon-reason-row" style="display:{% if user_form.instance.is_superuser %}block{% else %}none{% endif %}; margin-top:0.4rem;">
+        <label for="{{ user_form.panopticon_reason.id_for_label }}" style="font-size:0.88em; color:#555;">Reason for Panopticon access</label>
+        {{ user_form.panopticon_reason }}
+        {% if user_form.panopticon_reason.errors %}
+        <div class="text-danger small">{{ user_form.panopticon_reason.errors }}</div>
+        {% endif %}
+        <small class="form-text text-muted">Shown on the <a href="{% url 'toolkit-access' %}">access transparency page</a>.</small>
+      </div>
+      <script>
+      (function() {
+        var cb = document.getElementById("{{ user_form.is_superuser.id_for_label }}");
+        var row = document.getElementById("panopticon-reason-row");
+        if (cb && row) {
+          cb.addEventListener("change", function() {
+            row.style.display = cb.checked ? "block" : "none";
+          });
+          row.style.display = cb.checked ? "block" : "none";
+        }
+      })();
+      </script>
       <hr style="margin:0.6rem 0 0.4rem;">
       <div style="font-size:0.85em; color:#666;">
         Username: <strong>{{ user_form.instance.username|default:"—" }}</strong>

@@ -439,3 +439,57 @@ class AnonymisationLog(models.Model):
 
     def __str__(self):
         return f"Anonymisation of volunteer pk={self.volunteer_pk} at {self.created_at}"
+
+
+class PanopticonGrant(models.Model):
+    """Audit record created when a user is granted Panopticon (is_superuser) access.
+
+    Exists for accountability: the access list page shows who has Panopticon
+    access, why, when it was granted, and when it was last reviewed.
+    """
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="panopticon_grant"
+    )
+    reason = models.TextField(
+        help_text="Why does this person have Panopticon access?"
+    )
+    granted_at = models.DateField(auto_now_add=True)
+    granted_by = models.ForeignKey(
+        User, null=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    last_reviewed_at = models.DateField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+
+    class Meta:
+        db_table = "PanopticonGrant"
+        ordering = ["granted_at"]
+
+    def __str__(self):
+        return f"Panopticon grant for {self.user.username}"
+
+    def review_overdue(self):
+        """True if no review has been recorded or it is more than 365 days old."""
+        if not self.last_reviewed_at:
+            return True
+        delta = datetime.date.today() - self.last_reviewed_at
+        return delta.days > 365
+
+
+class ProgrammerGrant(models.Model):
+    """Lightweight record created when a user is granted Programmer group membership."""
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="programmer_grant"
+    )
+    granted_at = models.DateField(auto_now_add=True)
+    granted_by = models.ForeignKey(
+        User, null=True, on_delete=models.SET_NULL, related_name="+"
+    )
+
+    class Meta:
+        db_table = "ProgrammerGrant"
+        ordering = ["user__username"]
+
+    def __str__(self):
+        return f"Programmer grant for {self.user.username}"

@@ -209,6 +209,8 @@ The `CUBE_IP_ADDRESSES` setting defines a list of IP addresses that bypass the l
 
 Volunteers with the `Programmer` BooleanField set on their profile are automatically added to the `Programmers` Django group, which grants `toolkit.write` + `toolkit.read`. Panopticon (`is_superuser`) is assigned manually by an existing superuser.
 
+**Access audit trail:** When Panopticon or Programmer access is granted, a `PanopticonGrant` or `ProgrammerGrant` record is created (models in `toolkit/members/models.py`). Each grant stores the granting user, a mandatory reason (Panopticon only), and the date granted. `PanopticonGrant` also tracks last-reviewed date and reviewer. Access grants are visible to all logged-in volunteers at `/toolkit/access/` — a transparency page that also explains what each tier can do in plain language. Panopticon users can mark their own grants as reviewed; reviews are considered overdue after 365 days without a review.
+
 **Why role deletion requires Panopticon:** Deleting a `Role` object cascades (via `on_delete=CASCADE`) to every `RotaEntry` for that role across all past and future showings, and to every `EventTemplateRole` slot. There is no confirmation step and no undo at the database level. The `edit_roles` view is therefore gated on `is_superuser`, not just `toolkit.write`. Roles marked `read_only=True` are additionally protected at the model layer.
 
 ---
