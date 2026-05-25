@@ -221,9 +221,8 @@
         Up to 3 links copied to every new event created from this template. Appear as chip buttons on the rota — internal only, not on the public site.
       </p>
       <p class="allowed-domains mb-2">
-        Allowed: <code>*.riseup.net</code>, <code>*.nextcloud.com</code>, <code>*.nextcloud.org</code>,
-        <code>chat.whatsapp.com</code>, <code>linktr.ee</code>.
-        Extra domains via <code>EVENTLINK_EXTRA_ALLOWED_DOMAINS</code>.
+        Allowed: {% for domain in allowed_domains %}<code>*.{{ domain }}</code>{% if not forloop.last %}, {% endif %}{% endfor %}.
+        Add more via the Site Settings dashboard.
       </p>
 
       {{ links_formset.management_form }}

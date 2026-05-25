@@ -45,6 +45,7 @@ from toolkit.diary.models import (
     get_site_config,
 )
 import toolkit.diary.forms as diary_forms
+import toolkit.diary.validators as diary_validators
 import toolkit.diary.edit_prefs as edit_prefs
 from toolkit.diary.poster import generate_event_placeholder
 from toolkit.util.image import adjust_colour
@@ -453,6 +454,10 @@ def event_detail_view(request, event_id):
         "has_future_showing": bool(future_showings),
     }
 
+    unconfirmed_future_count = sum(
+        1 for s in future_showings if not s.confirmed and not s.cancelled
+    )
+
     return render(
         request,
         "view_event_privatedetails.html",
@@ -464,6 +469,7 @@ def event_detail_view(request, event_id):
             "completeness": completeness,
             "all_showings_in_past": event.all_showings_in_past(),
             "clone_source_showing": latest_showing,
+            "unconfirmed_future_count": unconfirmed_future_count,
         },
     )
 
@@ -504,6 +510,32 @@ def update_showing_status(request, showing_id):
             messages.error(request, "Unknown action.")
     return HttpResponseRedirect(
         reverse("edit-event-details-view", kwargs={"event_id": showing.event_id})
+    )
+
+
+@permission_required("toolkit.write")
+@require_POST
+def confirm_all_showings(request, event_id):
+    """Confirm all unconfirmed future showings on an event in one action."""
+    event = get_object_or_404(Event, pk=event_id)
+    if event.terms_required() and not event.terms_long_enough():
+        messages.error(
+            request,
+            "Add terms to the event before confirming showings.",
+        )
+        return HttpResponseRedirect(
+            reverse("edit-event-details-view", kwargs={"event_id": event_id})
+        )
+    now = timezone.now()
+    updated = event.showings.filter(confirmed=False, cancelled=False, start__gt=now).update(
+        confirmed=True
+    )
+    if updated:
+        messages.success(request, f"{updated} showing{'s' if updated != 1 else ''} confirmed.")
+    else:
+        messages.info(request, "No unconfirmed future showings to confirm.")
+    return HttpResponseRedirect(
+        reverse("edit-event-details-view", kwargs={"event_id": event_id})
     )
 
 
@@ -618,12 +650,13 @@ def batch_add_showings(request, event_id):
     latest_showing = all_showings[-1] if all_showings else None
 
     if request.method == "POST":
-        form = diary_forms.BatchAddShowingsForm(request.POST)
+        form = diary_forms.BatchAddShowingsForm(request.POST, event=event)
         if form.is_valid():
             dates = form.cleaned_data["dates"]
             start_time = form.cleaned_data["start_time"]
             room = form.cleaned_data.get("room")
             booked_by = form.cleaned_data["booked_by"]
+            confirmed = form.cleaned_data.get("confirmed", False)
 
             created = []
             for d in dates:
@@ -633,7 +666,7 @@ def batch_add_showings(request, event_id):
                     event=event,
                     start=aware_dt,
                     booked_by=booked_by,
-                    confirmed=False,
+                    confirmed=confirmed,
                 )
                 showing.save()
                 if room:
@@ -653,7 +686,8 @@ def batch_add_showings(request, event_id):
         latest_booked_by = latest_showing.booked_by if latest_showing else ""
         latest_room = latest_showing.primary_room if latest_showing else None
         form = diary_forms.BatchAddShowingsForm(
-            initial={"booked_by": latest_booked_by, "room": latest_room}
+            initial={"booked_by": latest_booked_by, "room": latest_room},
+            event=event,
         )
 
     return render(
@@ -695,6 +729,7 @@ def edit_event_links(request, event_id):
         {
             "event": event,
             "formset": formset,
+            "allowed_domains": diary_validators.get_eventlink_allowed_domains(),
         },
     )
 
@@ -1359,6 +1394,7 @@ def edit_event_template_detail(request, template_id=None):
         "links_formset": links_formset,
         "event_template": event_template,
         "export_json": export_json,
+        "allowed_domains": diary_validators.get_eventlink_allowed_domains(),
     }
     return render(request, "edit_event_template_detail.html", context)
 
@@ -1973,6 +2009,10 @@ def edit_site_configuration(request):
         (
             "Bulletins",
             ["bulletin_default_expiry_days", "bulletin_guidance", "bulletin_post_permission"],
+        ),
+        (
+            "Event links",
+            ["eventlink_extra_allowed_domains"],
         ),
         (
             "Public site navigation",

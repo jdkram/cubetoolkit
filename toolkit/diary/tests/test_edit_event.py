@@ -1206,6 +1206,34 @@ class EventLinkTests(DiaryTestsMixin, TestCase):
         )
         self.assertEqual(self.e1.links.count(), 1)
 
+    def test_post_site_config_extra_domain_accepted(self):
+        """A domain configured in SiteConfiguration.eventlink_extra_allowed_domains is accepted."""
+        from django.core.cache import cache
+        from toolkit.diary.models import SiteConfiguration
+
+        cache.delete(SiteConfiguration._CACHE_KEY)
+        config = SiteConfiguration.load()
+        config.eventlink_extra_allowed_domains = "nextcloud.xtreamlab.net\nfiles.example.org"
+        config.save()
+
+        data = self._mgmt()
+        data.update(
+            self._form(0, label="Notes", url="https://nextcloud.xtreamlab.net/s/xyz")
+        )
+        data.update(self._form(1))
+        data.update(self._form(2))
+        response = self.client.post(self.url, data)
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk}),
+        )
+        self.assertEqual(self.e1.links.count(), 1)
+
+        # Cleanup
+        config.eventlink_extra_allowed_domains = ""
+        config.save()
+        cache.delete(SiteConfiguration._CACHE_KEY)
+
     @override_settings(EVENTLINK_EXTRA_ALLOWED_DOMAINS=[])
     def test_post_unknown_domain_rejected_when_not_in_extra(self):
         """A domain not in any whitelist is rejected even if path looks Nextcloud-like."""

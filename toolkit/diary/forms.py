@@ -455,12 +455,12 @@ class BatchAddShowingsForm(forms.Form):
     """Add multiple showings to an existing event on several dates at once.
 
     The programmer selects one or more dates via a flatpickr multi-date picker.
-    All showings share the same start time, room, and booked_by value.
-    All created showings are unconfirmed (confirmed=False).
+    All showings share the same start time, room, booked_by, and confirmed flag.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, event=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self._event = event
         self.helper = FormHelper()
         self.helper.form_tag = False
         self.helper.form_class = "form-horizontal"
@@ -491,6 +491,11 @@ class BatchAddShowingsForm(forms.Form):
         required=True,
         label="Booked by",
     )
+    confirmed = forms.BooleanField(
+        required=False,
+        label="Create as confirmed",
+        help_text="Only tick if the event has terms set. Confirmed showings appear in the programme immediately.",
+    )
 
     def clean_dates(self):
         raw = self.cleaned_data.get("dates", "").strip()
@@ -514,6 +519,26 @@ class BatchAddShowingsForm(forms.Form):
                 "Maximum {} dates per batch.".format(_MAX_BATCH_SHOWINGS)
             )
         return sorted(set(parsed))
+
+    def clean(self):
+        cleaned = super().clean()
+        dates = cleaned.get("dates")
+        start_time = cleaned.get("start_time")
+        if dates and start_time:
+            now = datetime.datetime.now()
+            past = [d for d in dates if datetime.datetime.combine(d, start_time) < now]
+            if past:
+                date_strs = ", ".join(d.strftime("%-d %b %Y") for d in past)
+                raise forms.ValidationError(
+                    f"The following dates are in the past: {date_strs}."
+                )
+        if cleaned.get("confirmed") and self._event is not None:
+            if self._event.terms_required() and not self._event.terms_long_enough():
+                self.add_error(
+                    "confirmed",
+                    "Add terms to the event before creating confirmed showings.",
+                )
+        return cleaned
 
 
 class EventLinkForm(forms.ModelForm):
@@ -868,6 +893,7 @@ class SiteConfigurationForm(forms.ModelForm):
             "bulletin_default_expiry_days",
             "bulletin_guidance",
             "bulletin_post_permission",
+            "eventlink_extra_allowed_domains",
             "collectives_intro",
             "show_donations_in_public_nav",
             "banner_active",
@@ -887,6 +913,9 @@ class SiteConfigurationForm(forms.ModelForm):
             ),
             "collectives_intro": forms.Textarea(
                 attrs={"rows": 4, "class": "form-control"}
+            ),
+            "eventlink_extra_allowed_domains": forms.Textarea(
+                attrs={"rows": 4, "class": "form-control font-monospace"}
             ),
         }
 

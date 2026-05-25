@@ -98,6 +98,7 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
             "bulletin_default_expiry_days": str(config.bulletin_default_expiry_days),
             "bulletin_guidance": "",
             "bulletin_post_permission": config.bulletin_post_permission,
+            "eventlink_extra_allowed_domains": "",
             "banner_level": config.banner_level,
             "banner_text": "",
         }

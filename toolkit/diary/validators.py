@@ -24,6 +24,27 @@ _EVENTLINK_BUILTIN_DOMAINS = [
 ]
 
 
+def _get_extra_allowed_domains():
+    """Return extra allowed domains from SiteConfiguration, falling back to
+    the EVENTLINK_EXTRA_ALLOWED_DOMAINS Django setting."""
+    # Try SiteConfiguration first (DB-backed, editable via dashboard)
+    try:
+        from toolkit.diary.models import SiteConfiguration
+
+        raw = SiteConfiguration.load().eventlink_extra_allowed_domains
+        if raw:
+            return [
+                d.strip()
+                for d in raw.splitlines()
+                if d.strip()
+            ]
+    except Exception:
+        pass
+
+    # Fall back to settings constant
+    return list(getattr(settings, "EVENTLINK_EXTRA_ALLOWED_DOMAINS", []))
+
+
 def validate_event_link_url(url):
     """Accept only URLs from the EventLink domain whitelist.
 
@@ -37,8 +58,7 @@ def validate_event_link_url(url):
     except Exception:
         raise ValidationError("Enter a valid URL.")
 
-    extra = getattr(settings, "EVENTLINK_EXTRA_ALLOWED_DOMAINS", [])
-    all_domains = _EVENTLINK_BUILTIN_DOMAINS + list(extra)
+    all_domains = _EVENTLINK_BUILTIN_DOMAINS + _get_extra_allowed_domains()
 
     for domain in all_domains:
         if host == domain or host.endswith("." + domain):
@@ -47,6 +67,15 @@ def validate_event_link_url(url):
     allowed_str = ", ".join(all_domains)
     raise ValidationError(
         f"Event links must use an approved domain ({allowed_str}). "
-        "Ask a Panopticon member to add a new domain to "
-        "EVENTLINK_EXTRA_ALLOWED_DOMAINS in settings if you need another service."
+        "Ask a Panopticon member to add a new domain to the "
+        "Site Settings dashboard if you need another service."
     )
+
+
+def get_eventlink_allowed_domains():
+    """Return the full list of allowed event-link domains (builtins + extras).
+
+    Suitable for passing into templates so the hint text stays in sync with
+    the validator.
+    """
+    return _EVENTLINK_BUILTIN_DOMAINS + _get_extra_allowed_domains()

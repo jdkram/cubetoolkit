@@ -86,10 +86,8 @@
   on the rota view, visible only to logged-in volunteers — not on the public website.
 </p>
 <p class="allowed-domains mb-3">
-  Allowed: <code>*.riseup.net</code>, <code>*.nextcloud.com</code>, <code>*.nextcloud.org</code>,
-  <code>chat.whatsapp.com</code>, <code>linktr.ee</code>.
-  Venue-specific domains (e.g. a self-hosted Nextcloud) are configured via
-  <code>EVENTLINK_EXTRA_ALLOWED_DOMAINS</code> in settings.
+  Allowed: {% for domain in allowed_domains %}<code>*.{{ domain }}</code>{% if not forloop.last %}, {% endif %}{% endfor %}.
+  Add more via the Site Settings dashboard.
 </p>
 
 {% if formset.non_form_errors %}

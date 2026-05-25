@@ -706,7 +706,7 @@ class Showing(models.Model):
         #
         # (Mostly for tests, if force=True then this check is bypassed)
         force = kwargs.pop("force", False)
-        if not force and (self.in_past() or self.original_start_in_past()):
+        if not force and self.pk is not None and (self.in_past() or self.original_start_in_past()):
             logger.error(
                 f"Tried to update showing {self.pk} with start time {self.start}"
                 f" in the past (original start time {self._original_start}"
@@ -1355,6 +1355,19 @@ class SiteConfiguration(models.Model):
             "and examples of good and bad bulletins."
         ),
     )
+
+    # --- Event links ---
+    eventlink_extra_allowed_domains = models.TextField(
+        blank=True,
+        default="",
+        help_text=(
+            "Extra domains allowed for event resource links, one per line. "
+            "Subdomains are accepted (e.g. 'nextcloud.example.org' also allows "
+            "'files.nextcloud.example.org'). Built-in domains (riseup.net, "
+            "nextcloud.com/org, chat.whatsapp.com, linktr.ee) are always allowed."
+        ),
+    )
+
     BULLETIN_POST_ALL = "all"
     BULLETIN_POST_PROGRAMMER = "programmer"
     BULLETIN_POST_PANOPTICON = "panopticon"
