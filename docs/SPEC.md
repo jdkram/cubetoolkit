@@ -110,8 +110,8 @@ A few numbers from the git history:
 |---|---|
 | Total commits (all branches) | 1,877 |
 | Years of active development | 2011 – present (most active: 2012, 2014, 2017) |
-| Primary contributor | REDACTED (~1,434 commits) |
-| Second contributor | REDACTED (~234 commits) |
+| Primary contributor | Ben (~1,434 commits) |
+| Second contributor | Marcus (~234 commits) |
 | Lines of Python code | ~21,000 |
 | Lines of HTML templates | ~5,300 |
 

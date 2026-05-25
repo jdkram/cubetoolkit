@@ -2,6 +2,7 @@ from toolkit.settings_common import *
 
 ROOT_URLCONF = "toolkit.urls_flat"
 
+# CODE-LEVEL feature flags — changing these in settings_*.py takes effect on restart.
 MULTIROOM_ENABLED = True
 HTML_MAILOUT_ENABLED = True
 MEMBERSHIP_EXPIRY_ENABLED = True
@@ -45,7 +46,8 @@ VENUE = {
 
 WAGTAIL_SITE_NAME = "The Star and Shadow"
 
-# Prompt volunteers to email when clearing a rota slot
+# Prompt volunteers to email when clearing a rota slot.
+# SEED-ONLY — overridden by SiteConfiguration at runtime.
 ROTA_CLEAR_EMAIL_PROMPT_ENABLED = False
 
 # Disable 'allow editing from magic IP range' for now
@@ -55,13 +57,17 @@ DEFAULT_MUGSHOT = "/static/content/ss_logo_e3cae3_pink3.jpg"
 
 # Hide event images for shows before the S+S digital archive began.
 # Volunteers (authenticated users) always see images regardless.
+# SEED-ONLY — overridden by SiteConfiguration at runtime.
 SHOW_ARCHIVE_IMAGES = False
+# SEED-ONLY — overridden by SiteConfiguration at runtime.
 IMAGES_START_DATE = "1 May 2018"
 
 # S+S films start at the advertised time — no adverts or trailers.
+# SEED-ONLY — overridden by SiteConfiguration at runtime.
 FILMS_START_ON_TIME = True
 
 # Tags are not yet well-used at S+S; hide them from the rota to reduce clutter.
+# SEED-ONLY — overridden by SiteConfiguration at runtime.
 ROTA_SHOW_TAGS = False
 
 # Currently only used for setting an outer limit on what year printed
@@ -85,7 +91,7 @@ ALT_TEXT_GUIDANCE_URL = None  # TODO: add URL when volunteer documentation exist
 # Below here are Django settings
 #
 
-ADMINS = ("Marcus Valentine", "REDACTED")
+ADMINS = []
 
 # Enable Django admin for S+S (urls_flat.py mounts it at /toolkit/admin/)
 INSTALLED_APPS = INSTALLED_APPS + ("django.contrib.admin",)
