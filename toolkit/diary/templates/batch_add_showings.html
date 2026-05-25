@@ -15,8 +15,6 @@
 <p class="text-muted mb-3">
   Select several dates at once to add multiple showings to
   <strong>{{ event.name }}</strong>.
-  Each showing will be created <strong>unconfirmed</strong> so you can review
-  before publishing.
   {% if latest_showing %}
   The rota will be cloned from the most recent showing
   ({{ latest_showing.start|date:"D j M Y, H:i" }}).

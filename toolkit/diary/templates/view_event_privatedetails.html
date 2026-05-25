@@ -439,6 +439,16 @@ function hideAddShowingForm() {
      class="btn btn-outline-info btn-sm ms-2"
      data-bs-toggle="tooltip"
      title="Add showings on multiple dates at once &mdash; useful for recurring events.">+ Add showings on multiple dates</a>
+  {% if unconfirmed_future_count and completeness.terms_ok %}
+  <form method="post" action="{% url 'confirm-all-showings' event.pk %}" class="d-inline ms-2">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-outline-success btn-sm"
+            data-bs-toggle="tooltip"
+            title="Confirm all {{ unconfirmed_future_count }} unconfirmed future showing{{ unconfirmed_future_count|pluralize }} at once.">
+      ✓ Confirm all ({{ unconfirmed_future_count }})
+    </button>
+  </form>
+  {% endif %}
 
   <div id="add-showing-form" class="{% if not add_showing_form.errors %}d-none{% endif %} mt-3">
     <h5>Add a showing</h5>
