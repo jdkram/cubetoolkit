@@ -67,19 +67,19 @@ setup_page(true);
 <div class="programme">
     <div class="showing-sizer"></div>
     <div class="gutter-sizer"></div>
-{% for event, showings in events.items %}
-    <div class="showing{% if is_volunteer and event.private or is_volunteer and showings.0.hide_in_programme %} showing-internal{% endif %}" id="event_{{ event.id }}"
+{% for showing in showings_grid %}
+    {% with event=showing.event event_slug=showing.event.name|slugify media_item=showing.event.media.all.0 %}
+    {% if is_volunteer and event.private or is_volunteer and showing.hide_in_programme %}
+      {% url "rota-edit-month" year=showing.start.year month=showing.start.month as event_detail_url %}
+    {% else %}
+      {% url "single-event-view-with-slug" event_id=event.id event_slug=event_slug as event_detail_url %}
+    {% endif %}
+    <div class="showing{% if is_volunteer and event.private or is_volunteer and showing.hide_in_programme %} showing-internal{% endif %}" id="showing_{{ showing.id }}"
          data-search-text="{{ event.pre_title }} {{ event.name }} {{ event.post_title }} {{ event.copy_summary|striptags|truncatewords:50 }}{% for tag in event.tags.all %} {{ tag.name }}{% endfor %}"
          data-tags="{% for tag in event.tags.all %}{% if not forloop.first %} {% endif %}{{ tag.slug }}{% endfor %}">
 
         <div class="event_image">
-            {% with media_item=event.media.all.0 event_slug=event.name|slugify %}
-            {% if is_volunteer and event.private or is_volunteer and showings.0.hide_in_programme %}
-              {% url "rota-edit-month" year=showings.0.start.year month=showings.0.start.month as event_detail_url %}
-            {% else %}
-              {% url "single-event-view-with-slug" event_id=event.id event_slug=event_slug as event_detail_url %}
-            {% endif %}
-            {% if media_item %}<a href="{{ event_detail_url }}{% if is_volunteer and event.private or is_volunteer and showings.0.hide_in_programme %}#showing-{{ showings.0.pk }}{% endif %}">
+            {% if media_item %}<a href="{{ event_detail_url }}{% if is_volunteer and event.private or is_volunteer and showing.hide_in_programme %}#showing-{{ showing.pk }}{% endif %}">
                 <img src="{{ media_item.media_file|thumbnail_url:'indexview' }}" alt="{% if media_item.alt_text %}{{ media_item.alt_text }}{% else %}Picture for event {{ event.name }}{% endif %}"></a>
             {% endif %}
             {% if event.tags.all %}
@@ -90,7 +90,7 @@ setup_page(true);
                 </span>
             {% endif %}
         </div><!-- div event_image -->
-        <a href="{{ event_detail_url }}{% if is_volunteer and event.private or is_volunteer and showings.0.hide_in_programme %}#showing-{{ showings.0.pk }}{% endif %}">
+        <a href="{{ event_detail_url }}{% if is_volunteer and event.private or is_volunteer and showing.hide_in_programme %}#showing-{{ showing.pk }}{% endif %}">
             <p><span class="pre_title">
                 {{ event.pre_title }}
             </span></p>
@@ -101,23 +101,18 @@ setup_page(true);
         </a>
         <p><div class="event_details">
             <p class="start_and_pricing">
-                {% for showing in showings %}
-                    {% if showing.sold_out %}<span class="sold_out">{% endif %}
-                    {% if showing.cancelled %}<span class="cancelled">{% endif %}
-                    {% if showing == showings.next_showing %}<strong>{% endif %}
-                    {{ showing.start|date:"D j F " }}//{{ showing.start|date:" H:i" }}
-                    {% if showing == showings.next_showing %}</strong>{% endif %}
-                    {% if showing.cancelled %}</span> (cancelled){% endif %}
-                    {% if showing.sold_out %}</span> (SOLD OUT){% endif %}
-                    {% if showing.discounted %}<abbr class="discounted" title="* cheap night">*</abbr>{% endif %}<br>
-                    {% endfor %}
-                {% if showings.overflow_count %}<span class="showing-overflow-hint">+{{ showings.overflow_count }} more date{{ showings.overflow_count|pluralize }}</span>{% endif %}
+                {% if showing.sold_out %}<span class="sold_out">{% endif %}
+                {% if showing.cancelled %}<span class="cancelled">{% endif %}
+                <strong>{{ showing.start|date:"D j F " }}//{{ showing.start|date:" H:i" }}</strong>
+                {% if showing.cancelled %}</span> (cancelled){% endif %}
+                {% if showing.sold_out %}</span> (SOLD OUT){% endif %}
+                {% if showing.discounted %}<abbr class="discounted" title="* cheap night">*</abbr>{% endif %}
             </p>
             {% if event.film_information %}<p class="film-info">{{ event.film_information }}</p>{% endif %}
-            <p class="copy">{{ event.copy_summary|truncatewords:16 }} [<a class="more" href="{{ event_detail_url }}{% if is_volunteer and event.private or is_volunteer and showings.0.hide_in_programme %}#showing-{{ showings.0.pk }}{% endif %}" aria-label="More about {{ event.name }}">more</a>]</p>
+            <p class="copy">{{ event.copy_summary|truncatewords:16 }} [<a class="more" href="{{ event_detail_url }}{% if is_volunteer and event.private or is_volunteer and showing.hide_in_programme %}#showing-{{ showing.pk }}{% endif %}" aria-label="More about {{ event.name }}">more</a>]</p>
             {% if event.trailer_url %}<p class="trailer-link"><a href="{{ event.trailer_url }}" rel="noopener noreferrer" target="_blank"><i class="fa-solid fa-circle-play" aria-hidden="true"></i> Trailer</a></p>{% endif %}
-        </div>{% endwith %}
-    </div>{% endfor %}<!-- end .showing -->
+        </div>
+    </div>{% endwith %}{% endfor %}<!-- end .showing -->
 </div><!-- end #programme -->
 
 <div class="list">

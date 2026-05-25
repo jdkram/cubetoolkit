@@ -4,6 +4,7 @@ import calendar
 
 from collections import OrderedDict
 
+
 from django.db.models import Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import render, redirect
@@ -21,31 +22,6 @@ from toolkit.content.models import BasicArticlePage
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-
-class _EventShowings:
-    """Wraps the list of showings for one event on the programme index page.
-
-    Iterates and indexes like a plain list (so existing template loops work
-    unchanged), but also exposes .next_showing and .overflow_count so the
-    template can bold the next date and show a "N more" disclosure without
-    needing a custom template filter or a separate lookup dict.
-    """
-
-    __slots__ = ("_showings", "next_showing", "overflow_count")
-
-    def __init__(self, showings, next_showing, overflow_count):
-        self._showings = showings
-        self.next_showing = next_showing
-        self.overflow_count = overflow_count
-
-    def __iter__(self):
-        return iter(self._showings)
-
-    def __getitem__(self, index):
-        return self._showings[index]
-
-    def __len__(self):
-        return len(self._showings)
 
 
 def _show_archive_images(request, showings):
@@ -109,36 +85,23 @@ def _view_diary(request, startdate, enddate, tag=None, extra_title=None):
     if tag:
         showings_qs = showings_qs.filter(event__tags__slug=tag)
 
-    # Build a list of events for that list of showings, filtering out past
-    # dates and capping to max_showing_dates_shown per event.
     now = timezone.now()
-    limit = get_site_config().max_showing_dates_shown
 
     # Only filter past showings when the date range is current or future.
     # For archive ranges (the whole range is already past), show all showings
     # as-is so historical browsing still works.
     is_current_or_future_range = enddate >= now
 
-    raw_events: dict = OrderedDict()
+    # Build both output structures in one pass:
+    # - showings_grid: flat ordered list, one card per showing (S+S template)
+    # - events: OrderedDict[event -> list[showing]] (Cube template)
+    events: dict = OrderedDict()
+    showings_grid = []
     for showing in showings_qs:
-        raw_events.setdefault(showing.event, []).append(showing)
-
-    events = OrderedDict()
-    for event, all_showings in raw_events.items():
-        if is_current_or_future_range:
-            display = [s for s in all_showings if not s.in_past()]
-            if not display:
-                continue  # All showings in this range have passed — skip the card
-        else:
-            display = all_showings
-        next_showing = display[0] if display else None
-        if limit and len(display) > limit:
-            visible = display[:limit]
-            overflow_count = len(display) - limit
-        else:
-            visible = display
-            overflow_count = 0
-        events[event] = _EventShowings(visible, next_showing, overflow_count)
+        if is_current_or_future_range and showing.in_past():
+            continue
+        events.setdefault(showing.event, []).append(showing)
+        showings_grid.append(showing)
 
     context = {
         "cms_pages": cms_pages,
@@ -148,10 +111,12 @@ def _view_diary(request, startdate, enddate, tag=None, extra_title=None):
         "event_type": conditional_escape(tag) if tag else None,
         # Set page title:
         "extra_title": extra_title,
-        # Set of Showing objects for date range
-        "showings": showings_qs,
-        # Ordered dict mapping event -> list of showings:
+        # Flat ordered list of showings for the grid — one card per showing (S+S):
+        "showings_grid": showings_grid,
+        # OrderedDict[event -> list[showing]] for the Cube template:
         "events": events,
+        # Flat queryset used by the list view:
+        "showings": showings_qs,
         # This is prepended to filepaths from the MediaPaths table to use
         # as a location for images:
         "media_url": settings.MEDIA_URL,
