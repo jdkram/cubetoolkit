@@ -231,6 +231,15 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
         }
 
         saveFilterState();
+
+        // In timeline views, refresh the resource rows so unchecked rooms
+        // disappear entirely rather than just having their events hidden.
+        if (resources && resources.length > 0 && calendar) {
+            var vt = calendar.view ? calendar.view.type : '';
+            if (vt === 'resourceTimelineWeek' || vt === 'resourceTimelineMonth') {
+                calendar.refetchResources();
+            }
+        }
     }
 
     function saveFilterState() {
@@ -716,7 +725,13 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
         };
 
         if (hasResources) {
-            calendarOpts.resources = resources;
+            // Use a function so refetchResources() can hide/show room rows dynamically.
+            calendarOpts.resources = function(fetchInfo, successCallback) {
+                var visible = resources.filter(function(r) {
+                    return filterState.visibleRooms.indexOf(parseInt(r.id, 10)) !== -1;
+                });
+                successCallback(visible);
+            };
             calendarOpts.resourceAreaWidth = '15%';
 
             calendarOpts.views.resourceTimelineWeek = {
