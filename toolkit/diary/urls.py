@@ -28,6 +28,7 @@ from toolkit.diary.edit_views import (
     view_terms_report_csv,
     update_showing_status,
     clone_event,
+    batch_add_showings,
     edit_event_links,
     edit_site_configuration,
     toggle_event_mark,
@@ -184,6 +185,11 @@ diary_urls = [
         r"^edit/event/id/(?P<event_id>\d+)/clone/$",
         clone_event,
         name="clone-event",
+    ),
+    re_path(
+        r"^edit/event/id/(?P<event_id>\d+)/batch-showings/$",
+        batch_add_showings,
+        name="batch-add-showings",
     ),
     re_path(
         r"^edit/event/id/(?P<event_id>\d+)/links/$",

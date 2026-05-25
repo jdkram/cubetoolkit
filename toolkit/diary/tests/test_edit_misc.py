@@ -659,3 +659,154 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
         self._common_test_valid_query(now_patch, True)
 
 
+class BatchAddShowingsTests(DiaryTestsMixin, TestCase):
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="admin", password="T3stPassword!")
+        self.url = reverse("batch-add-showings", kwargs={"event_id": self.e4.pk})
+
+    def test_get_renders_form(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Add showings on multiple dates")
+        self.assertContains(response, "flatpickr-multidate")
+
+    def test_get_404_for_unknown_event(self):
+        url = reverse("batch-add-showings", kwargs={"event_id": 99999})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_permission_required(self):
+        self.client.logout()
+        self.client.login(username="read_only", password="T3stPassword!1")
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 302)
+
+    def test_post_creates_showings(self):
+        initial_count = Showing.objects.filter(event=self.e4).count()
+        response = self.client.post(
+            self.url,
+            {
+                "dates": "2099-03-01,2099-03-08",
+                "start_time": "19:30",
+                "booked_by": "Tester",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Showings added")
+        new_count = Showing.objects.filter(event=self.e4).count()
+        self.assertEqual(new_count, initial_count + 2)
+
+    def test_created_showings_are_unconfirmed(self):
+        self.client.post(
+            self.url,
+            {
+                "dates": "2099-04-01,2099-04-08",
+                "start_time": "20:00",
+                "booked_by": "Tester",
+            },
+        )
+        new_showings = Showing.objects.filter(
+            event=self.e4, start__year=2099, start__month=4
+        )
+        self.assertEqual(new_showings.count(), 2)
+        self.assertTrue(all(not s.confirmed for s in new_showings))
+
+    def test_created_showings_have_correct_times(self):
+        self.client.post(
+            self.url,
+            {
+                "dates": "2099-05-10",
+                "start_time": "18:00",
+                "booked_by": "Tester",
+            },
+        )
+        showing = Showing.objects.get(event=self.e4, start__year=2099, start__month=5)
+        local_start = showing.start.astimezone()
+        self.assertEqual(local_start.hour, 18)
+        self.assertEqual(local_start.minute, 0)
+
+    def test_created_showings_clone_rota(self):
+        # Create an event where the latest showing has a known rota
+        event = Event(name="Clone rota test event", duration="02:00:00")
+        event.save()
+        role = Role.objects.filter(standard=True).first()
+        source = Showing(
+            event=event,
+            start=datetime(2099, 5, 1, 19, 0, tzinfo=zoneinfo.ZoneInfo("UTC")),
+            booked_by="Tester",
+            confirmed=True,
+        )
+        source.save(force=True)
+        RotaEntry(showing=source, role=role, rank=1).save()
+
+        url = reverse("batch-add-showings", kwargs={"event_id": event.pk})
+        self.client.post(
+            url,
+            {
+                "dates": "2099-06-01",
+                "start_time": "19:00",
+                "booked_by": "Tester",
+            },
+        )
+        new_showing = Showing.objects.get(
+            event=event, start__year=2099, start__month=6
+        )
+        self.assertEqual(new_showing.rotaentry_set.count(), 1)
+
+    def test_post_with_room_creates_room_booking(self):
+        response = self.client.post(
+            self.url,
+            {
+                "dates": "2099-07-01",
+                "start_time": "19:00",
+                "booked_by": "Tester",
+                "room": str(self.room_2.pk),
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        new_showing = Showing.objects.get(
+            event=self.e4, start__year=2099, start__month=7
+        )
+        self.assertEqual(new_showing.room_bookings.count(), 1)
+
+    def test_post_missing_dates_shows_error(self):
+        response = self.client.post(
+            self.url,
+            {
+                "dates": "",
+                "start_time": "19:00",
+                "booked_by": "Tester",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Showings added")
+
+    def test_post_too_many_dates_shows_error(self):
+        many_dates = ",".join(
+            "2099-08-{:02d}".format(i) for i in range(1, 54)
+        )
+        response = self.client.post(
+            self.url,
+            {
+                "dates": many_dates,
+                "start_time": "19:00",
+                "booked_by": "Tester",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Showings added")
+
+    def test_success_page_lists_edit_links(self):
+        response = self.client.post(
+            self.url,
+            {
+                "dates": "2099-09-01,2099-09-08",
+                "start_time": "20:00",
+                "booked_by": "Tester",
+            },
+        )
+        # Success page should include edit links (resolved URL contains /showing/id/)
+        self.assertContains(response, "/diary/edit/showing/id/")
+
+

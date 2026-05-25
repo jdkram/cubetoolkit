@@ -61,6 +61,32 @@ class HtmlTextarea(forms.Textarea):
         return context
 
 
+class MultiDatePickerWidget(forms.TextInput):
+    """Text input enhanced by flatpickr in multiple-date mode.
+
+    Submits a comma-separated list of ISO dates (YYYY-MM-DD).  The form field
+    using this widget is responsible for parsing and validating that string.
+    """
+
+    class Media:
+        css = {
+            "all": ("css/lib/flatpickr.min.css",),
+        }
+        js = (
+            "js/lib/flatpickr.min.js",
+            "diary/js/multidatepicker_init.js",
+        )
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("attrs", {})
+        kwargs["attrs"]["class"] = (
+            kwargs["attrs"].get("class", "") + " flatpickr-multidate"
+        ).strip()
+        kwargs["attrs"]["autocomplete"] = "off"
+        kwargs["attrs"]["placeholder"] = "Click to select dates…"
+        super().__init__(*args, **kwargs)
+
+
 class JQueryDateTimePicker(forms.DateTimeInput):
     """
     datetime-local input enhanced by flatpickr on desktop.

@@ -1,0 +1,46 @@
+{% extends "form_base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Add showings: {{ event.name }}{% endblock %}
+
+{% block script %}
+{{ block.super }}
+{{ form.media }}
+{% endblock %}
+
+{% block body %}
+<h1>Add showings on multiple dates</h1>
+
+{% include "bs_messages.html" %}
+
+<p class="text-muted mb-3">
+  Select several dates at once to add multiple showings to
+  <strong>{{ event.name }}</strong>.
+  Each showing will be created <strong>unconfirmed</strong> so you can review
+  before publishing.
+  {% if latest_showing %}
+  The rota will be cloned from the most recent showing
+  ({{ latest_showing.start|date:"D j M Y, H:i" }}).
+  {% else %}
+  There are no existing showings, so the rota will be reset to template defaults.
+  {% endif %}
+</p>
+
+{% if latest_showing.rota_notes %}
+<div class="alert alert-warning py-2 px-3 mb-3" role="alert">
+  <strong>Note:</strong> The most recent showing has rota notes &mdash; these will be copied to every new showing. Review them afterwards.
+</div>
+{% endif %}
+
+<form method="post">
+  {% csrf_token %}
+  {% crispy form %}
+  <div class="mt-3">
+    <button type="submit" class="btn btn-primary">Add showings</button>
+    <a href="{% url 'edit-event-details-view' event.pk %}"
+       class="btn btn-secondary ms-2">Cancel</a>
+  </div>
+</form>
+
+<p class="mt-4"><a href="{% url 'cancel-edit' %}">&larr; Back to diary</a></p>
+
+{% endblock %}

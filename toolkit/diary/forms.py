@@ -11,6 +11,7 @@ from crispy_forms.helper import FormHelper
 from toolkit.diary.form_widgets import (
     HtmlTextarea,
     JQueryDateTimePicker,
+    MultiDatePickerWidget,
     ChosenSelectMultiple,
     TagPillSelect,
 )
@@ -445,6 +446,74 @@ class CloneEventForm(forms.Form):
         required=True,
         label="Booked by",
     )
+
+
+_MAX_BATCH_SHOWINGS = 52
+
+
+class BatchAddShowingsForm(forms.Form):
+    """Add multiple showings to an existing event on several dates at once.
+
+    The programmer selects one or more dates via a flatpickr multi-date picker.
+    All showings share the same start time, room, and booked_by value.
+    All created showings are unconfirmed (confirmed=False).
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        self.helper.form_class = "form-horizontal"
+        self.helper.label_class = "col-sm-3"
+        self.helper.field_class = "col-sm-9"
+
+    dates = forms.CharField(
+        widget=MultiDatePickerWidget(),
+        label="Dates",
+        help_text="Click to select one or more dates (max {}).".format(
+            _MAX_BATCH_SHOWINGS
+        ),
+    )
+    start_time = forms.TimeField(
+        widget=forms.TimeInput(attrs={"type": "time"}),
+        label="Start time",
+        help_text="The time each showing starts. Applies to all selected dates.",
+    )
+    room = forms.ModelChoiceField(
+        queryset=toolkit.diary.models.Room.objects.all(),
+        required=False,
+        label="Room",
+        empty_label="— no room —",
+    )
+    booked_by = forms.CharField(
+        min_length=1,
+        max_length=128,
+        required=True,
+        label="Booked by",
+    )
+
+    def clean_dates(self):
+        raw = self.cleaned_data.get("dates", "").strip()
+        if not raw:
+            raise forms.ValidationError("Select at least one date.")
+        parsed = []
+        for part in raw.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            try:
+                parsed.append(datetime.date.fromisoformat(part))
+            except ValueError:
+                raise forms.ValidationError(
+                    "Unrecognised date: {!r}. Expected YYYY-MM-DD.".format(part)
+                )
+        if not parsed:
+            raise forms.ValidationError("Select at least one date.")
+        if len(parsed) > _MAX_BATCH_SHOWINGS:
+            raise forms.ValidationError(
+                "Maximum {} dates per batch.".format(_MAX_BATCH_SHOWINGS)
+            )
+        return sorted(set(parsed))
 
 
 class EventLinkForm(forms.ModelForm):

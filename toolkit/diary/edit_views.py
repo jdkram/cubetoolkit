@@ -606,6 +606,69 @@ def clone_event(request, event_id):
 
 @permission_required("toolkit.write")
 @require_http_methods(["GET", "POST"])
+def batch_add_showings(request, event_id):
+    """Add multiple showings to an existing event across several dates at once.
+
+    The programmer picks dates via a flatpickr multi-date picker and sets a
+    shared start time, room, and booked_by.  One unconfirmed Showing is
+    created per date, each with its rota cloned from the event's latest showing.
+    """
+    event = get_object_or_404(Event, pk=event_id)
+    all_showings = list(event.showings.order_by("start"))
+    latest_showing = all_showings[-1] if all_showings else None
+
+    if request.method == "POST":
+        form = diary_forms.BatchAddShowingsForm(request.POST)
+        if form.is_valid():
+            dates = form.cleaned_data["dates"]
+            start_time = form.cleaned_data["start_time"]
+            room = form.cleaned_data.get("room")
+            booked_by = form.cleaned_data["booked_by"]
+
+            created = []
+            for d in dates:
+                naive_dt = datetime.datetime.combine(d, start_time)
+                aware_dt = timezone.make_aware(naive_dt)
+                showing = Showing(
+                    event=event,
+                    start=aware_dt,
+                    booked_by=booked_by,
+                    confirmed=False,
+                )
+                showing.save()
+                if room:
+                    _create_room_booking(showing, room, event)
+                showing.clone_or_reset_rota(latest_showing)
+                created.append(showing)
+
+            return render(
+                request,
+                "batch_add_showings_success.html",
+                {
+                    "event": event,
+                    "created": created,
+                },
+            )
+    else:
+        latest_booked_by = latest_showing.booked_by if latest_showing else ""
+        latest_room = latest_showing.primary_room if latest_showing else None
+        form = diary_forms.BatchAddShowingsForm(
+            initial={"booked_by": latest_booked_by, "room": latest_room}
+        )
+
+    return render(
+        request,
+        "batch_add_showings.html",
+        {
+            "event": event,
+            "latest_showing": latest_showing,
+            "form": form,
+        },
+    )
+
+
+@permission_required("toolkit.write")
+@require_http_methods(["GET", "POST"])
 def edit_event_links(request, event_id):
     """Edit the (up to 3) resource links attached to an event.
 

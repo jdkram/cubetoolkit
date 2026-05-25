@@ -435,6 +435,10 @@ function hideAddShowingForm() {
 <div class="add-showing-section">
   <button id="add-showing-toggle" type="button" class="btn btn-outline-info btn-sm"
           onclick="showAddShowingForm()">+ Add a showing</button>
+  <a href="{% url 'batch-add-showings' event.pk %}"
+     class="btn btn-outline-info btn-sm ms-2"
+     data-bs-toggle="tooltip"
+     title="Add showings on multiple dates at once &mdash; useful for recurring events.">+ Add showings on multiple dates</a>
 
   <div id="add-showing-form" class="{% if not add_showing_form.errors %}d-none{% endif %} mt-3">
     <h5>Add a showing</h5>

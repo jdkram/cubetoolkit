@@ -1,0 +1,39 @@
+{% extends "form_base.html" %}
+{% block title %}Showings added: {{ event.name }}{% endblock %}
+
+{% block body %}
+<h1>Showings added</h1>
+
+<p>
+  {{ created|length }} showing{{ created|length|pluralize }} added to
+  <strong>{{ event.name }}</strong>, all <span class="badge text-bg-secondary">Unconfirmed</span>.
+  Confirm each one once you&rsquo;re ready to publish.
+</p>
+
+<table class="table table-sm table-striped mb-3" style="max-width:500px;">
+  <thead>
+    <tr>
+      <th>Date &amp; time</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for showing in created %}
+    <tr>
+      <td>{{ showing.start|date:"D j M Y, H:i" }}</td>
+      <td>
+        <a href="{% url 'edit-showing' showing.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<a href="{% url 'edit-event-details-view' event.pk %}" class="btn btn-primary">
+  Back to event hub
+</a>
+<a href="{% url 'cancel-edit' %}" class="btn btn-outline-secondary ms-2">
+  &larr; Back to diary
+</a>
+
+{% endblock %}
