@@ -1,6 +1,6 @@
 import logging
 
-from django.contrib.auth.decorators import permission_required
+from django.contrib.auth.decorators import permission_required, user_passes_test
 from django.contrib.auth.signals import user_logged_in
 from django.contrib.auth.signals import user_logged_out
 from django.contrib.auth.signals import user_login_failed
@@ -8,6 +8,11 @@ from django.dispatch import receiver
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+
+def panopticon_required(func):
+    """Restrict a view to superusers (Panopticon tier) only."""
+    return user_passes_test(lambda u: u.is_superuser)(func)
 
 
 class ip_or_permission_required:

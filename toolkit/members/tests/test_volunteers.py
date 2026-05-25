@@ -87,7 +87,7 @@ class TestVolunteerEditViews(MembersTestsMixin, TestCase):
         self.assertFalse(v.active)
 
         # And redirected to volunteer list
-        self.assertRedirects(response, reverse("view-volunteer-list"))
+        self.assertRedirects(response, reverse("view-volunteer-summary"))
 
     def test_unretire(self):
         v = Volunteer.objects.get(id=1)
@@ -102,7 +102,7 @@ class TestVolunteerEditViews(MembersTestsMixin, TestCase):
         self.assertTrue(v.active)
 
         # And redirected to volunteer list
-        self.assertRedirects(response, reverse("view-volunteer-list"))
+        self.assertRedirects(response, reverse("view-volunteer-summary"))
 
 
 class TestActivateDeactivateVolunteer(MembersTestsMixin, TestCase):
@@ -146,7 +146,7 @@ class TestActivateDeactivateVolunteer(MembersTestsMixin, TestCase):
         url = reverse("inactivate-volunteer")
         response = self.client.post(url, data={"volunteer": "2"}, follow=True)
 
-        self.assertRedirects(response, reverse("view-volunteer-list"))
+        self.assertRedirects(response, reverse("view-volunteer-summary"))
 
         vol = Volunteer.objects.get(id=2)
         self.assertFalse(vol.active)
@@ -170,7 +170,7 @@ class TestActivateDeactivateVolunteer(MembersTestsMixin, TestCase):
         url = reverse("activate-volunteer")
         response = self.client.post(url, data={"volunteer": "4"}, follow=True)
 
-        self.assertRedirects(response, reverse("view-volunteer-list"))
+        self.assertRedirects(response, reverse("view-volunteer-summary"))
 
         vol = Volunteer.objects.get(id=self.vol_4.pk)
         self.assertTrue(vol.active)
@@ -262,7 +262,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
             },
             follow=True,
         )
-        self.assertRedirects(response, reverse("view-volunteer-list"))
+        self.assertRedirects(response, reverse("view-volunteer-summary"))
 
         self.assertContains(
             response,
@@ -309,7 +309,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
             follow=True,
         )
 
-        self.assertRedirects(response, reverse("view-volunteer-list"))
+        self.assertRedirects(response, reverse("view-volunteer-summary"))
 
         self.assertContains(
             response,
@@ -373,7 +373,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
             data={"mem-name": "Renam\u018fd Vol", "mem-email": "volon@cube.test", "vol-status": "active"},
             follow=True,
         )
-        self.assertRedirects(response, reverse("view-volunteer-list"))
+        self.assertRedirects(response, reverse("view-volunteer-summary"))
 
         self.assertContains(
             response,
@@ -441,7 +441,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
             follow=True,
         )
 
-        self.assertRedirects(response, reverse("view-volunteer-list"))
+        self.assertRedirects(response, reverse("view-volunteer-summary"))
 
         self.assertContains(
             response,
@@ -532,7 +532,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
                 "vol-status": "active",
             },
         )
-        self.assertRedirects(response, reverse("view-volunteer-list"))
+        self.assertRedirects(response, reverse("view-volunteer-summary"))
 
         vol = Volunteer.objects.get(id=1)
         self.assertEqual(vol.member.name, "Pictureless Person")
@@ -584,7 +584,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
                 },
             )
 
-        self.assertRedirects(response, reverse("view-volunteer-list"))
+        self.assertRedirects(response, reverse("view-volunteer-summary"))
 
         vol = Volunteer.objects.get(id=1)
         self.assertEqual(vol.member.name, "Pictureless Person")
@@ -631,7 +631,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
             },
         )
 
-        self.assertRedirects(response, reverse("view-volunteer-list"))
+        self.assertRedirects(response, reverse("view-volunteer-summary"))
 
         vol = Volunteer.objects.get(id=1)
         self.assertEqual(vol.member.name, "Pictureless Person")
@@ -1448,3 +1448,57 @@ class TestVolunteerDirectoryDisplayName(MembersTestsMixin, TestCase):
     def test_none_returns_empty(self):
         self.vol_1.dir_share_listed = False
         self.assertEqual(self.vol_1.directory_display_name(), "")
+
+
+class TestVolunteerPIIPermissionBoundary(MembersTestsMixin, TestCase):
+    """9.74: Programmer (toolkit.write only) must not access volunteer PII views."""
+
+    PII_URLS = [
+        "view-volunteer-list",
+        "view-volunteer-summary",
+        "view-volunteer-role-report",
+        "view-volunteer-training-report",
+        "view-volunteer-export",
+    ]
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="read_only", password="T3stPassword!1")
+
+    def _get(self, url_name, **kwargs):
+        return self.client.get(reverse(url_name, kwargs=kwargs))
+
+    def test_read_only_denied_volunteer_list(self):
+        resp = self._get("view-volunteer-list")
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/login", resp["Location"])
+
+    def test_read_only_denied_volunteer_summary(self):
+        resp = self._get("view-volunteer-summary")
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/login", resp["Location"])
+
+    def test_read_only_denied_volunteer_role_report(self):
+        resp = self._get("view-volunteer-role-report")
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/login", resp["Location"])
+
+    def test_read_only_denied_volunteer_export(self):
+        resp = self._get("view-volunteer-export")
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/login", resp["Location"])
+
+    def test_read_only_denied_volunteer_training_report(self):
+        resp = self._get("view-volunteer-training-report")
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/login", resp["Location"])
+
+    def test_read_only_denied_edit_other_volunteer(self):
+        resp = self._get("edit-volunteer", volunteer_id=self.vol_1.pk)
+        # read_only has no volunteer record, so editing another's profile → denied
+        self.assertEqual(resp.status_code, 403)
+
+    def test_panopticon_can_access_volunteer_list(self):
+        self.client.login(username="admin", password="T3stPassword!")
+        resp = self._get("view-volunteer-list")
+        self.assertEqual(resp.status_code, 200)

@@ -146,9 +146,9 @@ class MembersTestsMixin:
         self.vol_4.save()
 
     def _setup_test_users(self):
-        # Read/write user:
+        # Panopticon (superuser) — full access including volunteer/member PII:
         user_rw = auth_models.User.objects.create_user(
-            "admin", "toolkit_admin@localhost", "T3stPassword!"
+            "admin", "toolkit_admin@localhost", "T3stPassword!", is_superuser=True
         )
         # read only user:
         user_r = auth_models.User.objects.create_user(

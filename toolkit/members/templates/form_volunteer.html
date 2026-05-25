@@ -611,7 +611,7 @@ $(document).ready(function() {
 
 <!-- ── GDPR + password (panopticon, outside main form) ─────────── -->
 {# Grouped here — visually adjacent to Permissions at the foot of the main form. #}
-{% if request.user.is_superuser %}
+{% if request.user.is_superuser and volunteer.id %}
 <div id="vol-danger" style="margin-top:1rem;">
 
   <div class="vol-section danger-zone">

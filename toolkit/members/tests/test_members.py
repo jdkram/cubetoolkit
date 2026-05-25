@@ -1231,3 +1231,36 @@ class TestMemberMiscViews(MembersTestsMixin, TestCase):
         url = reverse("view-member", kwargs={"member_id": 999})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
+
+
+class TestMemberPIIPermissionBoundary(MembersTestsMixin, TestCase):
+    """9.74: Programmer (toolkit.write only) must not access member PII views."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="read_only", password="T3stPassword!1")
+
+    def test_read_only_denied_member_search(self):
+        resp = self.client.get(reverse("search-members"))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/login", resp["Location"])
+
+    def test_read_only_denied_member_view(self):
+        resp = self.client.get(reverse("view-member", kwargs={"member_id": self.mem_1.pk}))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/login", resp["Location"])
+
+    def test_read_only_denied_member_statistics(self):
+        resp = self.client.get(reverse("member-statistics"))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/login", resp["Location"])
+
+    def test_read_only_denied_member_duplicates(self):
+        resp = self.client.get(reverse("member-duplicates"))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/login", resp["Location"])
+
+    def test_panopticon_can_search_members(self):
+        self.client.login(username="admin", password="T3stPassword!")
+        resp = self.client.get(reverse("search-members"))
+        self.assertEqual(resp.status_code, 200)

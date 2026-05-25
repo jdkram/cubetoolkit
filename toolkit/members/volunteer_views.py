@@ -11,6 +11,7 @@ from django.urls import reverse
 from django.conf import settings
 from django.core.mail import send_mail
 from django.contrib.auth.decorators import login_required, permission_required
+from toolkit.toolkit_auth.decorators import panopticon_required
 from django.core.exceptions import PermissionDenied
 from django.contrib import messages
 from django.utils.text import slugify
@@ -33,7 +34,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-@permission_required("toolkit.read")
+@panopticon_required
 @require_safe
 def view_volunteer_list(request):
     show_retired = request.GET.get("show-retired", None) is not None
@@ -73,7 +74,7 @@ def view_volunteer_list(request):
     return render(request, "volunteer_list.html", context)
 
 
-@permission_required("toolkit.read")
+@panopticon_required
 @require_safe
 def export_volunteers_as_csv(request):
     # TODO use settings.DAWN_OF_TOOLKIT with export
@@ -121,7 +122,7 @@ def export_volunteers_as_csv(request):
     return response
 
 
-@permission_required("toolkit.read")
+@panopticon_required
 @require_safe
 def view_volunteer_summary(request):
     if not request.user.is_superuser:
@@ -164,7 +165,7 @@ def view_volunteer_summary(request):
     return render(request, "volunteer_summary.html", context)
 
 
-@permission_required("toolkit.read")
+@panopticon_required
 @require_safe
 def view_volunteer_role_report(request):
     # Build dict of role names -> volunteer names
@@ -192,7 +193,7 @@ def view_volunteer_role_report(request):
     return render(request, "volunteer_role_report.html", context)
 
 
-@permission_required("toolkit.read")
+@panopticon_required
 @require_safe
 def select_volunteer(request, action, active=True):
     # This view is called to retire / unretire a volunteer. It presents a list
@@ -228,7 +229,7 @@ def select_volunteer(request, action, active=True):
     return render(request, "select_volunteer.html", context)
 
 
-@permission_required("toolkit.write")
+@panopticon_required
 @require_POST
 def activate_volunteer(request, set_active=True):
     # Sets the 'active' value for the volunteer with the id passed  in the
@@ -271,7 +272,7 @@ def activate_volunteer(request, set_active=True):
             fail_silently=False,
         )
 
-    return HttpResponseRedirect(reverse("view-volunteer-list"))
+    return HttpResponseRedirect(reverse("view-volunteer-summary"))
 
 
 @login_required
@@ -279,7 +280,7 @@ def edit_volunteer(request, volunteer_id, create_new=False):
     # If called from the "add" url, then create_new will be True. If called
     # from the edit url then it'll be False
 
-    can_write = request.user.has_perm("toolkit.write")
+    is_panopticon = request.user.is_superuser
 
     # Depending on which way this method was called, either create a totally
     # new volunteer object with default values (add) or load the volunteer
@@ -287,16 +288,15 @@ def edit_volunteer(request, volunteer_id, create_new=False):
     if not create_new:
         # Called from "edit" url
         volunteer = get_object_or_404(Volunteer, id=volunteer_id)
-        # Programmers (toolkit.write) can edit anyone; volunteers can only
-        # edit their own record.
-        if not can_write and volunteer.user != request.user:
+        # Panopticons can edit anyone; volunteers can only edit their own record.
+        if not is_panopticon and volunteer.user != request.user:
             raise PermissionDenied
         member = volunteer.member
         user = volunteer.user
         new_training_record = TrainingRecord(volunteer=volunteer)
     else:
-        # Called from "add" url — requires write permission
-        if not can_write:
+        # Called from "add" url — Panopticon only
+        if not is_panopticon:
             raise PermissionDenied
         volunteer = Volunteer()
         member = Member()
@@ -411,7 +411,7 @@ def edit_volunteer(request, volunteer_id, create_new=False):
     return render(request, "form_volunteer.html", context)
 
 
-@permission_required("toolkit.write")
+@panopticon_required
 @require_POST
 def add_volunteer_training_record(request, volunteer_id):
     volunteer = get_object_or_404(Volunteer, id=volunteer_id)
@@ -453,7 +453,7 @@ def add_volunteer_training_record(request, volunteer_id):
         return JsonResponse(response)
 
 
-@permission_required("toolkit.write")
+@panopticon_required
 @require_POST
 def delete_volunteer_training_record(request, training_record_id):
     record = get_object_or_404(TrainingRecord, id=training_record_id)
@@ -473,7 +473,7 @@ def delete_volunteer_training_record(request, training_record_id):
     return HttpResponse("OK", content_type="text/plain")
 
 
-@permission_required("toolkit.read")
+@panopticon_required
 @require_safe
 def view_volunteer_training_records(request):
     # Two sets of data, the complicated one (training records) and the simpler
@@ -533,7 +533,7 @@ def view_volunteer_training_records(request):
     return render(request, "volunteer_training_report.html", context)
 
 
-@permission_required("toolkit.write")
+@panopticon_required
 def add_volunteer_training_group_record(request):
     if request.method == "POST":
         form = GroupTrainingForm(request.POST)
@@ -774,7 +774,7 @@ def send_volunteer_password_reset(request, volunteer_id):
 
 
 @require_POST
-@permission_required("toolkit.write")
+@panopticon_required
 def clear_login_inactive(request, volunteer_id):
     """Clear the login-inactive flag after a panopticon user has followed up."""
     volunteer = get_object_or_404(Volunteer, pk=volunteer_id)
