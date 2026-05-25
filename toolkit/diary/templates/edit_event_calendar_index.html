@@ -350,6 +350,20 @@
       flex-shrink: 0;
   }
 
+  /* "All / None" room toggle links */
+  .room-toggle-links {
+      font-size: 0.8em;
+      color: #6c757d;
+      white-space: nowrap;
+  }
+  .room-toggle-links a {
+      color: #0066cc;
+      text-decoration: none;
+  }
+  .room-toggle-links a:hover {
+      text-decoration: underline;
+  }
+
   /* Room section labels */
   .room-section-label {
       font-size: 0.75em;
@@ -637,8 +651,13 @@ var urls = {
   {# Room filters - only in multiroom mode, with primary/secondary distinction #}
   {% if MULTIROOM_ENABLED and rooms_and_colours %}
   <div class="calendar-filters-row">
-    <div class="filter-group" style="flex-wrap: wrap;">
+    <div class="filter-group" style="flex-wrap: wrap; align-items: center;">
       <label>Rooms:</label>
+      <span class="room-toggle-links">
+        <a href="#" id="room-select-all">All</a> /
+        <a href="#" id="room-select-none">None</a>
+      </span>
+      <span class="filter-divider" style="height: 1.2em;"></span>
       {% for room in rooms_and_colours %}
         {% if room.is_primary %}
         <label class="room-filter-item primary-room" title="Main space">

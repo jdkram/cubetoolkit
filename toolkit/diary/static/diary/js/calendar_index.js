@@ -28,17 +28,34 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
     var STORAGE_KEY = 'fc6-calendar-view';
     var FILTER_STORAGE_KEY = 'fc6-calendar-filters';
 
-    // Filter state (mutable)
-    var filterState = initialFilters || {
-        timeOfDay: 'all',
-        showUnconfirmed: true,
-        showPrivate: true,
-        showOutsideHire: true,
-        showCancelled: true,
-        nameQuery: '',
-        selectedTags: [],
-        visibleRooms: resources ? resources.map(function(r) { return r.id; }) : []
-    };
+    // Filter state — loaded from sessionStorage if available, else from initialFilters.
+    var filterState = (function() {
+        var defaults = initialFilters || {
+            timeOfDay: 'all',
+            showUnconfirmed: true,
+            showPrivate: true,
+            showOutsideHire: true,
+            showCancelled: true,
+            nameQuery: '',
+            selectedTags: [],
+            visibleRooms: resources ? resources.map(function(r) { return parseInt(r.id, 10); }) : []
+        };
+        try {
+            var saved = sessionStorage.getItem(FILTER_STORAGE_KEY);
+            if (saved) {
+                var parsed = JSON.parse(saved);
+                // Discard any saved room IDs that no longer exist
+                var allRoomIds = resources ? resources.map(function(r) { return parseInt(r.id, 10); }) : [];
+                if (Array.isArray(parsed.visibleRooms)) {
+                    parsed.visibleRooms = parsed.visibleRooms.filter(function(id) {
+                        return allRoomIds.indexOf(id) !== -1;
+                    });
+                }
+                return Object.assign({}, defaults, parsed);
+            }
+        } catch (e) {}
+        return defaults;
+    }());
 
     // Calendar instance (set in _init)
     var calendar;
@@ -212,6 +229,47 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
                 countEl.textContent = '';
             }
         }
+
+        saveFilterState();
+    }
+
+    function saveFilterState() {
+        try {
+            sessionStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(filterState));
+        } catch (e) {}
+    }
+
+    // Sync all filter control states to match filterState (called after loading
+    // a persisted state so the DOM reflects what JS actually has).
+    function syncFilterUI() {
+        var timeBtns = document.querySelectorAll('.time-filter-btn');
+        timeBtns.forEach(function(btn) {
+            btn.classList.toggle('active', (btn.dataset.timeFilter || 'all') === filterState.timeOfDay);
+        });
+
+        var nameInput = document.getElementById('filter-name');
+        if (nameInput) { nameInput.value = filterState.nameQuery || ''; }
+
+        var ids = [
+            ['filter-unconfirmed', 'showUnconfirmed'],
+            ['filter-private',     'showPrivate'],
+            ['filter-outside',     'showOutsideHire'],
+            ['filter-cancelled',   'showCancelled']
+        ];
+        ids.forEach(function(pair) {
+            var el = document.getElementById(pair[0]);
+            if (el) { el.checked = filterState[pair[1]]; }
+        });
+
+        var tagBtns = document.querySelectorAll('.tag-filter-btn[data-tag]');
+        tagBtns.forEach(function(btn) {
+            btn.classList.toggle('active', filterState.selectedTags.indexOf(btn.dataset.tag) !== -1);
+        });
+
+        var roomCbs = document.querySelectorAll('.room-filter-checkbox');
+        roomCbs.forEach(function(cb) {
+            cb.checked = filterState.visibleRooms.indexOf(parseInt(cb.value, 10)) !== -1;
+        });
     }
 
     // TIME_GRID_VIEWS: views that show a vertical hour grid and benefit from
@@ -350,6 +408,27 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
                 applyFilters();
             });
         });
+
+        // Room "Select all / none" toggle links
+        var allRoomIds = resources ? resources.map(function(r) { return parseInt(r.id, 10); }) : [];
+        var roomSelectAll  = document.getElementById('room-select-all');
+        var roomSelectNone = document.getElementById('room-select-none');
+        if (roomSelectAll) {
+            roomSelectAll.addEventListener('click', function(e) {
+                e.preventDefault();
+                filterState.visibleRooms = allRoomIds.slice();
+                roomCbs.forEach(function(cb) { cb.checked = true; });
+                applyFilters();
+            });
+        }
+        if (roomSelectNone) {
+            roomSelectNone.addEventListener('click', function(e) {
+                e.preventDefault();
+                filterState.visibleRooms = [];
+                roomCbs.forEach(function(cb) { cb.checked = false; });
+                applyFilters();
+            });
+        }
 
         // Filter collapse toggle (works on all screen sizes)
         var filterToggle = document.getElementById('filter-toggle');
@@ -666,6 +745,9 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
 
         calendar = new FullCalendar.Calendar(calendarEl, calendarOpts);
         calendar.render();
+
+        // Sync filter controls to the (possibly sessionStorage-restored) filterState
+        syncFilterUI();
 
         // Apply initial timeline hours if starting in week view
         updateTimelineHours(filterState.timeOfDay);
