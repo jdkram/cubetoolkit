@@ -8,6 +8,8 @@
 {% block header %}
 {% if user.is_authenticated %}
 {{ block.super }}
+{% else %}
+{% include "messages.html" %}
 {% endif %}
 <h3>{{ VENUE.longname }} members database</h3>
 
