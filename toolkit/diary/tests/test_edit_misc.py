@@ -16,9 +16,11 @@ from toolkit.diary.models import (
     Showing,
     Event,
     EventLink,
+    EventTag,
+    EventTemplate,
+    EventTemplateRole,
     Role,
     DiaryIdea,
-    EventTemplate,
     MediaItem,
     RotaEntry,
     Room,
@@ -810,3 +812,165 @@ class BatchAddShowingsTests(DiaryTestsMixin, TestCase):
         self.assertContains(response, "/diary/edit/showing/id/")
 
 
+
+
+class TemplateExportImportTests(DiaryTestsMixin, TestCase):
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="admin", password="T3stPassword!")
+
+    # ── Export ───────────────────────────────────────────────────────────────
+
+    def test_export_json_appears_on_detail_page(self):
+        url = reverse("edit_event_template_detail", kwargs={"template_id": self.tmpl1.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '"name"')
+        self.assertContains(response, "Template 1")
+
+    def test_export_json_is_valid_json(self):
+        from toolkit.diary.edit_views import _export_template_json
+        j = _export_template_json(self.tmpl1)
+        data = json.loads(j)
+        self.assertEqual(data["name"], "Template 1")
+        self.assertIn("role_slots", data)
+        self.assertIn("tags", data)
+
+    def test_export_includes_roles_and_tags(self):
+        from toolkit.diary.edit_views import _export_template_json
+        j = _export_template_json(self.tmpl2)
+        data = json.loads(j)
+        role_names = [s["role"] for s in data["role_slots"]]
+        self.assertIn("Role 1 (standard)", role_names)
+        tag_names = data["tags"]
+        self.assertIn("tag one", tag_names)
+
+    def test_export_not_shown_to_non_superuser(self):
+        import django.contrib.auth.models as auth_models
+        import django.contrib.contenttypes as contenttypes
+        programmer = auth_models.User.objects.create_user(
+            "programmer_test", "", "T3stPassword!X"
+        )
+        ct = contenttypes.models.ContentType.objects.get_or_create(
+            model="", app_label="toolkit"
+        )[0]
+        write_permission = auth_models.Permission.objects.get(
+            content_type=ct, codename="write"
+        )
+        programmer.user_permissions.add(write_permission)
+        self.client.logout()
+        self.client.login(username="programmer_test", password="T3stPassword!X")
+        url = reverse("edit_event_template_detail", kwargs={"template_id": self.tmpl1.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "import-event-template")
+
+    # ── Import ───────────────────────────────────────────────────────────────
+
+    def _import_url(self):
+        return reverse("import-event-template")
+
+    def _valid_json(self, name="Import Test"):
+        return json.dumps({
+            "name": name,
+            "pricing": "£5",
+            "film_information": "",
+            "copy_summary": "A test.",
+            "copy": "",
+            "terms": "",
+            "rota_notes": "",
+            "private": False,
+            "outside_hire": False,
+            "tags": ["tag one"],
+            "role_slots": [{"role": "Role 1 (standard)", "count": 2}],
+        })
+
+    def test_import_get_renders_form(self):
+        response = self.client.get(self._import_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Import event template")
+
+    def test_import_requires_superuser(self):
+        self.client.logout()
+        self.client.login(username="read_only", password="T3stPassword!1")
+        response = self.client.get(self._import_url())
+        self.assertEqual(response.status_code, 302)
+
+    def test_import_creates_template(self):
+        response = self.client.post(
+            self._import_url(), {"json_text": self._valid_json(), "overwrite": ""}
+        )
+        self.assertEqual(response.status_code, 302)
+        tmpl = EventTemplate.objects.get(name="Import Test")
+        self.assertEqual(tmpl.pricing, "£5")
+
+    def test_import_copies_roles(self):
+        self.client.post(
+            self._import_url(), {"json_text": self._valid_json(), "overwrite": ""}
+        )
+        tmpl = EventTemplate.objects.get(name="Import Test")
+        slot = tmpl.role_slots.first()
+        self.assertEqual(slot.role.name, "Role 1 (standard)")
+        self.assertEqual(slot.count, 2)
+
+    def test_import_copies_tags(self):
+        self.client.post(
+            self._import_url(), {"json_text": self._valid_json(), "overwrite": ""}
+        )
+        tmpl = EventTemplate.objects.get(name="Import Test")
+        tag_names = list(tmpl.tags.values_list("name", flat=True))
+        self.assertIn("tag one", tag_names)
+
+    def test_import_creates_copy_when_name_exists(self):
+        self.client.post(
+            self._import_url(), {"json_text": self._valid_json("Template 1"), "overwrite": ""}
+        )
+        self.assertTrue(EventTemplate.objects.filter(name="Template 1 (copy)").exists())
+
+    def test_import_overwrites_when_flag_set(self):
+        initial_pricing = self.tmpl1.pricing
+        new_json = json.dumps({
+            "name": "Template 1",
+            "pricing": "NEW PRICING",
+            "role_slots": [],
+            "tags": [],
+        })
+        self.client.post(self._import_url(), {"json_text": new_json, "overwrite": "1"})
+        self.tmpl1.refresh_from_db()
+        self.assertEqual(self.tmpl1.pricing, "NEW PRICING")
+
+    def test_import_skips_unknown_roles(self):
+        j = json.dumps({
+            "name": "Unknown Role Test",
+            "role_slots": [{"role": "Nonexistent Role XYZ", "count": 1}],
+            "tags": [],
+        })
+        response = self.client.post(self._import_url(), {"json_text": j, "overwrite": ""})
+        self.assertEqual(response.status_code, 302)
+        tmpl = EventTemplate.objects.get(name="Unknown Role Test")
+        self.assertEqual(tmpl.role_slots.count(), 0)
+
+    def test_import_skips_unknown_tags(self):
+        j = json.dumps({
+            "name": "Unknown Tag Test",
+            "role_slots": [],
+            "tags": ["nonexistent-tag-xyz"],
+        })
+        response = self.client.post(self._import_url(), {"json_text": j, "overwrite": ""})
+        self.assertEqual(response.status_code, 302)
+        tmpl = EventTemplate.objects.get(name="Unknown Tag Test")
+        self.assertEqual(tmpl.tags.count(), 0)
+
+    def test_import_invalid_json_shows_error(self):
+        response = self.client.post(
+            self._import_url(), {"json_text": "not valid json", "overwrite": ""}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Invalid JSON")
+
+    def test_import_empty_input_shows_error(self):
+        response = self.client.post(
+            self._import_url(), {"json_text": "", "overwrite": ""}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Paste a JSON template")

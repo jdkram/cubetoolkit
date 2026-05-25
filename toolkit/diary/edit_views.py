@@ -1349,13 +1349,134 @@ def edit_event_template_detail(request, template_id=None):
         roles_formset = diary_forms.EventTemplateRoleFormSet(instance=event_template)
         links_formset = diary_forms.EventTemplateLinkFormSet(instance=event_template)
 
+    export_json = None
+    if event_template is not None:
+        export_json = _export_template_json(event_template)
+
     context = {
         "form": form,
         "roles_formset": roles_formset,
         "links_formset": links_formset,
         "event_template": event_template,
+        "export_json": export_json,
     }
     return render(request, "edit_event_template_detail.html", context)
+
+
+def _export_template_json(template):
+    """Serialise an EventTemplate to a JSON string suitable for copy-paste export."""
+    data = {
+        "name": template.name,
+        "pricing": template.pricing or "",
+        "film_information": template.film_information or "",
+        "copy_summary": template.copy_summary or "",
+        "copy": template.copy or "",
+        "terms": template.terms or "",
+        "rota_notes": template.rota_notes or "",
+        "private": template.private,
+        "outside_hire": template.outside_hire,
+        "tags": [t.name for t in template.tags.order_by("name")],
+        "role_slots": [
+            {"role": slot.role.name, "count": slot.count}
+            for slot in template.role_slots.select_related("role").order_by("role__name")
+        ],
+    }
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_http_methods(["GET", "POST"])
+def import_event_template(request):
+    """Import a template from JSON (Panopticon only).
+
+    Handles same-name conflict via an 'overwrite' checkbox.  When unchecked
+    and a template with the given name exists, the import creates a copy
+    suffixed with " (copy)".
+    """
+    if request.method == "POST":
+        json_text = request.POST.get("json_text", "").strip()
+        overwrite = request.POST.get("overwrite") == "1"
+        errors = []
+        template = None
+
+        if not json_text:
+            errors.append("Paste a JSON template to import.")
+        else:
+            try:
+                data = json.loads(json_text)
+            except json.JSONDecodeError as exc:
+                errors.append(f"Invalid JSON: {exc}")
+                data = None
+
+            if data is not None:
+                name = (data.get("name") or "").strip()
+                if not name:
+                    errors.append("Template JSON must contain a non-empty 'name' field.")
+                else:
+                    existing = EventTemplate.objects.filter(name=name).first()
+                    if existing and overwrite:
+                        template = existing
+                        template.role_slots.all().delete()
+                        template.tags.clear()
+                    elif existing and not overwrite:
+                        name = f"{name} (copy)"
+                        template = EventTemplate(name=name)
+                    else:
+                        template = EventTemplate(name=name)
+
+                    if not errors:
+                        template.pricing = data.get("pricing") or ""
+                        template.film_information = data.get("film_information") or ""
+                        template.copy_summary = data.get("copy_summary") or ""
+                        template.copy = data.get("copy") or ""
+                        template.terms = data.get("terms") or ""
+                        template.rota_notes = data.get("rota_notes") or ""
+                        template.private = bool(data.get("private", False))
+                        template.outside_hire = bool(data.get("outside_hire", False))
+                        template.save()
+
+                        tag_warnings = []
+                        for tag_name in data.get("tags") or []:
+                            try:
+                                tag = EventTag.objects.get(name=tag_name)
+                                template.tags.add(tag)
+                            except EventTag.DoesNotExist:
+                                tag_warnings.append(tag_name)
+
+                        role_warnings = []
+                        for slot in data.get("role_slots") or []:
+                            role_name = (slot.get("role") or "").strip()
+                            count = slot.get("count", 1)
+                            try:
+                                role = Role.objects.get(name=role_name)
+                                EventTemplateRole = template.role_slots.model
+                                EventTemplateRole.objects.create(
+                                    template=template, role=role, count=count
+                                )
+                            except Role.DoesNotExist:
+                                role_warnings.append(role_name)
+
+                        msg = f"Imported template '{template.name}'."
+                        if tag_warnings:
+                            msg += f" Unknown tags skipped: {', '.join(tag_warnings)}."
+                        if role_warnings:
+                            msg += f" Unknown roles skipped: {', '.join(role_warnings)}."
+                        messages.success(request, msg)
+                        return HttpResponseRedirect(
+                            reverse("edit_event_template_detail", kwargs={"template_id": template.pk})
+                        )
+
+        return render(
+            request,
+            "import_event_template.html",
+            {
+                "errors": errors,
+                "json_text": json_text,
+                "overwrite": overwrite,
+            },
+        )
+
+    return render(request, "import_event_template.html", {})
 
 
 @permission_required("toolkit.write")

@@ -1,0 +1,46 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Import event template{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/messages.css">
+{% endblock %}
+
+{% block body %}
+<h1>Import event template</h1>
+
+<p class="text-muted mb-3">
+  Paste the JSON from an exported template below. Roles and tags are matched by name;
+  any that don&rsquo;t exist in this system will be skipped with a warning.
+</p>
+
+{% if errors %}
+<div class="alert alert-danger">
+  <ul class="mb-0">
+    {% for err in errors %}<li>{{ err }}</li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<form method="post">
+  {% csrf_token %}
+  <div class="mb-3">
+    <label for="json-input" class="form-label">Template JSON</label>
+    <textarea id="json-input" name="json_text" class="form-control font-monospace"
+              rows="20" style="font-size:0.82em;">{{ json_text }}</textarea>
+  </div>
+  <div class="mb-3 form-check">
+    <input type="checkbox" class="form-check-input" id="overwrite-check" name="overwrite" value="1"
+           {% if overwrite %}checked{% endif %}>
+    <label class="form-check-label" for="overwrite-check">
+      Overwrite existing template if name matches (default: create a copy)
+    </label>
+  </div>
+  <button type="submit" class="btn btn-primary">Import</button>
+  <a href="{% url 'edit_event_templates' %}" class="btn btn-secondary ms-2">Cancel</a>
+</form>
+
+<p class="mt-4"><a href="{% url 'edit_event_templates' %}">&larr; All templates</a></p>
+
+{% endblock %}

@@ -327,6 +327,20 @@
   </form>
 
   {% if event_template %}
+
+  {% if request.user.is_superuser %}
+  <div class="field-section mt-4">
+    <h3>Export</h3>
+    <p class="text-muted" style="font-size:0.88em;">
+      Copy this JSON and paste it into the
+      <a href="{% url 'import-event-template' %}">import form</a>
+      on another instance to recreate the template.
+    </p>
+    <textarea class="form-control font-monospace" rows="12" style="font-size:0.78em;"
+              onclick="this.select()" readonly>{{ export_json }}</textarea>
+  </div>
+  {% endif %}
+
   <div class="delete-zone">
     <h3>Delete template</h3>
     <p>This only removes the template definition. Existing events that used this template are unaffected.</p>

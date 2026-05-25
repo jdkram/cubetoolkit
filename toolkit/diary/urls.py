@@ -35,6 +35,7 @@ from toolkit.diary.edit_views import (
     generate_event_poster,
     edit_rooms,
     edit_room_detail,
+    import_event_template,
 )
 from toolkit.diary.public_views import (
     ArchiveIndex,
@@ -257,6 +258,11 @@ diary_urls = [
         r"^edit/eventtemplates/(?P<template_id>\d+)/$",
         edit_event_template_detail,
         name="edit_event_template_detail",
+    ),
+    re_path(
+        r"^edit/eventtemplates/import/$",
+        import_event_template,
+        name="import-event-template",
     ),
     re_path(r"^edit/eventtags/", edit_event_tags, name="edit_event_tags"),
     # Edit event roles
