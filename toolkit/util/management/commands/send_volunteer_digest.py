@@ -14,7 +14,7 @@ import datetime
 import logging
 
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import EmailMessage, get_connection
 from django.core.management.base import BaseCommand
 from django.core.signing import Signer
 from django.template.loader import render_to_string
@@ -156,73 +156,77 @@ class Command(BaseCommand):
         sent = 0
         skipped = 0
 
-        for volunteer in volunteers:
-            email = getattr(volunteer.member, "email", None)
-            name = getattr(volunteer.member, "name", None) or "Volunteer"
+        subject = f"Your {settings.VENUE['cinemaname']} volunteer digest — week of {week_of}"
+        from_email = settings.DEFAULT_FROM_EMAIL
+        toolkit_url = (
+            settings.VENUE.get("siteurl", "").rstrip("/")
+            + reverse("view-volunteer-list")
+        )
 
-            if not email:
-                self.stdout.write(
-                    self.style.WARNING(
-                        f"  Skipping {name}: no email address"
-                    )
-                )
-                skipped += 1
-                continue
+        # Open a single SMTP connection for the whole batch rather than one per email.
+        connection = get_connection() if not dry_run else None
+        try:
+            if connection:
+                connection.open()
 
-            sections = _build_digest(volunteer, now)
+            for volunteer in volunteers:
+                email = getattr(volunteer.member, "email", None)
+                name = getattr(volunteer.member, "name", None) or "Volunteer"
 
-            # Skip if there's nothing to say
-            if not any(sections.values()):
-                self.stdout.write(f"  Skipping {name} <{email}>: nothing to report")
-                skipped += 1
-                continue
-
-            token = _make_unsubscribe_token(volunteer)
-            unsubscribe_url = (
-                settings.VENUE.get("siteurl", "").rstrip("/")
-                + reverse("volunteer-digest-unsubscribe")
-                + f"?token={volunteer.pk}:{token}"
-            )
-            toolkit_url = (
-                settings.VENUE.get("siteurl", "").rstrip("/")
-                + reverse("view-volunteer-list")
-            )
-
-            context = {
-                "volunteer_name": name.split()[0] if name else "Volunteer",
-                "week_of": week_of,
-                "shifts": sections["shifts"],
-                "new_programme": sections["new_programme"],
-                "starred": sections["starred"],
-                "toolkit_url": toolkit_url,
-                "unsubscribe_url": unsubscribe_url,
-            }
-
-            body = render_to_string("volunteer_digest_email.txt", context)
-            subject = f"Your {settings.VENUE['cinemaname']} volunteer digest — week of {week_of}"
-            from_email = settings.DEFAULT_FROM_EMAIL
-
-            if dry_run:
-                self.stdout.write(f"  [DRY RUN] Would send to {name} <{email}>")
-                self.stdout.write(f"    Shifts: {len(sections['shifts'])}")
-                self.stdout.write(f"    New programme: {len(sections['new_programme'])}")
-                self.stdout.write(f"    Starred: {len(sections['starred'])}")
-            else:
-                try:
-                    send_mail(subject, body, from_email, [email], fail_silently=False)
-                    volunteer.last_digest_sent_at = now
-                    volunteer.save(update_fields=["last_digest_sent_at"])
+                if not email:
                     self.stdout.write(
-                        self.style.SUCCESS(f"  Sent to {name} <{email}>")
-                    )
-                    sent += 1
-                except Exception as exc:
-                    self.stdout.write(
-                        self.style.ERROR(
-                            f"  Failed to send to {name} <{email}>: {exc}"
-                        )
+                        self.style.WARNING(f"  Skipping {name}: no email address")
                     )
                     skipped += 1
+                    continue
+
+                sections = _build_digest(volunteer, now)
+
+                if not any(sections.values()):
+                    self.stdout.write(f"  Skipping {name} <{email}>: nothing to report")
+                    skipped += 1
+                    continue
+
+                token = _make_unsubscribe_token(volunteer)
+                unsubscribe_url = (
+                    settings.VENUE.get("siteurl", "").rstrip("/")
+                    + reverse("volunteer-digest-unsubscribe")
+                    + f"?token={volunteer.pk}:{token}"
+                )
+
+                context = {
+                    "volunteer_name": name.split()[0] if name else "Volunteer",
+                    "week_of": week_of,
+                    "shifts": sections["shifts"],
+                    "new_programme": sections["new_programme"],
+                    "starred": sections["starred"],
+                    "toolkit_url": toolkit_url,
+                    "unsubscribe_url": unsubscribe_url,
+                }
+
+                body = render_to_string("volunteer_digest_email.txt", context)
+
+                if dry_run:
+                    self.stdout.write(f"  [DRY RUN] Would send to {name} <{email}>")
+                    self.stdout.write(f"    Shifts: {len(sections['shifts'])}")
+                    self.stdout.write(f"    New programme: {len(sections['new_programme'])}")
+                    self.stdout.write(f"    Starred: {len(sections['starred'])}")
+                else:
+                    try:
+                        msg = EmailMessage(subject, body, from_email, [email], connection=connection)
+                        msg.send()
+                        volunteer.last_digest_sent_at = now
+                        volunteer.save(update_fields=["last_digest_sent_at"])
+                        self.stdout.write(self.style.SUCCESS(f"  Sent to {name} <{email}>"))
+                        sent += 1
+                    except Exception as exc:
+                        self.stdout.write(
+                            self.style.ERROR(f"  Failed to send to {name} <{email}>: {exc}")
+                        )
+                        skipped += 1
+        finally:
+            if connection:
+                connection.close()
 
         if not dry_run:
             self.stdout.write(
