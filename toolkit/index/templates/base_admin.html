@@ -22,6 +22,8 @@ body {
 @media (max-width: 767px) {
   .navbar .navbar-collapse {
     background-color: inherit;
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 }
 #base-admin-logout-form {
@@ -84,7 +86,10 @@ body {
               <div class="dropdown-divider"></div>
               <a class="dropdown-item" href="{% url "labs-floorplan" %}">Building Map</a>
               <a class="dropdown-item" href="{% url "labs-jobs" %}">Jobs board</a>
+              <a class="dropdown-item" href="{% url "labs-shopping" %}">Shopping list</a>
               <a class="dropdown-item" href="{% url "labs-donations" %}">Donations wishlist</a>
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="{% url "toolkit-access" %}">Access levels</a>
               <a class="dropdown-item" href="{% url "labs-donations-manage" %}">Manage donations</a>
             </div>
           </li>
@@ -131,9 +136,6 @@ body {
                <a class="nav-link" href="{% url "edit-site-configuration" %}">Site settings</a>
              </li>
           {% endif %}
-          <li class="nav-item">
-            <a class="nav-link" href="{% url "toolkit-access" %}">Access levels</a>
-          </li>
           {% if user.volunteer.pk %}
           <li class="nav-item">
             <a class="nav-link" href="{% url "edit-volunteer" user.volunteer.pk %}"><span class="fa fa-user"></span> {{ user.volunteer.member.name }}</a>

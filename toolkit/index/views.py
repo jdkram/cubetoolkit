@@ -158,6 +158,17 @@ class ToolkitIndexView(ListView):
         if unread:
             context["recent_bulletins"] = unread
 
+        # Shopping list widget (9.88): items with open need flags.
+        from toolkit.labs.models import NeedFlag
+        shopping_needs = list(
+            NeedFlag.objects.filter(resolved_at__isnull=True)
+            .select_related("item", "flagged_by__member")
+            .prefetch_related("pledge__pledged_by__member")
+            .order_by("-flagged_at")[:8]
+        )
+        if shopping_needs:
+            context["shopping_needs"] = shopping_needs
+
         return context
 
 

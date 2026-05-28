@@ -94,6 +94,20 @@
         outline: 2px dashed #0d6efd;
         outline-offset: -2px;
     }
+    .lc-header {
+        cursor: pointer;
+        user-select: none;
+    }
+    .lc-chevron {
+        display: inline-block;
+        font-size: 0.75em;
+        opacity: 0.5;
+        transition: transform 0.15s;
+        margin-left: 0.3em;
+    }
+    .lc-header.collapsed .lc-chevron {
+        transform: rotate(-90deg);
+    }
 </style>
 {% endblock %}
 
@@ -101,7 +115,7 @@
 {% block body %}
 <h1>{{ VENUE.longname }} Toolkit</h1>
 
-{% if has_volunteer or new_showings or showings_with_gaps or unconfirmed_showings or upcoming_training or recent_bulletins %}
+{% if has_volunteer or new_showings or showings_with_gaps or unconfirmed_showings or upcoming_training or recent_bulletins or shopping_needs %}
 <div class="d-flex justify-content-between align-items-baseline mb-2">
   <h2 class="h5 mb-0">Dashboard</h2>
   <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#dash-customise" aria-expanded="false">Customise</button>
@@ -131,6 +145,9 @@
       {% endif %}
       {% if recent_bulletins %}
       <label class="mb-0"><input type="checkbox" class="dash-toggle" data-key="dash_bulletins" checked> Bulletins</label>
+      {% endif %}
+      {% if shopping_needs %}
+      <label class="mb-0"><input type="checkbox" class="dash-toggle" data-key="dash_shopping" checked> Shopping list</label>
       {% endif %}
     </div>
   </div>
@@ -307,16 +324,49 @@
   </div>
   {% endif %}
 
+  {# Shopping list: items currently flagged as needed — all logged-in users #}
+  {% if shopping_needs %}
+  <div id="dash_shopping" class="col-md-6 d-flex">
+    <div class="card w-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Shopping needed</strong>
+        <a href="{% url "labs-shopping" %}" style="font-size:0.85em">Full list &rarr;</a>
+      </div>
+      <div class="card-body">
+        <table class="w-100">
+          {% for flag in shopping_needs %}
+          <tr class="shift-row">
+            <td><a href="{% url "labs-shopping-item" flag.item.pk %}">{{ flag.item.name }}</a></td>
+            <td>
+              {% if flag.pledge and not flag.pledge.fulfilled_at %}
+                <span style="font-size:0.8em; color:#0d6efd;">
+                  {% if flag.pledge.pledged_by %}{{ flag.pledge.pledged_by.member.name }} will get it{% else %}pledged{% endif %}
+                </span>
+              {% else %}
+                <form method="post" action="{% url "labs-shopping-pledge" flag.pk %}" style="display:inline;">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-primary" style="font-size:0.75rem; padding:0.1rem 0.4rem;">I'll get it</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
 </div>
 <hr id="dash-hr" class="mt-0 mb-4">
 <script>
 (function() {
-    var KEYS = ['dash_bulletins','dash_upcoming_shifts','dash_starred_events','dash_new_showings','dash_rota_gaps','dash_unconfirmed','dash_training'];
+    var KEYS = ['dash_bulletins','dash_upcoming_shifts','dash_starred_events','dash_rota_gaps','dash_new_showings','dash_shopping','dash_training','dash_unconfirmed'];
     var ORDER_KEY = 'dash_order';
     var row = document.getElementById('dash-cards-row');
 
-    // Cards hidden by default for new users (programmer-focused noise for volunteers).
-    ['dash_new_showings','dash_unconfirmed'].forEach(function(key) {
+    // dash_unconfirmed is programmer-focused noise for regular volunteers — hidden by default.
+    ['dash_unconfirmed'].forEach(function(key) {
         if (localStorage.getItem(key) === null) { localStorage.setItem(key, 'hidden'); }
     });
     // Apply saved visibility — runs here, after widget divs are in the DOM.
@@ -328,8 +378,10 @@
         }
     });
 
-    // Apply saved card order. Unknown / missing keys are skipped; new cards
-    // not in the saved order land at the end in their template order.
+    // Apply saved card order. Saved items appear in their saved position; any
+    // key not in the saved order is appended afterwards in KEYS default order.
+    // This prevents newly-added cards from floating to the top when an existing
+    // user's localStorage predates their addition.
     function applyOrder() {
         if (!row) return;
         var saved;
@@ -338,6 +390,12 @@
         saved.forEach(function(key) {
             var el = document.getElementById(key);
             if (el && el.parentNode === row) row.appendChild(el);
+        });
+        KEYS.forEach(function(key) {
+            if (saved.indexOf(key) === -1) {
+                var el = document.getElementById(key);
+                if (el && el.parentNode === row) row.appendChild(el);
+            }
         });
     }
     function saveOrder() {
@@ -423,6 +481,7 @@
             if (cb.checked) {
                 localStorage.removeItem(key);
                 if (el) el.classList.remove('d-none');
+                applyOrder();
             } else {
                 localStorage.setItem(key, 'hidden');
                 if (el) el.classList.add('d-none');
@@ -441,16 +500,18 @@
   {# Rota — all users #}
   <div class="col-md-6 d-flex">
     <div class="card w-100">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <strong>Rota</strong>
+      <div class="card-header lc-header d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#lc_rota" aria-expanded="true" aria-controls="lc_rota">
+        <span><strong>Rota</strong><span class="lc-chevron">&#9660;</span></span>
         {% if perms.toolkit.write %}<span class="badge text-bg-secondary">All users</span>{% endif %}
       </div>
-      <div class="card-body">
-        <ul class="card-links">
-          <li><a href="{% url "rota-edit" %}">Edit the rota</a></li>
-          <li><a href="{% url "view-rota-vacancies" %}">List vacancies in the next 30 days</a></li>
-          <li><a href="{% url "volunteer-directory" %}">Volunteer directory</a></li>
-        </ul>
+      <div class="collapse show" id="lc_rota">
+        <div class="card-body">
+          <ul class="card-links">
+            <li><a href="{% url "rota-edit" %}">Edit the rota</a></li>
+            <li><a href="{% url "view-rota-vacancies" %}">List vacancies in the next 30 days</a></li>
+            <li><a href="{% url "volunteer-directory" %}">Volunteer directory</a></li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
@@ -459,21 +520,23 @@
   {# Programming — Programmer+ #}
   <div class="col-md-6 d-flex">
     <div class="card w-100">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <strong>Programming</strong>
+      <div class="card-header lc-header d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#lc_programming" aria-expanded="true" aria-controls="lc_programming">
+        <span><strong>Programming</strong><span class="lc-chevron">&#9660;</span></span>
         <span class="badge text-bg-primary">Programmer+</span>
       </div>
-      <div class="card-body">
-        <ul class="card-links">
-          <li><a href="{% url "default-view" %}">Diary for the public</a></li>
-          <li><a href="{% url "archive-view-index" %}">Public diary archive</a></li>
-          <li><a href="{% url "default-edit" %}">Edit the diary</a></li>
-          <li><a href="{% url "diary-edit-calendar" %}">Edit the diary (calendar view)</a></li>
-          <li><a href="{% url "view_event_field" field="copy" %}">Copy report</a></li>
-          <li><a href="{% url "view_event_field" field="copy_summary" %}">Copy summary report</a></li>
-          <li><a href="{% url "view_event_field" field="terms" %}">Terms report</a></li>
-          <li><a href="{% url "edit-printed-programmes" %}">Upload printed programme PDFs</a></li>
-        </ul>
+      <div class="collapse show" id="lc_programming">
+        <div class="card-body">
+          <ul class="card-links">
+            <li><a href="{% url "default-view" %}">Diary for the public</a></li>
+            <li><a href="{% url "archive-view-index" %}">Public diary archive</a></li>
+            <li><a href="{% url "default-edit" %}">Edit the diary</a></li>
+            <li><a href="{% url "diary-edit-calendar" %}">Edit the diary (calendar view)</a></li>
+            <li><a href="{% url "view_event_field" field="copy" %}">Copy report</a></li>
+            <li><a href="{% url "view_event_field" field="copy_summary" %}">Copy summary report</a></li>
+            <li><a href="{% url "view_event_field" field="terms" %}">Terms report</a></li>
+            <li><a href="{% url "edit-printed-programmes" %}">Upload printed programme PDFs</a></li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
@@ -481,19 +544,21 @@
   {# Meta-programming — Programmer+ #}
   <div class="col-md-6 d-flex">
     <div class="card w-100">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <strong>Meta-programming</strong>
+      <div class="card-header lc-header d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#lc_meta" aria-expanded="true" aria-controls="lc_meta">
+        <span><strong>Meta-programming</strong><span class="lc-chevron">&#9660;</span></span>
         <span class="badge text-bg-primary">Programmer+</span>
       </div>
-      <div class="card-body">
-        <ul class="card-links">
-          <li><a href="{% url "edit_event_tags" %}">Edit available event tags</a></li>
-          <li><a href="{% url "edit_event_templates" %}">Edit available event templates</a></li>
-          <li><a href="{% url "edit_rooms" %}">Edit rooms</a></li>
-          {% if user.is_superuser %}
-          <li><a href="{% url "edit_roles" %}">Edit volunteer/event roles</a> <small class="text-muted">(Panopticon only)</small></li>
-          {% endif %}
-        </ul>
+      <div class="collapse show" id="lc_meta">
+        <div class="card-body">
+          <ul class="card-links">
+            <li><a href="{% url "edit_event_tags" %}">Edit available event tags</a></li>
+            <li><a href="{% url "edit_event_templates" %}">Edit available event templates</a></li>
+            <li><a href="{% url "edit_rooms" %}">Edit rooms</a></li>
+            {% if user.is_superuser %}
+            <li><a href="{% url "edit_roles" %}">Edit volunteer/event roles</a> <small class="text-muted">(Panopticon only)</small></li>
+            {% endif %}
+          </ul>
+        </div>
       </div>
     </div>
   </div>
@@ -503,21 +568,23 @@
   {# Members — Panopticon only #}
   <div class="col-md-6 d-flex">
     <div class="card w-100">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <strong>Members</strong>
+      <div class="card-header lc-header d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#lc_members" aria-expanded="true" aria-controls="lc_members">
+        <span><strong>Members</strong><span class="lc-chevron">&#9660;</span></span>
         <span class="badge text-bg-dark">Panopticon only</span>
       </div>
-      <div class="card-body">
-        <ul class="card-links">
-          <li><a href="{% url "add-member" %}">Add member</a></li>
-          <li><a href="{% url "search-members" %}">Search members</a></li>
-          <li><a href="{% url "member-statistics" %}">Member statistics</a></li>
-          <li><a href="{% url "member-duplicates" %}">Member duplicates</a></li>
-          {% if MEMBERSHIP_EXPIRY_ENABLED %}<li><a href="{% url "member-expired" %}">Expired members</a></li>{% endif %}
-          <li><a href="{% url "member-homepages" %}">Member homepages</a></li>
-          <li><a href="{% url "members-mailout" %}">Send mailout</a></li>
-          <li><a href="{% url "mailer:jobs-list" %}">Mailout job status</a></li>
-        </ul>
+      <div class="collapse show" id="lc_members">
+        <div class="card-body">
+          <ul class="card-links">
+            <li><a href="{% url "add-member" %}">Add member</a></li>
+            <li><a href="{% url "search-members" %}">Search members</a></li>
+            <li><a href="{% url "member-statistics" %}">Member statistics</a></li>
+            <li><a href="{% url "member-duplicates" %}">Member duplicates</a></li>
+            {% if MEMBERSHIP_EXPIRY_ENABLED %}<li><a href="{% url "member-expired" %}">Expired members</a></li>{% endif %}
+            <li><a href="{% url "member-homepages" %}">Member homepages</a></li>
+            <li><a href="{% url "members-mailout" %}">Send mailout</a></li>
+            <li><a href="{% url "mailer:jobs-list" %}">Mailout job status</a></li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
@@ -525,22 +592,24 @@
   {# Volunteers — Panopticon only #}
   <div class="col-md-6 d-flex">
     <div class="card w-100">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <strong>Volunteers</strong>
+      <div class="card-header lc-header d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#lc_volunteers" aria-expanded="true" aria-controls="lc_volunteers">
+        <span><strong>Volunteers</strong><span class="lc-chevron">&#9660;</span></span>
         <span class="badge text-bg-dark">Panopticon only</span>
       </div>
-      <div class="card-body">
-        <ul class="card-links">
-          <li><a href="{% url "view-volunteer-summary" %}">Volunteers summary</a></li>
-          <li><a href="{% url "view-volunteer-list" %}">Volunteers profiles</a></li>
-          <li><a href="{% url "add-volunteer" %}">Add new volunteer</a></li>
-          <li><a href="{% url "retire-select-volunteer" %}">Retire volunteer</a></li>
-          <li><a href="{% url "unretire-select-volunteer" %}">Unretire volunteer</a></li>
-          <li><a href="{% url "view-volunteer-export" %}">Export volunteers as CSV</a></li>
-          <li><a href="{% url "view-volunteer-role-report" %}">Volunteer role report</a></li>
-          <li><a href="{% url "view-volunteer-training-report" %}">Volunteer training report</a></li>
-          <li><a href="{% url "add-volunteer-training-group-record" %}">Add training records</a></li>
-        </ul>
+      <div class="collapse show" id="lc_volunteers">
+        <div class="card-body">
+          <ul class="card-links">
+            <li><a href="{% url "view-volunteer-summary" %}">Volunteers summary</a></li>
+            <li><a href="{% url "view-volunteer-list" %}">Volunteers profiles</a></li>
+            <li><a href="{% url "add-volunteer" %}">Add new volunteer</a></li>
+            <li><a href="{% url "retire-select-volunteer" %}">Retire volunteer</a></li>
+            <li><a href="{% url "unretire-select-volunteer" %}">Unretire volunteer</a></li>
+            <li><a href="{% url "view-volunteer-export" %}">Export volunteers as CSV</a></li>
+            <li><a href="{% url "view-volunteer-role-report" %}">Volunteer role report</a></li>
+            <li><a href="{% url "view-volunteer-training-report" %}">Volunteer training report</a></li>
+            <li><a href="{% url "add-volunteer-training-group-record" %}">Add training records</a></li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
@@ -548,18 +617,20 @@
   {# Admin — Panopticon only #}
   <div class="col-md-6 d-flex">
     <div class="card w-100">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <strong>Admin</strong>
+      <div class="card-header lc-header d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#lc_admin" aria-expanded="true" aria-controls="lc_admin">
+        <span><strong>Admin</strong><span class="lc-chevron">&#9660;</span></span>
         <span class="badge text-bg-dark">Panopticon only</span>
       </div>
-      <div class="card-body">
-        <ul class="card-links">
-          <li><a href="{% url "edit-site-configuration" %}">Site configuration</a></li>
-          <li><a href="{% url "wagtailadmin_home" %}">Content management (Wagtail)</a></li>
-          {% if VENUE.show_user_management %}
-          <li><a href="/toolkit/admin/">Administration backend</a></li>
-          {% endif %}
-        </ul>
+      <div class="collapse show" id="lc_admin">
+        <div class="card-body">
+          <ul class="card-links">
+            <li><a href="{% url "edit-site-configuration" %}">Site configuration</a></li>
+            <li><a href="{% url "wagtailadmin_home" %}">Content management (Wagtail)</a></li>
+            {% if VENUE.show_user_management %}
+            <li><a href="/toolkit/admin/">Administration backend</a></li>
+            {% endif %}
+          </ul>
+        </div>
       </div>
     </div>
   </div>
@@ -619,4 +690,20 @@
 {% if has_volunteer %}
 <script defer src="{{ STATIC_URL }}diary/js/calendar_links.js"></script>
 {% endif %}
+<script>
+(function() {
+    var LC_KEYS = ['lc_rota','lc_programming','lc_meta','lc_members','lc_volunteers','lc_admin'];
+    LC_KEYS.forEach(function(key) {
+        var body = document.getElementById(key);
+        if (!body) return;
+        if (localStorage.getItem(key) === 'hidden') {
+            body.classList.remove('show');
+            var header = document.querySelector('[data-bs-target="#' + key + '"]');
+            if (header) header.classList.add('collapsed');
+        }
+        body.addEventListener('hide.bs.collapse', function() { localStorage.setItem(key, 'hidden'); });
+        body.addEventListener('show.bs.collapse', function() { localStorage.removeItem(key); });
+    });
+})();
+</script>
 {% endblock %}
