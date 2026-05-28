@@ -162,6 +162,11 @@ class EventForm(forms.ModelForm):
                 }
             ),
             "tags": TagPillSelect(),
+            "trailer_url": forms.URLInput(
+                attrs={
+                    "placeholder": "e.g. https://www.youtube.com/watch?v=…",
+                }
+            ),
         }
         order = ("tags",)
         fields = (
@@ -252,7 +257,7 @@ class MediaItemForm(forms.ModelForm):
                 attrs={"accept": "image/jpeg,image/gif,image/png"}
             ),
             "alt_text": forms.Textarea(
-                attrs={"rows": 3, "style": "resize: vertical;"}
+                attrs={"rows": 3, "style": "resize: vertical;", "class": "form-control"}
             ),
         }
         exclude = ("mimetype", "caption")
@@ -296,6 +301,9 @@ class ShowingForm(forms.ModelForm):
 
         widgets = {
             "start": JQueryDateTimePicker(),
+            "setup_time": forms.TimeInput(attrs={"type": "time", "class": "form-control"}),
+            "doors_time": forms.TimeInput(attrs={"type": "time", "class": "form-control"}),
+            "final_volunteer_time": forms.TimeInput(attrs={"type": "time", "class": "form-control"}),
         }
 
     def clean_confirmed(self):
@@ -700,10 +708,10 @@ class NewEventForm(forms.Form):
         self.helper.label_class = "col-sm-2"
         self.helper.field_class = "col-sm-10"
 
-    room = forms.ModelChoiceField(
-        queryset=toolkit.diary.models.Room.objects.all(),
-        required=False,
-        empty_label="— no room —",
+    event_name = forms.CharField(min_length=1, max_length=256, required=True)
+    event_template = forms.ModelChoiceField(
+        queryset=toolkit.diary.models.EventTemplate.objects.all(),
+        required=True,
     )
     start = forms.DateTimeField(
         required=True,
@@ -718,12 +726,12 @@ class NewEventForm(forms.Form):
         initial=1,
         help_text="Bookings will be created with the same start time on consecutive days",
     )
-    event_name = forms.CharField(min_length=1, max_length=256, required=True)
-    event_template = forms.ModelChoiceField(
-        queryset=toolkit.diary.models.EventTemplate.objects.all(),
-        required=True,
-    )
     booked_by = forms.CharField(min_length=1, max_length=64, required=True)
+    room = forms.ModelChoiceField(
+        queryset=toolkit.diary.models.Room.objects.all(),
+        required=False,
+        empty_label="— no room —",
+    )
     private = forms.BooleanField(required=False)
     outside_hire = forms.BooleanField(required=False)
     # confirmed = forms.BooleanField(required=False)

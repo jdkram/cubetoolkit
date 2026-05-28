@@ -100,8 +100,8 @@ $(document).ready(function() {
 (function () {
     'use strict';
 
-    var FC_STANDARD = 500;
-    var FC_MUSIC = 750;
+    var FC_STANDARD = {{ breakeven_fc_standard_threshold }};
+    var FC_MUSIC = {{ breakeven_fc_music_threshold }};
 
     // Fixed costs (excluding artist deal, which is handled separately)
     var COST_IDS = ['be-hire', 'be-technical', 'be-accommodation', 'be-travel', 'be-food', 'be-other'];
@@ -256,6 +256,23 @@ $(document).ready(function () {
         'id_meeting_name':               'Optional. Name of the meeting, e.g. \u201cMonday meeting\u201d. Useful when minutes cover multiple meetings.',
         'id_meeting_minutes_url':        'Optional. Link to the meeting minutes (e.g. a shared doc or wiki page).',
     };
+
+    // Show/hide hire_name based on the outside_hire checkbox.
+    (function () {
+        var hireNameDiv = document.getElementById('div_id_hire_name');
+        var outsideHireBox = document.getElementById('id_outside_hire');
+
+        function applyHireNameVisibility() {
+            if (hireNameDiv) {
+                hireNameDiv.style.display = outsideHireBox && outsideHireBox.checked ? '' : 'none';
+            }
+        }
+
+        if (outsideHireBox) {
+            applyHireNameVisibility();
+            outsideHireBox.addEventListener('change', applyHireNameVisibility);
+        }
+    }());
 
     // Show/hide the three meeting-specific fields based on approval_type.
     (function () {
@@ -454,10 +471,9 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
 
                 <div id="be-output" class="mt-3" style="display:none"></div>
 
-                <p class="text-muted small mt-2 mb-0">
-                    Opening the doors at S&amp;S costs roughly &pound;200 before any additional costs &mdash; make sure this is factored in above.
-                    Finance Collective sign-off required if total costs exceed &pound;500 (standard) or &pound;750 (music).
-                </p>
+                {% if breakeven_guidance_note %}
+                <p class="text-muted small mt-2 mb-0">{{ breakeven_guidance_note }}</p>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -497,6 +513,10 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
             {% if media_form.media_file.errors %}
                 <div class="invalid-feedback d-block">{{ media_form.media_file.errors }}</div>
             {% endif %}
+            <small class="form-text text-muted mt-1">
+                &#x26A0;&#xFE0F; Please make sure you have the right to use any image you upload.
+                {% if IMAGE_COPYRIGHT_GUIDANCE_URL %}See our <a href="{{ IMAGE_COPYRIGHT_GUIDANCE_URL }}" target="_blank" rel="noopener">image copyright guidance</a> for help finding freely-licensed images.{% endif %}
+            </small>
         </div>
     </div>
 
@@ -535,11 +555,6 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
         {% endif %}
     {% endfor %}
 
-    <p class="help-block">
-        <small>&#x26A0;&#xFE0F; Please make sure you have the right to use any image you upload.
-        {% if IMAGE_COPYRIGHT_GUIDANCE_URL %}See our <a href="{{ IMAGE_COPYRIGHT_GUIDANCE_URL }}" target="_blank" rel="noopener">image copyright guidance</a> for help finding freely-licensed images.{% endif %}
-        </small>
-    </p>
     <p>
         <button type="submit" class="btn btn-primary">Update</button> <a href="{% url "edit-event-details-view" event_id=event.pk %}">Cancel</a>
     </p>

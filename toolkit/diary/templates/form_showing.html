@@ -18,6 +18,7 @@ $(document).ready(function() {
 // Room booking helpers — global so the SVG fetch callback can reach them
 var RB = (function () {
     var ROOMS = {{ rooms_json|safe }};
+    var SHOWING_START_TIME = "{{ showing.start|date:'H:i' }}";
     var roomsBySlug = {};
     var roomsById = {};
     ROOMS.forEach(function (r) {
@@ -42,6 +43,20 @@ var RB = (function () {
         });
     }
 
+    function getDefaultTimes() {
+        var rows = document.querySelectorAll(".rb-formset-row:not([data-deleted='1'])");
+        if (rows.length) {
+            var last = rows[rows.length - 1];
+            var startInput = last.querySelector("input[id$='-start_time']");
+            var endInput   = last.querySelector("input[id$='-end_time']");
+            return {
+                start: startInput ? startInput.value : SHOWING_START_TIME,
+                end:   endInput   ? endInput.value   : ""
+            };
+        }
+        return { start: SHOWING_START_TIME, end: "" };
+    }
+
     function addBookingRow(roomId) {
         var template = document.getElementById("rb-empty-form");
         if (!template) return;
@@ -56,6 +71,11 @@ var RB = (function () {
             var sel = row.querySelector("select[id$='-room']");
             if (sel) sel.value = roomId;
         }
+        var times = getDefaultTimes();
+        var startInput = row.querySelector("input[id$='-start_time']");
+        var endInput   = row.querySelector("input[id$='-end_time']");
+        if (startInput && times.start) startInput.value = times.start;
+        if (endInput   && times.end)   endInput.value   = times.end;
         document.getElementById("rb-formset-rows").appendChild(row);
         totalForms.value = count + 1;
         syncSvgHighlights();
@@ -65,6 +85,7 @@ var RB = (function () {
         svg.addEventListener("click", function (e) {
             var target = e.target.closest("[id^='room-']");
             if (!target) return;
+            if (target.classList.contains("rb-not-bookable")) return;
             var room = roomsBySlug[target.id];
             if (!room) return;
             var existing = null;
@@ -91,7 +112,7 @@ var RB = (function () {
         syncSvgHighlights();
     }
 
-    return { addBookingRow: addBookingRow, syncSvgHighlights: syncSvgHighlights, bindSvgClicks: bindSvgClicks, deleteRow: deleteRow };
+    return { addBookingRow: addBookingRow, syncSvgHighlights: syncSvgHighlights, bindSvgClicks: bindSvgClicks, deleteRow: deleteRow, roomsBySlug: roomsBySlug };
 }());
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -126,6 +147,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 svg.id = "room-booking-map";
                 svg.style.maxWidth = "100%";
                 svg.style.height = "auto";
+                svg.querySelectorAll("[id^='room-']").forEach(function (el) {
+                    if (!RB.roomsBySlug[el.id]) el.classList.add("rb-not-bookable");
+                });
                 RB.bindSvgClicks(svg);
             }
             RB.syncSvgHighlights();
@@ -136,6 +160,33 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
     RB.syncSvgHighlights();
+
+    // Field tooltips
+    var FIELD_TIPS = {
+        'id_confirmed':           'Must be ticked for a showing to appear on the volunteer rota AND the public programme. Leave unticked while a booking is provisional. For a volunteer-only event — visible on the rota but not to the public — confirm it and mark the event as Private.',
+        'id_hide_in_programme':   'Hides this specific date from the public programme, but the showing still appears on the volunteer rota. To hide all dates for an event from the public, use the Private flag on the event instead.',
+        'id_cancelled':           'Marks this showing as cancelled. Cancelled showings stay visible in the public programme and on the rota, clearly labelled CANCELLED — so the public knows and volunteers aren’t left guessing.',
+        'id_sold_out':            'Shows a "Sold out" badge on the public listing for this date. Does not automatically remove the ticket link.',
+        'id_discounted':          'Marks this specific date as discounted. Shown with a discounted badge on the public programme.',
+        'id_setup_time':          'Time of day when setup starts, e.g. 19:00. Shown on the rota as the earliest call time before doors open. Format: HH:MM (24-hour).',
+        'id_doors_time':          'Time doors open to the public. Shown on the rota. Format: HH:MM (24-hour).',
+        'id_final_volunteer_time':'Latest time volunteers are needed — anyone signed up knows they can leave after this. Shown on the rota. Format: HH:MM (24-hour).',
+    };
+
+    $.each(FIELD_TIPS, function (fieldId, tipText) {
+        var $label = $('label[for="' + fieldId + '"]');
+        if ($label.length) {
+            $label.append(
+                $('<span>').addClass('field-tip')
+                    .attr({'data-bs-toggle': 'tooltip', 'data-bs-placement': 'right', 'title': tipText})
+                    .text('ⓘ')
+            );
+        }
+    });
+
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+        new bootstrap.Tooltip(el);
+    });
 });
 </script>
 {% endblock %}
@@ -143,6 +194,14 @@ document.addEventListener("DOMContentLoaded", function () {
 {{ block.super }}
 <style>
     .asteriskField { display: none; }
+    .field-tip {
+        display: inline-block;
+        margin-left: 0.35em;
+        font-style: normal;
+        color: #6c757d;
+        cursor: help;
+        font-size: 0.9em;
+    }
     span.sub {
         color: gray;
     }
@@ -191,8 +250,9 @@ document.addEventListener("DOMContentLoaded", function () {
     .rb-map-wrap { margin-bottom: 1rem; }
     #room-booking-map { max-width: 100%; height: auto; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; user-select: none; }
     #room-booking-map [id^="room-"] { transition: fill 0.15s; }
-    #room-booking-map [id^="room-"].rb-selected { fill: #3a7bd5 !important; opacity: 0.75; }
-    #room-booking-map [id^="room-"]:hover { opacity: 0.6; }
+    #room-booking-map [id^="room-"].rb-selected { fill: #ff6d00 !important; opacity: 0.85; }
+    #room-booking-map [id^="room-"]:not(.rb-not-bookable):hover { opacity: 0.6; }
+    #room-booking-map [id^="room-"].rb-not-bookable { cursor: default !important; opacity: 0.45; }
     #room-booking-map text { pointer-events: none; }
     .rb-formset-table { width: 100%; border-collapse: collapse; font-size: 0.9em; margin-bottom: 0.5rem; }
     .rb-formset-table th { font-weight: 600; border-bottom: 1px solid #dee2e6; padding: 0.25rem 0.5rem; }

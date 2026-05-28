@@ -7,13 +7,22 @@ Add a new event
 {{ block.super }}
 <style>
     .asteriskField { display: none; }
+    #new-event-form .form-group { margin-bottom: 1.1rem; }
+    #new-event-form .field-tip {
+        display: inline-block;
+        margin-left: 0.35em;
+        font-style: normal;
+        color: #6c757d;
+        cursor: help;
+        font-size: 0.9em;
+    }
 </style>
 {% endblock %}
 
 {% block body %}
 <h1>New Event</h1>
 
-<form action="{% url "add-event" %}" method="post">
+<form id="new-event-form" action="{% url "add-event" %}" method="post">
     {% crispy form %}
     <p>
         <button type="submit" class="btn btn-primary" value="Add">Add Event and Booking</button>
@@ -21,4 +30,32 @@ Add a new event
     </p>
 </form>
 
+{% endblock %}
+
+{% block script %}
+{{ block.super }}
+<script>
+(function () {
+    var FIELD_TIPS = {
+        'id_private':      'When ticked, this event is hidden from the public website entirely — it won’t appear in any listing or be accessible via URL, even if showings are confirmed.',
+        'id_outside_hire': 'Tick if this event is run by an external organisation hiring the venue, not programmed by us. Affects internal reporting.',
+        'id_discounted':   'Marks this event as discounted for reporting purposes. Does not automatically change ticket prices.',
+    };
+
+    $.each(FIELD_TIPS, function (fieldId, tipText) {
+        var $label = $('label[for="' + fieldId + '"]');
+        if ($label.length) {
+            $label.append(
+                $('<span>').addClass('field-tip')
+                    .attr({'data-bs-toggle': 'tooltip', 'data-bs-placement': 'right', 'title': tipText})
+                    .text('ⓘ')
+            );
+        }
+    });
+
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+        new bootstrap.Tooltip(el);
+    });
+}());
+</script>
 {% endblock %}
