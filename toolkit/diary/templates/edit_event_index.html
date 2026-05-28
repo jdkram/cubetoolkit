@@ -78,6 +78,23 @@ Editing {{ event_list_name }}
       background: #f0f8ff;
   }
 
+  /* Fixed layout: column widths are set by <colgroup>, not content */
+  table.table {
+      table-layout: fixed;
+      width: 100%;
+  }
+  col.col-date    { width: 4rem; }
+  col.col-time    { width: 3.5rem; }
+  col.col-other   { width: 7rem; }
+  col.col-bookedby { width: 9rem; }
+  /* col.col-room has no width: unspecified cols share remaining space equally */
+
+  /* Allow event names to wrap rather than truncate */
+  td.room-col, td.col-event {
+      word-break: break-word;
+      overflow-wrap: break-word;
+  }
+
   /* Full-width colour stripe at bottom of room header cells */
   table.table thead th.room-col {
       border-bottom-width: 6px !important;
@@ -100,6 +117,20 @@ Editing {{ event_list_name }}
       font-size: 0.8em;
       vertical-align: top;
   }
+  /* Single quick-book link for the Other rooms column */
+  .other-room-add {
+      display: block;
+      color: #ccc;
+      text-decoration: none;
+      font-size: 0.85em;
+      text-align: center;
+  }
+  .other-room-add:hover,
+  .other-room-add:focus {
+      color: #0056b3;
+      background: #f0f8ff;
+  }
+
   /* Small pill badge for other-room bookings */
   .other-room-badge {
       display: inline-block;
@@ -250,6 +281,17 @@ function filter_events() {
   {% ifchanged day|date:"Y-m" %}
     {% if not forloop.first %}</tbody></table></div>{% endif %}
     <div class="table-responsive"><table class="table">
+    <colgroup>
+      <col class="col-date">
+      <col class="col-time">
+      {% if multiroom_enabled %}
+        {% for room in rooms %}<col class="col-room">{% endfor %}
+        {% if has_other_rooms %}<col class="col-other">{% endif %}
+      {% else %}
+        <col class="col-event">
+      {% endif %}
+      <col class="col-bookedby">
+    </colgroup>
     <thead><tr>
       <th class="month-heading" colspan="2">{{ day|date:"F Y" }}</th>
       {% if multiroom_enabled %}
@@ -298,7 +340,10 @@ function filter_events() {
       {% endfor %}
       {% if has_other_rooms %}
         {% other_room_bookings_at slot_showings time_slot as other_bookings %}
-        <td class="room-col other-col">{% for rb, showing in other_bookings %}<a href="{% url "edit-event-details-view" event_id=showing.event.pk %}" class="other-room-badge" style="border-left-color:{{ rb.room.colour }};" title="{{ showing.event.name }} — {{ rb.room.name }}">{{ rb.room.name }}</a>{% endfor %}</td>
+        <td class="room-col other-col">
+          {% for rb, showing in other_bookings %}<a href="{% url "edit-event-details-view" event_id=showing.event.pk %}" class="other-room-badge" style="border-left-color:{{ rb.room.colour }};" title="{{ showing.event.name }} — {{ rb.room.name }}">{{ rb.room.name }}</a>{% endfor %}
+          <a href="{% url "add-event" %}?date={{ day|date:"j-m-Y" }}&time={{ slot_local|date:"G:i" }}" class="other-room-add">+</a>
+        </td>
       {% endif %}
       <td class="room-col">{% for s in slot_showings %}{{ s.booked_by }}{% if not s.confirmed %} <span class="pencilled-at" title="Pencilled in on {{ s.created_at|date:"d-m-y" }}">(&#x270f;&#xfe0f;{{ s.created_at|date:"d-m-y" }})</span>{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
     </tr>
@@ -339,7 +384,7 @@ function filter_events() {
       <td></td>
       {% if multiroom_enabled %}
         {% for room in rooms %}<td class="room-col empty-slot"><a href="{% url "add-event" %}?date={{ day|date:"j-m-Y" }}&room={{ room.id }}">+</a></td>{% endfor %}
-        {% if has_other_rooms %}<td class="room-col other-col"></td>{% endif %}
+        {% if has_other_rooms %}<td class="room-col other-col"><a href="{% url "add-event" %}?date={{ day|date:"j-m-Y" }}" class="other-room-add">+</a></td>{% endif %}
       {% else %}
         <td></td>
       {% endif %}
