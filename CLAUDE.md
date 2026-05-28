@@ -63,10 +63,13 @@ The project uses CalVer (`YYYY.MM.N`). The canonical version is in [`VERSION`](V
 
 **How to bump (I will prompt you at the right moment):**
 
-1. Update `VERSION` — e.g. `2026.03.2`
-2. Include it in the commit: `git add VERSION && git commit`
-3. Tag the commit: `git tag v2026.03.2`
-4. Push tag separately: `git push origin v2026.03.2`
+1. Update `VERSION` — e.g. `2026.05.6`
+2. Commit it: `git add VERSION && git commit -m "chore(release): 2026.05.6"`
+3. Tag the commit: `git tag v2026.05.6`
+4. Push the tag: `git push origin v2026.05.6` (and `git push homeserver` for the homeserver)
+5. **Create a GitHub Release:** go to GitHub → Releases → Draft new release → choose the tag → paste release notes → Publish.
+
+**Release notes source:** Use the completed items from [CURRENT_WORK.md](CURRENT_WORK.md) — the ✅ rows since the last release. Summarise in plain English for a non-developer audience. Format: one bullet per shipped feature or notable fix.
 
 Full workflow documented in [docs/ONBOARDING.md — Releases and Versioning](docs/ONBOARDING.md).
 
