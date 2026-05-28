@@ -8,26 +8,22 @@ def find_clashes(room_booking):
     """Return a QuerySet of confirmed RoomBookings in the same room that overlap
     with room_booking's time window.
 
-    Overlap logic (open-interval at end):
-      existing.start < booking.end  AND  (existing.end IS NULL OR existing.end > booking.start)
+    Both bookings must have a known end time to be compared; open-ended bookings
+    (end=None) are excluded on both sides to avoid false positives.
 
-    If room_booking.end is None it is treated as open-ended (overlaps anything
-    that starts after room_booking.start).
+    Overlap condition (half-open intervals): start_A < end_B AND start_B < end_A
     """
-    qs = (
+    if room_booking.end is None:
+        return RoomBooking.objects.none()
+
+    return (
         RoomBooking.objects.filter(
             room=room_booking.room,
             showing__confirmed=True,
+            end__isnull=False,
+            start__lt=room_booking.end,
+            end__gt=room_booking.start,
         )
         .exclude(pk=room_booking.pk)
         .select_related("showing__event", "room")
     )
-
-    # If our booking has an end, any existing booking that starts before it overlaps.
-    if room_booking.end is not None:
-        qs = qs.filter(start__lt=room_booking.end)
-
-    # The existing booking must end after our start (or have no end — open-ended).
-    qs = qs.filter(Q(end__isnull=True) | Q(end__gt=room_booking.start))
-
-    return qs

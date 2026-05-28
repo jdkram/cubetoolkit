@@ -492,7 +492,10 @@ class Command(BaseCommand):
                     RoomBooking.objects.get_or_create(
                         showing=showing,
                         room=event_room,
-                        defaults={"start": showing_start},
+                        defaults={
+                            "start": showing_start,
+                            "end": showing_start + datetime.timedelta(minutes=dur_minutes),
+                        },
                     )
                 self._book_slot(event_room, showing_start, dur_minutes)
 
