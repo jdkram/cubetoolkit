@@ -36,18 +36,21 @@ map_slug = "room-meeting-room"
 name = "Dark Room"
 colour = "#707070"  # dark grey — text auto-detected as white
 is_primary = false
+show_column = false
 map_slug = "room-dark-room"
 
 [[rooms]]
 name = "Print Room"
 colour = "#CCE8F8"  # cool sky blue — matches floorplan screen printing room
 is_primary = false
+show_column = false
 map_slug = "room-screen-printing-room"
 
 [[rooms]]
 name = "Workshop"
 colour = "#F2E4A8"  # warm cream/tan — matches floorplan workshop
 is_primary = false
+show_column = false
 map_slug = "room-workshop"
 
 [[rooms]]
@@ -67,21 +70,25 @@ name = "Kitchen"
 colour = "#FFF0A8"  # pastel amber — café family
 is_primary = false
 show_column = false
+map_slug = "room-kitchen"
 
 [[rooms]]
 name = "Snug"
 colour = "#FFE8A0"  # warm pastel amber — café family, cosier than kitchen
 is_primary = false
 show_column = false
+map_slug = "room-snug"
 
 [[rooms]]
 name = "Projection Booth"
 colour = "#F5C0B2"  # pastel coral/salmon — cinema family
 is_primary = false
 show_column = false
+map_slug = "room-projection-booth"
 
 [[rooms]]
 name = "Middle Corridor"
 colour = "#EBEBEB"  # near-white grey — used as exhibition space occasionally
 is_primary = false
 show_column = false
+map_slug = "room-middle-corridor"
