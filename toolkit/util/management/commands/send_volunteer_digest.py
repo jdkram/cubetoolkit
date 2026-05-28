@@ -120,10 +120,31 @@ def _build_digest(volunteer, now):
                 f"{next_showing.start.strftime('%-d %b %Y, %H:%M')}"
             )
 
+    # 4. Shopping list: items with open need flags
+    from toolkit.labs.models import NeedFlag
+    open_flags = (
+        NeedFlag.objects.filter(resolved_at__isnull=True)
+        .select_related("item")
+        .prefetch_related("pledge__pledged_by__member")
+        .order_by("-flagged_at")
+    )
+    shopping_lines = []
+    for flag in open_flags:
+        try:
+            pledge = flag.pledge
+            pledger = pledge.pledged_by.member.name if (pledge and pledge.pledged_by) else None
+        except Exception:
+            pledger = None
+        if pledger:
+            shopping_lines.append(f"{flag.item.name} — {pledger} is getting it")
+        else:
+            shopping_lines.append(f"{flag.item.name} — needs someone to get it")
+
     return {
         "shifts": shifts_lines,
         "new_programme": new_programme_lines,
         "starred": starred_lines,
+        "shopping": shopping_lines,
     }
 
 
@@ -200,6 +221,7 @@ class Command(BaseCommand):
                     "shifts": sections["shifts"],
                     "new_programme": sections["new_programme"],
                     "starred": sections["starred"],
+                    "shopping": sections["shopping"],
                     "toolkit_url": toolkit_url,
                     "unsubscribe_url": unsubscribe_url,
                 }
@@ -211,6 +233,7 @@ class Command(BaseCommand):
                     self.stdout.write(f"    Shifts: {len(sections['shifts'])}")
                     self.stdout.write(f"    New programme: {len(sections['new_programme'])}")
                     self.stdout.write(f"    Starred: {len(sections['starred'])}")
+                    self.stdout.write(f"    Shopping: {len(sections['shopping'])}")
                 else:
                     try:
                         msg = EmailMessage(subject, body, from_email, [email], connection=connection)

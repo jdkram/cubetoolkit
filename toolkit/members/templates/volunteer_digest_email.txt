@@ -16,7 +16,13 @@ NEW ON THE PROGRAMME
 YOUR STARRED EVENTS (next 30 days)
 ------------------------------------
 {% for line in starred %}{{ line }}
-{% endfor %}{% endif %}
+{% endfor %}{% endif %}{% if shopping %}
+
+SHOPPING NEEDED
+----------------
+{% for line in shopping %}{{ line }}
+{% endfor %}Head to {{ toolkit_url }}/labs/shopping/ to pledge to get something.
+{% endif %}
 
 ---
 You're receiving this because you opted in at {{ toolkit_url }}.
