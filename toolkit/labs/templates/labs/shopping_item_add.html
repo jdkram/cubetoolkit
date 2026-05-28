@@ -1,0 +1,35 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Add to shopping list{% endblock %}
+
+{% block body %}
+<div class="mb-2">
+  <a href="{% url "labs-shopping" %}">&larr; Shopping list</a>
+</div>
+<h1>Add an item</h1>
+<p class="text-muted">Add a consumable to the catalogue. If it's already there, it'll just say so.</p>
+
+<form method="post" style="max-width: 28rem;">
+  {% csrf_token %}
+  <div class="mb-3">
+    <label for="id_name" class="form-label">Item name</label>
+    <input type="text" name="name" id="id_name" class="form-control" maxlength="100" required autofocus
+           value="{{ request.GET.name|default:'' }}">
+  </div>
+  <div class="mb-3">
+    <label for="id_category" class="form-label">Category</label>
+    <select name="category" id="id_category" class="form-select">
+      {% for value, label in CATEGORY_CHOICES %}
+      <option value="{{ value }}">{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="mb-3">
+    <label for="id_notes" class="form-label">Notes <span class="text-muted">(optional)</span></label>
+    <textarea name="notes" id="id_notes" class="form-control" rows="2"
+              placeholder="e.g. Hard water formula. The concentrated version from Nisbets."></textarea>
+  </div>
+  <button type="submit" class="btn btn-primary">Add item</button>
+  <a href="{% url "labs-shopping" %}" class="btn btn-outline-secondary ms-2">Cancel</a>
+</form>
+{% endblock %}

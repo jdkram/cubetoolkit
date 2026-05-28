@@ -1,0 +1,398 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Shopping list{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+  /* ── Search ─────────────────────────────────────────────────────────── */
+  .shopping-search-bar { margin-bottom: 1rem; }
+  #shopping-search {
+    font-size: 0.9rem;
+    padding: 0.32em 0.6em;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    width: 100%;
+    max-width: 22rem;
+  }
+  #shopping-no-match { font-size: 0.85rem; color: #6c757d; margin-top: 0.35rem; display: block; }
+
+  /* ── Table shell ────────────────────────────────────────────────────── */
+  .shopping-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    table-layout: fixed;
+  }
+  .shopping-table col.col-item   { width: 35%; }
+  .shopping-table col.col-status { width: 22%; }
+  .shopping-table col.col-onit   { width: 28%; }
+  .shopping-table col.col-action { width: 15%; }
+
+  .shopping-table thead th {
+    background: #343a40;
+    color: #fff;
+    padding: 0.45rem 0.65rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: left;
+  }
+
+  /* ── Item rows ──────────────────────────────────────────────────────── */
+  .item-row td {
+    padding: 0.5rem 0.65rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .item-row:hover td { background: #f8f9fa; }
+  .item-row--needed { border-left: 3px solid #dc3545; }
+  .item-row--needed td:first-child { padding-left: 0.45rem; }
+
+  /* item name */
+  .item-cell-name { font-weight: 600; color: inherit; text-decoration: none; }
+  .item-cell-name:hover { text-decoration: underline; }
+
+  /* status cell */
+  .item-row td.status-cell { vertical-align: top; padding-top: 0.6rem; }
+  .status-meta { font-size: 0.78rem; color: #6c757d; margin-top: 0.15rem; }
+  .ok-text { font-size: 0.82rem; color: #adb5bd; }
+  .item-row--urgent { border-left: 3px solid #dc3545; }
+  .item-row--urgent td:first-child { padding-left: 0.45rem; }
+  .item-row--on-it  { border-left: 3px solid #f59e0b; }
+  .item-row--on-it td:first-child  { padding-left: 0.45rem; }
+
+  .needed-pill {
+    display: inline-block;
+    font-size: 0.72rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    background: #dc3545;
+    color: #fff;
+    font-weight: 600;
+  }
+  .needed-pill--on-it {
+    background: #f59e0b;
+    color: #fff;
+  }
+  .needed-pill--noted {
+    cursor: pointer;
+    border: none;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: inherit;
+    padding: 0.1rem 0.4rem;
+  }
+  .needed-pill--noted .pill-asterisk { font-size: 0.85em; vertical-align: super; margin-left: 0.15em; }
+  .pill-note {
+    display: block;
+    font-size: 0.78rem;
+    font-style: italic;
+    color: #495057;
+    margin-top: 0.2rem;
+    padding: 0.2rem 0.4rem;
+    background: #fff8e1;
+    border-left: 2px solid #f59e0b;
+    border-radius: 2px;
+  }
+  .table-legend {
+    font-size: 0.78rem;
+    color: #9ca3af;
+    margin-top: 1rem;
+  }
+  .pledged-pill {
+    font-size: 0.72rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    background: #f59e0b;
+    color: #fff;
+  }
+
+
+  /* ── Action cell ────────────────────────────────────────────────────── */
+  .action-cell-inner { display: flex; flex-direction: column; gap: 0.3rem; align-items: flex-start; }
+  .detail-link { font-size: 0.78rem; color: #6c757d; text-decoration: none; white-space: nowrap; }
+  .detail-link:hover { text-decoration: underline; }
+
+  /* ── Pledge form two-step ───────────────────────────────────────────── */
+  .pledge-details { margin-top: 0.4rem; display: flex; flex-direction: column; gap: 0.3rem; }
+  .pledge-details input[type="date"],
+  .pledge-details input[type="text"] {
+    font-size: 0.8rem; padding: 0.2rem 0.35rem;
+    border: 1px solid #ced4da; border-radius: 3px; width: 100%;
+  }
+  .pledge-actions { display: flex; gap: 0.3rem; align-items: center; flex-wrap: wrap; }
+  .pledge-nudge { font-size: 0.72rem; color: #9ca3af; }
+
+  /* ── Category heading rows ──────────────────────────────────────────── */
+  .category-heading td {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    padding: 0.5rem 0.65rem 0.2rem;
+    border-bottom: none;
+    color: #6c757d;
+  }
+  .category-heading--cleaning td   { color: #1e3a5f; background: #eff6ff; }
+  .category-heading--kitchen td    { color: #14532d; background: #f0fdf4; }
+  .category-heading--stationery td { color: #78350f; background: #fffbeb; }
+  .category-heading--cinema-snacks td { color: #7c2d12; background: #fff7ed; }
+  .category-heading--other td      { color: #334155; background: #f8fafc; }
+
+  /* ── Actions ────────────────────────────────────────────────────────── */
+  td.action-cell { white-space: nowrap; vertical-align: middle; }
+
+  /* ── Recently restocked ─────────────────────────────────────────────── */
+  .done-section { margin-top: 2.5rem; opacity: 0.75; }
+  .done-section h4 { font-size: 0.88rem; color: #6c757d; margin-bottom: 0.4rem; }
+  .done-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    color: #9ca3af;
+  }
+  .done-table td { padding: 0.2rem 0.4rem; border-bottom: 1px solid #f5f5f5; }
+  .done-table td:first-child { text-decoration: line-through; }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="d-flex justify-content-between align-items-baseline mb-2">
+  <h1 class="mb-0">Shopping list</h1>
+  <a href="{% url "labs-shopping-add" %}" class="btn btn-sm btn-outline-primary">+ Add item</a>
+</div>
+
+<div class="shopping-search-bar">
+  <input type="search" id="shopping-search" placeholder="Find an item…" autocomplete="off" aria-label="Filter shopping list">
+  <span id="shopping-no-match" hidden>No match — <a href="{% url "labs-shopping-add" %}" id="shopping-add-link">add it</a></span>
+</div>
+
+{% if items %}
+<div style="overflow-x:auto;">
+  <table class="shopping-table">
+    <colgroup>
+      <col class="col-item">
+      <col class="col-status">
+      <col class="col-onit">
+      <col class="col-action">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>Status</th>
+        <th>On it</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% regroup items by get_category_display as items_by_category %}
+      {% for cat in items_by_category %}
+      <tr class="category-heading category-heading--{{ cat.grouper|slugify }}">
+        <td colspan="4">{{ cat.grouper }}</td>
+      </tr>
+
+      {% for item in cat.list %}
+      {% with flag=item.open_flags|first %}
+
+      <tr class="item-row {% if flag and flag.pledge and not flag.pledge.fulfilled_at %}item-row--on-it{% elif flag %}item-row--urgent{% endif %} shopping-item-row" data-name="{{ item.name|lower }}">
+        <td>
+          <a href="{% url "labs-shopping-item" item.pk %}" class="item-cell-name">{{ item.name }}</a>
+        </td>
+        <td class="status-cell">
+          {% if flag %}
+            {% if flag.notes %}
+              <button type="button" class="needed-pill {% if flag.pledge and not flag.pledge.fulfilled_at %}needed-pill--on-it{% endif %} needed-pill--noted pill-expand-btn">Needed<span class="pill-asterisk">*</span></button>
+              <span class="pill-note" hidden>{{ flag.notes }}</span>
+            {% elif flag.pledge and not flag.pledge.fulfilled_at %}
+              <span class="needed-pill needed-pill--on-it">Needed</span>
+            {% else %}
+              <span class="needed-pill">Needed</span>
+            {% endif %}
+            <div class="status-meta">
+              {% if flag.flagged_by %}{{ flag.flagged_by.member.name }}{% else %}Someone{% endif %} · {{ flag.flagged_at|date:"j M" }}
+            </div>
+          {% else %}
+            <span class="ok-text">OK</span>
+          {% endif %}
+        </td>
+        <td class="onit-cell">
+          {% if flag and flag.pledge and not flag.pledge.fulfilled_at %}
+            <span class="status-meta">
+              {% if flag.pledge.pledged_by %}{{ flag.pledge.pledged_by.member.name }}{% else %}Someone{% endif %}
+              {% if flag.pledge.eta_date %}<br>by {{ flag.pledge.eta_date|date:"j M" }}{% endif %}
+            </span>
+          {% elif flag %}
+            <form method="post" action="{% url "labs-shopping-pledge" flag.pk %}" class="pledge-form">
+              {% csrf_token %}
+              <button type="button" class="btn btn-sm btn-outline-primary pledge-trigger">I'll get it</button>
+              <div class="pledge-details" hidden>
+                <input type="date" name="eta_date" class="pledge-eta-date" title="When you'll get it">
+                <input type="text" name="eta_notes" placeholder="e.g. Friday cleaning club" maxlength="200">
+                <div class="pledge-actions">
+                  <button type="submit" class="btn btn-sm btn-outline-secondary pledge-confirm">Confirm anyway</button>
+                  <button type="button" class="btn btn-sm btn-link pledge-cancel-btn" style="font-size:0.8rem;padding:0;">Cancel</button>
+                </div>
+                <p class="pledge-nudge">Adding a date means others know when to expect it.</p>
+              </div>
+            </form>
+          {% endif %}
+        </td>
+        <td class="action-cell">
+          <div class="action-cell-inner">
+            {% if flag %}
+            <form method="post" action="{% url "labs-shopping-resolve" flag.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-success">Got it ✓</button>
+            </form>
+            {% else %}
+            <form method="post" action="{% url "labs-shopping-flag" item.pk %}" class="flag-form">
+              {% csrf_token %}
+              <button type="button" class="btn btn-sm btn-outline-danger flag-trigger">Flag as needed</button>
+              <div class="pledge-details" hidden>
+                <input type="text" name="notes" placeholder="e.g. down to our last roll" maxlength="300">
+                <div class="pledge-actions">
+                  <button type="submit" class="btn btn-sm btn-danger">Flag</button>
+                  <button type="button" class="btn btn-sm btn-link flag-cancel-btn" style="font-size:0.8rem;padding:0;">Cancel</button>
+                </div>
+              </div>
+            </form>
+            {% endif %}
+            <a href="{% url "labs-shopping-item" item.pk %}" class="detail-link">Details →</a>
+          </div>
+        </td>
+      </tr>
+
+      {% endwith %}{# flag #}
+      {% endfor %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+  <p class="table-legend">* This item has a note — tap the badge to read it.</p>
+{% else %}
+<p><em>No items yet. <a href="{% url "labs-shopping-add" %}">Add the first one.</a></em></p>
+{% endif %}
+
+{% if recently_resolved %}
+<div class="done-section">
+  <h4>Recently restocked</h4>
+  <table class="done-table">
+    <tbody>
+      {% for flag in recently_resolved %}
+      <tr>
+        <td>{{ flag.item.name }}</td>
+        <td>{{ flag.resolved_at|date:"j M" }}</td>
+        <td>{% if flag.resolved_by %}{{ flag.resolved_by.member.name }}{% elif flag.pledge and flag.pledge.pledged_by %}{{ flag.pledge.pledged_by.member.name }}{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<script>
+(function () {
+  /* ── Pledge two-step ── */
+  document.querySelectorAll('.pledge-trigger').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var form = btn.closest('.pledge-form');
+      btn.hidden = true;
+      var details = form.querySelector('.pledge-details');
+      details.hidden = false;
+      details.querySelector('.pledge-eta-date').focus();
+    });
+  });
+
+  document.querySelectorAll('.pledge-cancel-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var form = btn.closest('.pledge-form');
+      form.querySelector('.pledge-details').hidden = true;
+      form.querySelector('.pledge-trigger').hidden = false;
+    });
+  });
+
+  document.querySelectorAll('.pledge-eta-date').forEach(function (input) {
+    input.addEventListener('input', function () {
+      var confirm = input.closest('.pledge-form').querySelector('.pledge-confirm');
+      if (input.value) {
+        confirm.className = 'btn btn-sm btn-primary pledge-confirm';
+        confirm.textContent = "Yes, I’ll get it";
+      } else {
+        confirm.className = 'btn btn-sm btn-outline-secondary pledge-confirm';
+        confirm.textContent = "Confirm anyway";
+      }
+    });
+  });
+
+  /* ── Needed pill note toggle ── */
+  document.querySelectorAll('.pill-expand-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var note = btn.nextElementSibling;
+      if (!note || !note.classList.contains('pill-note')) return;
+      var open = note.hidden;
+      note.hidden = !open;
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  });
+
+  /* ── Flag two-step ── */
+  document.querySelectorAll('.flag-trigger').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var form = btn.closest('.flag-form');
+      btn.hidden = true;
+      var details = form.querySelector('.pledge-details');
+      details.hidden = false;
+      details.querySelector('input[type="text"]').focus();
+    });
+  });
+
+  document.querySelectorAll('.flag-cancel-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var form = btn.closest('.flag-form');
+      form.querySelector('.pledge-details').hidden = true;
+      form.querySelector('.flag-trigger').hidden = false;
+    });
+  });
+
+  /* ── Search filter ── */
+  var input = document.getElementById('shopping-search');
+  var noMatch = document.getElementById('shopping-no-match');
+  var addLink = document.getElementById('shopping-add-link');
+  var addBase = addLink ? addLink.getAttribute('href') : null;
+
+  if (!input) return;
+
+  input.addEventListener('input', function () {
+    var q = input.value.trim().toLowerCase();
+    var visible = 0;
+
+    document.querySelectorAll('.shopping-item-row').forEach(function (row) {
+      var match = !q || (row.getAttribute('data-name') || '').indexOf(q) !== -1;
+      row.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+
+    /* hide category headings with no visible rows beneath them */
+    document.querySelectorAll('.category-heading').forEach(function (heading) {
+      var sib = heading.nextElementSibling;
+      var anyVisible = false;
+      while (sib && !sib.classList.contains('category-heading')) {
+        if (sib.classList.contains('shopping-item-row') && sib.style.display !== 'none') {
+          anyVisible = true;
+        }
+        sib = sib.nextElementSibling;
+      }
+      heading.style.display = anyVisible ? '' : 'none';
+    });
+
+    if (noMatch) {
+      noMatch.hidden = !(q && visible === 0);
+      if (addLink && addBase && q) {
+        addLink.setAttribute('href', addBase + '?name=' + encodeURIComponent(q));
+      }
+    }
+  });
+}());
+</script>
+
+{% endblock %}

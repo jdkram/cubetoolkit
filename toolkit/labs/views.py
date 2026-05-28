@@ -19,6 +19,10 @@ from .models import (
     Bulletin,
     BulletinRead,
     Collective,
+    ConsumableItem,
+    NeedFlag,
+    ProcurementPledge,
+    SupplierRecord,
     RoomNote,
     DonationItem,
     Job,
@@ -768,3 +772,210 @@ def area_photo_delete(request, area_id):
     photo.image.delete(save=False)
     photo.delete()
     return JsonResponse({"deleted": True})
+
+
+# ── Shopping list (consumables) ────────────────────────────────────────────────
+
+@login_required
+def shopping_list(request):
+    cutoff = timezone.now() - datetime.timedelta(days=30)
+    items = (
+        ConsumableItem.objects.filter(active=True)
+        .prefetch_related(
+            models.Prefetch(
+                "need_flags",
+                queryset=NeedFlag.objects.filter(resolved_at__isnull=True)
+                    .select_related("flagged_by__member", "pledge__pledged_by__member"),
+                to_attr="open_flags",
+            )
+        )
+        .order_by("category", "name")
+    )
+    recently_resolved = (
+        NeedFlag.objects.filter(resolved_at__gte=cutoff)
+        .select_related("item", "flagged_by__member", "resolved_by__member")
+        .prefetch_related("pledge")
+        .order_by("-resolved_at")[:30]
+    )
+    try:
+        current_volunteer = request.user.volunteer
+    except Exception:
+        current_volunteer = None
+    return render(request, "labs/shopping.html", {
+        "items": items,
+        "recently_resolved": recently_resolved,
+        "current_volunteer": current_volunteer,
+        "CATEGORY_CHOICES": ConsumableItem.CATEGORY_CHOICES,
+    })
+
+
+@login_required
+def shopping_item(request, item_id):
+    item = get_object_or_404(ConsumableItem, pk=item_id, active=True)
+    suppliers = item.suppliers.all()
+    open_flag = item.need_flags.filter(resolved_at__isnull=True).select_related(
+        "flagged_by__member", "pledge__pledged_by__member"
+    ).first()
+    history = (
+        item.need_flags.filter(resolved_at__isnull=False)
+        .select_related("flagged_by__member", "resolved_by__member")
+        .prefetch_related("pledge__pledged_by__member")
+        .order_by("-resolved_at")[:20]
+    )
+    try:
+        current_volunteer = request.user.volunteer
+    except Exception:
+        current_volunteer = None
+    return render(request, "labs/shopping_item.html", {
+        "item": item,
+        "suppliers": suppliers,
+        "open_flag": open_flag,
+        "history": history,
+        "current_volunteer": current_volunteer,
+    })
+
+
+@login_required
+@require_POST
+def shopping_flag(request, item_id):
+    item = get_object_or_404(ConsumableItem, pk=item_id, active=True)
+    try:
+        volunteer = request.user.volunteer
+    except Exception:
+        volunteer = None
+    existing = NeedFlag.objects.filter(item=item, resolved_at__isnull=True).first()
+    if existing:
+        messages.info(request, f"'{item.name}' is already flagged as needed.")
+    else:
+        notes = request.POST.get("notes", "").strip()[:300]
+        NeedFlag.objects.create(item=item, flagged_by=volunteer, notes=notes)
+        messages.success(request, f"'{item.name}' flagged as needed.")
+    return redirect("labs-shopping")
+
+
+@login_required
+@require_POST
+def shopping_resolve(request, flag_id):
+    flag = get_object_or_404(NeedFlag, pk=flag_id, resolved_at__isnull=True)
+    try:
+        volunteer = request.user.volunteer
+    except Exception:
+        volunteer = None
+    flag.resolved_at = timezone.now()
+    flag.resolved_by = volunteer
+    flag.save()
+    try:
+        pledge = flag.pledge
+        if pledge.fulfilled_at is None:
+            pledge.fulfilled_at = timezone.now()
+            pledge.save()
+    except ProcurementPledge.DoesNotExist:
+        pass
+    messages.success(request, f"'{flag.item.name}' marked as restocked.")
+    return redirect("labs-shopping")
+
+
+@login_required
+@require_POST
+def shopping_pledge(request, flag_id):
+    flag = get_object_or_404(NeedFlag, pk=flag_id, resolved_at__isnull=True)
+    try:
+        volunteer = request.user.volunteer
+    except Exception:
+        volunteer = None
+    existing = getattr(flag, "pledge", None)
+    if existing and existing.fulfilled_at is None:
+        messages.info(request, f"Someone has already pledged to get '{flag.item.name}'.")
+        return redirect("labs-shopping")
+    eta_date = request.POST.get("eta_date") or None
+    eta_notes = request.POST.get("eta_notes", "").strip()[:200]
+    if existing:
+        existing.pledged_by = volunteer
+        existing.pledged_at = timezone.now()
+        existing.eta_date = eta_date
+        existing.eta_notes = eta_notes
+        existing.fulfilled_at = None
+        existing.save()
+    else:
+        ProcurementPledge.objects.create(
+            need_flag=flag,
+            pledged_by=volunteer,
+            eta_date=eta_date,
+            eta_notes=eta_notes,
+        )
+    messages.success(request, f"You've pledged to get '{flag.item.name}'.")
+    return redirect("labs-shopping")
+
+
+@login_required
+def shopping_item_add(request):
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()[:100]
+        category = request.POST.get("category", ConsumableItem.CATEGORY_OTHER)
+        notes = request.POST.get("notes", "").strip()
+        valid_categories = [c[0] for c in ConsumableItem.CATEGORY_CHOICES]
+        if not category or category not in valid_categories:
+            category = ConsumableItem.CATEGORY_OTHER
+        if name:
+            item, created = ConsumableItem.objects.get_or_create(
+                name__iexact=name,
+                defaults={"name": name, "category": category, "notes": notes},
+            )
+            if created:
+                messages.success(request, f"'{name}' added to the shopping list.")
+            else:
+                messages.info(request, f"'{name}' is already in the list.")
+        return redirect("labs-shopping")
+    return render(request, "labs/shopping_item_add.html", {
+        "CATEGORY_CHOICES": ConsumableItem.CATEGORY_CHOICES,
+    })
+
+
+@login_required
+@require_POST
+def shopping_supplier_add(request, item_id):
+    item = get_object_or_404(ConsumableItem, pk=item_id, active=True)
+    supplier_name = request.POST.get("supplier_name", "").strip()
+    if not supplier_name:
+        messages.error(request, "Supplier name is required.")
+        return redirect("labs-shopping-item", item_id=item_id)
+    try:
+        approx_price = request.POST.get("approx_price", "").strip() or None
+        if approx_price:
+            approx_price = float(approx_price)
+    except ValueError:
+        approx_price = None
+    SupplierRecord.objects.create(
+        item=item,
+        supplier_name=supplier_name,
+        ordering_notes=request.POST.get("ordering_notes", "").strip(),
+        product_url=request.POST.get("product_url", "").strip(),
+        product_code=request.POST.get("product_code", "").strip(),
+        unit_desc=request.POST.get("unit_desc", "").strip(),
+        approx_price=approx_price,
+    )
+    messages.success(request, f"Supplier '{supplier_name}' added.")
+    return redirect("labs-shopping-item", item_id=item_id)
+
+
+@login_required
+@require_POST
+def shopping_supplier_delete(request, supplier_id):
+    supplier = get_object_or_404(SupplierRecord, pk=supplier_id)
+    item_id = supplier.item_id
+    supplier.delete()
+    messages.success(request, "Supplier record removed.")
+    return redirect("labs-shopping-item", item_id=item_id)
+
+
+@login_required
+@require_POST
+def shopping_pledge_cancel(request, flag_id):
+    flag = get_object_or_404(NeedFlag, pk=flag_id, resolved_at__isnull=True)
+    try:
+        pledge = flag.pledge
+    except ProcurementPledge.DoesNotExist:
+        return redirect("labs-shopping")
+    pledge.delete()
+    messages.success(request, f"Pledge for '{flag.item.name}' cancelled.")
+    return redirect("labs-shopping")

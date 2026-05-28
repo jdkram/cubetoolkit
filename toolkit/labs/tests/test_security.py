@@ -173,6 +173,29 @@ class LabsSecurityTests(LabsTestsMixin, TestCase):
         url = reverse("labs-bulletin-delete", kwargs={"bulletin_id": self.bulletin.pk})
         self.assertEqual(self.client.post(url).status_code, 403)
 
+    def test_anon_cannot_access_shopping_list(self):
+        self._assert_anon_redirects("labs-shopping")
+
+    def test_anon_cannot_flag_item(self):
+        from toolkit.labs.models import ConsumableItem
+        item = ConsumableItem.objects.create(name="Security test item", category=ConsumableItem.CATEGORY_OTHER)
+        self._assert_anon_redirects("labs-shopping-flag", {"item_id": item.pk}, method="post")
+
+    def test_shopping_flag_get_returns_405(self):
+        from toolkit.labs.models import ConsumableItem
+        item = ConsumableItem.objects.create(name="Security test item 2", category=ConsumableItem.CATEGORY_OTHER)
+        self.client.login(username="volunteer", password="T3stPassword!3")
+        url = reverse("labs-shopping-flag", kwargs={"item_id": item.pk})
+        self.assertEqual(self.client.get(url).status_code, 405)
+
+    def test_shopping_resolve_get_returns_405(self):
+        from toolkit.labs.models import ConsumableItem, NeedFlag
+        item = ConsumableItem.objects.create(name="Security test item 3", category=ConsumableItem.CATEGORY_OTHER)
+        flag = NeedFlag.objects.create(item=item, flagged_by=self.vol)
+        self.client.login(username="volunteer", password="T3stPassword!3")
+        url = reverse("labs-shopping-resolve", kwargs={"flag_id": flag.pk})
+        self.assertEqual(self.client.get(url).status_code, 405)
+
     # ── Public endpoints: no auth required ───────────────────────────────
 
     def test_public_collectives_page_accessible_without_login(self):

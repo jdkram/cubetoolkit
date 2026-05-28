@@ -1,0 +1,27 @@
+# Shopping list seed data — need flags and pledges layered on top of the
+# ConsumableItem catalogue seeded directly in seed_dev_data.py.
+# These represent a realistic snapshot: a few items flagged, one pledged.
+
+# item: must match a name in the ConsumableItem catalogue exactly
+# pledged_by_index: index into the volunteers list (0-based), or omit for no pledge
+# pledge_eta_notes: free text ETA (optional)
+
+[[flags]]
+item = "Hand soap"
+notes = "Last bar used up Thursday after cleaning club"
+pledged_by_index = 2
+pledge_eta_notes = "Picking up at Suma order Friday"
+
+[[flags]]
+item = "Bin bags"
+notes = ""
+
+[[flags]]
+item = "Dishwasher detergent"
+notes = "Nearly out — maybe one wash left"
+pledged_by_index = 5
+pledge_eta_notes = "Bookers run Saturday"
+
+[[flags]]
+item = "Reams of paper (A4)"
+notes = "Printer in the meeting room showing empty"

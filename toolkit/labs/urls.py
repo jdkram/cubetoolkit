@@ -34,4 +34,13 @@ urlpatterns = [
     re_path(r"^bulletins/(?P<bulletin_id>\d+)/pin/$", views.bulletin_pin, name="labs-bulletin-pin"),
     re_path(r"^bulletins/(?P<bulletin_id>\d+)/expire/$", views.bulletin_expire, name="labs-bulletin-expire"),
     re_path(r"^bulletins/(?P<bulletin_id>\d+)/delete/$", views.bulletin_delete, name="labs-bulletin-delete"),
+    re_path(r"^shopping/$", views.shopping_list, name="labs-shopping"),
+    re_path(r"^shopping/add/$", views.shopping_item_add, name="labs-shopping-add"),
+    re_path(r"^shopping/(?P<item_id>\d+)/$", views.shopping_item, name="labs-shopping-item"),
+    re_path(r"^shopping/flag/(?P<item_id>\d+)/$", views.shopping_flag, name="labs-shopping-flag"),
+    re_path(r"^shopping/resolve/(?P<flag_id>\d+)/$", views.shopping_resolve, name="labs-shopping-resolve"),
+    re_path(r"^shopping/pledge/(?P<flag_id>\d+)/$", views.shopping_pledge, name="labs-shopping-pledge"),
+    re_path(r"^shopping/pledge/(?P<flag_id>\d+)/cancel/$", views.shopping_pledge_cancel, name="labs-shopping-pledge-cancel"),
+    re_path(r"^shopping/(?P<item_id>\d+)/supplier/add/$", views.shopping_supplier_add, name="labs-shopping-supplier-add"),
+    re_path(r"^shopping/supplier/(?P<supplier_id>\d+)/delete/$", views.shopping_supplier_delete, name="labs-shopping-supplier-delete"),
 ]

@@ -1,0 +1,271 @@
+{% extends "base_admin.html" %}
+
+{% block title %}{{ item.name }} — Shopping{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+  .supplier-card {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+  }
+  .supplier-name { font-weight: 600; margin-bottom: 0.3rem; }
+  .supplier-field { color: #555; margin-bottom: 0.2rem; }
+  .supplier-field label { font-weight: 600; color: #333; }
+  .history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  .history-table th {
+    background: #343a40;
+    color: #fff;
+    padding: 0.4rem 0.6rem;
+    text-align: left;
+  }
+  .history-table td {
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid #dee2e6;
+    vertical-align: top;
+  }
+  .needed-pill {
+    display: inline-block;
+    font-size: 0.75rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 3px;
+    background: #dc3545;
+    color: #fff;
+  }
+  .pledged-pill {
+    display: inline-block;
+    font-size: 0.75rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 3px;
+    background: #0d6efd;
+    color: #fff;
+  }
+  .text-muted-sm { font-size: 0.8rem; color: #6c757d; }
+  .flag-actions { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.5rem; }
+  .pledge-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+  }
+  .pledge-form input[type="date"],
+  .pledge-form input[type="text"] {
+    font-size: 0.85rem;
+    padding: 0.25rem 0.4rem;
+    border: 1px solid #ced4da;
+    border-radius: 3px;
+  }
+  .pledge-form input[type="date"] { width: 8.5rem; }
+  .pledge-form input[type="text"] { flex: 1 1 10rem; min-width: 0; }
+  .pledge-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .pledge-field label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #495057;
+  }
+  @media (max-width: 480px) {
+    .pledge-form { flex-direction: column; align-items: stretch; }
+    .pledge-form input[type="date"],
+    .pledge-form input[type="text"] { width: 100%; }
+    .pledge-form button { align-self: flex-start; }
+  }
+  .supplier-add-form {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 0.85rem 1rem;
+    margin-top: 0.75rem;
+    font-size: 0.88rem;
+  }
+  .supplier-add-form .form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    align-items: flex-end;
+  }
+  .supplier-add-form .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .supplier-add-form label { font-weight: 600; font-size: 0.8rem; color: #495057; }
+  .supplier-add-form input[type="text"],
+  .supplier-add-form input[type="url"],
+  .supplier-add-form input[type="number"],
+  .supplier-add-form textarea {
+    font-size: 0.85rem;
+    padding: 0.25rem 0.4rem;
+    border: 1px solid #ced4da;
+    border-radius: 3px;
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="mb-2">
+  <a href="{% url "labs-shopping" %}">&larr; Shopping list</a>
+</div>
+<h1>{{ item.name }}</h1>
+{% if item.notes %}<p class="text-muted">{{ item.notes }}</p>{% endif %}
+<p class="text-muted-sm">Category: {{ item.get_category_display }}</p>
+
+<h3>Current status</h3>
+{% if open_flag %}
+  <p>
+    <span class="needed-pill">Needed</span>
+    flagged by {% if open_flag.flagged_by %}{{ open_flag.flagged_by.member.name }}{% else %}someone{% endif %}
+    on {{ open_flag.flagged_at|date:"j M Y, H:i" }}.{% if open_flag.notes %}<br><em>{{ open_flag.notes }}</em>{% endif %}
+  </p>
+
+  {% if open_flag.pledge and not open_flag.pledge.fulfilled_at %}
+    <p>
+      <span class="pledged-pill">Pledged</span>
+      {% if open_flag.pledge.pledged_by %}{{ open_flag.pledge.pledged_by.member.name }}{% else %}Someone{% endif %}
+      is getting this (pledged {{ open_flag.pledge.pledged_at|date:"j M Y" }}).
+      {% if open_flag.pledge.eta_date %}<br><strong>Arriving by:</strong> {{ open_flag.pledge.eta_date|date:"l j M Y" }}.{% endif %}
+      {% if open_flag.pledge.eta_notes %}<br><strong>Details:</strong> {{ open_flag.pledge.eta_notes }}{% endif %}
+    </p>
+    <form method="post" action="{% url "labs-shopping-pledge-cancel" open_flag.pk %}" style="display:inline;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-secondary">Cancel pledge</button>
+    </form>
+  {% else %}
+    <form method="post" action="{% url "labs-shopping-pledge" open_flag.pk %}" class="pledge-form">
+      {% csrf_token %}
+      <div class="pledge-field">
+        <label for="id_eta_date">Arriving by (optional)</label>
+        <input type="date" id="id_eta_date" name="eta_date">
+      </div>
+      <div class="pledge-field" style="flex: 1 1 14rem;">
+        <label for="id_eta_notes">Details (optional)</label>
+        <input type="text" id="id_eta_notes" name="eta_notes"
+               placeholder="e.g. ordered online, arrives Friday morning during cleaning club"
+               maxlength="200">
+      </div>
+      <button type="submit" class="btn btn-sm btn-outline-primary" style="align-self: flex-end;">I'll get it</button>
+    </form>
+  {% endif %}
+
+  <div class="flag-actions">
+    <form method="post" action="{% url "labs-shopping-resolve" open_flag.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-success">Mark as restocked ✓</button>
+    </form>
+  </div>
+{% else %}
+  <p class="text-muted">Not currently flagged as needed.</p>
+  <form method="post" action="{% url "labs-shopping-flag" item.pk %}">
+    {% csrf_token %}
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+      <input type="text" name="notes" class="form-control form-control-sm" style="max-width: 20rem;"
+             placeholder="Optional note, e.g. 'last one used Thursday'" maxlength="300">
+      <button type="submit" class="btn btn-sm btn-outline-danger">Flag as needed</button>
+    </div>
+  </form>
+{% endif %}
+
+<h3 class="mt-4">Where to get it</h3>
+{% for s in suppliers %}
+<div class="supplier-card">
+  <div class="supplier-name">{{ s.supplier_name }}</div>
+  {% if s.unit_desc %}<div class="supplier-field"><label>Unit:</label> {{ s.unit_desc }}
+    {% if s.approx_price %}&mdash; approx £{{ s.approx_price }}{% endif %}
+  </div>{% endif %}
+  {% if s.product_code %}<div class="supplier-field"><label>Product code:</label> {{ s.product_code }}</div>{% endif %}
+  {% if s.product_url %}<div class="supplier-field"><a href="{{ s.product_url }}" target="_blank" rel="noopener">Product page</a></div>{% endif %}
+  {% if s.ordering_notes %}<div class="supplier-field"><label>Notes:</label> {{ s.ordering_notes }}</div>{% endif %}
+  {% if s.account_holder %}<div class="supplier-field"><label>Account held by:</label> {{ s.account_holder.member.name }}</div>{% endif %}
+  {% if s.account_notes %}<div class="supplier-field text-muted-sm">{{ s.account_notes }}</div>{% endif %}
+  <form method="post" action="{% url "labs-shopping-supplier-delete" s.pk %}" style="margin-top: 0.5rem;"
+        onsubmit="return confirm('Remove {{ s.supplier_name }} from this item?')">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+  </form>
+</div>
+{% empty %}
+<p class="text-muted-sm">No supplier info yet. Add it below so others know where to buy this.</p>
+{% endfor %}
+
+<details class="supplier-add-form mt-2">
+  <summary style="cursor: pointer; font-weight: 600; font-size: 0.88rem;">+ Add supplier info</summary>
+  <form method="post" action="{% url "labs-shopping-supplier-add" item.pk %}" style="margin-top: 0.75rem;">
+    {% csrf_token %}
+    <div class="form-row">
+      <div class="field-group" style="flex: 2; min-width: 12rem;">
+        <label for="id_supplier_name">Supplier name <span style="color:#dc3545">*</span></label>
+        <input type="text" id="id_supplier_name" name="supplier_name" maxlength="100" required
+               placeholder="e.g. Nisbets, Costco, Amazon">
+      </div>
+      <div class="field-group" style="flex: 1; min-width: 8rem;">
+        <label for="id_unit_desc">Unit / pack size</label>
+        <input type="text" id="id_unit_desc" name="unit_desc" maxlength="200" placeholder="e.g. 5L, 6-pack">
+      </div>
+      <div class="field-group" style="min-width: 6rem;">
+        <label for="id_approx_price">Approx price (£)</label>
+        <input type="number" id="id_approx_price" name="approx_price" min="0" step="0.01" placeholder="0.00" style="width: 7rem;">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field-group" style="flex: 1; min-width: 10rem;">
+        <label for="id_product_code">Product code</label>
+        <input type="text" id="id_product_code" name="product_code" maxlength="100" placeholder="e.g. SKU or catalogue number">
+      </div>
+      <div class="field-group" style="flex: 2; min-width: 14rem;">
+        <label for="id_product_url">Product URL</label>
+        <input type="url" id="id_product_url" name="product_url" placeholder="https://..." style="width: 100%;">
+      </div>
+    </div>
+    <div class="field-group" style="margin-bottom: 0.65rem;">
+      <label for="id_ordering_notes">Ordering notes</label>
+      <textarea id="id_ordering_notes" name="ordering_notes" rows="2"
+                style="width: 100%; max-width: 36rem;"
+                placeholder="e.g. Hard water formula. Use the trade account. Don't order the concentrated version."></textarea>
+    </div>
+    <button type="submit" class="btn btn-sm btn-primary">Save supplier</button>
+  </form>
+</details>
+
+{% if history %}
+<h3 class="mt-4">History</h3>
+<div style="overflow-x: auto;">
+  <table class="history-table">
+    <thead>
+      <tr>
+        <th>Flagged</th>
+        <th>By</th>
+        <th>Notes</th>
+        <th>Got it</th>
+        <th>Resolved</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for flag in history %}
+      <tr>
+        <td style="white-space:nowrap;">{{ flag.flagged_at|date:"j M Y" }}</td>
+        <td>{% if flag.flagged_by %}{{ flag.flagged_by.member.name }}{% endif %}</td>
+        <td>{{ flag.notes }}</td>
+        <td>{% if flag.pledge and flag.pledge.pledged_by %}{{ flag.pledge.pledged_by.member.name }}{% endif %}</td>
+        <td style="white-space:nowrap;">
+          {{ flag.resolved_at|date:"j M Y" }}
+          {% if flag.resolved_by %}<br><span class="text-muted-sm">{{ flag.resolved_by.member.name }}</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% endblock %}

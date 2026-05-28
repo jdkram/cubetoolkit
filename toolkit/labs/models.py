@@ -365,6 +365,112 @@ class BulletinRead(models.Model):
         return f"{self.user} read {self.bulletin_id} at {self.read_at:%Y-%m-%d %H:%M}"
 
 
+# ── Shopping list (consumables) ───────────────────────────────────────────────
+
+class ConsumableItem(models.Model):
+    CATEGORY_CLEANING = "cleaning"
+    CATEGORY_STATIONERY = "stationery"
+    CATEGORY_KITCHEN = "kitchen"
+    CATEGORY_SNACKS = "snacks"
+    CATEGORY_OTHER = "other"
+    CATEGORY_CHOICES = [
+        (CATEGORY_CLEANING, "Cleaning"),
+        (CATEGORY_STATIONERY, "Stationery"),
+        (CATEGORY_KITCHEN, "Kitchen"),
+        (CATEGORY_SNACKS, "Cinema Snacks"),
+        (CATEGORY_OTHER, "Other"),
+    ]
+
+    name = models.CharField(max_length=100)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default=CATEGORY_OTHER)
+    notes = models.TextField(blank=True, default="")
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "labs_consumable_items"
+        ordering = ["category", "name"]
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def open_flag(self):
+        return self.need_flags.filter(resolved_at__isnull=True).first()
+
+
+class SupplierRecord(models.Model):
+    item = models.ForeignKey(ConsumableItem, on_delete=models.CASCADE, related_name="suppliers")
+    supplier_name = models.CharField(max_length=100)
+    product_code = models.CharField(max_length=100, blank=True, default="")
+    product_url = models.URLField(blank=True, default="")
+    unit_desc = models.CharField(max_length=200, blank=True, default="", help_text="e.g. '6-pack', '5L'")
+    approx_price = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    ordering_notes = models.TextField(blank=True, default="")
+    account_holder = models.ForeignKey(
+        "members.Volunteer",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="supplier_accounts",
+        help_text="Volunteer who holds the login for this supplier account.",
+    )
+    account_notes = models.TextField(blank=True, default="")
+
+    class Meta:
+        db_table = "labs_supplier_records"
+        ordering = ["supplier_name"]
+
+    def __str__(self):
+        return f"{self.supplier_name} ({self.item.name})"
+
+
+class NeedFlag(models.Model):
+    item = models.ForeignKey(ConsumableItem, on_delete=models.CASCADE, related_name="need_flags")
+    flagged_by = models.ForeignKey(
+        "members.Volunteer", null=True, blank=True, on_delete=models.SET_NULL, related_name="flagged_needs"
+    )
+    flagged_at = models.DateTimeField(auto_now_add=True)
+    notes = models.CharField(max_length=300, blank=True, default="")
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolved_by = models.ForeignKey(
+        "members.Volunteer",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="resolved_flags",
+    )
+
+    class Meta:
+        db_table = "labs_need_flags"
+        ordering = ["-flagged_at"]
+
+    def __str__(self):
+        return f"{self.item.name} flagged at {self.flagged_at:%Y-%m-%d %H:%M}"
+
+    @property
+    def is_resolved(self):
+        return self.resolved_at is not None
+
+
+class ProcurementPledge(models.Model):
+    need_flag = models.OneToOneField(NeedFlag, on_delete=models.CASCADE, related_name="pledge")
+    pledged_by = models.ForeignKey(
+        "members.Volunteer", null=True, blank=True, on_delete=models.SET_NULL, related_name="pledges"
+    )
+    pledged_at = models.DateTimeField(auto_now_add=True)
+    eta_date = models.DateField(null=True, blank=True)
+    eta_notes = models.CharField(max_length=200, blank=True, default="", help_text="e.g. 'Friday cleaning club'")
+    fulfilled_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "labs_procurement_pledges"
+
+    def __str__(self):
+        return f"Pledge by {self.pledged_by} for {self.need_flag.item.name}"
+
+
+# ── Loft inventory ─────────────────────────────────────────────────────────────
+
 class LoftItemPhoto(models.Model):
     item = models.ForeignKey(LoftItem, on_delete=models.CASCADE, related_name="photos")
     image = models.ImageField(upload_to="loft-photos/")
