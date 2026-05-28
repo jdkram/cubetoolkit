@@ -54,6 +54,9 @@ from toolkit.util.management.commands.seed_data import (
     THURSDAY_FILMS,
     COLLECTIVES,
     DONATION_ITEMS,
+    JOBS,
+    SHOPPING_FLAGS,
+    BUILDING_MAP_NOTES,
 )
 
 try:
@@ -229,6 +232,10 @@ class Command(BaseCommand):
             "index_links": 0,
             "collectives": 0,
             "donation_items": 0,
+            "shopping_items": 0,
+            "shopping_flags": 0,
+            "jobs": 0,
+            "map_notes": 0,
         }
 
         # Roles
@@ -640,6 +647,104 @@ class Command(BaseCommand):
             if created:
                 counts["donation_items"] += 1
 
+        # Consumable items (9.88)
+        from toolkit.labs.models import ConsumableItem
+
+        CONSUMABLE_ITEMS = [
+            ("Hand soap", ConsumableItem.CATEGORY_CLEANING),
+            ("Bin bags", ConsumableItem.CATEGORY_CLEANING),
+            ("Washing detergent", ConsumableItem.CATEGORY_CLEANING),
+            ("Dishwasher detergent", ConsumableItem.CATEGORY_CLEANING),
+            ("Dishwasher rinse aid", ConsumableItem.CATEGORY_CLEANING),
+            ("Washing up sponges", ConsumableItem.CATEGORY_CLEANING),
+            ("Steel scrubbers", ConsumableItem.CATEGORY_CLEANING),
+            ("Microfibre cloths", ConsumableItem.CATEGORY_CLEANING),
+            ("Cling film", ConsumableItem.CATEGORY_KITCHEN),
+            ("Steriliser tablets", ConsumableItem.CATEGORY_KITCHEN),
+            ("Sesame Snaps", ConsumableItem.CATEGORY_SNACKS),
+            ("Sesame Snaps (Chocolate)", ConsumableItem.CATEGORY_SNACKS),
+            ("Dino Gummies", ConsumableItem.CATEGORY_SNACKS),
+            ("Crisps (Lightly Salted)", ConsumableItem.CATEGORY_SNACKS),
+            ("Crisps (Sea Salt & Malt Vinegar)", ConsumableItem.CATEGORY_SNACKS),
+            ("Crisps (Rosemary & Sea Salt)", ConsumableItem.CATEGORY_SNACKS),
+            ("Pens", ConsumableItem.CATEGORY_STATIONERY),
+            ("Lamination sheets (A4)", ConsumableItem.CATEGORY_STATIONERY),
+            ("Reams of paper (A4)", ConsumableItem.CATEGORY_STATIONERY),
+            ("Reams of paper (A3)", ConsumableItem.CATEGORY_STATIONERY),
+        ]
+        for name, category in CONSUMABLE_ITEMS:
+            _, created = ConsumableItem.objects.get_or_create(
+                name=name,
+                defaults={"category": category},
+            )
+            if created:
+                counts["shopping_items"] += 1
+
+        # Shopping need flags (9.88) — layered on top of ConsumableItem catalogue
+        from toolkit.labs.models import NeedFlag, ProcurementPledge
+
+        _vols = list(volunteer_objects.values())
+        for flag_data in SHOPPING_FLAGS:
+            item_name = flag_data["item"]
+            try:
+                item = ConsumableItem.objects.get(name=item_name)
+            except ConsumableItem.DoesNotExist:
+                continue
+            # Only create if no open flag already exists for this item
+            if NeedFlag.objects.filter(item=item, resolved_at__isnull=True).exists():
+                continue
+            pledge_idx = flag_data.get("pledged_by_index")
+            flagger = _vols[0] if _vols else None
+            flag = NeedFlag.objects.create(
+                item=item,
+                flagged_by=flagger,
+                notes=flag_data.get("notes", ""),
+            )
+            counts["shopping_flags"] += 1
+            if pledge_idx is not None and _vols and pledge_idx < len(_vols):
+                ProcurementPledge.objects.get_or_create(
+                    need_flag=flag,
+                    defaults={
+                        "pledged_by": _vols[pledge_idx],
+                        "eta_notes": flag_data.get("pledge_eta_notes", ""),
+                    },
+                )
+
+        # Jobs board (9.80)
+        from toolkit.labs.models import Job
+        from django.utils import timezone as tz
+
+        for job_data in JOBS:
+            if Job.objects.filter(title=job_data["title"]).exists():
+                continue
+            resolved = job_data.get("resolved", False)
+            job = Job.objects.create(
+                title=job_data["title"],
+                area=job_data.get("area", ""),
+                description=job_data.get("description", ""),
+                plan_status=job_data.get("plan_status", ""),
+                urgency=job_data.get("urgency", Job.URGENCY_LOW),
+                safety_risk=job_data.get("safety_risk", False),
+                skill_needed=job_data.get("skill_needed", False),
+                keyholder_required=job_data.get("keyholder_required", False),
+                location_type=job_data.get("location_type", Job.LOCATION_BUILDING),
+                reporter_name=job_data.get("reporter_name", ""),
+                resolved=resolved,
+                resolved_at=tz.now() if resolved else None,
+            )
+            counts["jobs"] += 1
+
+        # Building map notes (labs floorplan)
+        from toolkit.labs.models import RoomNote
+
+        for note_data in BUILDING_MAP_NOTES:
+            _, created = RoomNote.objects.get_or_create(
+                room_id=note_data["room_id"],
+                defaults={"body": note_data["body"]},
+            )
+            if created:
+                counts["map_notes"] += 1
+
         # Sample bulletin (9.95)
         from toolkit.labs.models import Bulletin
 
@@ -677,6 +782,10 @@ class Command(BaseCommand):
                 f"  Index links:     {counts['index_links']} new\n"
                 f"  Collectives:     {counts['collectives']} new\n"
                 f"  Donation items:  {counts['donation_items']} new\n"
+                f"  Shopping items:  {counts['shopping_items']} new\n"
+                f"  Shopping flags:  {counts['shopping_flags']} new\n"
+                f"  Jobs:            {counts['jobs']} new\n"
+                f"  Map notes:       {counts['map_notes']} new\n"
             )
         )
 
@@ -914,7 +1023,10 @@ class Command(BaseCommand):
                 RoomBooking.objects.get_or_create(
                     showing=showing,
                     room=room,
-                    defaults={"start": showing_start},
+                    defaults={
+                        "start": showing_start,
+                        "end": showing_start + datetime.timedelta(minutes=_dur_mins),
+                    },
                 )
             self._book_slot(room, showing_start, _dur_mins)
 
@@ -1041,7 +1153,10 @@ class Command(BaseCommand):
                 RoomBooking.objects.get_or_create(
                     showing=showing,
                     room=room,
-                    defaults={"start": showing_start},
+                    defaults={
+                        "start": showing_start,
+                        "end": showing_start + datetime.timedelta(minutes=120),
+                    },
                 )
             self._book_slot(room, showing_start, 120)
 

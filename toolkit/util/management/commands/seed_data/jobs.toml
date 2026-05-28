@@ -1,0 +1,132 @@
+# Jobs board seed data for the Star and Shadow.
+# urgency: "high" | "medium" | "low"
+# location_type: "building" | "remote" | "both"
+
+# ── High urgency ──────────────────────────────────────────────────────────────
+
+[[jobs]]
+title = "Toilet in block 1 running constantly"
+area = "Toilet Block 1"
+description = "The cistern on the far cubicle doesn't stop filling. Audible from the corridor. Wasting water and noisy during quiet cinema screenings."
+urgency = "high"
+safety_risk = false
+skill_needed = true
+keyholder_required = true
+location_type = "building"
+reporter_name = "Cleaning collective"
+plan_status = "Needs a plumber — contact details in the green folder in the kitchen."
+
+[[jobs]]
+title = "Fire exit sign above side door not illuminated"
+area = "Cinema Entrance"
+description = "The emergency exit sign above the side door has been dark for at least two weeks. Should be illuminated at all times."
+urgency = "high"
+safety_risk = true
+skill_needed = true
+keyholder_required = true
+location_type = "building"
+reporter_name = ""
+plan_status = "May need a new LED module — same fittings as the projection booth exit sign that was fixed last year."
+
+# ── Medium urgency ────────────────────────────────────────────────────────────
+
+[[jobs]]
+title = "Broken coat hook in the bar"
+area = "Bar"
+description = "Two of the coat hooks on the back wall are pulling out of the plaster — fixing screws have stripped the wall. Coat has fallen twice."
+urgency = "medium"
+safety_risk = false
+skill_needed = false
+keyholder_required = true
+location_type = "building"
+reporter_name = "Bar collective"
+plan_status = "Need wall plugs and longer screws. Any volunteer with a drill can do this."
+
+[[jobs]]
+title = "Café window latch broken"
+area = "Café"
+description = "The latch on the left café window doesn't close properly. Window stays on the snib but could be opened from outside if someone tried."
+urgency = "medium"
+safety_risk = false
+skill_needed = false
+keyholder_required = true
+location_type = "building"
+reporter_name = ""
+plan_status = ""
+
+[[jobs]]
+title = "Update venue WiFi password in onboarding docs"
+area = ""
+description = "WiFi password changed three months ago but the onboarding guide on Nextcloud still has the old one. New volunteers get confused."
+urgency = "medium"
+safety_risk = false
+skill_needed = false
+keyholder_required = false
+location_type = "remote"
+reporter_name = "Training collective"
+plan_status = "New password is on the noticeboard in the green room. Just needs someone with Nextcloud access to update the doc."
+
+[[jobs]]
+title = "Condensation on workshop window — mould starting"
+area = "Workshop"
+description = "The single-glazed window in the workshop gets heavy condensation in cold weather. Black mould appearing in the bottom corners of the frame."
+urgency = "medium"
+safety_risk = false
+skill_needed = false
+keyholder_required = true
+location_type = "building"
+reporter_name = "Workshop collective"
+plan_status = "Short-term: clean with vinegar solution. Medium-term: look at improving ventilation or adding secondary glazing."
+
+# ── Low urgency ───────────────────────────────────────────────────────────────
+
+[[jobs]]
+title = "Label the fuse board in the electrical cupboard"
+area = "Electrical Cupboard"
+description = "The fuse board has no labels — it's impossible to know which circuit is which without trial and error. A proper chart would help a lot."
+urgency = "low"
+safety_risk = false
+skill_needed = false
+keyholder_required = true
+location_type = "building"
+reporter_name = ""
+plan_status = "Needs someone to systematically map circuits. Two-person job — one trips breakers, one walks the building."
+
+[[jobs]]
+title = "Touch up paint on cinema door frames"
+area = "Cinema"
+description = "Several door frames in the cinema have chipped paint — looks scruffy in event photos. White gloss."
+urgency = "low"
+safety_risk = false
+skill_needed = false
+keyholder_required = true
+location_type = "building"
+reporter_name = "Programming collective"
+plan_status = "White gloss in the store cupboard. Any quiet afternoon would work."
+
+[[jobs]]
+title = "Sort the cable box in the IT cupboard"
+area = "IT Cupboard"
+description = "The box of spare cables in the IT cupboard has become totally chaotic — HDMI, ethernet, power, VGA, all jumbled together. Slows things down when there's a tech emergency."
+urgency = "low"
+safety_risk = false
+skill_needed = false
+keyholder_required = false
+location_type = "building"
+reporter_name = ""
+plan_status = ""
+
+# ── Resolved example ─────────────────────────────────────────────────────────
+
+[[jobs]]
+title = "Venue door deadbolt stiff"
+area = "Venue Front Entrance"
+description = "The deadbolt on the main venue door was stiff and hard to turn quickly. Safety concern when locking up late at night."
+urgency = "high"
+safety_risk = true
+skill_needed = false
+keyholder_required = true
+location_type = "building"
+reporter_name = "Keyholders"
+plan_status = "Sorted — WD-40 and a small adjustment to the strike plate. Tested and working smoothly."
+resolved = true

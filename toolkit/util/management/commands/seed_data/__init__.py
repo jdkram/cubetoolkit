@@ -61,6 +61,18 @@ COLLECTIVES = collectives_data["collectives"]
 donations_data = _load_toml("donations.toml")
 DONATION_ITEMS = donations_data["items"]
 
+# Jobs board
+jobs_data = _load_toml("jobs.toml")
+JOBS = jobs_data["jobs"]
+
+# Shopping list — need flags (items must already exist from ConsumableItem seeding)
+shopping_data = _load_toml("shopping.toml")
+SHOPPING_FLAGS = shopping_data["flags"]
+
+# Building map notes
+building_map_data = _load_toml("building_map.toml")
+BUILDING_MAP_NOTES = building_map_data["notes"]
+
 # Generic cinema image used for all recurring film events
 _RECURRING_FILM_IMAGE_URL = "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=800"
 
@@ -80,4 +92,7 @@ __all__ = [
     "_RECURRING_FILM_IMAGE_URL",
     "COLLECTIVES",
     "DONATION_ITEMS",
+    "JOBS",
+    "SHOPPING_FLAGS",
+    "BUILDING_MAP_NOTES",
 ]
