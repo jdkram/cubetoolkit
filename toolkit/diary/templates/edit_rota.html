@@ -359,6 +359,25 @@
     .rota-showing.rota-mooned:hover {
         opacity: 0.75;
     }
+    /* ── Cancelled showing ──────────────────────────────────────────────── */
+    .rota-cancelled-notice {
+        display: inline-block;
+        background: #b22222;
+        color: #fff;
+        font-weight: bold;
+        font-size: 0.78rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 0.2em 0.6em;
+        border-radius: 3px;
+        margin-bottom: 0.5rem;
+    }
+    .rota-showing--cancelled {
+        opacity: 0.7;
+    }
+    .rota-showing--cancelled:hover {
+        opacity: 1;
+    }
     /* ── Role warning badge (needs keyholder / programmer) ──────────────── */
     .rota-role-warning-badge {
         font-size: 0.75rem;
@@ -568,9 +587,10 @@
         font-weight: normal;
         transition: color 0.12s;
     }
-    .rota-signup-available:hover .rota-signup-prompt { color: #0056b3; }
-    .rota-signup-mine { cursor: pointer; }
-    .rota-signup-mine:hover { color: #dc3545; text-decoration: line-through; }
+    @media (hover: hover) {
+        .rota-signup-available:hover .rota-signup-prompt { color: #0056b3; }
+        .rota-signup-mine:hover { color: #dc3545; text-decoration: line-through; }
+    }
     .rota-signup-loading { opacity: 0.45; pointer-events: none; }
     .rota-supedit-btn {
         font-size: 0.7em;
@@ -620,11 +640,12 @@ edit_rota(
     jQuery,
     '{% url "rota-edit" %}',
     "{{ edit_showing_notes_url_prefix }}",
-    "{{ VENUE.vols_email }}",
+    "{{ rota_vols_email }}",
     "{{ csrf_token }}",
     {{ rota_clear_email_prompt_enabled|lower }},
     {{ request.user.is_superuser|lower }},
-    "{{ current_volunteer_pk }}"
+    "{{ current_volunteer_pk }}",
+    "{{ rota_clear_email_prompt_text|escapejs }}"
 );
 
 (function($) {
@@ -1145,14 +1166,14 @@ edit_rota(
 
 })(jQuery);
 
-(function () {
+document.addEventListener('DOMContentLoaded', function () {
     var hash = window.location.hash;
     if (!hash || hash.indexOf('#showing-') !== 0) return;
     var target = document.querySelector(hash);
     if (!target) return;
     target.classList.add('rota-showing--linked');
     target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-})();
+});
 </script>
 {% endblock %}
 
@@ -1270,10 +1291,11 @@ edit_rota(
 
         {# Build comma-separated tag slugs for JS filtering #}
         {% with tag_slugs=showing.event.tags.all %}
-        <div class="rota-showing" id="showing-{{ showing.pk }}" data-in-past="{% if showing.in_past %}1{% else %}0{% endif %}"
+        <div class="rota-showing{% if showing.cancelled %} rota-showing--cancelled{% endif %}" id="showing-{{ showing.pk }}" data-in-past="{% if showing.in_past %}1{% else %}0{% endif %}"
              data-tags="{% for tag in tag_slugs %}{{ tag.slug }}{% if not forloop.last %},{% endif %}{% endfor %}"
              data-tag-names="{% for tag in tag_slugs %}{{ tag.name }}{% if not forloop.last %}|{% endif %}{% endfor %}">
 
+            {% if showing.cancelled %}<div class="rota-cancelled-notice" role="alert">&#9888; Cancelled</div>{% endif %}
             <!-- Showing header: meta row (date/room/link) then title row -->
             <h3 class="showing_title{% if showing.in_past %} past_showing{% endif %}">
                 <span class="showing-header-row">
@@ -1326,7 +1348,7 @@ edit_rota(
             {% endfor %}
             </ul>
 
-            {# Resource links: clickable chips for shared folders, crew chat, etc. #}
+            {# Resource links: clickable chips for shared folders, organisational chats, etc. #}
             {% with event_links=showing.event.links.all %}
             {% if event_links %}
             <div class="event-links">

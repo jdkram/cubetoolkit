@@ -499,7 +499,6 @@ def update_showing_status(request, showing_id):
             messages.success(request, "Showing unconfirmed.")
         elif action == "cancel":
             showing.cancelled = True
-            showing.confirmed = False
             showing.save()
             messages.success(request, "Showing cancelled.")
         elif action == "uncancel":
@@ -1311,10 +1310,13 @@ def view_event_field(request, field, year=None, month=None, day=None):
     if start_date is None:
         raise Http404(days_ahead)
     end_date = start_date + datetime.timedelta(days=days_ahead)
+    # The rota view should include cancelled showings so volunteers can see what's off.
+    # Copy/terms/copy_summary reports only care about active events.
+    showings_qs = Showing.objects.confirmed().start_in_range(start_date, end_date)
+    if field != "rota":
+        showings_qs = showings_qs.not_cancelled()
     showings = (
-        Showing.objects.not_cancelled()
-        .confirmed()
-        .start_in_range(start_date, end_date)
+        showings_qs
         .order_by("start")
         #              following prefetch is for the rota view
         .prefetch_related("rotaentry_set__role", "rotaentry_set__volunteer__member")
@@ -1756,8 +1758,7 @@ class EditRotaView(PermissionRequiredMixin, View):
 
         end_date = start_date + datetime.timedelta(days=days_ahead)
         showings = (
-            Showing.objects.not_cancelled()
-            .confirmed()
+            Showing.objects.confirmed()
             .start_in_range(start_date, end_date)
             .order_by("start")
             #              force sane number of queries:

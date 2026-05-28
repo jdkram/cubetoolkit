@@ -1,7 +1,9 @@
 {# Renders one showing date row. Expects `showing` and `next_showing` in context. #}
+{% load calendar_links %}
 <span class="showing-date{% if next_showing and showing == next_showing %} showing-date--next{% endif %}">
+{% if showing.cancelled %}<strong class="cancelled-inline-label">CANCELLED</strong> {% endif %}
 {% if showing.sold_out %}<span class="sold_out">{% endif %}
-{% if showing.cancelled %}<span class="cancelled">{% endif %}
+<span{% if showing.cancelled %} class="cancelled"{% endif %}>
 {% if showing.start.year != current_year %}
     {{ showing.start|date:"D j F Y " }}//{{ showing.start|date:" H:i" }}
 {% else %}
@@ -9,7 +11,7 @@
 {% endif %}
 {% if showing.doors_time %}(doors {{ showing.doors_time|time:"H:i" }}){% endif %}
 {% if MULTIROOM_ENABLED %}/ {{ showing.room }}{% endif %}
-{% if showing.cancelled %}</span> (cancelled){% endif %}
+</span>
 {% if showing.sold_out %}</span> (SOLD OUT){% endif %}
 {% if showing.discounted %}<abbr class="discounted" title="* cheap night">*</abbr>{% endif %}
 {% if not showing.cancelled %}{% calendar_links showing %}{% endif %}

@@ -309,10 +309,11 @@ function hideAddShowingForm() {
 <hr class="mt-2 mb-4">
 
 {# ── Resource links ────────────────────────────────────────────────────────── #}
-<div class="d-flex align-items-center mb-2">
+<div class="d-flex align-items-center mb-1">
   <h3 class="mb-0 me-3">Resource links</h3>
   <a href="{% url 'edit-event-links' event.pk %}" class="btn btn-sm btn-outline-secondary">Edit links →</a>
 </div>
+<p class="text-muted small mb-2">Links to shared folders, organisational chats, planning docs, etc. They appear as clickable buttons on the rota, so volunteers can find them during a shift. Not shown on the public website.</p>
 {% with links=event.links.all %}
 {% if links %}
 <div class="mb-3 d-flex flex-wrap" style="gap:0.4em;">
@@ -323,7 +324,7 @@ function hideAddShowingForm() {
   {% endfor %}
 </div>
 {% else %}
-<p class="text-muted small mb-3">No resource links yet. Add links to shared folders, crew chats, planning docs, etc. — they appear as clickable chips on the rota view (visible only to logged-in volunteers).</p>
+<p class="text-muted small mb-3">None added yet.</p>
 {% endif %}
 {% endwith %}
 
@@ -355,7 +356,7 @@ function hideAddShowingForm() {
     <div class="status-actions">
       {% if showing.cancelled %}
         <span class="badge text-bg-danger" data-bs-toggle="tooltip"
-              title="This showing is cancelled — it will appear in internal lists clearly marked as cancelled.">Cancelled</span>
+              title="This showing is cancelled — it stays visible on the public programme and the rota, clearly labelled CANCELLED, so the public knows and volunteers aren't left guessing.">Cancelled</span>
         <form method="post" action="{% url 'update-showing-status' showing.id %}">
           {% csrf_token %}<input type="hidden" name="action" value="uncancel">
           <button type="submit" class="btn btn-sm btn-outline-secondary">Uncancel</button>

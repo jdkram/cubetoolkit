@@ -60,7 +60,8 @@ setup_page(true);
     <div class="volunteer-notice">You&#8217;re logged in as a volunteer &#8212; private events are shown. <form method="post" action="{% url 'logout' %}" style="display:inline;margin:0">{% csrf_token %}<button type="submit" class="volunteer-signout-btn">Sign out</button></form></div>
     {% endif %}
     <div class="programme-filter-bar">
-        <input type="search" id="programme-search" placeholder="Search events…" autocomplete="off" aria-label="Search events">
+        <label for="programme-search" class="programme-search-label">Search:</label>
+        <input type="search" id="programme-search" placeholder="Filter by title, tag…" autocomplete="off">
         <button type="button" id="filter-reset" class="filter-reset-btn" hidden>Clear</button>
     </div>
 </div>
@@ -74,10 +75,11 @@ setup_page(true);
     {% else %}
       {% url "single-event-view-with-slug" event_id=event.id event_slug=event_slug as event_detail_url %}
     {% endif %}
-    <div class="showing{% if is_volunteer and event.private or is_volunteer and showing.hide_in_programme %} showing-internal{% endif %}" id="showing_{{ showing.id }}"
+    <div class="showing{% if is_volunteer and event.private or is_volunteer and showing.hide_in_programme %} showing-internal{% endif %}{% if showing.cancelled %} showing--cancelled{% endif %}" id="showing_{{ showing.id }}"
          data-search-text="{{ event.pre_title }} {{ event.name }} {{ event.post_title }} {{ event.copy_summary|striptags|truncatewords:50 }}{% for tag in event.tags.all %} {{ tag.name }}{% endfor %}"
          data-tags="{% for tag in event.tags.all %}{% if not forloop.first %} {% endif %}{{ tag.slug }}{% endfor %}">
 
+        {% if showing.cancelled %}<div class="cancelled-flag" role="alert">CANCELLED</div>{% endif %}
         <div class="event_image">
             {% if media_item %}<a href="{{ event_detail_url }}{% if is_volunteer and event.private or is_volunteer and showing.hide_in_programme %}#showing-{{ showing.pk }}{% endif %}">
                 <img src="{{ media_item.media_file|thumbnail_url:'indexview' }}" alt="{% if media_item.alt_text %}{{ media_item.alt_text }}{% else %}Picture for event {{ event.name }}{% endif %}"></a>
@@ -102,9 +104,8 @@ setup_page(true);
         <p><div class="event_details">
             <p class="start_and_pricing">
                 {% if showing.sold_out %}<span class="sold_out">{% endif %}
-                {% if showing.cancelled %}<span class="cancelled">{% endif %}
-                <strong>{{ showing.start|date:"D j F " }}//{{ showing.start|date:" H:i" }}</strong>
-                {% if showing.cancelled %}</span> (cancelled){% endif %}
+                {% if showing.cancelled %}<strong class="cancelled-inline-label">CANCELLED</strong> {% endif %}
+                <span{% if showing.cancelled %} class="cancelled"{% endif %}><strong>{{ showing.start|date:"D j F " }}//{{ showing.start|date:" H:i" }}</strong></span>
                 {% if showing.sold_out %}</span> (SOLD OUT){% endif %}
                 {% if showing.discounted %}<abbr class="discounted" title="* cheap night">*</abbr>{% endif %}
             </p>
@@ -127,7 +128,7 @@ setup_page(true);
     {% if is_volunteer and showing.hide_in_programme or is_volunteer and showing.event.private %}
         <a href="{% url "rota-edit-month" year=showing.start.year month=showing.start.month %}#showing-{{ showing.pk }}" class="event-internal-link">{{ showing.event.name|capfirst }}</a></p>
     {% elif not showing.hide_in_programme and not showing.event.private %}
-        <a href="{% url "single-event-view" event_id=showing.event_id %}">{{ showing.event.pre_title|title }} {{ showing.event.name|capfirst }} {{ showing.event.post_title|title }}{% if showing.cancelled %} (CANCELLED){% endif %}{% if showing.sold_out %} (SOLD OUT){% endif %}{% if showing.discounted %} *{% endif %}</a></p>
+        {% if showing.cancelled %}<strong class="cancelled-inline-label">CANCELLED</strong> {% endif %}<a href="{% url "single-event-view" event_id=showing.event_id %}"{% if showing.cancelled %} class="cancelled"{% endif %}>{{ showing.event.pre_title|title }} {{ showing.event.name|capfirst }} {{ showing.event.post_title|title }}{% if showing.sold_out %} (SOLD OUT){% endif %}{% if showing.discounted %} *{% endif %}</a></p>
     {% endif %}
 {% endfor %}
 <p>&nbsp;</p>

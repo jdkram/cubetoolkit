@@ -112,6 +112,25 @@ p.start_and_pricing {
 .sold_out, .cancelled {
     text-decoration: line-through;
 }
+.cancelled-flag {
+    display: block;
+    background: #b00;
+    color: #fff;
+    font-weight: bold;
+    font-size: 0.7em;
+    letter-spacing: 0.1em;
+    text-align: center;
+    padding: 0.3em 0;
+    margin-bottom: 0.4em;
+}
+.cancelled-inline-label {
+    color: #b00;
+    font-size: 0.85em;
+    letter-spacing: 0.05em;
+}
+.showing--cancelled {
+    opacity: 0.7;
+}
 abbr.discounted {
     border-bottom: none !important;
 }
@@ -641,11 +660,17 @@ span.tags {
 }
 
 /* Search bar: compact, right-aligned within the row */
+.programme-search-label {
+    font-size: 0.75em;
+    white-space: nowrap;
+}
+
 .programme-filter-bar {
     display: flex;
     align-items: center;
     gap: 0.4rem;
     flex-shrink: 0;
+    margin-left: auto;
 }
 
 #programme-search {
@@ -712,18 +737,24 @@ span.tags {
         width: 820px;
         margin-left: 6px;
         margin-right: 6px;
+        /* 3 cols × 265px + 2 gutters × 5px = 805px; trim 15px so search right edge aligns with tiles */
+        padding-right: 15px;
     }
 }
 
 @media screen and (min-width: 1260px) {
     .programme-header-row {
         width: 1090px;
+        /* 4 cols × 265px + 3 gutters × 5px = 1075px; same 15px trim */
+        padding-right: 15px;
     }
 }
 
 @media screen and (min-width: 1600px) {
     .programme-header-row {
         width: 1356px;
+        /* 4 cols × 328px + 3 gutters × 6px = 1330px; trim 26px */
+        padding-right: 26px;
     }
 }
 
@@ -732,5 +763,7 @@ span.tags {
         width: 1670px;
         margin-left: 10px;
         margin-right: 10px;
+        /* 4 cols × 400px + 3 gutters × 10px = 1630px; trim 40px */
+        padding-right: 40px;
     }
 }
