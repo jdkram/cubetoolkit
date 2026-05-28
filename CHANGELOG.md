@@ -2,7 +2,56 @@
 
 Releases from the 2026 Star and Shadow porting effort only. Pre-2026 (legacy Cube Toolkit) history is preserved in git but is not divided into releases.
 
-Each release below is tagged (`v2026.03.0` through `v2026.05.5`) and represents a **demo-able milestone** — a developer can check it out, run `docker compose up --build`, seed the data, and show users a coherent vertical slice of functionality.
+Each release below is tagged (`v2026.03.0` through `v2026.05.6`) and represents a **demo-able milestone** — a developer can check it out, run `docker compose up --build`, seed the data, and show users a coherent vertical slice of functionality.
+
+---
+
+## v2026.05.6 — Operations & Polish
+
+**Tagged at:** `TBD` (2026-05-29)
+
+A polish release focused on day-to-day operational friction: cancelled events no longer vanish, the shopping list keeps the building stocked, and every form field now explains itself.
+
+### What's new
+
+- **Shared shopping list** — volunteers flag when consumables run out, pledge to restock them, and mark them done. Supplier records with account-holder pointers live in Django admin
+- **Shopping in the weekly digest** — open shopping needs appear in the volunteer email alongside shifts and new programme
+- **Cancelled showings stay visible** — they now show a clear CANCELLED badge on the public programme and the rota instead of disappearing entirely
+- **Form field tooltips** — every field on the showing edit form (confirmed, cancelled, sold out, setup time, doors time, etc.) has a Bootstrap tooltip explaining exactly what it does
+- **Site settings expansion** — break-even thresholds, rota clear-slot prompt text, and volunteers list email are all configurable without redeploying
+- **Diary edit list stability** — fixed column widths stop the table jumping when event names are long; quick-add (+) links in the Other rooms column
+- **Room map UX** — the SVG floorplan dims non-bookable areas and copies the last room's start/end time when adding a new booking
+- **Toolkit homepage** — all link-card sections are collapsible and remember their state; shopping dashboard widget; Access Levels moved into the Labs dropdown
+- **Clash detection fix** — open-ended room bookings no longer trigger false-positive overlap warnings
+
+### How to demo
+
+1. `git checkout v2026.05.6`
+2. `docker compose up --build -d`
+3. `docker compose exec toolkit /venv/bin/python3 manage.py configure_toolkit_users --password password`
+4. `docker compose exec toolkit /venv/bin/python3 manage.py seed_dev_data`
+5. Log in as `admin` / `password`
+
+| Page to show | URL | What to point out |
+|---|---|---|
+| Shopping list | `/labs/shopping/` | Flag an item, pledge to get it, mark restocked |
+| Event hub (cancelled) | `/diary/edit/<event_id>/` | Cancel a showing; see it still appears on the rota with a badge |
+| Showing edit | `/diary/edit/<event_id>/showing/<showing_id>/` | Hover over the ⓘ icons next to field labels |
+| Site settings | `/diary/edit/siteconfiguration/` | Two-column layout; break-even thresholds; rota prompt text |
+| Dashboard | `/toolkit/` | Collapse/expand link cards; shopping widget if items are flagged |
+| Digest preview | Run `send_volunteer_digest --dry-run` inside the container | See the shopping section alongside shifts and programme |
+
+### State of the code
+
+- 755 tests passing
+- 47 migrations in `diary`, 15 in `members`, 14 in `labs`
+- All new models have admin inlines where relevant
+
+### Known rough edges
+
+- Public keyword search is still client-side only
+- Volunteer directory has no Simplelists integration (9.87 deferred)
+- Shopping list has no email notifications beyond the weekly digest
 
 ---
 
