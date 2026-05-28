@@ -873,8 +873,13 @@ class SiteConfigurationForm(forms.ModelForm):
             "films_start_on_time_banner_text",
             "rota_show_tags",
             "rota_clear_email_prompt_enabled",
+            "rota_clear_email_prompt_text",
+            "vols_email",
             "show_archive_images",
             "images_start_date",
+            "breakeven_guidance_note",
+            "breakeven_fc_standard_threshold",
+            "breakeven_fc_music_threshold",
             "max_count_per_role",
             "max_showing_dates_shown",
             "programme_copy_summary_max_chars",
@@ -902,7 +907,13 @@ class SiteConfigurationForm(forms.ModelForm):
             "banner_dismissible",
         )
         widgets = {
+            "breakeven_guidance_note": forms.Textarea(
+                attrs={"rows": 3, "class": "form-control"}
+            ),
             "films_start_on_time_banner_text": forms.Textarea(
+                attrs={"rows": 3, "class": "form-control"}
+            ),
+            "rota_clear_email_prompt_text": forms.Textarea(
                 attrs={"rows": 3, "class": "form-control"}
             ),
             "images_start_date": forms.DateInput(

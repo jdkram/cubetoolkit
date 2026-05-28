@@ -1133,11 +1133,44 @@ class SiteConfiguration(models.Model):
     )
     rota_show_tags = models.BooleanField(
         default=True,
-        help_text="Show event tag badges on the edit rota page.",
+        help_text=(
+            "Show coloured event tag badges (e.g. 'family-friendly', 'accessible') on the "
+            "edit rota page, along with a filter bar for narrowing the rota by tag. "
+            "Useful once events are consistently tagged; turn off to reduce visual clutter "
+            "if tags are rarely used at your venue."
+        ),
     )
     rota_clear_email_prompt_enabled = models.BooleanField(
         default=True,
-        help_text="When clearing a rota slot, prompt the user to email the volunteers list.",
+        help_text=(
+            "When a volunteer removes themselves from a rota slot, show a reminder "
+            "prompt asking them to notify the volunteers list. "
+            "Edit the prompt text in the field below."
+        ),
+    )
+    rota_clear_email_prompt_text = models.TextField(
+        blank=True,
+        default=(
+            "Slot cleared.\n"
+            "Please consider emailing {email} to say that the shift needs covering."
+        ),
+        help_text=(
+            "The message shown when a volunteer clears their rota slot. "
+            "Use {email} as a placeholder; it will be replaced with the volunteers list address "
+            "set in the 'Volunteers list email' field below. "
+            "Only shown when 'Rota clear email prompt' is enabled above."
+        ),
+    )
+    vols_email = models.EmailField(
+        blank=True,
+        default="",
+        max_length=254,
+        verbose_name="Volunteers list email",
+        help_text=(
+            "The email address of the volunteers mailing list. "
+            "Shown in the rota slot-cleared prompt (see above) when the {email} placeholder is used. "
+            "Seeded from the VENUE settings on first run."
+        ),
     )
     show_archive_images = models.BooleanField(
         default=True,
@@ -1164,6 +1197,35 @@ class SiteConfiguration(models.Model):
             "Earliest hour shown in the 3-day and week calendar views (0–23). "
             "Events before this time are still shown but the grid starts here. "
             "Default 10 hides the dead early-morning hours."
+        ),
+    )
+
+    # --- Break-even calculator ---
+    breakeven_guidance_note = models.TextField(
+        blank=True,
+        default=(
+            "Opening the doors at S&S costs roughly £200 before any additional costs —"
+            " make sure this is factored in above."
+            " Finance Collective sign-off required if total costs exceed"
+            " £500 (standard) or £750 (music)."
+        ),
+        help_text=(
+            "Guidance note shown below the break-even calculator on the event hub page. "
+            "Plain text."
+        ),
+    )
+    breakeven_fc_standard_threshold = models.PositiveSmallIntegerField(
+        default=500,
+        help_text=(
+            "Gross cost threshold (£) for a standard event above which a Finance Collective "
+            "sign-off is required. Triggers a warning in the break-even calculator."
+        ),
+    )
+    breakeven_fc_music_threshold = models.PositiveSmallIntegerField(
+        default=750,
+        help_text=(
+            "Gross cost threshold (£) for a music event above which a Finance Collective "
+            "sign-off is required. Triggers a warning in the break-even calculator."
         ),
     )
 
@@ -1249,9 +1311,15 @@ class SiteConfiguration(models.Model):
     )
     alt_text_guidance_url = models.URLField(
         blank=True,
-        default="",
+        default="https://design102.blog.gov.uk/2022/01/14/whats-the-alternative-how-to-write-good-alt-text/",
         max_length=500,
-        help_text="Link shown next to the alt-text field — e.g. a guide to writing good alt text.",
+        help_text=(
+            "Alt text (alternative text) is a short written description of an image, "
+            "read aloud by screen readers for blind and partially-sighted users and shown "
+            "when an image fails to load. This field sets a link shown next to the alt text "
+            "input when uploading event images — point it at a guide to writing good alt text. "
+            "Leave blank to hide the link."
+        ),
     )
     access_rider_guidance_url = models.URLField(
         blank=True,

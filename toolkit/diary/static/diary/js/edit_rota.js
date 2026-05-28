@@ -1,4 +1,4 @@
-function edit_rota(jQuery, rota_edit_base_url, edit_rota_notes_url_prefix, vol_email, CSRF_TOKEN, rota_clear_email_prompt_enabled, is_superuser, current_volunteer_pk) {
+function edit_rota(jQuery, rota_edit_base_url, edit_rota_notes_url_prefix, vol_email, CSRF_TOKEN, rota_clear_email_prompt_enabled, is_superuser, current_volunteer_pk, rota_clear_email_prompt_text) {
     "use strict";
     var $ = jQuery;
 
@@ -47,9 +47,7 @@ function edit_rota(jQuery, rota_edit_base_url, edit_rota_notes_url_prefix, vol_e
 
     function nameEditedCallback(value) {
         if (value === "" && this.revert !== "" && rota_clear_email_prompt_enabled) {
-            window.alert("Rota entry cleared.\nPlease consider emailing " +
-                         vol_email +
-                         " to say that the shift needs covering.");
+            window.alert(rota_clear_email_prompt_text.replace('{email}', vol_email));
         }
         $(document).trigger('rota:entry-changed');
     }
@@ -95,9 +93,7 @@ function edit_rota(jQuery, rota_edit_base_url, edit_rota_notes_url_prefix, vol_e
         $(document).on('click', '.rota_name.rota-signup-mine', function() {
             var span = $(this);
             if (rota_clear_email_prompt_enabled) {
-                window.alert("Slot cleared.\nPlease consider emailing " +
-                             vol_email +
-                             " to say that the shift needs covering.");
+                window.alert(rota_clear_email_prompt_text.replace('{email}', vol_email));
             }
             postRotaChange(span.attr('id'), '', function() {
                 span.html('<span class="na rota-signup-prompt">—</span>');

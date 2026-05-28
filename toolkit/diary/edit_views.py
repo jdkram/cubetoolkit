@@ -1129,11 +1129,15 @@ class EditEventView(PermissionRequiredMixin, View):
             )
 
         # Got here if there's a form validation error:
+        cfg = get_site_config()
         context = {
             "event": event,
             "event_form": form,
             "media_form": media_form,
-            "programme_copy_summary_max_chars": get_site_config().programme_copy_summary_max_chars,
+            "programme_copy_summary_max_chars": cfg.programme_copy_summary_max_chars,
+            "breakeven_guidance_note": cfg.breakeven_guidance_note,
+            "breakeven_fc_standard_threshold": cfg.breakeven_fc_standard_threshold,
+            "breakeven_fc_music_threshold": cfg.breakeven_fc_music_threshold,
         }
         return render(request, "form_event.html", context)
 
@@ -1150,11 +1154,15 @@ class EditEventView(PermissionRequiredMixin, View):
         form = diary_forms.EventForm(instance=event)
         media_form = diary_forms.MediaItemForm(instance=media_item)
 
+        cfg = get_site_config()
         context = {
             "event": event,
             "event_form": form,
             "media_form": media_form,
-            "programme_copy_summary_max_chars": get_site_config().programme_copy_summary_max_chars,
+            "programme_copy_summary_max_chars": cfg.programme_copy_summary_max_chars,
+            "breakeven_guidance_note": cfg.breakeven_guidance_note,
+            "breakeven_fc_standard_threshold": cfg.breakeven_fc_standard_threshold,
+            "breakeven_fc_music_threshold": cfg.breakeven_fc_music_threshold,
         }
 
         return render(request, "form_event.html", context)
@@ -1802,14 +1810,17 @@ class EditRotaView(PermissionRequiredMixin, View):
                         (entry.name or "").strip().lower(), ""
                     )
 
+        site_config = get_site_config()
         context = {
             "start_date": start_date,
             "end_date": end_date,
             "days_ahead": days_ahead,
             "showings": showings,
             "edit_showing_notes_url_prefix": showing_notes_url_prefix,
-            "rota_clear_email_prompt_enabled": get_site_config().rota_clear_email_prompt_enabled,
-            "rota_show_tags": get_site_config().rota_show_tags,
+            "rota_clear_email_prompt_enabled": site_config.rota_clear_email_prompt_enabled,
+            "rota_clear_email_prompt_text": site_config.rota_clear_email_prompt_text,
+            "rota_vols_email": site_config.vols_email or settings.VENUE.get("vols_email", ""),
+            "rota_show_tags": site_config.rota_show_tags,
             "can_mark_events": can_mark_events,
             "rota_marks_json": json.dumps(rota_marks),
             "current_volunteer_pk": current_volunteer_pk,
@@ -1973,8 +1984,18 @@ def edit_site_configuration(request):
                 "films_start_on_time_banner_text",
                 "rota_show_tags",
                 "rota_clear_email_prompt_enabled",
+                "rota_clear_email_prompt_text",
+                "vols_email",
                 "show_archive_images",
                 "images_start_date",
+            ],
+        ),
+        (
+            "Break-even calculator",
+            [
+                "breakeven_guidance_note",
+                "breakeven_fc_standard_threshold",
+                "breakeven_fc_music_threshold",
             ],
         ),
         (

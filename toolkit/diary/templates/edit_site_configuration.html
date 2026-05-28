@@ -8,7 +8,6 @@
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/messages.css">
 <style type="text/css">
   .config-section {
-    margin-bottom: 1.5rem;
   }
   .config-section .card-header {
     font-weight: 600;
@@ -56,36 +55,40 @@
       <div class="alert alert-danger">{{ form.non_field_errors }}</div>
     {% endif %}
 
+    <div class="row g-3">
     {% for label, fields in grouped_fields %}
-    <div class="card config-section">
-      <div class="card-header">{{ label }}</div>
-      <div class="card-body">
-        {% for field in fields %}
-          <div class="mb-3">
-            {% if field.field.widget.input_type == "checkbox" %}
-              <div class="form-check">
+    <div class="col-12 col-md-6">
+      <div class="card config-section h-100">
+        <div class="card-header">{{ label }}</div>
+        <div class="card-body">
+          {% for field in fields %}
+            <div class="mb-3">
+              {% if field.field.widget.input_type == "checkbox" %}
+                <div class="form-check">
+                  {{ field }}
+                  <label class="form-check-label" for="{{ field.id_for_label }}">
+                    {{ field.label }}
+                  </label>
+                </div>
+              {% else %}
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                 {{ field }}
-                <label class="form-check-label" for="{{ field.id_for_label }}">
-                  {{ field.label }}
-                </label>
-              </div>
-            {% else %}
-              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-              {{ field }}
-            {% endif %}
-            {% if field.help_text %}
-              <small class="form-text">{{ field.help_text }}</small>
-            {% endif %}
-            {% if field.errors %}
-              <div class="text-danger small mt-1">{{ field.errors }}</div>
-            {% endif %}
-          </div>
-        {% endfor %}
+              {% endif %}
+              {% if field.help_text %}
+                <small class="form-text">{{ field.help_text }}</small>
+              {% endif %}
+              {% if field.errors %}
+                <div class="text-danger small mt-1">{{ field.errors }}</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
       </div>
     </div>
     {% endfor %}
+    </div>
 
-    <div class="mb-4">
+    <div class="mt-4 mb-4">
       <button type="submit" class="btn btn-primary">Save changes</button>
       <a href="{% url 'toolkit-index' %}" class="btn btn-link">Cancel</a>
     </div>

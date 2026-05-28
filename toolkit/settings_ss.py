@@ -84,7 +84,8 @@ IMAGE_COPYRIGHT_GUIDANCE_URL = "https://example.com/TODO-replace-with-nextcloud-
 
 # URL for alt text writing guidance shown alongside the alt text field on image
 # upload. Set to None to show the field without a link.
-ALT_TEXT_GUIDANCE_URL = None  # TODO: add URL when volunteer documentation exists
+# SEED-ONLY — overridden by SiteConfiguration at runtime.
+ALT_TEXT_GUIDANCE_URL = "https://design102.blog.gov.uk/2022/01/14/whats-the-alternative-how-to-write-good-alt-text/"
 
 ###############################################################################
 #
