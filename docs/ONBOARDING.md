@@ -121,7 +121,7 @@ docker compose exec toolkit /venv/bin/python3 manage.py seed_labs_data
 | --- | --- | --- |
 | `admin` | **Panopticon** (superuser) | Everything — edit events, manage roles, volunteers, members, Wagtail CMS |
 | `programmer`, `programmer2` | **Programmer** | Edit events, manage templates and tags; cannot manage roles, volunteers, or members |
-| `volunteer` … `volunteer5` | **Volunteer** | Edit the rota only |
+| `volunteer` … `volunteer5` | **Volunteer** | Edit the rota; have linked Volunteer records, so volunteer-specific features (star/shadow marks, my-shifts widget, digest email) work for these accounts |
 
 > **Password for all dev accounts:** `DevPassword1!`
 > These are intentionally the same password — for local development only. Never use `--password` in production.
@@ -247,9 +247,10 @@ sns-toolkit/                  # Repo root
 │   └── tk_run.sh             # Docker container entrypoint script
 │
 ├── requirements/
-│   ├── base.txt              # Core Python dependencies
+│   ├── base.txt              # Core Python dependencies (edit this to add/remove packages)
 │   ├── dev.txt               # Adds dev tools (debug toolbar, black, fabric)
-│   └── docker.txt            # Adds gunicorn, mysqlclient
+│   ├── docker.txt            # Adds gunicorn, mysqlclient
+│   └── docker.lock           # Pinned lockfile compiled from docker.txt — commit this
 │
 ├── Dockerfile                    # Multi-stage Docker build
 ├── docker-compose.yml            # Dev environment (app + database)
@@ -451,6 +452,17 @@ The entrypoint script is [containerconfig/tk_run.sh](containerconfig/tk_run.sh).
 
 **In production**, `docker-compose-production.yml` uses `gunicorn` for the web app and `mailerd` in a separate container for sending email.
 
+### Upgrading dependencies
+
+The Docker build installs from `requirements/docker.lock` (a fully pinned file). To upgrade dependencies after editing `requirements/base.txt` or `requirements/docker.txt`, recompile the lockfile and rebuild:
+
+```bash
+uv pip compile requirements/docker.txt --output-file requirements/docker.lock --python-version 3.11
+docker compose up --build -d
+```
+
+Commit both the edited requirements file and the updated `docker.lock` together.
+
 ---
 
 ## Releases and Versioning
@@ -497,55 +509,80 @@ The canonical version string is in the [`VERSION`](../VERSION) file at the repo 
 
 ## Scheduled Tasks (production)
 
-The following management commands are intended to run on a schedule in production via systemd timers (or cron). They are not triggered by the web UI.
+Periodic maintenance jobs run inside a dedicated **`scheduler` Docker container** that is part of the normal `docker compose up` stack. There is no host cron, no systemd timer, and no separate process manager to configure on the server.
 
-### Weekly volunteer digest email
+### Architecture: why a scheduler container?
 
-Sends a personalised plain-text summary to each opted-in active volunteer: upcoming shifts, new programme items, and starred events.
+Three alternatives were considered:
 
-```bash
-python manage.py send_volunteer_digest
-```
+| Option | Verdict |
+|--------|---------|
+| **Host cron** | Works, but requires SSH access to configure, is invisible to `docker compose`, and drifts out of sync when the image changes. |
+| **`django-apscheduler` (in-process)** | Runs inside gunicorn workers, which complicates deployment: multiple workers risk duplicate runs, and tasks only fire while the web process is alive. Adds a Python dependency. |
+| **Docker scheduler container** (chosen) | Uses the same image and `manage.py` commands already tested. Schedule lives in version control alongside the code. Brought up and torn down with `docker compose up/down`. No new dependencies. |
 
-Example systemd timer (`/etc/systemd/system/volunteer-digest.timer`):
+The scheduler container runs `tk_run scheduler`, which is a bash loop in `containerconfig/tk_run.sh`. It waits for the database (same `wait-for-it` check as the web container), then sleeps to each job's scheduled time and fires the appropriate management command.
 
-```ini
-[Unit]
-Description=Weekly volunteer digest email
+### What the container controls vs. what SiteConfiguration controls
 
-[Timer]
-OnCalendar=Thu 09:00
-Persistent=true
+The container controls **when** jobs fire. SiteConfiguration controls **what they do**:
 
-[Install]
-WantedBy=timers.target
-```
+| Setting | Effect |
+|---------|--------|
+| `volunteer_dormancy_days = 0` | `auto_dormancy` runs but is a no-op (disabled) |
+| `volunteer_never_logged_in_grace_days = 0` | Grace-period cohort not checked |
+| No opted-in volunteers | `send_volunteer_digest` sends nothing |
 
-Companion service (`/etc/systemd/system/volunteer-digest.service`):
+You do not need to restart or reconfigure the scheduler container to toggle behaviour — change the setting in Django admin and the next run picks it up.
 
-```ini
-[Unit]
-Description=Weekly volunteer digest email
-
-[Service]
-Type=oneshot
-ExecStart=/path/to/venv/bin/python manage.py send_volunteer_digest
-WorkingDirectory=/path/to/toolkit
-EnvironmentFile=/path/to/.env
-```
-
-Enable and start:
+To change the firing time or add a new job, edit `containerconfig/tk_run.sh` and restart the container:
 
 ```bash
-systemctl enable --now volunteer-digest.timer
+docker compose restart scheduler
 ```
 
-### Other scheduled commands
+No image rebuild is needed because `tk_run.sh` is bind-mounted from source in development and baked into the image in production (so a production change does require `docker compose up --build -d scheduler`).
 
-| Command | Purpose | Suggested schedule |
-|---|---|---|
-| `auto_dormancy` | Flags volunteers who haven't logged in recently | Monthly |
-| `email_vols_rota_vacancies` | Emails rota vacancy report | Weekly |
+### Current job schedule
+
+| Job | Command | Fires | Behaviour controlled by |
+|-----|---------|-------|------------------------|
+| Auto-dormancy | `auto_dormancy` | Daily at 03:00 | `volunteer_dormancy_days`, `volunteer_never_logged_in_grace_days` in SiteConfiguration |
+| Volunteer digest | `send_volunteer_digest` | Daily at 09:00 | `volunteer_digest_day` in SiteConfiguration |
+
+**`auto_dormancy`** marks active volunteers as Dormant when they have gone quiet: no login for `volunteer_dormancy_days`, or never logged in within `volunteer_never_logged_in_grace_days` of joining. Dormant is soft and reversible — it does not disable login or rota signup. Set either field to 0 in Site settings to disable that cohort. Run `manage.py auto_dormancy --dry-run` to preview.
+
+**`send_volunteer_digest`** sends a personalised plain-text weekly summary to each opted-in active volunteer: upcoming shifts, new programme items, and starred events. The scheduler fires this command every day at 09:00, but the command checks `SiteConfiguration.volunteer_digest_day` (default: Thursday) and exits quietly on non-matching days. Set the field to **Disabled** in Site settings to suppress sending without touching the container. Only volunteers who have explicitly opted in (`weekly_digest = True` on their profile, default off) and are currently Active receive the email.
+
+### Viewing scheduler logs
+
+```bash
+docker compose logs scheduler          # recent output
+docker compose logs -f scheduler       # follow live
+```
+
+Each job logs its start time, completion, and any failure with an exit code.
+
+### Adding a new periodic job
+
+1. Confirm the management command has a `--dry-run` flag and is idempotent (safe to re-run).
+2. Add it to the `scheduler)` case in `containerconfig/tk_run.sh`, following the `_sleep_until` / `_run` pattern already there.
+3. Restart the container: `docker compose restart scheduler`.
+4. Update this table.
+
+### Management commands that must NOT be scheduled
+
+| Command | Why |
+|---------|-----|
+| `purge_stale_volunteers` | Irreversible anonymisation. Requires `--apply --confirm "anonymise N volunteers"`. Always run by hand as a conscious decision. |
+| `check_vols_against_mailman` | Interactive — prompts for server, list name, and password. |
+| `delete_members_who_dont_get_the_mailout` | Interactive prompt. Destructive. |
+| `delete_non_members_who_dont_get_the_mailout` | Destructive one-off. |
+| `keep_vols_from_csv_retire_everyone_else` | Destructive bulk operation. |
+
+### Archived commands
+
+`email_vols_rota_vacancies` — originally intended as a periodic rota-vacancy email blast to all active volunteers. Superseded by the weekly digest, which is personalised and opt-in. The command also had two blocking issues: `settings.ROTA_DAYS_AHEAD` was never defined (instant crash), and the recipient list was hardcoded to two test usernames. The file is kept at `toolkit/util/management/commands/email_vols_rota_vacancies.py.archived` for reference but is not importable.
 
 ---
 

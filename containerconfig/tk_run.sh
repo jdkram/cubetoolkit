@@ -59,8 +59,53 @@ case "$COMMAND" in
     mailerd)
         exec /venv/bin/python3 /site/manage.py mailerd
         ;;
+    scheduler)
+        # Periodic maintenance jobs. All behaviour is controlled by SiteConfiguration
+        # (set volunteer_dormancy_days=0 to make auto_dormancy a no-op, etc.); this
+        # container only controls *when* jobs fire. To change the schedule, edit this
+        # file and restart the container — no image rebuild needed.
+        #
+        # Schedule:
+        #   auto_dormancy        — daily at 03:00
+        #   send_volunteer_digest — daily at 09:00 (which day it sends is controlled
+        #                           by SiteConfiguration.volunteer_digest_day; set to
+        #                           0 in Django admin to disable without restarting)
+        echo "Scheduler started."
+        echo "  auto_dormancy:         daily at 03:00"
+        echo "  send_volunteer_digest: daily at 09:00 (day controlled by SiteConfiguration)"
+
+        _sleep_until() {
+            # Sleep until the next occurrence of HH:MM today (or tomorrow if past).
+            local label="$1" time="$2"
+            local now target
+            now=$(date +%s)
+            target=$(date -d "today ${time}" +%s)
+            [ "$now" -ge "$target" ] && target=$(date -d "tomorrow ${time}" +%s)
+            echo "[scheduler] ${label}: next run at $(date -d @${target} '+%Y-%m-%d %H:%M') ($(( target - now ))s)"
+            sleep $(( target - now ))
+        }
+
+        _run() {
+            local label="$1"; shift
+            echo "[$(date '+%Y-%m-%d %H:%M')] [${label}] starting"
+            "$@" \
+                && echo "[$(date '+%Y-%m-%d %H:%M')] [${label}] done" \
+                || echo "[$(date '+%Y-%m-%d %H:%M')] [${label}] FAILED (exit $?)"
+        }
+
+        while true; do
+            _sleep_until "auto_dormancy" "03:00"
+            _run "auto_dormancy" /venv/bin/python3 /site/manage.py auto_dormancy
+
+            # Run the digest command daily at 09:00. The command checks
+            # SiteConfiguration.volunteer_digest_day and exits quietly if today
+            # is not the configured send day (or if digest is disabled).
+            _sleep_until "volunteer_digest" "09:00"
+            _run "volunteer_digest" /venv/bin/python3 /site/manage.py send_volunteer_digest
+        done
+        ;;
     *)
-        echo "Unknown option; expected runserver, gunicorn, or mailerd"
+        echo "Unknown option; expected runserver, gunicorn, mailerd, or scheduler"
         exit 5
         ;;
 esac

@@ -43,6 +43,20 @@ services:
       - type: volume
         source: seed_image_cache
         target: /site/.seed_cache/
+  scheduler:
+    networks:
+      - toolkit_dev
+    image: toolkit:latest
+    command: ["tk_run", "scheduler"]
+    restart: unless-stopped
+    environment: *commonEnv
+    volumes:
+      - type: bind
+        source: .
+        target: /site/
+      - type: volume
+        source: media_data
+        target: /site/media/
   mariadb:
     networks:
       - toolkit_dev
