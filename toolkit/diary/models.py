@@ -1322,6 +1322,28 @@ class SiteConfiguration(models.Model):
         ),
     )
 
+    DIGEST_DAY_DISABLED = 0
+    DIGEST_DAY_CHOICES = [
+        (0, "Disabled"),
+        (1, "Monday"),
+        (2, "Tuesday"),
+        (3, "Wednesday"),
+        (4, "Thursday"),
+        (5, "Friday"),
+        (6, "Saturday"),
+        (7, "Sunday"),
+    ]
+    volunteer_digest_day = models.PositiveSmallIntegerField(
+        default=4,
+        choices=DIGEST_DAY_CHOICES,
+        help_text=(
+            "Day of the week on which the volunteer digest email is sent. "
+            "The scheduler fires the digest command daily at 09:00; this setting "
+            "controls which day it actually sends. Set to Disabled to suppress sending "
+            "without stopping the scheduler container."
+        ),
+    )
+
     # --- Guidance URLs ---
     image_copyright_guidance_url = models.URLField(
         blank=True,

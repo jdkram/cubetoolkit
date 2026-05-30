@@ -21,7 +21,7 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 import django.utils.timezone as timezone
 
-from toolkit.diary.models import RotaEntry, Showing, VolunteerEventMark
+from toolkit.diary.models import RotaEntry, Showing, VolunteerEventMark, get_site_config
 from toolkit.members.models import Volunteer
 
 logger = logging.getLogger(__name__)
@@ -163,6 +163,19 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         dry_run = options["dry_run"]
         now = timezone.now()
+
+        config = get_site_config()
+        digest_day = config.volunteer_digest_day
+        if digest_day == 0:
+            self.stdout.write("Volunteer digest is disabled in Site settings (digest day = 0). Nothing sent.")
+            return
+        if now.isoweekday() != digest_day:
+            day_name = config.get_volunteer_digest_day_display()
+            self.stdout.write(
+                f"Today is not {day_name} (digest day = {digest_day}). Nothing sent."
+            )
+            return
+
         week_of = now.strftime("%-d %b %Y")
 
         volunteers = Volunteer.objects.filter(
