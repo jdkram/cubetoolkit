@@ -5739,3 +5739,80 @@ Uses the existing base templates. No new JS dependencies.
 | URL routing + access control | 1h |
 | Tests | 3–4h |
 | **Total** | **~20–32h** |
+
+### 9.100 — Role qualification gates: training-gated rota sign-up with shadow progression 🟡 M (draft — needs ratification)
+
+**Status:** First-draft spec, 2026-05-30. Captures the last outstanding volunteer-feedback request. Needs a design decision on the open questions below and collective buy-in before any build. Closely related to §8.8 (training records too rigid), the shadow-mode spec under 9.x (programmer/shadow roles), and §9.4 (induction workflow — where inductions get recorded in the first place).
+
+**The request (verbatim intent).** Volunteers should not be able to sign up for a skilled role until they have done the relevant induction — e.g. you can't take the **Projectionist** slot unless you've done the **Projection Induction**. Ideally, after the induction a volunteer should **shadow 2–3 times** before going solo, especially for trickier formats (35mm, unusual aspect ratios, multi-projector).
+
+**Why this is hard, and why it has stalled before.** §8.8 already diagnoses the core problem: the existing `TrainingRecord` model tries to force every kind of qualification through one schema (trainer + date + role, expiring after 12 months), so it is never maintained and is therefore used to gate nothing. Real qualifications differ in kind: binary inductions (bar, projection — you've done it or you haven't, no expiry), expiring external certificates (food hygiene L2), tiered internal progression (projectionist levels), and informal "comfortable with this" signals (sound/tech). A gate that blocks sign-up is only as trustworthy as the records behind it — **if the records aren't reliably kept, a hard gate locks out genuinely-qualified people.** That is the central risk and it shapes everything below.
+
+**Core concept — a `Qualification`, decoupled from the expiring training log.**
+
+Introduce a lightweight `Qualification` model representing a thing a volunteer can hold (e.g. "Projection induction", "Bar induction", "Food hygiene L2"). A volunteer *holds* qualifications via a join record. A `Role` can *require* zero or more qualifications. This deliberately sits **alongside** the existing `TrainingRecord` rather than replacing it — `TrainingRecord` can remain the audit log of training *events*; `Qualification` is the durable "is this person cleared for this?" fact that the gate actually reads. (Long-term, §8.8's rewrite could fold the two together, but that is a bigger job and not required for this feature.)
+
+**The gate is a spectrum, set per requirement — not a single hard block.**
+
+| Mode | Behaviour at sign-up | Use for |
+|---|---|---|
+| **Off** | No check. (Today's behaviour.) | Most roles |
+| **Advisory** | Volunteer can still sign up, but sees a notice ("This role normally needs the Projection induction — have you done it?") and the slot is flagged on the rota for a coordinator to eyeball. | Soft signals; roles where records are incomplete; rollout phase |
+| **Blocking** | Volunteer without the qualification cannot take the **primary** slot. They may still take a **shadow** slot if one is open (see below). | Genuine hard gates (projection, bar) once records are trusted |
+
+Defaulting new requirements to **Advisory** is the safe path: it surfaces the expectation without locking anyone out while the qualification records are still being populated. A requirement can be promoted to **Blocking** per-role once the collective trusts the data.
+
+**Shadow progression (the "shadow 2–3 times before solo" part).**
+
+This composes with the existing **shadow-mode** spec (solo / shadow-open / shadow-at-discretion). The progression adds one idea: holding the induction unlocks *shadowing*; logging enough shadows unlocks *solo*.
+
+- A volunteer who **has the induction but not enough shadows** may sign up only to the **shadow** slot (when one is open), not the primary slot.
+- Each completed shadow is logged (by the primary volunteer, a coordinator, or self-attested — open question). When the volunteer reaches the role's `shadows_required` threshold (e.g. 3), they become eligible for the **primary** slot.
+- The threshold lives on the role requirement (`shadows_required`, default 0 = no shadow gate). Setting it to 0 reduces the feature to a plain induction gate.
+
+**Format-specific difficulty ("especially for trickier formats").** The cleanest first cut treats difficulty at the **role** level (one "Projectionist" gate). True per-format gating (digital vs 35mm) likely wants either separate roles ("Projectionist — 35mm") or a per-showing `difficulty`/`format` tag that raises the required shadow count. This is a genuine fork — see open questions. **Recommend deferring format-specificity to a phase 2**; the MVP gate is per-role.
+
+**Where the gate fires.** The sign-up coercion path (§8.3 / 8.1 MVP) is the single choke point. When a non-superuser claims a slot, the server already overrides the submitted text with their own identity; the gate is an additional check at that same point: look up the role's requirements, check the volunteer's held qualifications + shadow count, then allow / warn / block. Superusers (Panopticon) bypass the gate, exactly as they bypass name coercion — a coordinator can always place someone manually. The rota UI should *also* reflect eligibility ahead of the click (e.g. lock/grey the slot for ineligible volunteers, with a tooltip explaining what's needed) so the block is never a surprise.
+
+**Data model sketch.**
+
+```
+Qualification:
+  name              # "Projection induction"
+  kind              # induction | certificate | tier   (informs expiry UI; see §8.8)
+  expires_after     # nullable duration; null = never expires (inductions)
+
+VolunteerQualification (join):
+  volunteer FK
+  qualification FK
+  awarded_on, awarded_by, expires_on (nullable), notes
+
+RoleQualificationRequirement:
+  role FK
+  qualification FK
+  gate_mode         # off | advisory | blocking
+  shadows_required  # int, default 0
+
+ShadowLog:           # one row per completed shadow shift
+  volunteer FK
+  role FK            # which role they shadowed
+  showing FK         # provenance
+  signed_off_by      # who confirmed (nullable if self-attested)
+  date
+```
+
+A volunteer is **solo-eligible** for a role when, for every blocking requirement on that role, they hold a current qualification *and* their `ShadowLog` count for that role ≥ `shadows_required`.
+
+**Open design questions (need a decision before building):**
+1. **Who logs a shadow?** Self-attested (low friction, low trust), confirmed by the primary volunteer on the night (medium), or only by a coordinator (high trust, high friction)? This is the make-or-break culture question, mirroring §8.8's point that gates are only as good as the records.
+2. **Advisory vs blocking default, and who can promote to blocking** — Panopticon only, or any programmer per role?
+3. **Format-specific difficulty** — separate roles, per-showing difficulty tag, or out of scope for v1?
+4. **Expiry surfacing** — inductions never expire; certificates do. Do we want the dashboard lapse-warning (§8.9) in scope here, or keep that separate?
+5. **Interaction with bulk/superuser placement** — confirmed that Panopticon bypasses, but should an advisory note still log against superuser placements for later review?
+
+**Suggested phasing.**
+- **Phase 1 (MVP, ~8–12h):** `Qualification` + `VolunteerQualification` + `RoleQualificationRequirement` with `off`/`advisory` only (no blocking, no shadows). Admin/UI to award qualifications and attach requirements. Advisory notice on sign-up. This delivers the visible expectation and starts populating records with zero lock-out risk.
+- **Phase 2 (~8–12h):** `blocking` mode + `ShadowLog` + shadow-progression gate + rota slot eligibility display.
+- **Phase 3 (~6–10h):** format-specific difficulty; expiry dashboard tie-in (§8.9); fold legacy `TrainingRecord` into the new model per §8.8.
+
+**Size estimate:** 🟡 M — ~22–34h across all three phases; MVP (phase 1) alone is 🔵 S (~8–12h). Requires 8.1 (rota↔volunteer FK, done) for the gate to know who is signing up.

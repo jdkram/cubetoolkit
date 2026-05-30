@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-05-29
+**Last updated:** 2026-05-30
 
 **Current phase:** Phase 2 complete — entering Phase 3
 **See also:** [ROADMAP.md](docs/ROADMAP.md) (wave-by-wave sequencing) · [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -228,6 +228,7 @@ Priorities agreed 2026-05-25. Full specs in [TASKS.md](docs/TASKS.md).
 - **9.96 Volunteer pool management GUI** — pool health actions (auto-dormancy button, quick restore, retention-exempt flag, last-gasp email, active-membership guard on anonymise); spec in TASKS.md §9.96
 - **9.87 Collectives → simplelists sync** — high importance; defer until prod access available; warn about sync-state complexity (unsubscribes outside our interface)
 - **9.4 Induction tracking** — keep specced; needs collective buy-in before any implementation
+- **9.100 Role qualification gates** — training-gated rota sign-up (e.g. can't take Projectionist without the Projection induction) with shadow-2–3-times progression. First-draft spec in TASKS.md §9.100; needs design decisions (who logs a shadow; advisory vs blocking default; format-specificity) + collective buy-in. MVP (advisory only, no lock-out) is 🔵 S; full feature 🟡 M.
 - **9.63 Room availability overlay on map** — helpful but not a priority
 - **9.49 Programmer permissions** — code implemented; approach being revisited (SiteSettings-based); Panopticons to decide before deploying
 - **9.29 Role management** — unresolved design; guide users to create new roles rather than rename; warn about rename consequences in historical data
