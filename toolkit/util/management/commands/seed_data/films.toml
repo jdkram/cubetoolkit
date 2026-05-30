@@ -12,7 +12,7 @@ film_information = "Dir. Amber Collective, GB 1985"
 pricing = "£7/£5/£3/£0"
 tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/ptlBtpecd39gYVDNbMpVIg7gYsd.jpg"
-trailer_url = ""
+trailer_url = "https://www.youtube.com/watch?v=r-_H_AAjqGw"
 
 [[sunday_films]]
 name = "Born in Flames"

@@ -153,11 +153,29 @@ function hideAddShowingForm() {
     {% else %}—{% endif %}
   </dd>
 
+  <dt class="col-sm-3">Trailer URL
+    <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
+          title="Link to a trailer (YouTube, Vimeo, etc.). Appears as a &ldquo;Watch trailer&rdquo; link on the public event page.">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">
+    {% if event.trailer_url %}<a href="{{ event.trailer_url }}">{{ event.trailer_url }}</a>
+    {% else %}—{% endif %}
+  </dd>
+
   <dt class="col-sm-3">Film information
     <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
           title="Screening details shown in public listings, e.g. &quot;Dir: Jane Smith, 1990, USA, 95 mins, Cert: 15&quot;.">ⓘ</span>
   </dt>
   <dd class="col-sm-9">{{ event.film_information|default:"—" }}</dd>
+
+  <dt class="col-sm-3">Age restriction
+    <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
+          title="Under 18s must be accompanied by an adult at all events. Use this to flag family-friendly events (&ldquo;All ages welcome&rdquo;) or a minimum admission age (16+ / 18+ only).">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">
+    {% if event.age_restriction %}{{ event.get_age_restriction_display }}
+    {% else %}<span class="text-muted">Not stated</span>{% endif %}
+  </dd>
 
   <dt class="col-sm-3">Outside hire
     <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
@@ -189,6 +207,21 @@ function hideAddShowingForm() {
   <dd class="col-sm-9">
     {% if event.notes %}{{ event.notes }}
     {% else %}<span class="text-muted">—</span>{% endif %}
+  </dd>
+
+  <dt class="col-sm-3">Approval status
+    <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
+          title="How this event entered the programme — approved at a programming meeting, or a standing/regular event that needs no meeting.">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">
+    {% if event.approval_type %}
+      {{ event.get_approval_type_display }}
+      {% if event.approval_type == "meeting" %}
+        {% if event.approved_at_meeting_date %}<br>Meeting date: {{ event.approved_at_meeting_date|date:"j M Y" }}{% endif %}
+        {% if event.meeting_name %}<br>Meeting: {{ event.meeting_name }}{% endif %}
+        {% if event.meeting_minutes_url %}<br>Minutes: <a href="{{ event.meeting_minutes_url }}">{{ event.meeting_minutes_url }}</a>{% endif %}
+      {% endif %}
+    {% else %}<span class="text-muted">Not recorded</span>{% endif %}
   </dd>
 
   <dt class="col-sm-3">Public link
