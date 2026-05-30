@@ -3,6 +3,7 @@ import django.contrib.auth.models as auth_models
 import django.contrib.contenttypes as contenttypes
 
 from django.core.management.base import BaseCommand, CommandError
+from toolkit.members.models import Member, Volunteer
 
 
 def _get_password(use):
@@ -89,7 +90,10 @@ def _configure_users(password=None, force_password=False):
     )
 
     # --- Panopticon (superuser) ---
-    _create_or_update_user(
+    # The admin account also gets a Member + Volunteer record so that the
+    # volunteer-specific dashboard cards (star/shadow marks, "my shifts") are
+    # visible when logged in as admin, not just as a seeded volunteer account.
+    admin_user = _create_or_update_user(
         "admin",
         "admin@localhost",
         [write_permission, read_permission, edit_rota_permission],
@@ -98,13 +102,24 @@ def _configure_users(password=None, force_password=False):
         password=password,
         force_password=force_password,
     )
+    admin_member, _ = Member.objects.get_or_create(
+        email="admin@localhost",
+        defaults={"name": "Demo Admin"},
+    )
+    Volunteer.objects.get_or_create(user=admin_user, defaults={"member": admin_member})
 
     # --- Programmer tier ---
+    # Programmer accounts also get a Member + Volunteer record so the
+    # volunteer-specific dashboard cards (star/shadow marks, "my shifts") work
+    # when logged in as a programmer.
     programmer_users = []
-    for username, email in [
-        ("programmer", "programmer@localhost"),
-        ("programmer2", "programmer2@localhost"),
-    ]:
+    for i, (username, email) in enumerate(
+        [
+            ("programmer", "programmer@localhost"),
+            ("programmer2", "programmer2@localhost"),
+        ],
+        start=1,
+    ):
         user = _create_or_update_user(
             username,
             email,
@@ -112,6 +127,11 @@ def _configure_users(password=None, force_password=False):
             password=password,
             force_password=force_password,
         )
+        member, _ = Member.objects.get_or_create(
+            email=email,
+            defaults={"name": f"Demo Programmer {i}"},
+        )
+        Volunteer.objects.get_or_create(user=user, defaults={"member": member})
         programmer_users.append(user)
 
     # Add programmer accounts to the Programmers group:
@@ -119,6 +139,9 @@ def _configure_users(password=None, force_password=False):
         user.groups.set([programmers_group])
 
     # --- Volunteer tier (rota editing only) ---
+    # Each volunteer account gets a Member + Volunteer record so the
+    # volunteer-specific features (star/shadow marks, "my shifts", digest
+    # email) work when logged in as one of these accounts.
     for i, (username, email) in enumerate(
         [
             ("volunteer", "volunteer@localhost"),
@@ -129,13 +152,18 @@ def _configure_users(password=None, force_password=False):
         ],
         start=1,
     ):
-        _create_or_update_user(
+        user = _create_or_update_user(
             username,
             email,
             [edit_rota_permission],
             password=password,
             force_password=force_password,
         )
+        member, _ = Member.objects.get_or_create(
+            email=email,
+            defaults={"name": f"Demo Volunteer {i}"},
+        )
+        Volunteer.objects.get_or_create(user=user, defaults={"member": member})
 
 
 class Command(BaseCommand):

@@ -302,6 +302,32 @@ class Command(BaseCommand):
                     except EventTag.DoesNotExist:
                         pass
 
+        # Collectives must be seeded before volunteers so that collective
+        # membership can be wired up in the volunteer loop below.
+        from toolkit.labs.models import Collective
+
+        for c in COLLECTIVES:
+            collective, created = Collective.objects.get_or_create(
+                slug=c["slug"],
+                defaults={
+                    "name": c["name"],
+                    "colour": c.get("colour", "#343a40"),
+                    "display_order": c.get("display_order", 0),
+                    "volunteer_count": c.get("volunteer_count", ""),
+                    "about": c.get("about", ""),
+                    "roles": c.get("roles", ""),
+                    "organising": c.get("organising", ""),
+                    "proud_of": c.get("proud_of", ""),
+                    "get_involved": c.get("get_involved", ""),
+                    "contact": c.get("contact", ""),
+                    "invite_only": c.get("invite_only", False),
+                    "listed_publicly": c.get("listed_publicly", False),
+                    "public_copy": c.get("public_copy", ""),
+                },
+            )
+            if created:
+                counts["collectives"] += 1
+
         # Members and Volunteers
         volunteer_objects = {}
         for idx, vol_data in enumerate(VOLUNTEERS):
@@ -364,11 +390,49 @@ class Command(BaseCommand):
                 volunteer.save()
 
             # Sync collective memberships.
-            from toolkit.labs.models import Collective as CollectiveModel
             wanted_slugs = vol_data.get("collectives", [])
-            wanted_collectives = list(CollectiveModel.objects.filter(slug__in=wanted_slugs))
+            wanted_collectives = list(Collective.objects.filter(slug__in=wanted_slugs))
             if set(volunteer.collectives.values_list("slug", flat=True)) != set(wanted_slugs):
                 volunteer.collectives.set(wanted_collectives)
+
+            # Pool-health test fields — only applied when explicitly present in TOML.
+            # These create volunteers in specific lifecycle states so the pool-health
+            # dashboard (/volunteers/view/pool-health/) has meaningful data to display.
+            _ph_now = timezone.now()
+
+            status = vol_data.get("status")
+            if status and volunteer.status != status:
+                volunteer.status = status
+                volunteer.save(update_fields=["status"])
+
+            # User.objects.update() bypasses auto_now fields and model .save() hooks,
+            # which is what we want: we're backdating dates for test realism, not
+            # triggering the suspension logic that Volunteer.save() applies.
+            if "last_login_days_ago" in vol_data:
+                User.objects.filter(pk=user.pk).update(
+                    last_login=_ph_now - datetime.timedelta(days=vol_data["last_login_days_ago"])
+                )
+            if "date_joined_days_ago" in vol_data:
+                User.objects.filter(pk=user.pk).update(
+                    date_joined=_ph_now - datetime.timedelta(days=vol_data["date_joined_days_ago"])
+                )
+            # Backdate Volunteer.created_at to match the earliest of the two user
+            # dates, so that purge_candidates() (which uses Greatest(created_at, ...))
+            # correctly classifies these as old accounts.
+            _backdate_days = max(
+                vol_data.get("last_login_days_ago", 0),
+                vol_data.get("date_joined_days_ago", 0),
+            )
+            if _backdate_days:
+                Volunteer.objects.filter(pk=volunteer.pk).update(
+                    created_at=_ph_now - datetime.timedelta(days=_backdate_days)
+                )
+
+            if "membership_expires_days_from_now" in vol_data:
+                expires = (_ph_now + datetime.timedelta(days=vol_data["membership_expires_days_from_now"])).date()
+                if member.membership_expires != expires:
+                    member.membership_expires = expires
+                    member.save(update_fields=["membership_expires"])
 
             volunteer_objects[vol_data["name"]] = volunteer
 
@@ -606,32 +670,9 @@ class Command(BaseCommand):
         # Toolkit index links
         counts["index_links"] = self._seed_index_links()
 
-        # Collectives
-        from toolkit.labs.models import Collective, DonationItem
-
-        for c in COLLECTIVES:
-            collective, created = Collective.objects.get_or_create(
-                slug=c["slug"],
-                defaults={
-                    "name": c["name"],
-                    "colour": c.get("colour", "#343a40"),
-                    "display_order": c.get("display_order", 0),
-                    "volunteer_count": c.get("volunteer_count", ""),
-                    "about": c.get("about", ""),
-                    "roles": c.get("roles", ""),
-                    "organising": c.get("organising", ""),
-                    "proud_of": c.get("proud_of", ""),
-                    "get_involved": c.get("get_involved", ""),
-                    "contact": c.get("contact", ""),
-                    "invite_only": c.get("invite_only", False),
-                    "listed_publicly": c.get("listed_publicly", False),
-                    "public_copy": c.get("public_copy", ""),
-                },
-            )
-            if created:
-                counts["collectives"] += 1
-
         # Donation items
+        from toolkit.labs.models import DonationItem
+
         for item in DONATION_ITEMS:
             _, created = DonationItem.objects.get_or_create(
                 name=item["name"],

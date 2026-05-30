@@ -190,3 +190,323 @@ name = "Fig"
 email = "fig@example.com"
 collectives = ["community-kitchen"]
 dir_share_name = "full"
+
+# ── Additional active volunteers ─────────────────────────────────────────────
+# Larger realistic cohort with varied collective memberships and directory
+# sharing preferences, giving the directory and pool-maintenance pages something
+# to work with.
+
+[[volunteers]]
+name = "Demi Osei"
+email = "demi.osei@example.com"
+pronouns = "she/her"
+collectives = ["film-programming", "facilitation"]
+dir_share_name = "full"
+dir_share_pronouns = true
+dir_share_email = true
+dir_share_collectives = true
+
+[[volunteers]]
+name = "Reuben Ashford"
+email = "reuben.ashford@example.com"
+pronouns = "he/him"
+collectives = ["cafe-collective", "caretaking-operations"]
+dir_share_name = "full"
+dir_share_pronouns = true
+dir_share_collectives = true
+access_intro = "Hard of hearing in my left ear."
+access_needs = "Works fine in most situations. Prefer if people face me when speaking in noisy environments."
+dir_share_access_rider = true
+emergency_contact_name = "Philippa Ashford"
+emergency_contact_relationship = "Spouse"
+emergency_contact_phone = "07700 900010"
+
+[[volunteers]]
+name = "Nadia Kurosawa"
+email = "nadia.kurosawa@example.com"
+pronouns = "she/they"
+collectives = ["bar-collective", "safer-spaces"]
+dir_share_name = "full"
+dir_share_pronouns = true
+dir_share_collectives = true
+
+[[volunteers]]
+name = "Obi Nwosu"
+email = "obi.nwosu@example.com"
+pronouns = "he/him"
+collectives = ["community-kitchen", "finance"]
+dir_share_name = "initial"
+dir_share_pronouns = true
+dir_share_collectives = true
+
+[[volunteers]]
+name = "Lila Estraven"
+email = "lila.estraven@example.com"
+pronouns = "she/her"
+collectives = ["film-projection-tech", "film-programming"]
+dir_share_name = "full"
+dir_share_pronouns = true
+dir_share_email = true
+dir_share_collectives = true
+emergency_contact_name = "Felix Estraven"
+emergency_contact_relationship = "Partner"
+emergency_contact_phone = "07700 900011"
+
+[[volunteers]]
+name = "Priya Nair"
+email = "priya.nair@example.com"
+pronouns = "she/her"
+collectives = ["canny-little-library", "art-club"]
+dir_share_name = "full"
+dir_share_pronouns = true
+dir_share_collectives = true
+dir_share_access_rider = true
+access_intro = "Anxiety disorder — support needs vary."
+access_needs = "I'm fine with most shifts. Prefer advanced notice of any changes to the running order. Busy crowds are easier if I know what to expect."
+
+[[volunteers]]
+name = "Kofi Asante"
+email = "kofi.asante@example.com"
+pronouns = "he/him"
+collectives = ["keyholder", "caretaking-operations"]
+dir_share_name = "full"
+dir_share_pronouns = true
+dir_share_email = true
+dir_share_collectives = true
+emergency_contact_name = "Abena Asante"
+emergency_contact_relationship = "Sister"
+emergency_contact_phone = "07700 900012"
+
+[[volunteers]]
+name = "Zara Moon"
+email = "zara.moon@example.com"
+# opted out of directory entirely
+collectives = ["bar-collective"]
+
+[[volunteers]]
+name = "Tunde"
+email = "tunde@example.com"
+pronouns = "he/him"
+collectives = ["film-programming", "keyholder"]
+dir_share_name = "full"
+dir_share_pronouns = true
+dir_share_collectives = true
+
+[[volunteers]]
+name = "Pip"
+email = "pip@example.com"
+pronouns = "they/them"
+collectives = ["community-kitchen", "canny-little-library"]
+dir_share_name = "full"
+dir_share_pronouns = true
+dir_share_collectives = true
+dir_share_access_rider = true
+access_intro = "Coeliac disease."
+access_needs = "Please keep gluten away from the prep area I'm using. Happy to chat through what that means before a kitchen shift."
+
+[[volunteers]]
+name = "Remi"
+email = "remi@example.com"
+collectives = ["art-club"]
+dir_share_name = "initial"
+dir_share_collectives = true
+
+# ── Pool health test scenarios ────────────────────────────────────────────────
+# One volunteer per distinct case on the volunteer pool maintenance page.
+# Includes both edge cases and a larger realistic cohort so the dashboard
+# shows something meaningful with pagination/scroll.
+# Fields understood by seed_dev_data (not standard volunteer fields):
+#   status                      — volunteer lifecycle status (default: "active")
+#   last_login_days_ago         — set user.last_login to this many days ago;
+#                                  omit entirely for a never-logged-in account
+#   date_joined_days_ago        — set user.date_joined to this many days ago
+#   membership_expires_days_from_now — set member.membership_expires relative to
+#                                  today; negative = already expired
+
+[[volunteers]]
+name = "Ioana Feraru"
+email = "ioana.feraru@example.com"
+# Dormant — logged in 500 days ago (past the 365-day dormancy threshold).
+# Appears in the Dormant cohort with a visible last-login date.
+status = "dormant"
+last_login_days_ago = 500
+membership_expires_days_from_now = -200
+
+[[volunteers]]
+name = "Yusuf Bekele"
+email = "yusuf.bekele@example.com"
+# Dormant, never logged in — account created 200 days ago (past the 90-day
+# never-logged-in grace period). Shows the re-induction badge.
+status = "dormant"
+date_joined_days_ago = 200
+membership_expires_days_from_now = -50
+
+[[volunteers]]
+name = "Dagmar Lund"
+email = "dagmar.lund@example.com"
+# Retired — last login ~1400 days ago (well past the 1095-day purge window).
+# Membership expired long ago: a clean purge candidate with no active-member guard.
+status = "retired"
+last_login_days_ago = 1400
+membership_expires_days_from_now = -730
+
+[[volunteers]]
+name = "Cassidy Osei"
+email = "cassidy.osei@example.com"
+# Dormant — last login ~1200 days ago (past the 1095-day purge window).
+# Another clean purge candidate.
+status = "dormant"
+last_login_days_ago = 1200
+membership_expires_days_from_now = -365
+
+[[volunteers]]
+name = "Tomoko Rivers"
+email = "tomoko.rivers@example.com"
+# Dormant, never logged in — account created ~1300 days ago (well past the
+# purge window). A never-onboarded volunteer eligible for erasure.
+status = "dormant"
+date_joined_days_ago = 1300
+membership_expires_days_from_now = -1000
+
+[[volunteers]]
+name = "Rowan Halcyon"
+email = "rowan.halcyon@example.com"
+# Retired — last login ~1400 days ago (past the purge window), but membership
+# is still active for another 6 months. This volunteer appears in the purge
+# candidates list and should trigger the active-membership guard on the
+# anonymise confirmation page (feature 9.96.5).
+status = "retired"
+last_login_days_ago = 1400
+membership_expires_days_from_now = 180
+
+# ── Larger dormant/retired cohort — purge candidates ─────────────────────────
+# These volunteers are dormant or retired and well past the 1095-day window.
+# Having ~15 realistic purge candidates makes the pool maintenance page look
+# like something you'd actually have to act on.
+
+[[volunteers]]
+name = "Bea Whitmore"
+email = "bea.whitmore@example.com"
+status = "dormant"
+last_login_days_ago = 1150
+membership_expires_days_from_now = -400
+
+[[volunteers]]
+name = "Sol Adeyemi"
+email = "sol.adeyemi@example.com"
+status = "retired"
+last_login_days_ago = 1500
+membership_expires_days_from_now = -900
+
+[[volunteers]]
+name = "Juno Carver"
+email = "juno.carver@example.com"
+status = "dormant"
+last_login_days_ago = 1250
+membership_expires_days_from_now = -600
+
+[[volunteers]]
+name = "Petra Lindqvist"
+email = "petra.lindqvist@example.com"
+status = "retired"
+last_login_days_ago = 1600
+membership_expires_days_from_now = -1200
+
+[[volunteers]]
+name = "Ade Babatunde"
+email = "ade.babatunde@example.com"
+status = "dormant"
+last_login_days_ago = 1100
+membership_expires_days_from_now = -300
+
+[[volunteers]]
+name = "Hazel Fenn"
+email = "hazel.fenn@example.com"
+status = "retired"
+last_login_days_ago = 1800
+membership_expires_days_from_now = -1400
+
+[[volunteers]]
+name = "Marco Ricci"
+email = "marco.ricci@example.com"
+status = "dormant"
+last_login_days_ago = 1300
+membership_expires_days_from_now = -700
+
+[[volunteers]]
+name = "Siobhan Daly"
+email = "siobhan.daly@example.com"
+status = "dormant"
+last_login_days_ago = 1175
+membership_expires_days_from_now = -450
+
+[[volunteers]]
+name = "Orla Maguire"
+email = "orla.maguire@example.com"
+status = "retired"
+last_login_days_ago = 2000
+membership_expires_days_from_now = -1800
+
+[[volunteers]]
+name = "Dimitri Papadopoulos"
+email = "dimitri.papadopoulos@example.com"
+status = "dormant"
+last_login_days_ago = 1400
+membership_expires_days_from_now = -800
+
+[[volunteers]]
+name = "Luz Reyes"
+email = "luz.reyes@example.com"
+status = "dormant"
+date_joined_days_ago = 1400
+membership_expires_days_from_now = -500
+
+[[volunteers]]
+name = "Kwame Boateng"
+email = "kwame.boateng@example.com"
+status = "retired"
+last_login_days_ago = 1550
+membership_expires_days_from_now = -600
+
+[[volunteers]]
+name = "Imogen Tate"
+email = "imogen.tate@example.com"
+status = "dormant"
+last_login_days_ago = 1200
+membership_expires_days_from_now = -90
+
+[[volunteers]]
+name = "Sven Holmberg"
+email = "sven.holmberg@example.com"
+status = "retired"
+last_login_days_ago = 1700
+membership_expires_days_from_now = -1100
+
+# ── Dormant — not yet purge-eligible ─────────────────────────────────────────
+# Dormant but within the 1095-day window: appear in the dormant cohort but not
+# as purge candidates.
+
+[[volunteers]]
+name = "Fen Archer"
+email = "fen.archer@example.com"
+status = "dormant"
+last_login_days_ago = 600
+
+[[volunteers]]
+name = "Camille Bertrand"
+email = "camille.bertrand@example.com"
+status = "dormant"
+last_login_days_ago = 450
+membership_expires_days_from_now = 60
+
+[[volunteers]]
+name = "Akira Nakamura"
+email = "akira.nakamura@example.com"
+status = "dormant"
+last_login_days_ago = 750
+
+[[volunteers]]
+name = "Wren"
+email = "wren@example.com"
+status = "dormant"
+date_joined_days_ago = 400
