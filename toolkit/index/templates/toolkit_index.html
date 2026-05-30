@@ -115,7 +115,7 @@
 {% block body %}
 <h1>{{ VENUE.longname }} Toolkit</h1>
 
-{% if has_volunteer or new_showings or showings_with_gaps or unconfirmed_showings or upcoming_training or recent_bulletins or shopping_needs %}
+{% if welcome_back or has_volunteer or new_showings or showings_with_gaps or unconfirmed_showings or upcoming_training or recent_bulletins or shopping_needs %}
 <div class="d-flex justify-content-between align-items-baseline mb-2">
   <h2 class="h5 mb-0">Dashboard</h2>
   <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#dash-customise" aria-expanded="false">Customise</button>
@@ -153,6 +153,40 @@
   </div>
 </div>
 <div id="dash-cards-row" class="row gy-4 mb-2">
+
+  {# Welcome-back card — shown to returning Dormant volunteers. #}
+  {% if welcome_back %}
+  <div class="col-12 d-flex">
+    <div class="card w-100 border-success">
+      <div class="card-header d-flex justify-content-between align-items-center text-bg-success">
+        <strong>Welcome back &mdash; good to see you</strong>
+        <a href="?dismiss_welcome=1" class="text-white" style="font-size:0.85em" title="Hide this for now">Dismiss &times;</a>
+      </div>
+      <div class="card-body">
+        <p class="mb-2">
+          It's been a while, so we marked your account as dormant &mdash; nothing was lost,
+          and you can still do everything as before. Ready to pick up shifts again?
+        </p>
+        <form method="post" action="{% url "volunteer-reactivate-self" %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-success btn-sm">I'm back &mdash; put me on the active roster</button>
+        </form>
+        <ul class="mt-3 mb-0" style="font-size:0.92em">
+          {% if next_induction %}
+          <li>
+            Fancy a refresher? The next induction is
+            <a href="{% url "single-showing-view" showing_id=next_induction.id %}">{{ next_induction.event.name }}</a>
+            on {{ next_induction.start|date:"l j F, g:i a" }}.
+          </li>
+          {% else %}
+          <li>If you'd like a refresher, ask about the next volunteer induction.</li>
+          {% endif %}
+          <li>On the rota, beginner-friendly roles (&#127793;) are highlighted to help you ease back in.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   {# Unread bulletins — all logged-in users. Full-width so 5 cards tessellate. #}
   {% if recent_bulletins %}
@@ -602,8 +636,6 @@
             <li><a href="{% url "view-volunteer-summary" %}">Volunteers summary</a></li>
             <li><a href="{% url "view-volunteer-list" %}">Volunteers profiles</a></li>
             <li><a href="{% url "add-volunteer" %}">Add new volunteer</a></li>
-            <li><a href="{% url "retire-select-volunteer" %}">Retire volunteer</a></li>
-            <li><a href="{% url "unretire-select-volunteer" %}">Unretire volunteer</a></li>
             <li><a href="{% url "view-volunteer-export" %}">Export volunteers as CSV</a></li>
             <li><a href="{% url "view-volunteer-role-report" %}">Volunteer role report</a></li>
             <li><a href="{% url "view-volunteer-training-report" %}">Volunteer training report</a></li>

@@ -15,7 +15,7 @@ from django.views.generic import ListView
 
 from toolkit.diary.models import RotaEntry, Showing, VolunteerEventMark, get_site_config
 from toolkit.index.models import IndexLink
-from toolkit.members.models import PanopticonGrant
+from toolkit.members.models import PanopticonGrant, Volunteer
 from toolkit.toolkit_auth.decorators import panopticon_required
 
 
@@ -35,6 +35,30 @@ class ToolkitIndexView(ListView):
 
         if volunteer:
             context["has_volunteer"] = True
+
+            # Welcome-back card: a logged-in Dormant volunteer is, by definition,
+            # a returner. Offer a one-click route back to Active and nudge them
+            # toward re-induction. Dismissable for the session (the card links
+            # back here with ?dismiss_welcome=1).
+            if self.request.GET.get("dismiss_welcome"):
+                self.request.session["welcome_back_dismissed"] = True
+            if (
+                volunteer.status == Volunteer.STATUS_DORMANT
+                and not self.request.session.get("welcome_back_dismissed")
+            ):
+                context["welcome_back"] = True
+                context["next_induction"] = (
+                    Showing.objects.filter(
+                        confirmed=True,
+                        start__gte=now,
+                        event__tags__name__in=["induction", "training-for-volunteers"],
+                    )
+                    .select_related("event")
+                    .order_by("start")
+                    .distinct()
+                    .first()
+                )
+
             context["upcoming_shifts"] = list(
                 RotaEntry.objects.filter(
                     volunteer=volunteer,

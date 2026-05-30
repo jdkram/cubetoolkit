@@ -499,6 +499,7 @@ def update_showing_status(request, showing_id):
             messages.success(request, "Showing unconfirmed.")
         elif action == "cancel":
             showing.cancelled = True
+            showing.confirmed = False
             showing.save()
             messages.success(request, "Showing cancelled.")
         elif action == "uncancel":
@@ -1779,10 +1780,18 @@ class EditRotaView(PermissionRequiredMixin, View):
         rota_marks: dict[int, str] = {}
         can_mark_events = False
         current_volunteer_pk = ""
+        # Returning (Dormant) volunteers get the beginner-friendly role highlight
+        # forced on, overriding their stored localStorage preference, to help them
+        # ease back in. Everyone else keeps their own toggle state.
+        force_beginner_highlight = False
+        from toolkit.members.models import Volunteer as _Volunteer
         try:
             volunteer = request.user.volunteer
             can_mark_events = True
             current_volunteer_pk = str(volunteer.pk)
+            force_beginner_highlight = (
+                volunteer.status == _Volunteer.STATUS_DORMANT
+            )
             event_ids = [s.event_id for s in showings]
             for mark in VolunteerEventMark.objects.filter(
                 volunteer=volunteer, event_id__in=event_ids
@@ -1795,9 +1804,8 @@ class EditRotaView(PermissionRequiredMixin, View):
         # whose Member record has personal_pronouns set, then attach a `pronouns`
         # attribute to each prefetched rota entry. Match on case-insensitive
         # full name. (Not visible to the public — this view is permission-gated.)
-        from toolkit.members.models import Volunteer as _Volunteer
         pronouns_by_name: dict[str, str] = {}
-        for v in _Volunteer.objects.filter(active=True).select_related("member"):
+        for v in _Volunteer.objects.active().select_related("member"):
             if v.member.personal_pronouns:
                 key = v.member.name.strip().lower()
                 if key:
@@ -1825,6 +1833,7 @@ class EditRotaView(PermissionRequiredMixin, View):
             "can_mark_events": can_mark_events,
             "rota_marks_json": json.dumps(rota_marks),
             "current_volunteer_pk": current_volunteer_pk,
+            "force_beginner_highlight": force_beginner_highlight,
         }
 
         return render(request, "edit_rota.html", context)
@@ -2017,7 +2026,9 @@ def edit_site_configuration(request):
             [
                 "membership_length_days",
                 "default_training_expiry_months",
-                "volunteer_dormancy_months",
+                "volunteer_dormancy_days",
+                "volunteer_never_logged_in_grace_days",
+                "volunteer_purge_days",
             ],
         ),
         (

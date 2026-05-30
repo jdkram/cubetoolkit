@@ -191,6 +191,15 @@
         color: #777;
     }
 
+    .showing-meta .showing-anchor-link {
+        font-size: 0.9rem;
+        color: #ccc;
+        text-decoration: none;
+        margin-left: 0.2em;
+    }
+    .showing-meta .showing-anchor-link:hover {
+        color: #777;
+    }
 
     .showing-room-badge {
         font-size: 0.8rem;
@@ -615,14 +624,15 @@
         border-radius: 2px;
     }
 
-    /* Deep-link highlight: permanent amber left bar, background fades over 5s */
+    /* Deep-link highlight: permanent teal left bar, background fades over 5s */
     @keyframes rota-linked-bg {
-        0%   { background-color: rgba(255, 193, 7, 0.22); }
-        50%  { background-color: rgba(255, 193, 7, 0.22); }
+        0%   { background-color: rgba(23, 162, 184, 0.2); }
+        50%  { background-color: rgba(23, 162, 184, 0.2); }
         100% { background-color: transparent; }
     }
     .rota-showing--linked {
-        box-shadow: inset 4px 0 0 #e6a817;
+        box-shadow: inset 4px 0 0 #17a2b8;
+        padding-left: 6px;
         animation: rota-linked-bg 5s ease-out forwards;
         border-radius: 0 2px 2px 0;
     }
@@ -1033,11 +1043,17 @@ edit_rota(
         { key: "rota_badge_keyholder",   cls: "rota-hide-keyholder",   id: "badge-pref-keyholder",   defaultVisible: false }
     ];
 
+    // Server hint: returning (Dormant) volunteers get the beginner highlight
+    // forced on for this page load, overriding any stored "off" preference, to
+    // help them ease back in. They can still toggle it off again.
+    var FORCE_BEGINNER = {{ force_beginner_highlight|yesno:"true,false" }};
+
     function initBadgeToggles() {
         var wrapper = $(".rota-wrapper");
         $.each(BADGE_PREFS, function(i, pref) {
             var stored = localStorage.getItem(pref.key);
             var show = stored !== null ? (stored === "1") : pref.defaultVisible;
+            if (pref.key === "rota_badge_beginner" && FORCE_BEGINNER) { show = true; }
             if (!show) { wrapper.addClass(pref.cls); }
             var cb = document.getElementById(pref.id);
             if (cb) {
@@ -1309,6 +1325,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         <a class="showing-public-link"
                            href="{% noprefix_url 'single-showing-view' showing.pk %}"
                            title="Public programme view">↗</a>
+                        <a class="showing-anchor-link"
+                           href="#showing-{{ showing.pk }}"
+                           title="Copy link to this entry"
+                           onclick="navigator.clipboard.writeText(window.location.origin + window.location.pathname + '#showing-{{ showing.pk }}'); return false;">§</a>
                         </span>
                     </span>
                     {# Title row: event name (links to edit or public view) + optional tags #}
