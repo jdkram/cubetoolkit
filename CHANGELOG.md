@@ -2,13 +2,66 @@
 
 Releases from the 2026 Star and Shadow porting effort only. Pre-2026 (legacy Cube Toolkit) history is preserved in git but is not divided into releases.
 
-Each release below is tagged (`v2026.03.0` through `v2026.05.6`) and represents a **demo-able milestone** — a developer can check it out, run `docker compose up --build`, seed the data, and show users a coherent vertical slice of functionality.
+Each release below is tagged (`v2026.03.0` through `v2026.05.7`) and represents a **demo-able milestone** — a developer can check it out, run `docker compose up --build`, seed the data, and show users a coherent vertical slice of functionality.
+
+---
+
+## v2026.05.7 — Volunteer Lifecycle & Maintenance
+
+**Tagged at:** `2026.05.7` (2026-05-30)
+
+The volunteer record grows up. A single `status` now governs the whole lifecycle — who can log in, who appears on the rota, who has been retired or anonymised — replacing the tangle of separate on/off flags that could quietly drift out of sync. Around it sits a set of maintenance tools: a pool-health dashboard, automatic dormancy, an emergency suspension lever, and a self-running scheduler that handles the nightly and weekly housekeeping.
+
+### What's new
+
+- **Volunteer status lifecycle** — a volunteer's status (Active / Dormant / Retired / Suspended / Anonymised) is now the single source of truth for whether they can log in and appear on the rota. The old separate `active` and `login_inactive` flags are gone, so the two can no longer disagree
+- **Emergency suspension (safeguarding)** — Panopticon users can suspend a volunteer instantly: it blocks login, drops any live session, and clears their future shifts (past shifts are preserved). Reinstating restores access but not the cleared shifts
+- **Anonymised status** — GDPR-erased accounts now carry their own status, so they no longer linger in the active volunteer pool or the maintenance lists showing as "Retired"
+- **Pool-health dashboard** — `/volunteers/view/pool-health/` lists dormant volunteers (with re-induction badges) and long-inactive accounts that are candidates for anonymisation
+- **Automatic dormancy** — a nightly sweep marks long-inactive volunteers Dormant (never retires or deletes them), and now correctly catches accounts that have never logged in
+- **Returning-volunteer welcome** — a dormant volunteer who logs back in gets a "welcome back" card with one-click "I'm back" reactivation and an induction nudge; the rota force-highlights beginner-friendly roles for them
+- **Guarded bulk purge command** — `purge_stale_volunteers` reuses the shared anonymisation logic; dry-run by default, requires `--apply` plus a typed `"anonymise N volunteers"` phrase matching the live count
+- **Configurable weekly digest day** — the volunteer digest email's send day is now a site setting (or can be disabled entirely)
+- **Maintenance scheduler** — a new `scheduler` container runs the dormancy sweep (03:00) and the weekly digest (09:00) automatically; no host cron needed
+- **Event hub ↔ edit form parity** — trailer URL, age restriction, and the approval metadata now appear on the event hub, matching the edit form (21 fields on both)
+- **TMDB trailer fetcher** — a helper that populates trailer URLs in seed data from The Movie Database
+- **Clash detection fix** — open-ended room bookings are now treated conservatively as clashes rather than silently ignored
+- **Dependency pinning** — Docker builds install from a fully pinned `requirements/docker.lock` for reproducible images
+
+### How to demo
+
+1. `git checkout v2026.05.7`
+2. `docker compose up --build -d`
+3. `docker compose exec toolkit /venv/bin/python3 manage.py configure_toolkit_users --password password`
+4. `docker compose exec toolkit /venv/bin/python3 manage.py seed_dev_data`
+5. Log in as `admin` / `password`
+
+| Page to show | URL | What to point out |
+|---|---|---|
+| Pool health | `/volunteers/view/pool-health/` | Dormant list with re-induction badges; purge candidates |
+| Volunteer profile | `/volunteers/<pk>/edit/` | Status radios with plain-English consequences; Suspend (Panopticon only) |
+| Dashboard (as dormant volunteer) | `/toolkit/` | Welcome-back card with one-click "I'm back" |
+| Event hub | `/diary/edit/<event_id>/` | Trailer URL, age restriction, approval metadata rows |
+| Site settings | `/diary/edit/siteconfiguration/` | Dormancy / grace / purge day thresholds; digest send day |
+| Purge command | `purge_stale_volunteers` (dry-run) inside the container | Report of stale accounts; `--apply` needs the typed phrase |
+
+### State of the code
+
+- 782 tests passing
+- 51 migrations in `diary`, 21 in `members`, 16 in `labs`
+- New `scheduler` container in `docker-compose.yml`; build installs from `requirements/docker.lock`
+
+### Known rough edges
+
+- Role sign-up is still not gated by training/inductions (specced as 9.100; needs collective buy-in)
+- The pool-health dashboard is read-only reporting plus the purge command — no in-page bulk actions yet (9.96)
+- Volunteer directory has no Simplelists integration (9.87 deferred)
 
 ---
 
 ## v2026.05.6 — Operations & Polish
 
-**Tagged at:** `TBD` (2026-05-29)
+**Tagged at:** `46492067` (2026-05-29)
 
 A polish release focused on day-to-day operational friction: cancelled events no longer vanish, the shopping list keeps the building stocked, and every form field now explains itself.
 
