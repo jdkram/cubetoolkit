@@ -85,7 +85,7 @@ class Command(BaseCommand):
             self.style.SUCCESS(f"Loaded {len(desired_vols)} volunteers\n")
         )
 
-        volsToRetire = Volunteer.objects.filter(active=True).order_by(
+        volsToRetire = Volunteer.objects.active().order_by(
             "member__name"
         )
 
@@ -151,6 +151,6 @@ class Command(BaseCommand):
                 vol.member.volunteer.notes = (
                     vol.member.volunteer.notes + seperator + retireStr
                 )
-                vol.active = False
+                vol.status = Volunteer.STATUS_RETIRED
                 vol.save()
         self.stdout.write("\n")

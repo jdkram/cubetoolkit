@@ -3,11 +3,11 @@ from django.urls import re_path
 from toolkit.members.volunteer_views import (
     view_volunteer_list,
     view_volunteer_summary,
+    view_volunteer_pool_health,
+    bulk_anonymise_volunteers,
     view_volunteer_role_report,
     edit_volunteer,
-    select_volunteer,
     export_volunteers_as_csv,
-    activate_volunteer,
     add_volunteer_training_record,
     add_volunteer_training_group_record,
     view_volunteer_training_records,
@@ -15,7 +15,7 @@ from toolkit.members.volunteer_views import (
     anonymise_volunteer,
     set_volunteer_password,
     send_volunteer_password_reset,
-    clear_login_inactive,
+    reactivate_self,
     view_volunteer_directory,
     volunteer_digest_unsubscribe,
 )
@@ -67,6 +67,16 @@ volunteer_urls = [
         name="view-volunteer-summary",
     ),
     re_path(
+        r"^view/pool-health/$",
+        view_volunteer_pool_health,
+        name="view-volunteer-pool-health",
+    ),
+    re_path(
+        r"^bulk-anonymise/$",
+        bulk_anonymise_volunteers,
+        name="bulk-anonymise-volunteers",
+    ),
+    re_path(
         r"^view/rolereport/$",
         view_volunteer_role_report,
         name="view-volunteer-role-report",
@@ -80,18 +90,6 @@ volunteer_urls = [
         r"^view/export/$",
         export_volunteers_as_csv,
         name="view-volunteer-export",
-    ),
-    re_path(
-        r"^retire/select$",
-        select_volunteer,
-        name="retire-select-volunteer",
-        kwargs={"action": "retire"},
-    ),
-    re_path(
-        r"^unretire/select$",
-        select_volunteer,
-        name="unretire-select-volunteer",
-        kwargs={"action": "unretire", "active": False},
     ),
     re_path(
         r"^(?P<volunteer_id>\d+)/edit$", edit_volunteer, name="edit-volunteer"
@@ -111,18 +109,7 @@ volunteer_urls = [
         send_volunteer_password_reset,
         name="send-volunteer-password-reset",
     ),
-    re_path(
-        r"^(?P<volunteer_id>\d+)/clear-login-inactive$",
-        clear_login_inactive,
-        name="clear-login-inactive",
-    ),
-    re_path(r"^unretire$", activate_volunteer, name="activate-volunteer"),
-    re_path(
-        r"^retire$",
-        activate_volunteer,
-        name="inactivate-volunteer",
-        kwargs={"set_active": False},
-    ),
+    re_path(r"^reactivate/$", reactivate_self, name="volunteer-reactivate-self"),
     re_path(r"^directory/$", view_volunteer_directory, name="volunteer-directory"),
     re_path(r"^digest/unsubscribe/$", volunteer_digest_unsubscribe, name="volunteer-digest-unsubscribe"),
 ]

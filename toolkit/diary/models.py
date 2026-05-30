@@ -1293,12 +1293,32 @@ class SiteConfiguration(models.Model):
     )
 
     # --- Volunteers ---
-    volunteer_dormancy_months = models.PositiveSmallIntegerField(
-        default=24,
+    volunteer_dormancy_days = models.PositiveSmallIntegerField(
+        default=365,
         help_text=(
-            "Mark active volunteers as Dormant if they have not logged in for this many months. "
-            "Set to 0 to never auto-enforce dormancy. "
-            "Run the 'auto_dormancy' management command periodically (e.g. via cron) to apply this rule."
+            "Mark active volunteers as Dormant if they have not logged in for this many days. "
+            "Dormant is a soft, reversible label: it does not disable login or rota signup. "
+            "Set to 0 to never auto-mark dormancy. "
+            "Applied by the 'auto_dormancy' management command (run periodically, e.g. via cron) "
+            "and surfaced on the volunteer pool-health dashboard."
+        ),
+    )
+    volunteer_never_logged_in_grace_days = models.PositiveSmallIntegerField(
+        default=90,
+        help_text=(
+            "Mark active volunteers who have never logged in as Dormant once this many days "
+            "have passed since their account was created (they were inducted but never engaged — "
+            "likely re-induction candidates). Set to 0 to never auto-mark these. "
+            "Applied by the 'auto_dormancy' command."
+        ),
+    )
+    volunteer_purge_days = models.PositiveSmallIntegerField(
+        default=1095,
+        help_text=(
+            "Flag dormant/retired volunteers as candidates for anonymisation (GDPR data "
+            "minimisation) once their last activity is older than this many days. "
+            "Set to 0 to never flag purge candidates. Surfaced on the pool-health dashboard; "
+            "acted on only via the manual 'purge_stale_volunteers' command — never automatically."
         ),
     )
 

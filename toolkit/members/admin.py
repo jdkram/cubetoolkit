@@ -9,7 +9,7 @@ class VolunteerInline(admin.StackedInline):
     model = Volunteer
     can_delete = False
     verbose_name_plural = "Volunteer"
-    fields = ("active", "notes", "roles")
+    fields = ("status", "notes", "roles")
     readonly_fields = ()
 
 
@@ -32,8 +32,8 @@ class MemberAdmin(admin.ModelAdmin):
 
 @admin.register(Volunteer)
 class VolunteerAdmin(admin.ModelAdmin):
-    list_display = ("member", "active", "get_email", "created_at")
-    list_filter = ("active", "roles")
+    list_display = ("member", "status", "get_email", "created_at")
+    list_filter = ("status", "roles")
     search_fields = ("member__name", "member__email", "notes")
     readonly_fields = ("created_at", "updated_at")
 

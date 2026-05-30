@@ -1,0 +1,211 @@
+{% extends 'base_admin.html' %}
+{% block title %}Volunteer pool maintenance{% endblock %}
+{% block css %}
+{{ block.super }}
+<style>
+    .pool-section { margin-bottom: 2.5rem; }
+    .pool-section table { margin-top: 0.5rem; }
+    .pool-meta { color: #555; font-size: 0.9em; }
+    .pool-empty { color: #555; font-style: italic; }
+    .pool-tier-label {
+        display: inline-block;
+        font-size: 0.75em;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        padding: 0.15rem 0.45rem;
+        border-radius: 0.25rem;
+        vertical-align: middle;
+        margin-left: 0.4rem;
+    }
+    .tier-safest  { background: #d1e7dd; color: #0f5132; }
+    .tier-safe    { background: #fff3cd; color: #664d03; }
+    .tier-dormant { background: #e2e3e5; color: #383d41; }
+    .bulk-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+    .tier-select-btn { font-size: 0.85em; }
+</style>
+{% endblock %}
+
+{% block body %}
+<h2>{{ VENUE.name }} volunteer pool maintenance</h2>
+
+<p class="pool-meta">
+  Volunteers grouped by how safe it is to anonymise them, oldest first within each group.
+  Anonymisation is irreversible &mdash; it erases PII while keeping rota history.
+  Nothing on this page changes records except the bulk anonymise action at the bottom.
+</p>
+<p>
+  <a href="{% url "view-volunteer-list" %}">volunteer profiles</a> &#xb7;
+  <a href="{% url "view-volunteer-summary" %}">volunteer summary</a>
+</p>
+
+<form method="post" action="{% url "bulk-anonymise-volunteers" %}" id="bulk-anonymise-form">
+{% csrf_token %}
+<input type="hidden" name="action" value="select">
+
+{# ── Tier 1: Never onboarded ────────────────────────────────────────────── #}
+<section class="pool-section">
+  <h3>
+    Never onboarded
+    <span class="pool-tier-label tier-safest">safest to remove</span>
+    <span class="pool-meta">({{ never_onboarded_count }})</span>
+  </h3>
+  <p class="pool-meta">
+    Inducted but never logged in, and the account is older than {{ purge_days }} days.
+    No engagement history. These are the clearest candidates for anonymisation under
+    data-minimisation.
+  </p>
+
+  {% if never_onboarded %}
+  <table class="table table-sm table-striped">
+    <thead>
+      <tr>
+        <th style="width:2rem"><input type="checkbox" class="tier-select-all" data-tier="never-onboarded" title="Select all in this group"></th>
+        <th>Name</th><th>Inducted</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in never_onboarded %}
+      <tr>
+        <td><input type="checkbox" name="volunteer_ids" value="{{ v.pk }}" class="purge-checkbox" data-tier="never-onboarded"></td>
+        <td><a href="{% url "edit-volunteer" v.pk %}">{{ v.member.name }}</a></td>
+        <td>{{ v.created_at|date:"d/m/Y" }}</td>
+        <td><a href="{% url "anonymise-volunteer" v.pk %}">Anonymise&hellip;</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="pool-empty">None.</p>
+  {% endif %}
+</section>
+
+{# ── Tier 2: Long inactive ──────────────────────────────────────────────── #}
+<section class="pool-section">
+  <h3>
+    Long inactive
+    <span class="pool-tier-label tier-safe">eligible for removal</span>
+    <span class="pool-meta">({{ long_inactive_count }})</span>
+  </h3>
+  <p class="pool-meta">
+    {% if purge_days %}
+      Dormant or retired volunteers who previously logged in but whose last activity
+      is more than {{ purge_days }} days ago.
+    {% else %}
+      Retention flagging is disabled (purge window set to 0).
+    {% endif %}
+    Still clearly eligible under data-minimisation, but they were once active.
+  </p>
+
+  {% if long_inactive %}
+  <table class="table table-sm table-striped">
+    <thead>
+      <tr>
+        <th style="width:2rem"><input type="checkbox" class="tier-select-all" data-tier="long-inactive" title="Select all in this group"></th>
+        <th>Name</th><th>Status</th><th>Last login</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in long_inactive %}
+      <tr>
+        <td><input type="checkbox" name="volunteer_ids" value="{{ v.pk }}" class="purge-checkbox" data-tier="long-inactive"></td>
+        <td><a href="{% url "edit-volunteer" v.pk %}">{{ v.member.name }}</a></td>
+        <td>{{ v.get_status_display }}</td>
+        <td>{{ v.user.last_login|date:"d/m/Y" }}</td>
+        <td><a href="{% url "anonymise-volunteer" v.pk %}">Anonymise&hellip;</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="pool-empty">None.</p>
+  {% endif %}
+</section>
+
+{# ── Bulk submit ────────────────────────────────────────────────────────── #}
+<div class="bulk-actions">
+  <button type="submit" class="btn btn-sm btn-danger" id="bulk-submit" disabled>
+    Anonymise selected&hellip;
+  </button>
+  <span class="pool-meta" id="selected-count"></span>
+</div>
+
+</form>
+
+{# ── Tier 3: Recently dormant (informational — no bulk action) ─────────── #}
+<section class="pool-section" style="margin-top:2rem;">
+  <h3>
+    Recently dormant
+    <span class="pool-tier-label tier-dormant">within retention window</span>
+    <span class="pool-meta">({{ recently_dormant_count }})</span>
+  </h3>
+  <p class="pool-meta">
+    Marked dormant but last active within the {{ purge_days }}-day retention window.
+    {% if dormancy_days %}Auto-dormancy triggers after {{ dormancy_days }} days without login{% if never_logged_in_grace_days %}, or {{ never_logged_in_grace_days }} days for accounts that have never logged in{% endif %}.{% endif %}
+    These volunteers may still return. No bulk action is available here; use
+    <a href="{% url "view-volunteer-list" %}">Volunteer profiles</a> to act on individual records.
+  </p>
+
+  {% if recently_dormant %}
+  <table class="table table-sm table-striped">
+    <thead>
+      <tr><th>Name</th><th>Inducted</th><th>Last login</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for v in recently_dormant %}
+      <tr>
+        <td><a href="{% url "edit-volunteer" v.pk %}">{{ v.member.name }}</a></td>
+        <td>{{ v.created_at|date:"d/m/Y" }}</td>
+        <td>{{ v.user.last_login|date:"d/m/Y"|default:"Never" }}</td>
+        <td><a href="{% url "edit-volunteer" v.pk %}">edit</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="pool-empty">None.</p>
+  {% endif %}
+</section>
+
+<script>
+(function () {
+    var checkboxes = document.querySelectorAll('.purge-checkbox');
+    var submitBtn = document.getElementById('bulk-submit');
+    var countLabel = document.getElementById('selected-count');
+
+    function updateState() {
+        var checked = document.querySelectorAll('.purge-checkbox:checked').length;
+        submitBtn.disabled = checked === 0;
+        countLabel.textContent = checked > 0 ? checked + ' selected' : '';
+
+        document.querySelectorAll('.tier-select-all').forEach(function (hdr) {
+            var tier = hdr.dataset.tier;
+            var tierBoxes = document.querySelectorAll('.purge-checkbox[data-tier="' + tier + '"]');
+            var tierChecked = document.querySelectorAll('.purge-checkbox[data-tier="' + tier + '"]:checked').length;
+            hdr.indeterminate = tierChecked > 0 && tierChecked < tierBoxes.length;
+            hdr.checked = tierBoxes.length > 0 && tierChecked === tierBoxes.length;
+        });
+    }
+
+    document.querySelectorAll('.tier-select-all').forEach(function (hdr) {
+        hdr.addEventListener('change', function () {
+            var tier = hdr.dataset.tier;
+            document.querySelectorAll('.purge-checkbox[data-tier="' + tier + '"]').forEach(function (cb) {
+                cb.checked = hdr.checked;
+            });
+            updateState();
+        });
+    });
+
+    checkboxes.forEach(function (cb) {
+        cb.addEventListener('change', updateState);
+    });
+})();
+</script>
+{% endblock %}

@@ -18,7 +18,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        vols = Volunteer.objects.filter(active=True).order_by("member__name")
+        vols = Volunteer.objects.active().order_by("member__name")
 
         for vol in vols:
             if options["names"]:

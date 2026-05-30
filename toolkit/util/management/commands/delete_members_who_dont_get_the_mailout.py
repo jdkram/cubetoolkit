@@ -42,7 +42,7 @@ class Command(BaseCommand):
                 )
                 vols_found = vols_found + 1
 
-                if member.volunteer.active:
+                if member.volunteer.is_active:
                     self.stdout.write(
                         self.style.ERROR(
                             "Not deleting active volunteer %s <%s> joined %s"

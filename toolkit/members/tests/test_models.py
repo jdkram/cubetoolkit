@@ -183,25 +183,25 @@ class TestVolunteerStatusModel(MembersTestsMixin, TestCase):
     def test_default_status_is_active(self):
         self.assertEqual(self.vol_1.status, Volunteer.STATUS_ACTIVE)
 
-    def test_active_field_true_when_status_active(self):
-        self.assertTrue(self.vol_1.active)
+    def test_is_active_true_when_status_active(self):
+        self.assertTrue(self.vol_1.is_active)
 
-    def test_status_dormant_sets_active_false(self):
+    def test_status_dormant_is_not_active(self):
         self.vol_1.status = Volunteer.STATUS_DORMANT
         self.vol_1.save()
         self.vol_1.refresh_from_db()
-        self.assertFalse(self.vol_1.active)
+        self.assertFalse(self.vol_1.is_active)
 
-    def test_status_retired_sets_active_false(self):
+    def test_status_retired_is_not_active(self):
         self.vol_1.status = Volunteer.STATUS_RETIRED
         self.vol_1.save()
         self.vol_1.refresh_from_db()
-        self.assertFalse(self.vol_1.active)
+        self.assertFalse(self.vol_1.is_active)
 
-    def test_reactivating_to_active_restores_active_true(self):
+    def test_reactivating_to_active_restores_is_active(self):
         self.vol_1.status = Volunteer.STATUS_DORMANT
         self.vol_1.save()
         self.vol_1.status = Volunteer.STATUS_ACTIVE
         self.vol_1.save()
         self.vol_1.refresh_from_db()
-        self.assertTrue(self.vol_1.active)
+        self.assertTrue(self.vol_1.is_active)

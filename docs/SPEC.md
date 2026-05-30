@@ -164,10 +164,10 @@ Logged-in users can:
 - **Members**: the underlying record for anyone in the system (subscribers,
 volunteers). Stores name, email, address, phone, pronouns, notes, GDPR consent date. At Star and Shadow, the formal "membership" distinction is not used — everyone is treated as a volunteer, not a paying member.
 - **Volunteers**: the active layer on top of a Member record. Stores portrait
-photo, active/retired status, notes, and a list of roles the volunteer is qualified for.
+photo, lifecycle status (active / dormant / retired / suspended), notes, and a list of roles the volunteer is qualified for. `status` is the single source of truth: "active" means on the rota and receiving mailouts; dormant, retired and suspended are all off it. Dormant and retired do not affect login access, but **suspended** is a safeguarding hold that also disables the linked Django `User` account (and releases the volunteer's upcoming shifts) — see §[Volunteer status, login access and suspension](#volunteer-status-login-access-and-suspension).
 - **Training records**: the data model includes structured training logs (who
 was trained for which role, when, by whom). In practice at Star and Shadow these are not actively maintained — the system is too rigid to keep up to date, and role access is not currently gated by training status. Anyone can sign up for any role.
-- Add/edit/retire/unretire volunteers, with automatic notification emails to admins
+- Add/edit volunteers and set their status (active / dormant / retired / suspended) on the profile page, with automatic notification emails to admins when a volunteer joins or leaves the active roster
 - CSV export of volunteer list
 - Reports: volunteer list, role-by-volunteer report, training records report
 
@@ -301,12 +301,14 @@ flowchart TD
     C --> D[Admin logs into Toolkit]
     D --> E[Navigates to Volunteers → Add Volunteer]
     E --> F[Manually enters details\nfrom Google Form]
-    F --> G[System emails vols_admin_address:\n'Please add to mailing list']
-    G --> H[Admin manually adds person\nto Simplelists mailing list]
-    H --> I[Volunteer active in system]
+    F --> G[System auto-creates user account\nand emails volunteer a password-set link]
+    G --> H[System emails vols_admin_address:\n'Please add to mailing list']
+    H --> I[Admin manually adds person\nto Simplelists mailing list]
+    I --> J[Volunteer clicks link, sets password]
+    J --> K[Volunteer active and can log in]
 ```
 
-**Current pain points:** entirely manual, no link between the Google Form and the Toolkit, no automated account creation, admins must remember to act on emails.
+**Current pain points:** entirely manual, no link between the Google Form and the Toolkit, admins must remember to act on notification emails. Account creation and password-set emails are now automated — see §4.6.
 
 ### 4.3 Sending a mailout (Cube Microplex only; not used at S&S)
 
@@ -332,13 +334,16 @@ sequenceDiagram
 
 ### 4.4 Volunteer retirement
 
+Retirement (and dormancy, and reactivation) is done by changing the volunteer's **status** on their profile page — there is no separate retire/unretire workflow. `status` is the single source of truth; whenever an edit moves a volunteer on or off the active roster, an admin notification fires.
+
 ```mermaid
 flowchart TD
-    A[Admin visits Retire Volunteer page] --> B[Selects volunteer from list]
-    B --> C[Confirms action]
-    C --> D[Volunteer.active set to False]
-    D --> E[Email sent to vols_admin_address:\n'Please remove from mailing list']
-    E --> F[Admin manually removes\nfrom Simplelists]
+    A[Open volunteer profile] --> B[Set status: active / dormant / retired]
+    B --> C[Save profile]
+    C --> D{Did active-roster membership change?}
+    D -- yes --> E[Email sent to vols_admin_address:\n'Please add/remove from mailing list']
+    E --> F[Admin manually updates\nSimplelists]
+    D -- no --> G[No email]
 ```
 
 ### 4.5 Film programming workflow (Star and Shadow)
@@ -423,6 +428,152 @@ Ticket sales close 1 hour before the showing start. Print the TicketSource sales
 - The Social Media Team manages Facebook, Instagram, BlueSky, Threads, and X. Facebook events are the primary engagement channel.
 - A weekly round-up covering the next seven days is posted on all channels.
 - Programmers can request additional posts (subject to availability in the content schedule) or use personal networks.
+
+### 4.6 Volunteer user accounts and password setup
+
+Every volunteer gets a Django `User` account. This section documents how accounts are created, how volunteers set their initial password, and the flows for resetting or directly setting a password later.
+
+---
+
+#### Account creation (automatic on volunteer add)
+
+When a Panopticon user saves a new volunteer record (`POST /volunteers/add/`), the system:
+
+1. Creates `Member` (contact details) and `Volunteer` (volunteer profile) records.
+2. Auto-creates a linked `User` account:
+   - **Username:** slugified from `member.name`, deduplicated with a `-N` suffix if already taken (e.g. `alex-smith`, then `alex-smith-1`)
+   - **Email:** copied from `member.email`
+   - **first\_name / last\_name:** split from `member.name` at the first space
+   - **Password:** set unusable (`user.set_unusable_password()`) — the account cannot be used to log in until the volunteer completes the password-set flow
+3. Sends the volunteer a **welcome email** containing a password-set link (see below), if `member.email` is non-empty.
+4. Sends an admin notification to `VENUE["vols_admin_address"]` (if configured) asking the admin to add the volunteer to the Simplelists mailing list.
+
+```mermaid
+sequenceDiagram
+    participant P as Panopticon user
+    participant T as Toolkit
+    participant V as New volunteer (email)
+
+    P->>T: POST /volunteers/add/ (name, email, ...)
+    T->>T: Create Member + Volunteer + User
+    T->>T: user.set_unusable_password()
+    T->>V: Welcome email with password-set link
+    T->>P: Redirect to volunteer list
+    V->>T: GET /auth/reset/<uidb64>/<token>/
+    T->>V: Render set-password form
+    V->>T: POST new password
+    T->>T: user.set_password(new_password)
+    T->>V: Redirect to login
+```
+
+**Code:** `toolkit/members/volunteer_views.py` — `edit_volunteer()` (the `create_new` branch), `_send_password_set_email()`.
+
+---
+
+#### Welcome email and password-set link
+
+The welcome email is sent by `_send_password_set_email(request, user, welcome=True)`.
+
+| Field | Value |
+|---|---|
+| Subject | `[{venue longname}] Welcome — set your toolkit password` |
+| Body | Warm welcome; password-set URL; validity period |
+| From | `VENUE["mailout_from_address"]` |
+| To | `user.email` |
+
+The password-set link is a standard Django password-reset token:
+
+```
+https://example.com/auth/reset/<uidb64>/<token>/
+```
+
+- **`uidb64`:** URL-safe base64 encoding of `user.pk`
+- **`token`:** HMAC-SHA256 token generated by `django.contrib.auth.tokens.PasswordResetTokenGenerator`
+- **Validity:** `settings.PASSWORD_RESET_TIMEOUT` seconds (default Django 5 value: 259200 = **3 days**). Not overridden in this codebase.
+- **Single-use:** the token is invalidated as soon as it is used, or if the user's `last_login`, `password`, or `email` changes.
+
+If the link has expired before the volunteer clicks it, the page shows an "invalid link" message. The Panopticon can re-send a fresh link from the volunteer edit page (see below).
+
+---
+
+#### Panopticon: resending the password-set link
+
+On the volunteer edit page (`/volunteers/<id>/edit/`), a "Send password reset email" button is visible to Panopticon users when `VENUE["show_user_management"]` is True.
+
+Clicking it calls `POST /volunteers/<id>/send-password-reset/`, handled by `send_volunteer_password_reset()`, which calls `_send_password_set_email(request, user, welcome=False)`.
+
+This sends a shorter "password reset requested" message with the same token mechanism. Use this if:
+- The volunteer's welcome email expired or was lost.
+- The volunteer forgot their password.
+- A new email address was added and the account needs re-linking.
+
+---
+
+#### Panopticon: setting a password directly
+
+On the volunteer edit page, a "Set password" form (inside the Permissions card) allows a Panopticon user to set the volunteer's password without sending an email. This is handled by `set_volunteer_password()` and uses Django's `SetPasswordForm`.
+
+Use this for:
+- Volunteers without email addresses.
+- In-person setup at an induction session.
+- Debugging in development environments.
+
+---
+
+#### Volunteer status, login access and suspension
+
+A volunteer's lifecycle is a **status** change made on their profile page; `status` is the single canonical control. There are four values:
+
+- **Active** — on the rota, receives mailouts, can log in. The normal state.
+- **Dormant** — taking a break, or gone quiet: off the rota and mailouts, but **can still log in and sign up for shifts** (it is a soft label, not a restriction). Reversible. Set by hand, or applied automatically by the `auto_dormancy` command (see below).
+- **Retired** — has left the team: off the rota and mailouts, but **can still log in** to view their own record. The `User` is retained for rota history and audit purposes; it is never deleted by a status change.
+- **Suspended** — a **safeguarding hold**. Setting this immediately disables the linked Django `User` account (`user.is_active = False`, which drops any live session on the next request), removes the volunteer from every **future** rota entry, and takes them off the rota and mailouts. Reversible.
+
+Login access is driven by `status` and `Volunteer.save()` keeps `user.is_active` in step: it forces it off on suspension and restores it when a suspended volunteer is moved back to any other status. It only ever *restores* login on the suspend→other transition, so it never silently re-enables an account disabled for another reason (e.g. GDPR anonymisation). There is no separate manual "login enabled" toggle on the profile — it was removed so the two could not drift apart. The Django admin remains as a last-resort manual override.
+
+Reinstating a suspended volunteer (setting status back to Active) restores their login, rota visibility and mailout eligibility, but the specific future shifts they were removed from are **not** restored — those slots were blanked and may have been filled by others, so the volunteer would sign up again.
+
+**Auto-dormancy and the returning volunteer.** The `auto_dormancy` command (run on a schedule) moves Active volunteers to **Dormant** once they go quiet — either no login for `volunteer_dormancy_days`, or, for accounts that never logged in, `volunteer_never_logged_in_grace_days` after they were created (the "inducted but never engaged" cohort, candidates for re-induction). This only ever makes the Active→Dormant transition; it never touches Retired or Suspended volunteers and never deletes. Because Dormant carries no restrictions, a returning volunteer simply logs in as before. A logged-in Dormant volunteer is, by definition, a returner, so the dashboard shows them a **welcome-back card** with a one-click "I'm back" button (sets status straight back to Active and notifies the volunteers admin) and a nudge toward the next induction; the rota also force-enables the beginner-friendly role highlight for them. There is no separate "login inactive" flag — that earlier denormalised marker was removed in favour of `status` being the single source of truth.
+
+**Purge / data minimisation.** Dormant and retired volunteers whose last activity (last login, or join date if they never logged in) is older than `volunteer_purge_days` are surfaced as **purge candidates** on the panopticon pool-health dashboard (`/volunteers/view/pool-health/`). Erasure is never automatic: it is done one record at a time via the per-volunteer Anonymise flow, or in bulk via the manual `purge_stale_volunteers` command, which reports only unless given `--apply` and a typed confirmation phrase. Both paths call the same `Volunteer.anonymise()` method, so the audited web flow and the bulk command cannot diverge.
+
+Suspension is a Panopticon-only action: the "Suspended" choice is hidden from the status options when a non-superuser edits a profile (and a suspended volunteer cannot reach the form anyway, since their login is disabled).
+
+**Deleting a suspended volunteer.** Suspension preserves the full record while blocking access, so the usual answer during an investigation is to *leave them suspended*. If the outcome is permanent removal, prefer **Anonymise** (the GDPR right-to-erasure flow): it wipes personal data from the Member/Volunteer/User records, anonymises rota history, deletes training records, and writes an `AnonymisationLog` audit entry — keeping accountability. A hard "Delete member" also works on a suspended volunteer (the active-volunteer guard does not block non-active statuses), but it destroys all history with no audit trail and currently leaves the disabled `User` account orphaned, so it is not recommended for safeguarding cases.
+
+---
+
+#### GDPR anonymisation: account wiping
+
+The "Anonymise this volunteer" action (Panopticon only, `/volunteers/<id>/anonymise/`) also wipes the user account:
+- `user.email = ""`
+- `user.set_unusable_password()`
+- Username is retained (used for audit log references) but the account is unusable.
+
+---
+
+#### Key settings
+
+| Setting | Location | Effect |
+|---|---|---|
+| `VENUE["show_user_management"]` | `settings_ss.py` | Enables the user account section on the volunteer edit page (send password reset, set password directly). Should be `True` for S+S, `False` for Cube (which manages users differently). |
+| `PASSWORD_RESET_TIMEOUT` | Django default (not overridden) | Token validity in seconds. Default: 259200 (3 days). Increase if volunteers commonly miss the 3-day window. |
+| `VENUE["mailout_from_address"]` | `settings_ss.py` | From address on all volunteer emails. |
+| `VENUE["vols_admin_address"]` | `settings_ss.py` | List of addresses for admin notification emails. |
+
+---
+
+#### Key code locations
+
+| What | File | Function / class |
+|---|---|---|
+| Account auto-creation on volunteer add | `toolkit/members/volunteer_views.py` | `edit_volunteer()` — `create_new` branch, lines ~329–346 |
+| Welcome email helper | `toolkit/members/volunteer_views.py` | `_send_password_set_email()` |
+| Manual resend (Panopticon button) | `toolkit/members/volunteer_views.py` | `send_volunteer_password_reset()` |
+| Direct password set | `toolkit/members/volunteer_views.py` | `set_volunteer_password()` |
+| Password-set URL pattern | `toolkit/toolkit_auth/urls.py` | `password_reset_confirm` |
+| Password-set confirm view | Django built-in | `django.contrib.auth.views.PasswordResetConfirmView` |
+| Token generator | Django built-in | `django.contrib.auth.tokens.PasswordResetTokenGenerator` |
 
 ---
 
@@ -666,7 +817,7 @@ erDiagram
     Volunteer {
         int id PK
         text notes
-        bool active
+        string status
         image portrait
         datetime created_at
         datetime updated_at
@@ -824,12 +975,12 @@ venue's network). This guard was intended for sign-up desks.
 #### Volunteer
 A member who volunteers. Extends (OneToOne) `Member`.
 
-- `active` / retired status
+- `status` — lifecycle state: active / dormant / retired / suspended (added in migration `members/0019`). Single source of truth; "active" means on the rota and receiving mailouts. There is no separate `active` boolean (removed in migration `members/0018`); read the derived `is_active` property or query `Volunteer.objects.active()` / `.inactive()`. `suspended` is a safeguarding hold that also disables the linked `User` login — `Volunteer.save()` syncs `user.is_active` and clears future rota entries on the suspend transition (see §[Volunteer status, login access and suspension](#volunteer-status-login-access-and-suspension)).
 - `roles` — M2M to `Role`: what roles this volunteer is qualified for
 - `portrait` — headshot photo
-- When a new volunteer is added, an email is sent to `vols_admin_address` asking
-admins to add them to the volunteers mailing list (which runs externally via Simplelists)
-- When a volunteer is retired, a similar email is sent
+- Every `Volunteer` has a linked Django `User` (OneToOne), auto-created when the volunteer record is saved for the first time. The `User` is created with an unusable password; the volunteer sets their own password via an emailed link. See §4.6 for the full account and password flow.
+- When a new volunteer is added, a welcome email with a password-set link is sent to the volunteer, and a notification email is sent to `vols_admin_address` asking admins to add them to the volunteers mailing list (which runs externally via Simplelists).
+- Retirement and dormancy are `status` changes made on the profile page; they do **not** disable the Django `User` login or wipe the password. **Suspension** is the one status that does disable login (and clears future shifts) — it is the safeguarding/emergency-deactivation lever. Whenever a status change moves a volunteer on or off the active roster, a mailing-list notification is sent to `vols_admin_address`.
 
 #### TrainingRecord
 A log entry recording that a volunteer was trained.

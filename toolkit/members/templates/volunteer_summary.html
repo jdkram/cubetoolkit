@@ -38,8 +38,6 @@
 <p>
 <a href="{% url "view-volunteer-list" %}" title="volunteers profiles">volunteers profiles</a> &#xb7;
 <a href="{% url "add-volunteer" %}" title="add new volunteer">add volunteer</a> &#xb7;
-<a href="{% url "retire-select-volunteer" %}" title="retire volunteer">retire volunteer</a> &#xb7;
-<a href="{% url "unretire-select-volunteer" %}" title="unretire volunteer">unretire volunteer</a> &#xb7;
 <a href="{% url "view-volunteer-role-report" %}" title="volunteer role report">volunteer role report</a> &#xb7;
 <a href="{% url "view-volunteer-training-report" %}" title="volunteer training report">volunteer training report</a>
 <br>
@@ -98,7 +96,7 @@ Active {{ VENUE.name }} volunteers: {{ active_count }}{% if dormant_count %} &nb
                     </td>
                 {% endif %}
                 <td data-value="{{ volunteer.status }}">
-                    {% if volunteer.status == "dormant" %}<em class="text-muted">Dormant</em>{% else %}Active{% endif %}
+                    {% if volunteer.status == "dormant" %}<em class="text-muted">Dormant</em>{% elif volunteer.status == "suspended" %}<strong class="text-danger">Suspended</strong>{% elif volunteer.status == "anonymised" %}<em class="text-muted">Anonymised</em>{% else %}Active{% endif %}
                 </td>
                 <td>
                     {{ member.email|urlize|default:"<em>Request email address</em>" }}

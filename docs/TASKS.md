@@ -1352,7 +1352,9 @@ Any notification system must be **opt-in**, configurable per-volunteer, and
 **supplement** rather than replace email. The goal is to reach volunteers
 who prefer async messaging — not to create new obligations for everyone.
 
-### 9.12 "Dormant" volunteer status 🟢 XS (2–4h)
+### 9.12 "Dormant" volunteer status 🟢 XS (2–4h) — ✅ DONE 2026-05-29
+
+> **Shipped.** `Volunteer.status` now has four values (active / dormant / retired / suspended). Dormant is soft and reversible (no login/rota restriction), can be set by hand or auto-applied by the `auto_dormancy` command on login inactivity, and a returning dormant volunteer gets a one-click "I'm back" welcome-back card on the dashboard. See SPEC §"Volunteer status, login access and suspension". Original design note below.
 
 The current volunteer status model is binary: `active` or `retired`. In
 practice, the volunteer community is more fluid than this. People go
@@ -1410,6 +1412,8 @@ The toolkit holds:
 | GDPR consent timestamp | `Member.gdpr_opt_in` | Administrative |
 
 #### Data purge workflow
+
+> **Partially shipped (2026-05).** The erasure steps below are implemented as `Volunteer.anonymise()`, reachable per-record via the Anonymise web flow and in bulk via the `purge_stale_volunteers` command (dry-run by default; `--apply` + typed confirmation to mutate). The panopticon pool-health dashboard (`/volunteers/view/pool-health/`) flags volunteers past the `volunteer_purge_days` retention window. Step 4 (mailing-list removal) is still manual. The broader SAR/portability/DPO items remain open.
 
 When a volunteer requests erasure, or when data is cleaned up on retirement:
 
@@ -3049,28 +3053,19 @@ The existing `start` field continues to be the public programme start time. All 
 
 ---
 
-### 9.45 — Password management in the volunteer profile 🔵 S
+### 9.45 — Password management in the volunteer profile ✅ implemented (2026-05-29)
 
-**Context:** Panopticon users currently have to leave the volunteer profile and navigate to `/toolkit/admin/auth/user/<id>/password/` to set or reset a volunteer's password. The Django admin password form is a jarring context switch and isn't accessible to non-superusers.
+**Status:** Both flows are implemented. See SPEC.md §4.6 for full documentation.
 
-**Proposed behaviour:**
+**What was built:**
 
-- On the volunteer edit page, add a "Set password" section (or a button that expands one) inside the Permissions card, visible only when `VENUE.show_user_management and user_form`.
-- If the volunteer has a usable password already, show a "Change password" link/button.
-- If the account has no usable password (`has_usable_password() == False` — i.e. created with `set_unusable_password()`), show a "Create password" prompt.
-- The form takes two fields: New password + Confirm password. On POST, calls `user.set_password(new_password)` + `user.save()`.
-- Alternatively, a "Send password reset email" button (calls `PasswordResetForm.save()`) might be simpler and avoids Panopticon ever seeing the plaintext — worth considering as the primary flow, with the manual-set form as a fallback.
+- **On new volunteer creation:** `_send_password_set_email(request, user, welcome=True)` is called automatically. The volunteer receives a welcome email with a 3-day password-set link. No plaintext password is ever generated or sent.
+- **"Send password reset email" button** on the volunteer edit page (Panopticon only): calls `send_volunteer_password_reset()` → `_send_password_set_email(request, user, welcome=False)`. Use this when the welcome email expired or was lost.
+- **"Set password" form** on the volunteer edit page (Panopticon only, when `VENUE.show_user_management`): calls `set_volunteer_password()` using Django's `SetPasswordForm`. Use for in-person setup or volunteers without email.
 
-**Scope:**
+**Design decision taken:** "Send password reset email" is the primary flow (no plaintext exposure, volunteer chooses their own password). Direct set is the fallback. This was the cleaner option identified in the original spec.
 
-- New `SetPasswordForm` or reuse Django's `SetPasswordForm` / `AdminPasswordChangeForm`
-- New view or inline POST handler in `edit_volunteer` that processes the password change separately from the main volunteer form
-- Template section in `form_volunteer.html` under the Permissions card
-- Permission gate: `is_superuser` (Panopticon only) or also Programmer? Likely Panopticon only.
-- CSRF protected; POST-only
-- Success/error feedback inline (not a redirect to a different page)
-
-**Design question:** Should the primary flow be "send password reset email" (less friction, no plaintext exposure) with manual set as a secondary option, or should Panopticon always be able to set directly?
+**Known remaining gap:** No "Change password" link for the volunteer themselves (they rely on the Panopticon-triggered reset flow). Volunteer self-service password change would be a separate small task.
 
 ---
 
@@ -3477,11 +3472,11 @@ Option B first (small, immediate visual improvement), Option C when the collecti
 
 ---
 
-### 9.56 — Volunteer activity tracking: `active` flag and programmer eligibility 🔵 S (6–12h)
+### 9.56 — Volunteer activity tracking: lifecycle `status` and programmer eligibility 🔵 S (6–12h)
 
 #### Context and current state
 
-`Volunteer.active` is a manually-administered boolean. There is no automated mechanism to set or clear it. The live database shows 13 inactive volunteers, most of which are test accounts or people who registered and never returned — the flag does not reliably indicate whether someone is currently volunteering.
+`Volunteer.status` (active / dormant / retired / suspended) is administered on the profile page — `active` means on the rota and receiving mailouts. (It replaced the old `active` boolean in migration `members/0018`; `is_active` is now a derived property.) Since the 2026-05 pool-management work, the `auto_dormancy` command auto-applies the Active→Dormant transition based on login age (`volunteer_dormancy_days` / `volunteer_never_logged_in_grace_days`); retire/purge remain manual. The live database shows ~13 non-active volunteers, most of which are test accounts or people who registered and never returned. **Note:** dormancy is still driven by *login* activity, not *shift* activity — the shift-based eligibility logic below remains unimplemented.
 
 The `RotaEntry.name` field stores free-text volunteer names, not a FK to `Volunteer`. This means rota activity cannot be automatically correlated with a volunteer record without a matching step.
 
@@ -3495,7 +3490,7 @@ The collective has discussed a policy under which programmers should only be abl
    - A `completed` BooleanField on `RotaEntry` (set by keyholder or programmer post-event), or
    - A `shifts_completed` counter on `Volunteer` updated via a management command or webhook.
 
-2. **`Volunteer.active` automation:** Could be auto-derived as "has completed ≥ 1 shift in the last 3 months". Would require the shift-completion tracking above.
+2. **`Volunteer.status` automation:** login-based auto-dormancy now exists (`auto_dormancy` sets Active→Dormant). A *shift-based* refinement — e.g. auto-derive activity from "has completed ≥ 1 shift in the last 3 months" — would require the shift-completion tracking above.
 
 3. **Programmer eligibility gate:** The `add_event` and `add_showing` views would check `request.user.volunteer.is_eligible_to_programme` (a property, not a DB field) before allowing access. The index page would surface this eligibility status with a friendly prompt to build more shifts.
 
@@ -5573,4 +5568,174 @@ You can now contact the keyholders list at totally_real@list.name if you need a 
 | Seed data bulletin | 0.25h |
 | Digest integration (§9.89 section) | 1h |
 | Tests | 4h |
+
+---
+
+### 9.96 — Volunteer pool management GUI 🔵 S (14–22h total)
+
+**Goal:** Make the volunteer lifecycle management tools accessible to Panopticon users without needing shell/console access. The `auto_dormancy` and `purge_stale_volunteers` management commands currently require SSH access, which is a barrier for day-to-day pool maintenance.
+
+#### Background
+
+The pool health dashboard (`/volunteers/view/pool-health/`) already surfaces two cohorts — dormant volunteers and purge candidates — in a read-only view. This feature adds the management actions that belong alongside that view.
+
+#### Features
+
+**9.96.1 — Run auto-dormancy from the GUI** 🟢 XS (2–3h)
+
+A "Run auto-dormancy" button on the pool health page. On click, shows a dry-run preview (names + last login dates of volunteers who would be marked Dormant) and asks for confirmation before making any changes. On confirm, applies the same logic as the `auto_dormancy` management command and shows a summary of what changed.
+
+Implementation: a new pair of views (`auto-dormancy-preview` GET and `auto-dormancy-apply` POST) that run the same queryset logic currently in the command. The command itself should stay — it is still useful for cron scheduling.
+
+**9.96.2 — Quick "restore to active" from pool health** 🟢 XS (1–2h)
+
+Each dormant volunteer in the pool health table should have a "Restore to active" POST action alongside the existing "edit" link. Applies the same logic as `reactivate_self` but admin-triggered: sets `status = active`, fires `_notify_vols_admin_status_change`, and adds a success message. Returns to the pool health page.
+
+This is distinct from editing the volunteer's full profile — it's a one-click decision, not a form.
+
+**9.96.3 — Retention override flag** 🔵 S (4–6h)
+
+A boolean `retention_exempt` field on `Volunteer` (plus migration). When set, the volunteer is excluded from `purge_candidates()` regardless of their status or last-activity date. An optional `retention_exempt_reason` text field (max 200 chars) lets the operator record why.
+
+**Why a flag, not a new status value:** the existing statuses (`active`, `dormant`, `retired`, `suspended`) describe lifecycle state and each drives concrete system behaviour — rota eligibility, login access, comms inclusion. A retention override is a data governance decision that is orthogonal to lifecycle state: a volunteer can be dormant+retained or retired+retained. Adding a fifth status value would create an enum where two values secretly mean "dormant+exempted" and "retired+exempted", which conflates two independent dimensions onto one field.
+
+The pool health page should show a small "retained" badge alongside the volunteer's name in the purge candidates section, and the edit form should expose the checkbox and reason field (Panopticon only).
+
+**9.96.4 — Last-gasp contact email** 🔵 S (4–6h)
+
+A "Send last-gasp email" action on each purge candidate row. On click, shows a preview of the email (subject and body configurable via `SiteConfiguration`) and sends it to the volunteer's address on confirm. The email asks whether the volunteer is still interested in the venue and optionally mentions sponsorship (e.g. Ko-fi). Records the send as a log entry (timestamp + volunteer PK) so the action cannot be triggered twice for the same volunteer within a configurable cooldown window (default 30 days).
+
+Use case: before anonymising a record, give the person a chance to re-engage or at least say goodbye. Can also double as a soft marketing touchpoint for sponsorship asks.
+
+**9.96.5 — Guard anonymise against active membership** 🟢 XS (1–2h)
+
+The `anonymise_volunteer` view and `purge_stale_volunteers` command currently anonymise the linked `Member` record unconditionally. If the volunteer also holds an active membership (`member.is_member = True` and `member.membership_expires` is in the future), this silently destroys their membership data.
+
+Fix: on the anonymise confirmation page, check for active membership and display a prominent warning if found. Do not block the action (the operator may legitimately want to proceed), but ensure it is a conscious decision. The `purge_stale_volunteers` command should also log a warning for any candidate with an active membership and exclude them from bulk anonymisation by default (opt-in with `--include-members`).
+
+#### Sizing
+
+| Component | Est. |
+|---|---|
+| Auto-dormancy preview + apply views | 2–3h |
+| Quick restore action | 1–2h |
+| `retention_exempt` field + migration + queryset update | 1–2h |
+| Retention exempt UI (pool health badge + edit form field) | 2–3h |
+| Last-gasp email (view + template + log model + cooldown) | 3–5h |
+| Active-membership guard (view warning + command flag) | 1–2h |
+| Tests | 4–5h |
 | **Total** | **~14–15h** |
+
+---
+
+### 9.99 — Volunteer stats page 🟡 M (20–30h)
+
+**Goal:** Give each logged-in volunteer a personal "your history at S+S" page. A place to go down memory lane, see what kinds of shifts they've signed up for, understand their activity over time, and feel recognised for their contribution.
+
+This surfaces data that already exists in the database (rota entries, training records, induction date). It does not require any new data collection — only querying and presenting existing records.
+
+#### Background
+
+The sns-analysis project (`~/code/sns-analysis`) already generates a similar report as a WhatsApp-formatted text block (see `src/export_volunteer_shifts_enhanced_report.py`). That analysis includes: monthly heatmaps, shifts-per-year bars, event-type breakdown with percentage bars, most common roles, role evolution narrative, milestone shifts (10th, 25th, 50th...), and co-volunteer frequency. This spec translates that data into a proper web page, adapting it to what is available directly in the toolkit database (no DuckDB, no external analysis pipeline required).
+
+The analysis script operates on a richer, deduplicated dataset (via a name-disambiguation pipeline). The toolkit version will operate on the raw `RotaEntry` data linked to the logged-in volunteer's `Volunteer` PK — straightforward and fully self-contained.
+
+#### Access model
+
+- Volunteers see only their own stats (authenticated, own record only).
+- Panopticon users can view any volunteer's stats page (useful for welfare check-ins, appreciation moments, and one-to-one conversations).
+- The page is read-only. No data is modified.
+
+#### Features
+
+**9.99.1 — Core stats: headline numbers** 🟢 XS (2–3h)
+
+At the top of the page, a summary header showing:
+
+- Total shifts completed (count of `RotaEntry` records where `volunteer = self` and the showing's date is in the past).
+- First shift date and most recent shift date.
+- Duration active at the venue (e.g. "3 years, 4 months").
+- Induction date (`volunteer.created_at`).
+- Time since induction (e.g. "member of the community for 4 years").
+
+The living-wage estimate from the analysis script (shifts × 3.5h × NMW) is emotionally effective — consider including it as a "your contribution is worth approximately £X at the living wage" note, framed as appreciation rather than compensation. This should probably be togglable via `SiteConfiguration`.
+
+**9.99.2 — Activity heatmap (year × month grid)** 🟡 M (5–7h)
+
+A calendar-style heatmap rendered in HTML/CSS (no JS charting library required — CSS grid with colour-coded cells works well). Each cell is one calendar month; colour intensity encodes shift count (0 = empty, 1–2 = light, 3+ = strong). Years as rows, months as columns.
+
+This is the most visually arresting section of the analysis report. In the web version it can use proper colour rather than ASCII characters.
+
+Accessible fallback: each cell should have a title attribute or aria-label with the count.
+
+**9.99.3 — Shifts per year bar chart** 🟢 XS (2–3h)
+
+A simple horizontal bar chart showing shift count per calendar year. Can be rendered as a CSS-only chart (no JS needed) or a `<table>` with bar cells. Include the raw count alongside each bar.
+
+**9.99.4 — Role breakdown** 🟢 XS (2–3h)
+
+A ranked list of the roles the volunteer has done, with counts and percentages (e.g. "Bar Staff — 34 shifts, 28%"). Show the top 8–10 roles; collapse the rest under a "show more" if there are many.
+
+A secondary section could group roles into the functional buckets from the analysis script (film crew, bar team, café team, tech, building ops) to give a higher-level picture of "what kind of volunteer are you". The bucket mapping is already defined in `export_volunteer_shifts_enhanced_report.py` and can be replicated as a Python dict in the toolkit.
+
+**9.99.5 — Event type breakdown** 🟡 M (3–4h)
+
+Showing → Event has a category field (from the `Event.media_type` or similar). Show what proportion of their shifts were at film screenings, gigs, community events, etc. A horizontal stacked bar or percentage list works well here.
+
+Note: need to verify which field on `Event` / `Showing` encodes the event type and whether it maps cleanly to the 6-category system in the analysis script. May require a translation layer.
+
+**9.99.6 — Role evolution timeline** 🟢 XS (3–4h)
+
+A chronological list of "first time" milestones — when the volunteer first did each distinct role bucket, and when they hit named milestones like "became a keyholder" or "started training new volunteers". Presented as a vertical timeline or a simple dated list.
+
+The narrative format from the analysis script ("▸ 2021-03 first film crew shift") translates well to a `<dl>` or a styled `<ol>`.
+
+**9.99.7 — Milestone shifts** 🟢 XS (1–2h)
+
+Mark the 10th, 25th, 50th, 100th, 150th, 200th shifts with the event title and date. Short section — a simple table. Doubles as a "wow, your 50th shift was at..." moment.
+
+**9.99.8 — Training record** 🟢 XS (2–3h)
+
+List the volunteer's training records from `TrainingRecord`: date, training type (general safety / role-specific), role (if applicable), trainer name. A simple table is fine. Show the most recent general safety training date prominently, since it determines whether they are currently considered trained.
+
+This section may not be relevant for all venues; gate it behind a `SiteConfiguration` flag.
+
+**9.99.9 — Panopticon: view-as for any volunteer** 🟢 XS (1–2h)
+
+Panopticon users should be able to navigate to `/volunteers/<pk>/stats/` to see any volunteer's stats. The volunteer summary page (`/volunteers/view/`) should link to this view for each row. The page header should make clear whose stats are being shown when viewed by a Panopticon user (e.g. "Viewing stats for Alex Birch").
+
+#### URL design
+
+```
+/volunteers/stats/               # own stats (requires login, volunteer status)
+/volunteers/<pk>/stats/          # any volunteer's stats (requires Panopticon)
+```
+
+The own-stats URL redirects to the PK-based URL once the volunteer is identified — avoids duplicating the view logic.
+
+#### Data availability caveat
+
+The toolkit's rota data only goes back to whenever records were entered. The analysis script works on a richer dataset (including archived spreadsheets predating the toolkit). The volunteer stats page should make this caveat visible: "Your stats cover shifts recorded in this system from [earliest date] onwards." The analysis project covers a longer history — that is a separate offline tool for appreciation events.
+
+#### Template and visual design
+
+The page should feel warm and appreciative — this is not a productivity dashboard, it is a "look how much you've given" page. Consider a celebratory header tone. The heatmap is the centrepiece; keep the rest scannable.
+
+Uses the existing base templates. No new JS dependencies.
+
+#### Sizing
+
+| Component | Est. |
+|---|---|
+| Core stats header (9.99.1) | 2–3h |
+| Activity heatmap (9.99.2) | 4–6h |
+| Shifts per year bar (9.99.3) | 1–2h |
+| Role breakdown (9.99.4) | 2–3h |
+| Event type breakdown (9.99.5) | 2–4h |
+| Role evolution timeline (9.99.6) | 2–3h |
+| Milestone shifts (9.99.7) | 1–2h |
+| Training record section (9.99.8) | 1–2h |
+| Panopticon view-as (9.99.9) | 1–2h |
+| URL routing + access control | 1h |
+| Tests | 3–4h |
+| **Total** | **~20–32h** |

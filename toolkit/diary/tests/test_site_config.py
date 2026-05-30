@@ -74,6 +74,10 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
             "rota_clear_email_prompt_enabled": "on",
             "show_archive_images": "on",
             "images_start_date": "",
+            "breakeven_fc_standard_threshold": str(
+                config.breakeven_fc_standard_threshold
+            ),
+            "breakeven_fc_music_threshold": str(config.breakeven_fc_music_threshold),
             "max_count_per_role": "20",
             "max_showing_dates_shown": str(config.max_showing_dates_shown),
             "programme_copy_summary_max_chars": str(
@@ -89,7 +93,11 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
             "default_training_expiry_months": str(
                 config.default_training_expiry_months
             ),
-            "volunteer_dormancy_months": str(config.volunteer_dormancy_months),
+            "volunteer_dormancy_days": str(config.volunteer_dormancy_days),
+            "volunteer_never_logged_in_grace_days": str(
+                config.volunteer_never_logged_in_grace_days
+            ),
+            "volunteer_purge_days": str(config.volunteer_purge_days),
             "rota_gap_min_missing": str(config.rota_gap_min_missing),
             "rota_gap_min_pct": str(config.rota_gap_min_pct),
             "image_copyright_guidance_url": "",

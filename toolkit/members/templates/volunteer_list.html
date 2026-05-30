@@ -81,8 +81,6 @@ $(document).ready(function() {
 <p>
 <a href="{% url "view-volunteer-summary" %}" title="volunteers summary">volunteers summary</a> &#xb7;
 <a href="{% url "add-volunteer" %}" title="add new volunteer">add volunteer</a> &#xb7;
-<a href="{% url "retire-select-volunteer" %}" title="retire volunteer">retire volunteer</a> &#xb7;
-<a href="{% url "unretire-select-volunteer" %}" title="unretire volunteer">unretire volunteer</a> &#xb7;
 <a href="{% url "view-volunteer-export" %}" title="export volunteers">export volunteers</a><br>
 Active {{ VENUE.name }} volunteers: {{ active_count }}</p>
 <p><input type="text" placeholder="Filter by name..." id="id_input_filter">
@@ -101,7 +99,7 @@ Active {{ VENUE.name }} volunteers: {{ active_count }}</p>
 <div class="row">
     {% for volunteer in volunteers %}
         {% with volunteer.member as member %}
-        <div class="volunteer col-sm-6 {{ volunteer.active|yesno:",inactive" }}">
+        <div class="volunteer col-sm-6 {{ volunteer.is_active|yesno:",inactive" }}">
             <div class="row">
                 <div class="col-4">
                     {% if volunteer.portrait %}
@@ -111,18 +109,10 @@ Active {{ VENUE.name }} volunteers: {{ active_count }}</p>
                     {% else %}
                     <img src="{{ default_mugshot }}"  alt="Photo of {{ member.name }}" border="0" width="75"><br>
                     {% endif %}
-                    {% if volunteer.active %}
-                        <a href="{% url "edit-volunteer" volunteer.pk %}">[update]</a>
-                    {% else %}
-                        <form action="{% url 'activate-volunteer' %}" method="POST">
-                        {% csrf_token %}
-                        <input type="hidden" name="volunteer" value="{{ volunteer.pk }}">
-                        <p><input type="submit" name="submit" value="unretire"></p>
-                        </form>
-                    {% endif %}
+                    <a href="{% url "edit-volunteer" volunteer.pk %}">[update]</a>
                 </div>
                 <div class="col-8">
-                    <p class="name">{{ member.name }}{% if volunteer.status == "dormant" %} <em>(dormant)</em>{% elif volunteer.status == "retired" %} (retired){% endif %}</p>
+                    <p class="name">{{ member.name }}{% if volunteer.status == "dormant" %} <em>(dormant)</em>{% elif volunteer.status == "retired" %} (retired){% elif volunteer.status == "suspended" %} <strong class="text-danger">(suspended)</strong>{% elif volunteer.status == "anonymised" %} <em class="text-muted">(anonymised)</em>{% endif %}</p>
                     {% if volunteer.member.gdpr_opt_in %}
                        <p><b>GDPR opt in:</b> {{ volunteer.member.gdpr_opt_in|date:"d/m/Y" }}</p>
                     {% else %}
@@ -147,7 +137,7 @@ Active {{ VENUE.name }} volunteers: {{ active_count }}</p>
                     {% if member.altphone %}{{ member.altphone }}<br>{% endif %}
                     {% endif %}
                     {% if member.personal_pronouns %}This volunteer uses {{ member.personal_pronouns }} pronouns.<br>{% endif %}
-                    {% if volunteer.active %}<a href="{% url "edit-volunteer" volunteer.pk %}">[update]</a>{% endif %}
+                    <a href="{% url "edit-volunteer" volunteer.pk %}">[update]</a>
                     </p>
                 </div>
             </div>

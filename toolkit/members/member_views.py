@@ -157,7 +157,7 @@ def delete_member(request, member_id):
         pass
 
     # Check the person being deleted isn't an active volunteer.
-    if vol and vol.active:
+    if vol and vol.is_active:
         # Volunteers who tried to delete their own record using an email link
         # get a special message:
         if access_using_key:

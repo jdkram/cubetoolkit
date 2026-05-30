@@ -5,6 +5,7 @@ import binascii
 import datetime
 import zoneinfo
 
+from django.core import mail
 from django.test import TestCase
 from django.test.utils import override_settings
 from django.urls import reverse
@@ -75,117 +76,156 @@ class TestVolunteerEditViews(MembersTestsMixin, TestCase):
     def tearDown(self):
         self.client.logout()
 
-    def test_retire(self):
+    def _post_status(self, volunteer, status):
+        # Retirement, dormancy and reactivation are all done by editing the
+        # volunteer's status on their profile page. Posts the edit form with
+        # just the fields needed to change status.
+        url = reverse("edit-volunteer", kwargs={"volunteer_id": volunteer.id})
+        return self.client.post(
+            url,
+            data={
+                "mem-name": volunteer.member.name,
+                "mem-email": volunteer.member.email,
+                "vol-status": status,
+            },
+            follow=True,
+        )
+
+    def test_retire_via_profile(self):
         v = Volunteer.objects.get(id=1)
-        self.assertTrue(v.active)
+        self.assertTrue(v.is_active)
 
-        url = reverse("inactivate-volunteer")
-        response = self.client.post(url, {"volunteer": v.id})
+        self._post_status(v, Volunteer.STATUS_RETIRED)
 
-        # Should have deactivated volunteer:
-        v = Volunteer.objects.get(id=1)
-        self.assertFalse(v.active)
+        v.refresh_from_db()
+        self.assertEqual(v.status, Volunteer.STATUS_RETIRED)
+        self.assertFalse(v.is_active)
 
-        # And redirected to volunteer list
-        self.assertRedirects(response, reverse("view-volunteer-summary"))
-
-    def test_unretire(self):
+    def test_unretire_via_profile(self):
         v = Volunteer.objects.get(id=1)
         v.status = Volunteer.STATUS_RETIRED
         v.save()
 
-        url = reverse("activate-volunteer")
-        response = self.client.post(url, {"volunteer": v.id})
+        self._post_status(v, Volunteer.STATUS_ACTIVE)
 
-        # Shoudl have activated volunteer:
+        v.refresh_from_db()
+        self.assertEqual(v.status, Volunteer.STATUS_ACTIVE)
+        self.assertTrue(v.is_active)
+
+    def test_leaving_active_roster_notifies_vols_admin(self):
+        # Moving a volunteer off the active roster emails the volunteers admin
+        # so the mailing list can be kept in step.
         v = Volunteer.objects.get(id=1)
-        self.assertTrue(v.active)
+        mail.outbox = []
+        self._post_status(v, Volunteer.STATUS_RETIRED)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("Change in volunteer status", mail.outbox[0].subject)
 
-        # And redirected to volunteer list
-        self.assertRedirects(response, reverse("view-volunteer-summary"))
+    def test_status_unchanged_does_not_notify(self):
+        v = Volunteer.objects.get(id=1)  # already active
+        mail.outbox = []
+        self._post_status(v, Volunteer.STATUS_ACTIVE)
+        self.assertEqual(len(mail.outbox), 0)
 
 
-class TestActivateDeactivateVolunteer(MembersTestsMixin, TestCase):
+class TestVolunteerSuspension(MembersTestsMixin, TestCase):
+    """Suspension is a safeguarding action. It must, at the model layer,
+    immediately lock the login account and release upcoming shifts, and be
+    fully reversible — independent of any view or form plumbing."""
+
     def setUp(self):
         super().setUp()
-        self.assertTrue(
-            self.client.login(username="admin", password="T3stPassword!")
+        self.future = datetime.datetime(
+            2035, 6, 1, 19, 0, tzinfo=zoneinfo.ZoneInfo("UTC")
+        )
+        self.past = datetime.datetime(
+            2010, 6, 1, 19, 0, tzinfo=zoneinfo.ZoneInfo("UTC")
         )
 
-    def test_load_select_form_retire(self):
-        url = reverse("retire-select-volunteer")
-        response = self.client.get(url)
+    def _make_entry_for(self, volunteer, start):
+        event = Event(
+            name="Ev", copy="c", copy_summary="s", duration=None,
+            outside_hire=False, private=False,
+        )
+        event.save()
+        # Showing.start is a FutureDateTimeField, so always create in the
+        # future, then drop a past start in via .update() (bypassing validation)
+        # when we need to simulate a historical shift.
+        showing = Showing(event=event, start=self.future, confirmed=True)
+        showing.save()
+        if start != self.future:
+            Showing.objects.filter(pk=showing.pk).update(start=start)
+        return RotaEntry.objects.create(
+            showing=showing,
+            role=Role.objects.first(),
+            volunteer=volunteer,
+            name=volunteer.member.name,
+            rank=1,
+        )
 
-        self.assertTemplateUsed(response, "select_volunteer.html")
+    def test_suspend_disables_login(self):
+        self.assertTrue(self.vol_1.user.is_active)
+        self.vol_1.status = Volunteer.STATUS_SUSPENDED
+        self.vol_1.save()
+        self.vol_1.user.refresh_from_db()
+        self.assertFalse(self.vol_1.user.is_active)
 
-        self.assertContains(response, "Volunteer One")
-        self.assertContains(response, "Volunteer Two")
-        self.assertContains(response, "Volunteer Three")
-        self.assertNotContains(response, "Volunteer Four")
+    def test_suspend_marks_inactive(self):
+        self.vol_1.status = Volunteer.STATUS_SUSPENDED
+        self.vol_1.save()
+        self.assertFalse(self.vol_1.is_active)
 
-    def test_load_select_form_unretire(self):
-        url = reverse("unretire-select-volunteer")
-        response = self.client.get(url)
+    def test_reinstate_restores_login(self):
+        self.vol_1.status = Volunteer.STATUS_SUSPENDED
+        self.vol_1.save()
+        self.vol_1.status = Volunteer.STATUS_ACTIVE
+        self.vol_1.save()
+        self.vol_1.user.refresh_from_db()
+        self.assertTrue(self.vol_1.user.is_active)
 
-        self.assertTemplateUsed(response, "select_volunteer.html")
+    def test_suspend_clears_future_shifts(self):
+        entry = self._make_entry_for(self.vol_1, self.future)
+        self.vol_1.status = Volunteer.STATUS_SUSPENDED
+        self.vol_1.save()
+        entry.refresh_from_db()
+        self.assertIsNone(entry.volunteer)
+        self.assertEqual(entry.name, "")
 
-        self.assertNotContains(response, "Volunteer One")
-        self.assertNotContains(response, "Volunteer Two")
-        self.assertNotContains(response, "Volunteer Three")
-        self.assertContains(response, "Volunteer Four")
+    def test_suspend_keeps_past_shifts(self):
+        entry = self._make_entry_for(self.vol_1, self.past)
+        self.vol_1.status = Volunteer.STATUS_SUSPENDED
+        self.vol_1.save()
+        entry.refresh_from_db()
+        self.assertEqual(entry.volunteer_id, self.vol_1.pk)
 
-    def test_select_form_post(self):
-        url = reverse("unretire-select-volunteer")
-        response = self.client.post(url)
-        self.assertEqual(response.status_code, 405)
+    def test_suspend_leaves_other_volunteers_future_shifts(self):
+        entry = self._make_entry_for(self.vol_2, self.future)
+        self.vol_1.status = Volunteer.STATUS_SUSPENDED
+        self.vol_1.save()
+        entry.refresh_from_db()
+        self.assertEqual(entry.volunteer_id, self.vol_2.pk)
 
-    def test_retire(self):
-        vol = Volunteer.objects.get(id=2)
-        self.assertTrue(vol.active)
+    def test_save_does_not_reenable_independently_disabled_account(self):
+        # A non-suspend save must never silently re-enable a login that was
+        # disabled for another reason (e.g. GDPR anonymisation).
+        self.vol_1.user.is_active = False
+        self.vol_1.user.save()
+        self.vol_1.notes = "touched"
+        self.vol_1.save()
+        self.vol_1.user.refresh_from_db()
+        self.assertFalse(self.vol_1.user.is_active)
 
-        url = reverse("inactivate-volunteer")
-        response = self.client.post(url, data={"volunteer": "2"}, follow=True)
+    def test_suspended_not_offered_to_non_superuser(self):
+        from toolkit.members.forms import VolunteerForm
+        form = VolunteerForm(instance=self.vol_1, is_superuser=False)
+        values = [v for v, _ in form.fields["status"].choices]
+        self.assertNotIn(Volunteer.STATUS_SUSPENDED, values)
 
-        self.assertRedirects(response, reverse("view-volunteer-summary"))
-
-        vol = Volunteer.objects.get(id=2)
-        self.assertFalse(vol.active)
-
-        self.assertContains(response, "Retired volunteer Volunteer Two")
-
-    def test_retire_bad_vol_id(self):
-        url = reverse("inactivate-volunteer")
-        response = self.client.post(url, data={"volunteer": "2000"})
-        self.assertEqual(response.status_code, 404)
-
-    def test_retire_no_vol_id(self):
-        url = reverse("inactivate-volunteer")
-        response = self.client.post(url)
-        self.assertEqual(response.status_code, 404)
-
-    def test_unretire(self):
-        vol = Volunteer.objects.get(id=self.vol_4.pk)
-        self.assertFalse(vol.active)
-
-        url = reverse("activate-volunteer")
-        response = self.client.post(url, data={"volunteer": "4"}, follow=True)
-
-        self.assertRedirects(response, reverse("view-volunteer-summary"))
-
-        vol = Volunteer.objects.get(id=self.vol_4.pk)
-        self.assertTrue(vol.active)
-
-        self.assertContains(response, "Unretired volunteer Volunteer Four")
-
-    def test_unretire_bad_vol_id(self):
-        url = reverse("activate-volunteer")
-        response = self.client.post(url, data={"volunteer": "2000"})
-        self.assertEqual(response.status_code, 404)
-
-    def test_unretire_no_vol_id(self):
-        url = reverse("activate-volunteer")
-        response = self.client.post(url)
-        self.assertEqual(response.status_code, 404)
+    def test_suspended_offered_to_superuser(self):
+        from toolkit.members.forms import VolunteerForm
+        form = VolunteerForm(instance=self.vol_1, is_superuser=True)
+        values = [v for v, _ in form.fields["status"].choices]
+        self.assertIn(Volunteer.STATUS_SUSPENDED, values)
 
 
 class TestVolunteerEdit(MembersTestsMixin, TestCase):
@@ -280,7 +320,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
             name="New Volunteer, called \u0187hri\u01a8topher"
         )
         # Implicitly check Volunteer record exists:
-        self.assertTrue(new_member.volunteer.active)
+        self.assertTrue(new_member.volunteer.is_active)
 
     def test_post_new_vol_all_data(self):
         init_vol_count = Volunteer.objects.count()
@@ -341,7 +381,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
         # Member notes aren't included on the form:
         self.assertEqual(new_member.notes, "")
 
-        self.assertTrue(new_member.volunteer.active)
+        self.assertTrue(new_member.volunteer.is_active)
         self.assertEqual(
             new_member.volunteer.notes, "plays the balalaika really badly"
         )
@@ -389,7 +429,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
         # extant member
         volunteer = Volunteer.objects.get(id=1)
         member = volunteer.member
-        self.assertTrue(member.volunteer.active)
+        self.assertTrue(member.volunteer.is_active)
         # Changed things:
         self.assertEqual(member.name, "Renam\u018fd Vol")
         self.assertEqual(member.email, "volon@cube.test")
@@ -406,7 +446,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
         # Member notes aren't included on the form:
         self.assertEqual(member.notes, "")
 
-        self.assertTrue(member.volunteer.active)
+        self.assertTrue(member.volunteer.is_active)
         self.assertEqual(member.volunteer.notes, "")
         # Won't have changed without "clear" being checked:
         self.assertEqual(member.volunteer.portrait, "/tmp/path/to/portrait")
@@ -457,7 +497,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
         # extant member
         volunteer = Volunteer.objects.get(id=1)
         member = volunteer.member
-        self.assertTrue(member.volunteer.active)
+        self.assertTrue(member.volunteer.is_active)
         self.assertEqual(member.name, "Renam\u018fd Vol")
         self.assertEqual(member.email, "snoo@whatver.com")
         self.assertEqual(member.address, "somewhere over the rainbow, I guess")
@@ -474,7 +514,7 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
         # Member notes aren't included on the form:
         self.assertEqual(member.notes, "")
 
-        self.assertTrue(member.volunteer.active)
+        self.assertTrue(member.volunteer.is_active)
         self.assertEqual(
             member.volunteer.notes, "plays the balalaika really badly"
         )
@@ -821,7 +861,7 @@ class TestAddTraining(MembersTestsMixin, TestCase):
         self.assertEqual(len(vol.training_records.all()), 0)
 
     def test_add_training_inactive_volunteer(self):
-        vol = Volunteer.objects.filter(active=False)[0]
+        vol = Volunteer.objects.inactive()[0]
         url = reverse(
             "add-volunteer-training-record", kwargs={"volunteer_id": vol.id}
         )
@@ -925,7 +965,7 @@ class TestAddGroupTraining(MembersTestsMixin, TestCase):
         notes = " Some not\u018fs\nwere noted here. "
         training_date = datetime.date(day=4, month=5, year=2016)
 
-        volunteers = Volunteer.objects.filter(active=True)[:3]
+        volunteers = Volunteer.objects.active()[:3]
         self.assertEqual(len(volunteers), 3)
         post_data = {
             "role": "",
@@ -944,7 +984,7 @@ class TestAddGroupTraining(MembersTestsMixin, TestCase):
         response = self.client.post(url, data=post_data)
         self.assertRedirects(response, url)
 
-        volunteers = Volunteer.objects.filter(active=True)[:3]
+        volunteers = Volunteer.objects.active()[:3]
         for vol in volunteers:
             recs = vol.training_records.all()
             self.assertEqual(len(recs), 1)
@@ -974,7 +1014,7 @@ class TestAddGroupTraining(MembersTestsMixin, TestCase):
 
         role = Role.objects.get(id=1)
 
-        volunteers = Volunteer.objects.filter(active=True)[:3]
+        volunteers = Volunteer.objects.active()[:3]
         self.assertEqual(len(volunteers), 3)
         volunteers[1].status = Volunteer.STATUS_RETIRED
         volunteers[1].save()
@@ -1067,14 +1107,14 @@ class TestViewVolunteerTraining(MembersTestsMixin, TestCase):
     def test_content(self):
         url = reverse("view-volunteer-training-report")
 
-        volunteers = Volunteer.objects.filter(active=True)[:3]
+        volunteers = Volunteer.objects.active()[:3]
         self.assertEqual(len(volunteers), 3)
 
         role = Role.objects.get(id=1)
         training_date = datetime.date(day=4, month=5, year=2016)
 
         for vol in volunteers:
-            self.assertTrue(vol.active)
+            self.assertTrue(vol.is_active)
             vol.roles.add(role)
             record = TrainingRecord(
                 volunteer=vol,
@@ -1257,7 +1297,7 @@ class TestAnonymiseVolunteer(MembersTestsMixin, TestCase):
     def test_anonymise_deactivates_volunteer(self):
         self._post_confirm()
         self.vol_1.refresh_from_db()
-        self.assertFalse(self.vol_1.active)
+        self.assertFalse(self.vol_1.is_active)
         self.assertEqual(self.vol_1.notes, "")
 
     def test_anonymise_clears_roles(self):

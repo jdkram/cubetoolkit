@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-05-25
+**Last updated:** 2026-05-29
 
 **Current phase:** Phase 2 complete — entering Phase 3
 **See also:** [ROADMAP.md](docs/ROADMAP.md) (wave-by-wave sequencing) · [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -14,6 +14,11 @@
 | # | Bug | Notes |
 |---|-----|-------|
 | ~~**Bug AE**~~ | ~~**Homeserver: star/shadow mark icons missing on rota; panopticon [e]/tap-to-toggle not working**~~ | ✅ 2026-05-23 — Resolved on homeserver. |
+| ~~**Bug AH**~~ | ~~**Star/shadow icons missing in dev — `volunteer*` accounts had no Volunteer record**~~ | ✅ 2026-05-29 — `configure_toolkit_users` now creates `Member` + `Volunteer` records for each `volunteer*` account. Re-run the command to apply to existing dev databases. |
+| ~~**Bug AI**~~ | ~~**Missing migration: `ConsumableItem.category` choices added "Cinema Snacks" without a migration**~~ | ✅ 2026-05-29 — Migration `labs/0016_alter_consumableitem_category` generated and applied. |
+| ~~**Bug AJ**~~ | ~~**New volunteers got unusable password with no way to log in themselves**~~ | ✅ 2026-05-29 — `_send_password_set_email()` helper extracted; called automatically on new volunteer creation with a welcome message + password-set link (3-day validity). |
+| ~~**Bug AK**~~ | ~~**Password reset URL regex rejected Django 5 SHA-256 tokens (token too long)**~~ | ✅ 2026-05-29 — `password_reset_confirm` regex widened; "valid for 24 hours" message corrected to use `PASSWORD_RESET_TIMEOUT` (default 3 days). |
+| **Bug AL** | **3 pre-existing diary test failures** | `test_cancel`, `test_open_ended_existing_booking_treated_as_clash`, `test_panopticon_can_save_changes` — confirmed pre-existing on clean `HEAD`; not caused by recent work. Needs investigation. |
 | ~~**Bug AF**~~ | ~~**Message banners: duplicate tick/cross (list-style-image + ::before pseudo-element)**~~ | ✅ 2026-05-25 — Removed `list-style-image` from `li.success` and `li.error` in `messages.css`; `::before` rules kept. |
 | ~~**Bug AG**~~ | ~~**Batch showings crash on past dates (IntegrityError from Showing.save guard)**~~ | ✅ 2026-05-25 — `Showing.save()` now only enforces the past-start guard when `self.pk is not None` (existing records). `BatchAddShowingsForm.clean()` rejects past date+time combinations with a clear error. "Create as confirmed" checkbox added to form; form validates that event has terms set before allowing it. "Confirm all (N)" button added to event hub (shown when there are unconfirmed future showings and terms are OK). |
 | ~~**Bug W**~~ | ~~**Burger menu vanishes on very narrow mobile views**~~ | ✅ 2026-04-28 — Root cause: `.showing-meta` in `edit_rota.html` had `flex-wrap: nowrap`. On multi-room events with duration + room badge + outside-hire badge + link, the combined min-content width exceeds the ~274px available at 320px viewport, causing horizontal overflow. On iOS Safari, horizontal overflow causes the fixed navbar to appear to scroll off-screen. Fix: changed to `flex-wrap: wrap`. |
@@ -37,7 +42,7 @@
 | ✅ `SHOW_ARCHIVE_IMAGES` / `IMAGES_START_DATE` | Done 2026-02-28 | Hide event images before configurable date; see TASKS.md 9.27 for rationale |
 | ✅ `Showing.rota_notes` field size | Done 2026-02-28 | Extended to 4096; migration `diary/0010` |
 | ✅ `Member.email` mandatory | Done 2026-02-28 | `blank=False`; migration `members/0010`; 10 tests updated |
-| ✅ Panopticon user management in volunteer edit | Done 2026-02-28 | `UserForm` (username/is_active/is_superuser) shown when `VENUE.show_user_management=True`; gated so Cube tests unaffected |
+| ✅ Panopticon user management in volunteer edit | Done 2026-02-28 | `UserForm` (username/is_superuser/programmer) shown when `VENUE.show_user_management=True`; gated so Cube tests unaffected. (The `is_active` "Login enabled" checkbox was later removed — login is now driven by `Volunteer.status`; see the Suspension entry in Done.) |
 | ✅ Custom Django admin `ModelAdmin` classes | Done 2026-02-28 | `members/admin.py` (Member, Volunteer, User+VolunteerInline); `diary/admin.py` (Room, Role, EventTag, Event, Showing) |
 | ✅ Expired members view | Done 2026-02-28 | `/members/expired/` endpoint; reuses `search_members_results.html` |
 | ❌ `view_diary_json` endpoint | Shelved | Experimental; existed on `s+s`. Not currently needed. |
@@ -191,7 +196,7 @@ Items identified during the April 2026 SNS production site outage investigation.
 |---|------|------|-------|
 | ~~**D.1**~~ | ~~**WhiteNoise cache-busting storage backend**~~ | ✅ 2026-04-30 | `STORAGES` dict added to `docker_settings_prod_ss.py` with `CompressedManifestStaticFilesStorage`; dry-run collectstatic verified clean (312 files, no errors). |
 | ~~**D.2**~~ | ~~**Docker health checks**~~ | ✅ 2026-05-06 | `/health/` view in `toolkit/index/views.py` — calls `connection.ensure_connection()`, returns 200 `ok` or 503 `db unavailable`. Wired into `docker-compose-production.yml`: `toolkit` service uses HTTP check; `mailer` uses `pgrep -f mailerd`. Both: 30s interval, 3 retries, 60s/30s start_period. |
-| **D.3** | **Dependency pinning** | **🟡 M — do ASAP** | Several packages have no version constraints (`nh3`, `python-dateutil`, `html2text`, `monthdelta`, `python-magic`). Compile lockfile with `uv pip compile`; switch Dockerfile to install from it. Prevents surprise breakage on image rebuild. Separate branch; verify full build before merging. |
+| ~~**D.3**~~ | ~~**Dependency pinning**~~ | ✅ 2026-05-29 | `uv pip compile requirements/docker.txt --python-version 3.11` → `requirements/docker.lock` (45 packages fully pinned). Dockerfile build stage now installs from lockfile. Full image build verified clean. |
 | ~~**D.4**~~ | ~~**Docker resource limits**~~ | ✅ 2026-05-06 | `toolkit: 512m / 1.0 CPU`, `mailer: 192m / 0.5 CPU`. Production is 2GB total; leaves ~1.3GB for OS + MySQL. |
 | ~~**D.5**~~ | ~~**Console email backend in dev settings**~~ | ✅ 2026-04-21 | `EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'` already in `devserver_settings.py` (line 55). |
 
@@ -202,8 +207,8 @@ Items identified during the April 2026 SNS production site outage investigation.
 Priorities agreed 2026-05-25. Full specs in [TASKS.md](docs/TASKS.md).
 
 **High priority — do these first:**
-1. **D.3 Dependency pinning** — do ASAP; prevents surprise build breakage
-2. **9.41 Calendar: clickable room filter in legend sidebar** — small, high priority
+1. ~~**D.3 Dependency pinning**~~ — ✅ 2026-05-29
+2. ~~**9.41 Calendar: clickable room filter in legend sidebar**~~ — ✅ already implemented (see row above)
 3. **9.74 Permission model redesign** — go ahead; Panopticon-only PII; no collective discussion needed
 4. **9.21 Recurring events / batch clone to dates** — handy feature, near top of list
 5. **9.48 Template export/import** — MVP (copy-paste JSON round-trip)
@@ -219,6 +224,8 @@ Priorities agreed 2026-05-25. Full specs in [TASKS.md](docs/TASKS.md).
 13. **9.79 Tool library** — Labs section; gate behind SiteSettings
 
 **Backlog (blocked or complex):**
+- **9.99 Volunteer stats page** — personal "your history at S+S" page: activity heatmap, shifts/year bar, role breakdown, event-type breakdown, role evolution timeline, milestone shifts, training record; Panopticon view-as; spec in TASKS.md §9.99
+- **9.96 Volunteer pool management GUI** — pool health actions (auto-dormancy button, quick restore, retention-exempt flag, last-gasp email, active-membership guard on anonymise); spec in TASKS.md §9.96
 - **9.87 Collectives → simplelists sync** — high importance; defer until prod access available; warn about sync-state complexity (unsubscribes outside our interface)
 - **9.4 Induction tracking** — keep specced; needs collective buy-in before any implementation
 - **9.63 Room availability overlay on map** — helpful but not a priority
@@ -233,6 +240,10 @@ Completed items stay here. When the Done section gets unwieldy, old rows can be 
 
 | Item | Completed | Notes |
 |------|-----------|-------|
+| ~~Volunteer pool-management tools + returning-volunteer experience~~ | 2026-05-29 | Day-based site settings (`volunteer_dormancy_days` 365, `volunteer_never_logged_in_grace_days` 90, `volunteer_purge_days` 1095) replacing `volunteer_dormancy_months`; data migration carries over any tuned value. `auto_dormancy` rewritten to set **Dormant** status (Active→Dormant only; never retires/deletes) and now catches never-logged-in accounts (the old `last_login__lt` query silently dropped NULLs). Dropped the redundant `login_inactive` flag (+ its view/URL/template) — `status` is the single source of truth. New panopticon **pool-health dashboard** (`/volunteers/view/pool-health/`) listing Dormant (with re-induction badges) and purge candidates. Returning dormant volunteers get a dashboard **welcome-back card** with one-click "I'm back" reactivation + induction nudge, and the rota force-enables the beginner-role highlight for them. Erasure logic extracted to `Volunteer.anonymise()`, shared by the web flow and a new guarded **`purge_stale_volunteers`** command (dry-run default; `--apply` + typed `"anonymise N volunteers"` phrase). 25 new tests; full members+diary suite (580) green. Built from `~/.claude/plans/let-s-create-tools-for-pure-mist.md`. |
+| ~~Emergency suspension (safeguarding) — `Volunteer.STATUS_SUSPENDED`~~ | 2026-05-29 | Added a fourth volunteer status, **Suspended**, as the emergency-deactivation lever. `Volunteer.save()` syncs `user.is_active` on the suspend/reinstate transition (immediately blocks login and drops live sessions) and clears the volunteer's future rota entries (past entries preserved); reinstating restores login + rota visibility but **not** the cleared shifts. Migration `members/0019`. Removed the manual "Login enabled" (`is_active`) checkbox from `UserForm` so `status` is the single canonical login control — the two could otherwise drift. Suspension is Panopticon-only (choice hidden from non-superusers). Status options rewritten with always-visible plain-English consequences; suspended option visually set apart. Summary/list views now show a "Suspended" badge. SPEC §"Volunteer status, login access and suspension" rewritten, incl. guidance to prefer Anonymise over hard-delete for removing a suspended volunteer. 9 new tests (185→195 members suite green). |
+| ~~Event hub ↔ edit form lockstep~~ | 2026-05-29 | Event hub (`view_event_privatedetails.html`) was missing three `EditEventForm` fields: `trailer_url`, `age_restriction`, and the approval group (`approval_type` + `approved_at_meeting_date`/`meeting_name`/`meeting_minutes_url`). Added all to the details `<dl>` with matching ⓘ tooltips, so the hub view and edit form now show the same 21 fields. |
+| ~~Volunteer status cleanup: drop `active`, retire dedicated workflow~~ | 2026-05-29 | `status` (active/dormant/retired) is now the single source of truth. Removed the redundant `active` BooleanField (migration `members/0018`); added `VolunteerQuerySet.active()/.inactive()` + an `is_active` property, and rewrote ~15 query/template/command call sites. Deleted the dedicated retire/unretire workflow (`select_volunteer`/`activate_volunteer` views, `select_volunteer.html`, 4 URLs, all nav links) — retirement is now done via the status radio on the profile page. The vols-admin notification email is folded into the profile save, firing whenever a volunteer joins/leaves the active roster. Fixed a latent bug in `keep_vols_from_csv_retire_everyone_else` (set `vol.active=False`, which `save()` immediately recomputed — now sets `status`). Tests updated; full suite (748) green. |
 | ~~Staging database migration to master~~ | 2026-03-31 | Successfully migrated staging DB from `s+s` branch to current `master`. Fixed migration name mismatches (`members.0008`/`0009` renumbering), added 19 new migrations, all 9,214 events / 10,994 showings / 2,334 members / 1,879 volunteers preserved. Created `migrate-staging-db.sh` automation script and `docs/DATABASE_MIGRATION.md` documentation. |
 | ~~seed_dev_data rewrite — fix 8 bugs preventing seeding~~ | 2026-03-27 | Replaced external image downloads with local PIL placeholders; fixed indentation (rota/image/link creation was outside event loop); fixed `_seed_bulk_volunteers` (undefined `_`, tuple not unpacked, `return` inside loop); fixed monthly events nth-weekday calculation; fixed `_seed_one_recurring_showing` inner loop nesting; fixed `_seed_cms_pages` (tuple unpack, Wagtail tree API, `body=` field name, added missing CMS body constants); fixed `_seed_index_links` (field names `text`/`link`/`name`); created missing migration `diary/0018`; changed `--bulk-volunteers` default to 0 (opt-in). Seed now completes in ~4s with no network calls. |
 | ~~CalVer versioning + dev watermark~~ | 2026-03-21 | `VERSION` file at repo root; `settings_common.py` reads it; `venue` context processor exposes `{{ VERSION }}` to all public templates; `base_public.html` watermark shows `DEV · {{ VERSION }}`; `.dockerignore` gains `static/` + `staticfiles/` entries; `collectstatic` uses `--clear` to prevent stale static assets. See ONBOARDING.md "Releases and Versioning". |

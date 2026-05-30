@@ -68,7 +68,7 @@ $(document).ready(function() {
     <td><form method="get" action="{% url "edit-member" member.pk %}"><input type="submit" value="Edit"></form></td>
     <td><form class="delete" method="post" action="{% url "delete-member" member.pk %}">{% csrf_token %}<input type="submit" value="Delete"></form></td>
     <td>{% if member.volunteer %}
-            {% if member.volunteer.active %}
+            {% if member.volunteer.is_active %}
                 <form method="get" action="{% url "edit-volunteer" member.volunteer.pk %}"><input type="submit" value="Edit"></form>
             {% else %}
                 Retired

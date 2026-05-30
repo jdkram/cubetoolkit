@@ -124,15 +124,43 @@ input[type="text"], input[type="tel"], input[type="email"], textarea {
 }
 
 /* ── Volunteer status ──────────────────────────────────────────── */
+.status-intro {
+  font-size: 0.9em;
+  color: #555;
+  margin: 0.2rem 0 0.7rem;
+  max-width: 46rem;
+}
+.status-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-bottom: 0.4rem;
+}
 .status-option {
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
+  gap: 0.15rem;
+}
+.status-name {
+  font-weight: 600;
 }
 .status-desc {
-  font-size: 0.82em;
-  color: #666;
-  padding-left: 1.4em;
+  font-size: 0.85em;
+  color: #555;
+  padding-left: 1.6em;
+  max-width: 46rem;
+  line-height: 1.4;
+}
+/* Suspension is a rare, high-consequence safeguarding action — set it apart
+   visually, but carry the meaning in the wording too (not colour alone). */
+.status-option.suspended {
+  border-left: 3px solid #c0392b;
+  background: #fdf3f2;
+  padding: 0.5rem 0.65rem;
+  border-radius: 4px;
+}
+.status-option.suspended .status-desc {
+  color: #7a1f17;
 }
 .field-tip {
   display: inline-block;
@@ -215,21 +243,6 @@ $(document).ready(function() {
 {% block body %}
 <h3>{{ pagetitle }} {{ volunteer.member.name }}</h3>
 {% if message %}<h3>{{ message }}</h3>{% endif %}
-
-{% if volunteer.login_inactive %}
-<div style="background:#fff3cd; border-left:4px solid #ffc107; padding:0.6rem 1rem; margin-bottom:1rem; font-size:0.9em;">
-  <strong>Login inactivity notice:</strong> This volunteer has not logged in for
-  {{ site_config.volunteer_dormancy_months }} months or more. This is a soft flag only —
-  their access is unchanged. Once you have made contact or confirmed their situation,
-  clear the flag below.
-  {% if perms.toolkit.write %}
-  <form method="post" action="{% url 'clear-login-inactive' volunteer.pk %}" style="display:inline; margin:0;">
-    {% csrf_token %}
-    <button type="submit" class="btn btn-sm btn-outline-warning" style="margin-left:0.5rem;">Clear flag</button>
-  </form>
-  {% endif %}
-</div>
-{% endif %}
 
 <form id="main_form" action="" method="POST" enctype="multipart/form-data">
 {% csrf_token %}
@@ -390,32 +403,22 @@ $(document).ready(function() {
 
     <!-- Volunteer status -->
     <div class="vol-section" id="vol-status">
-      <h4>Volunteer status
-        <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
-          title="Status controls whether this person appears on the rota and receives mailouts. It does not affect login access — use the Permissions section for that.">ⓘ</span>
-      </h4>
-      <div style="display:flex; gap:1.25rem; flex-wrap:wrap; margin-bottom:0.3rem;">
+      <h4>Volunteer status</h4>
+      <p class="status-intro">This controls what a volunteer can do. Each option below says exactly what changes. Only <strong>Suspended</strong> stops someone logging in — the others just take them off the rota and mailing list.</p>
+      <div class="status-list">
         {% for radio in vol_form.status %}
-        <div class="status-option">
-          <label style="font-weight:normal; cursor:pointer;">
-            {{ radio.tag }} {{ radio.choice_label }}
-            {% if radio.choice_value == "active" %}
-              <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
-                title="Appears on the rota, receives mailouts.">ⓘ</span>
-            {% elif radio.choice_value == "dormant" %}
-              <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
-                title="Taking a break or lapsed. Hidden from the rota and mailouts but stays in the system. Can be reactivated if they return.">ⓘ</span>
-            {% elif radio.choice_value == "retired" %}
-              <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
-                title="Has permanently left the volunteer team. Hidden from the rota and mailouts.">ⓘ</span>
-            {% endif %}
+        <div class="status-option {{ radio.choice_value }}">
+          <label style="cursor:pointer;">
+            {{ radio.tag }} <span class="status-name">{{ radio.choice_label }}</span>
           </label>
           {% if radio.choice_value == "active" %}
-            <span class="status-desc">On the rota, receives mailouts.</span>
+            <span class="status-desc"><strong>Can log in.</strong> Shown on the rota and receives mailouts. This is the normal state for a current volunteer.</span>
           {% elif radio.choice_value == "dormant" %}
-            <span class="status-desc">Taking a break — hidden from rota and mailouts, can be reactivated.</span>
+            <span class="status-desc"><strong>Can still log in.</strong> Taken off the rota and the mailing list while they're on a break. Set them back to Active when they return.</span>
           {% elif radio.choice_value == "retired" %}
-            <span class="status-desc">Has left the volunteer team.</span>
+            <span class="status-desc"><strong>Can still log in</strong> to see their own record. Taken off the rota and the mailing list. Use this when someone has left the volunteer team for good.</span>
+          {% elif radio.choice_value == "suspended" %}
+            <span class="status-desc"><strong>Locks them out straight away</strong> — they are logged out and cannot log back in. They are also removed from every upcoming shift and taken off the rota and mailing list. Use this to restrict someone's access while a concern is being looked into. Setting them back to Active restores their login and puts them back on the rota and mailing list — but the shifts they were removed from are <strong>not</strong> added back, so they would need to sign up for those again.</span>
           {% endif %}
         </div>
         {% endfor %}
@@ -527,12 +530,6 @@ $(document).ready(function() {
     {% if VENUE.show_user_management and user_form %}
     <div class="vol-section danger-zone" id="vol-permissions">
       <h4>Permissions</h4>
-      <div class="danger-row">
-        {{ user_form.is_active }}
-        <label for="{{ user_form.is_active.id_for_label }}">Login enabled</label>
-        <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
-          title="Controls whether this volunteer can log into the toolkit. Disable rather than deleting the account.">ⓘ</span>
-      </div>
       <div class="danger-row">
         {{ user_form.programmer }}
         <label for="{{ user_form.programmer.id_for_label }}">Programmer</label>

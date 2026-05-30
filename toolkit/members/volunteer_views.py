@@ -5,7 +5,8 @@ from django.contrib.auth.models import User
 from django.contrib.auth.forms import SetPasswordForm
 from django.contrib.auth.tokens import default_token_generator
 from django.core.signing import BadSignature, Signer
-from django.db import transaction
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
@@ -28,8 +29,8 @@ from toolkit.members.forms import (
     TrainingRecordForm,
     GroupTrainingForm,
 )
-from toolkit.members.models import AnonymisationLog, Member, Volunteer, TrainingRecord
-from toolkit.diary.models import Role, RotaEntry, VolunteerEventMark, get_site_config
+from toolkit.members.models import Member, Volunteer, TrainingRecord
+from toolkit.diary.models import Role, RotaEntry, get_site_config
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -63,7 +64,7 @@ def view_volunteer_list(request):
         volunteers = volunteers.filter(status__in=[Volunteer.STATUS_ACTIVE, Volunteer.STATUS_DORMANT])
     else:
         volunteers = volunteers.filter(status=Volunteer.STATUS_ACTIVE)
-    active_count = sum(1 for v in volunteers if v.active)
+    active_count = sum(1 for v in volunteers if v.is_active)
     context = {
         "volunteers": volunteers,
         "default_mugshot": settings.DEFAULT_MUGSHOT,
@@ -103,7 +104,7 @@ def export_volunteers_as_csv(request):
         ]
     )
 
-    volunteers = Volunteer.objects.filter(active=True).order_by("member__name")
+    volunteers = Volunteer.objects.active().order_by("member__name")
     for volunteer in volunteers:
         writer.writerow(
             [
@@ -132,7 +133,9 @@ def view_volunteer_summary(request):
     order = request.GET.get("order", "name")
 
     base_qs = (
-        Volunteer.objects.exclude(status=Volunteer.STATUS_RETIRED)
+        Volunteer.objects.exclude(
+            status__in=[Volunteer.STATUS_RETIRED, Volunteer.STATUS_ANONYMISED]
+        )
         .select_related("member", "user")
         .annotate(
             is_programmer=Exists(
@@ -168,12 +171,175 @@ def view_volunteer_summary(request):
 
 @panopticon_required
 @require_safe
+def view_volunteer_pool_health(request):
+    """Read-only Panopticon view of volunteers needing attention.
+
+    Surfaces three tiers ordered by how safe it is to anonymise them:
+
+      1. Never onboarded — past retention window, never logged in. These accounts
+         have no engagement history; safest to remove.
+      2. Long inactive — past retention window, previously logged in. They used to
+         participate; still clearly eligible under data-minimisation.
+      3. Recently dormant — marked dormant but within the retention window. May
+         still return; no bulk action available here.
+
+    The dormant section (tier 3) excludes any volunteer already in tiers 1/2 to
+    avoid double-counting.
+    """
+    config = get_site_config()
+
+    all_purge = Volunteer.objects.purge_candidates(config.volunteer_purge_days)
+
+    never_onboarded = (
+        all_purge.filter(user__last_login__isnull=True)
+        .select_related("member", "user")
+        .order_by("last_activity", "member__name")
+    )
+    long_inactive = (
+        all_purge.filter(user__last_login__isnull=False)
+        .select_related("member", "user")
+        .order_by("last_activity", "member__name")
+    )
+
+    purge_pks = all_purge.values_list("pk", flat=True)
+    recently_dormant = (
+        Volunteer.objects.filter(status=Volunteer.STATUS_DORMANT)
+        .exclude(pk__in=purge_pks)
+        .select_related("member", "user")
+        .order_by("user__last_login", "member__name")
+    )
+
+    context = {
+        "never_onboarded": never_onboarded,
+        "never_onboarded_count": never_onboarded.count(),
+        "long_inactive": long_inactive,
+        "long_inactive_count": long_inactive.count(),
+        "recently_dormant": recently_dormant,
+        "recently_dormant_count": recently_dormant.count(),
+        "dormancy_days": config.volunteer_dormancy_days,
+        "never_logged_in_grace_days": config.volunteer_never_logged_in_grace_days,
+        "purge_days": config.volunteer_purge_days,
+    }
+    return render(request, "volunteer_pool_health.html", context)
+
+
+@panopticon_required
+def bulk_anonymise_volunteers(request):
+    """Two-step bulk anonymisation for purge candidates.
+
+    Step 1 (POST from pool-health page): receive selected volunteer IDs, re-validate
+    that each is still a purge candidate, show a confirmation page with a typed-phrase
+    guard.
+
+    Step 2 (POST from confirmation page): execute anonymise() on each. Passing the IDs
+    through hidden fields avoids any session state.
+
+    Only purge candidates (dormant/retired past the retention window) can be bulk-
+    anonymised here. Volunteers outside that cohort are silently skipped so a stale
+    selection (e.g. one record was edited between page load and confirm) never errors.
+    """
+    config = get_site_config()
+    purge_days = config.volunteer_purge_days
+
+    if request.method == "POST":
+        action = request.POST.get("action", "select")
+
+        if action == "select":
+            raw_ids = request.POST.getlist("volunteer_ids")
+            try:
+                selected_ids = [int(i) for i in raw_ids if i]
+            except ValueError:
+                messages.error(request, "Invalid volunteer selection.")
+                return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
+
+            if not selected_ids:
+                messages.warning(request, "No volunteers selected.")
+                return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
+
+            candidates = (
+                Volunteer.objects.purge_candidates(purge_days)
+                .filter(pk__in=selected_ids)
+                .select_related("member", "user")
+                .order_by("member__name")
+            )
+            candidates = list(candidates)
+            if not candidates:
+                messages.warning(
+                    request,
+                    "None of the selected volunteers are currently purge candidates "
+                    "(they may have been edited since the page loaded).",
+                )
+                return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
+
+            return render(
+                request,
+                "bulk_anonymise_confirm.html",
+                {
+                    "candidates": candidates,
+                    "count": len(candidates),
+                    "expected_phrase": f"anonymise {len(candidates)} volunteers",
+                },
+            )
+
+        elif action == "confirm":
+            raw_ids = request.POST.getlist("volunteer_ids")
+            try:
+                selected_ids = [int(i) for i in raw_ids if i]
+            except ValueError:
+                messages.error(request, "Invalid volunteer selection.")
+                return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
+
+            candidates = list(
+                Volunteer.objects.purge_candidates(purge_days)
+                .filter(pk__in=selected_ids)
+                .select_related("member", "user")
+            )
+            expected_phrase = f"anonymise {len(candidates)} volunteers"
+            confirm_text = request.POST.get("confirm_phrase", "").strip()
+
+            if confirm_text != expected_phrase:
+                messages.error(
+                    request,
+                    f'Confirmation phrase did not match — type exactly: "{expected_phrase}"',
+                )
+                return render(
+                    request,
+                    "bulk_anonymise_confirm.html",
+                    {
+                        "candidates": candidates,
+                        "count": len(candidates),
+                        "expected_phrase": expected_phrase,
+                    },
+                )
+
+            anonymised = 0
+            for vol in candidates:
+                rota_count = vol.anonymise(performed_by=request.user)
+                logger.info(
+                    "Volunteer pk=%s bulk-anonymised by %s (%d rota entries cleared)",
+                    vol.pk,
+                    request.user.username,
+                    rota_count,
+                )
+                anonymised += 1
+
+            messages.success(
+                request,
+                f"Anonymised {anonymised} volunteer record{'s' if anonymised != 1 else ''}.",
+            )
+            return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
+
+    return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
+
+
+@panopticon_required
+@require_safe
 def view_volunteer_role_report(request):
     # Build dict of role names -> volunteer names
     role_vol_map = {}
     # Query for active volunteers, sorted by name
     volunteer_query = (
-        Role.objects.filter(volunteer__active=True)
+        Role.objects.filter(volunteer__status=Volunteer.STATUS_ACTIVE)
         .values_list("name", "volunteer__id", "volunteer__member__name")
         .order_by("volunteer__member__name", "name")
     )
@@ -194,86 +360,40 @@ def view_volunteer_role_report(request):
     return render(request, "volunteer_role_report.html", context)
 
 
-@panopticon_required
-@require_safe
-def select_volunteer(request, action, active=True):
-    # This view is called to retire / unretire a volunteer. It presents a list
-    # of all volunteer names and a button. If the view is called with
-    # "action=retire" in the url then it shows a "retire" button linked to the
-    # retire url, and if it's called with "action=unretire" it shows a link to
-    # the unretire url.
-    #
-    # The selection of volunteers (retired vs unretired) is decided by the
-    # "active" parameter to this method, which is set by the url route,
-    # depending on which view was used. This is probably not the simplest way
-    # to do this...
-    action_urls = {
-        "retire": reverse("inactivate-volunteer"),
-        "unretire": reverse("activate-volunteer"),
-    }
-
-    assert action in action_urls
-    assert isinstance(active, bool)
-
-    volunteers = (
-        Volunteer.objects.filter(active=active)
-        .order_by("member__name")
-        .select_related()
-    )
-
-    context = {
-        "volunteers": volunteers,
-        "action": action,
-        "action_url": action_urls[action],
-    }
-
-    return render(request, "select_volunteer.html", context)
-
-
-@panopticon_required
-@require_POST
-def activate_volunteer(request, set_active=True):
-    # Sets the 'active' value for the volunteer with the id passed  in the
-    # 'volunteer' parameter of the POST request
-
-    vol_pk = request.POST.get("volunteer", None)
-
-    vol = get_object_or_404(Volunteer, id=vol_pk)
-
-    assert isinstance(set_active, bool)
-    vol.status = Volunteer.STATUS_ACTIVE if set_active else Volunteer.STATUS_RETIRED
-    vol.save()
-
-    logger.info(
-        f"{request.user.last_name} set status to {vol.status} for volunteer {vol.member.name}"
-    )
-    messages.add_message(
-        request,
-        messages.SUCCESS,
-        f"{'Unretired' if set_active else 'Retired'} volunteer {vol.member.name}",
-    )
-    # email admin with the news (only if vols_admin_address is configured)
+def _notify_vols_admin_status_change(request, vol, now_active):
+    # Volunteer status (active / dormant / retired) is edited on the volunteer's
+    # own profile page. When that change moves a volunteer on or off the active
+    # roster, email the volunteers admin so the mailing list can be kept in step.
+    # No-op when no vols_admin_address is configured.
     vols_admin = settings.VENUE.get("vols_admin_address") or []
-    if vols_admin:
-        admin_body = (
-            f"I'm delighted to inform you that {request.user.last_name} has updated the "
-            f"status of volunteer\n\n"
-            f"{vol.member.name} <{vol.member.email}>\n\n"
-            f"to {'unretired' if set_active else 'retired'}.\n\n"
-            f"Please amend the volunteers mailing list "
+    if not vols_admin:
+        return
+
+    status_label = vol.get_status_display()
+    if now_active:
+        action_line = (
+            f"to {status_label}.\n\n"
+            f"Please add them back to the volunteers mailing list "
             f"at your earliest convenience."
         )
-        send_mail(
-            (
-                f"[{settings.VENUE['longname']}] Change in volunteer status {vol.member.name}"
-            ),
-            admin_body,
-            settings.VENUE["mailout_from_address"],
-            vols_admin,
-            fail_silently=False,
+    else:
+        action_line = (
+            f"to {status_label}.\n\n"
+            f"Please remove them from the volunteers mailing list "
+            f"at your earliest convenience."
         )
-
-    return HttpResponseRedirect(reverse("view-volunteer-summary"))
+    admin_body = (
+        f"{request.user.last_name} has updated the status of volunteer\n\n"
+        f"{vol.member.name} <{vol.member.email}>\n\n"
+        f"{action_line}"
+    )
+    send_mail(
+        f"[{settings.VENUE['longname']}] Change in volunteer status {vol.member.name}",
+        admin_body,
+        settings.VENUE["mailout_from_address"],
+        vols_admin,
+        fail_silently=False,
+    )
 
 
 @login_required
@@ -295,6 +415,12 @@ def edit_volunteer(request, volunteer_id, create_new=False):
         member = volunteer.member
         user = volunteer.user
         new_training_record = TrainingRecord(volunteer=volunteer)
+        # Remember whether they were on the active roster, so we can notify the
+        # volunteers admin if this edit moves them on or off it (see below).
+        was_active = volunteer.is_active
+        # Remember suspension state so we can flag the safeguarding side-effects
+        # (login disabled, shifts cleared) to the operator after saving.
+        was_suspended = volunteer.status == Volunteer.STATUS_SUSPENDED
     else:
         # Called from "add" url — Panopticon only
         if not is_panopticon:
@@ -347,6 +473,32 @@ def edit_volunteer(request, volunteer_id, create_new=False):
 
             vol_form.save()
 
+            if not create_new and volunteer.is_active != was_active:
+                logger.info(
+                    f"{request.user.last_name} set status to {volunteer.status} "
+                    f"for volunteer {volunteer.member.name}"
+                )
+                _notify_vols_admin_status_change(
+                    request, volunteer, volunteer.is_active
+                )
+
+            now_suspended = volunteer.status == Volunteer.STATUS_SUSPENDED
+            if not create_new and now_suspended and not was_suspended:
+                messages.add_message(
+                    request,
+                    messages.WARNING,
+                    f"{member.name} has been suspended: their login is now "
+                    f"disabled and they have been removed from all upcoming shifts.",
+                )
+            elif not create_new and was_suspended and not now_suspended:
+                messages.add_message(
+                    request,
+                    messages.INFO,
+                    f"{member.name}'s suspension has been lifted — their login is "
+                    f"restored and they are back on the rota. Any shifts they were "
+                    f"removed from were not added back automatically.",
+                )
+
             if user_form is not None:
                 user_form.save(granted_by=request.user)
 
@@ -361,6 +513,14 @@ def edit_volunteer(request, volunteer_id, create_new=False):
             )
 
             if create_new:
+                # Send the new volunteer a welcome email with a password-set link.
+                # They use it to choose their own password before first login.
+                if user.email:
+                    _send_password_set_email(request, user, welcome=True)
+                    logger.info(
+                        "Welcome email sent to new volunteer pk=%s", volunteer.pk
+                    )
+
                 # Email admin (only if vols_admin_address is configured)
                 vols_admin = settings.VENUE.get("vols_admin_address") or []
                 if vols_admin:
@@ -424,7 +584,7 @@ def add_volunteer_training_record(request, volunteer_id):
         prefix="training",
     )
 
-    if not volunteer.active:
+    if not volunteer.is_active:
         response = {"succeeded": False, "errors": "volunteer is not active"}
         return JsonResponse(response)
     elif record_form.is_valid():
@@ -459,7 +619,7 @@ def add_volunteer_training_record(request, volunteer_id):
 def delete_volunteer_training_record(request, training_record_id):
     record = get_object_or_404(TrainingRecord, id=training_record_id)
 
-    if not record.volunteer.active:
+    if not record.volunteer.is_active:
         logger.error("Tried to delete training record for inactive volunteer")
         return HttpResponse(
             "Can't delete record for inactive volunteer",
@@ -480,7 +640,7 @@ def view_volunteer_training_records(request):
     # Two sets of data, the complicated one (training records) and the simpler
     # one (all active volunteers, for the 'general' dates.)
     records = (
-        TrainingRecord.objects.filter(volunteer__active=True)
+        TrainingRecord.objects.filter(volunteer__status=Volunteer.STATUS_ACTIVE)
         .filter(volunteer__roles=F("role"))
         .select_related()
         .prefetch_related("role")
@@ -517,7 +677,7 @@ def view_volunteer_training_records(request):
     ).order_by("-training_date")
 
     volunteers = (
-        Volunteer.objects.filter(active=True)
+        Volunteer.objects.active()
         .order_by("member__name")
         .select_related()
         # Use above queryset to prepopulate a 'general_training'
@@ -619,71 +779,7 @@ def anonymise_volunteer(request, volunteer_id):
                 reverse("anonymise-volunteer", kwargs={"volunteer_id": volunteer_id})
             )
 
-        with transaction.atomic():
-            anon_label = f"Anonymised volunteer {volunteer.pk}"
-
-            # Clear FK-linked rota entries (primary path)
-            fk_matches.update(volunteer=None, name="")
-            # Legacy fallback: text-match entries where FK was never set
-            name_matches.update(name="")
-
-            # Anonymise the Member record
-            member.name = anon_label
-            member.email = f"anon-{volunteer.pk}@deleted.invalid"
-            member.address = ""
-            member.posttown = ""
-            member.postcode = ""
-            member.country = ""
-            member.phone = ""
-            member.altphone = ""
-            member.personal_pronouns = ""
-            member.notes = ""
-            member.website = ""
-            member.mailout = False
-            member.save()
-
-            # Anonymise the Volunteer record
-            volunteer.notes = ""
-            volunteer.access_intro = ""
-            volunteer.access_needs = ""
-            volunteer.access_links = ""
-            volunteer.emergency_contact_name = ""
-            volunteer.emergency_contact_relationship = ""
-            volunteer.emergency_contact_phone = ""
-            volunteer.dir_share_listed = False
-            volunteer.dir_share_name_style = Volunteer.NAME_STYLE_FULL
-            volunteer.dir_share_pronouns = False
-            volunteer.dir_share_email = False
-            volunteer.dir_share_phone = False
-            volunteer.dir_share_access_rider = False
-            volunteer.dir_share_collectives = False
-            if volunteer.portrait:
-                volunteer.portrait.delete(save=False)
-                volunteer.portrait = None
-            volunteer.status = Volunteer.STATUS_RETIRED
-            volunteer.roles.clear()
-            volunteer.collectives.clear()
-            volunteer.save()
-
-            # Anonymise the Django User account
-            user = volunteer.user
-            user.username = f"anon-{volunteer.pk}"
-            user.first_name = ""
-            user.last_name = ""
-            user.email = ""
-            user.is_active = False
-            user.is_superuser = False
-            user.set_unusable_password()
-            user.save()
-
-            # Remove personal-preference data
-            VolunteerEventMark.objects.filter(volunteer=volunteer).delete()
-            TrainingRecord.objects.filter(volunteer=volunteer).delete()
-
-            AnonymisationLog.objects.create(
-                volunteer_pk=volunteer.pk,
-                performed_by=request.user,
-            )
+        rota_match_count = volunteer.anonymise(performed_by=request.user)
 
         logger.info(
             f"Volunteer pk={volunteer.pk} anonymised by {request.user.username}"
@@ -735,6 +831,56 @@ def set_volunteer_password(request, volunteer_id):
 
 
 @require_POST
+def _send_password_set_email(request, user, welcome=False):
+    """Send a password-set link to a volunteer user.
+
+    welcome=True sends a first-time welcome message; False sends the
+    standard "password reset requested" message used for manual resets.
+    The link uses Django's password-reset token mechanism and is valid
+    for PASSWORD_RESET_TIMEOUT seconds (default 3 days).
+    """
+    token = default_token_generator.make_token(user)
+    uid_b64 = urlsafe_base64_encode(force_bytes(user.pk))
+    reset_url = request.build_absolute_uri(
+        reverse("password_reset_confirm", kwargs={"uidb64": uid_b64, "token": token})
+    )
+    timeout_days = max(1, getattr(settings, "PASSWORD_RESET_TIMEOUT", 259200) // 86400)
+    validity = f"{timeout_days} day" if timeout_days == 1 else f"{timeout_days} days"
+
+    name = user.first_name or user.username
+    venue = settings.VENUE["longname"]
+    from_email = settings.VENUE.get("mailout_from_address") or settings.DEFAULT_FROM_EMAIL
+
+    if welcome:
+        subject = f"[{venue}] Welcome — set your toolkit password"
+        message = (
+            f"Hi {name},\n\n"
+            f"You've been added as a volunteer at {venue}.\n\n"
+            f"Click the link below to set your password and log in to the toolkit "
+            f"(valid for {validity}):\n\n"
+            f"{reset_url}\n\n"
+            f"If you weren't expecting this email, you can ignore it — no account "
+            f"will be activated unless you follow the link."
+        )
+    else:
+        subject = f"[{venue}] Set your toolkit password"
+        message = (
+            f"Hi {name},\n\n"
+            f"A password reset has been requested for your toolkit account.\n\n"
+            f"Click the link below to set a new password (valid for {validity}):\n\n"
+            f"{reset_url}\n\n"
+            f"If you weren't expecting this, you can ignore this email."
+        )
+
+    send_mail(
+        subject=subject,
+        message=message,
+        from_email=from_email,
+        recipient_list=[user.email],
+        fail_silently=False,
+    )
+
+
 def send_volunteer_password_reset(request, volunteer_id):
     """Send a password reset email to a volunteer (Panopticon only)."""
     if not request.user.is_superuser:
@@ -746,47 +892,11 @@ def send_volunteer_password_reset(request, volunteer_id):
         messages.error(request, "This volunteer has no linked user account or no email address.")
         return HttpResponseRedirect(reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id}))
 
-    from django.utils.encoding import force_bytes
-    from django.utils.http import urlsafe_base64_encode
-    token = default_token_generator.make_token(user)
-    uid_b64 = urlsafe_base64_encode(force_bytes(user.pk))
-    reset_url = request.build_absolute_uri(
-        reverse("password_reset_confirm", kwargs={"uidb64": uid_b64, "token": token})
-    )
-
-    send_mail(
-        subject=f"[{settings.VENUE['longname']}] Set your password",
-        message=(
-            f"Hi {user.first_name or user.username},\n\n"
-            f"A Panopticon user has requested a password reset for your account.\n\n"
-            f"Click the link below to set your password (valid for 24 hours):\n\n"
-            f"{reset_url}\n\n"
-            f"If you weren't expecting this, you can ignore this email."
-        ),
-        from_email=settings.VENUE.get("mailout_from_address") or settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user.email],
-        fail_silently=False,
-    )
+    _send_password_set_email(request, user, welcome=False)
     logger.info(
         "Password reset email sent to volunteer pk=%s by %s", volunteer_id, request.user.username
     )
     messages.success(request, f"Password reset email sent to {user.email}.")
-    return HttpResponseRedirect(reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id}))
-
-
-@require_POST
-@panopticon_required
-def clear_login_inactive(request, volunteer_id):
-    """Clear the login-inactive flag after a panopticon user has followed up."""
-    volunteer = get_object_or_404(Volunteer, pk=volunteer_id)
-    volunteer.login_inactive = False
-    volunteer.save(update_fields=["login_inactive"])
-    logger.info(
-        "login_inactive flag cleared for volunteer pk=%s by %s",
-        volunteer_id,
-        request.user.username,
-    )
-    messages.success(request, f"Inactivity flag cleared for {volunteer.member.name}.")
     return HttpResponseRedirect(reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id}))
 
 
@@ -816,6 +926,33 @@ def view_volunteer_directory(request):
         "volunteer_directory.html",
         {"volunteers": volunteers, "query": query, "own_volunteer_pk": own_volunteer_pk},
     )
+
+
+@require_POST
+@login_required
+def reactivate_self(request):
+    """Let a dormant volunteer put themselves back on the active roster in one click.
+
+    Triggered from the welcome-back dashboard card. Only acts on the requesting
+    user's own record, and only when they are currently Dormant — so it can't be
+    used to climb out of a Retired or Suspended state, which are deliberate
+    admin/safeguarding decisions.
+    """
+    try:
+        volunteer = request.user.volunteer
+    except Exception:
+        return HttpResponseRedirect(reverse("toolkit-index"))
+
+    if volunteer.status == Volunteer.STATUS_DORMANT:
+        volunteer.status = Volunteer.STATUS_ACTIVE
+        volunteer.save(update_fields=["status"])
+        logger.info("Volunteer pk=%s reactivated themselves from dormant", volunteer.pk)
+        _notify_vols_admin_status_change(request, volunteer, now_active=True)
+        messages.success(
+            request,
+            "Welcome back! You're active again and back on the volunteer roster.",
+        )
+    return HttpResponseRedirect(reverse("toolkit-index"))
 
 
 @require_safe

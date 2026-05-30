@@ -83,7 +83,7 @@ class Command(BaseCommand):
             )
             return
 
-        vols = Volunteer.objects.filter(active=True).order_by("member__name")
+        vols = Volunteer.objects.active().order_by("member__name")
 
         self.stdout.write(
             self.style.SUCCESS(f"{len(vols)} active volunteers to check\n")
@@ -111,9 +111,7 @@ class Command(BaseCommand):
         )
 
         for mmvol in mmvols:
-            matched = Volunteer.objects.filter(member__email=mmvol).filter(
-                active=True
-            )
+            matched = Volunteer.objects.active().filter(member__email=mmvol)
             if matched:
                 if len(matched) > 1:
                     self.stdout.write(

@@ -80,7 +80,11 @@ class UserForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ("username", "is_active", "is_superuser")
+        # NB: login access is *not* edited here. It is driven by
+        # Volunteer.status — setting status to "suspended" disables the
+        # account (see Volunteer.save). This keeps status as the single
+        # canonical control rather than a second, easily-desynced switch.
+        fields = ("username", "is_superuser")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -171,6 +175,17 @@ class VolunteerForm(forms.ModelForm):
         self.fields["roles"].queryset = self.fields["roles"].queryset.order_by(
             "-standard", "name"
         )
+
+        # Suspension is a Panopticon-only safeguarding action; anonymised is
+        # set only by the anonymise flow. Filter accordingly.
+        excluded = {toolkit.members.models.Volunteer.STATUS_ANONYMISED}
+        if not is_superuser:
+            excluded.add(toolkit.members.models.Volunteer.STATUS_SUSPENDED)
+        self.fields["status"].choices = [
+            (value, label)
+            for value, label in self.fields["status"].choices
+            if value not in excluded
+        ]
 
         # Collectives: superusers see all; others see only open collectives.
         from toolkit.labs.models import Collective
@@ -275,9 +290,9 @@ class GroupTrainingForm(forms.Form):
     training_date = forms.DateField(required=True, initial=datetime.date.today)
     trainer = forms.CharField(min_length=2, max_length=128, required=True)
     volunteers = forms.ModelMultipleChoiceField(
-        queryset=Member.objects.filter(volunteer__active=True).order_by(
-            "name"
-        ),
+        queryset=Member.objects.filter(
+            volunteer__status=toolkit.members.models.Volunteer.STATUS_ACTIVE
+        ).order_by("name"),
         widget=ChosenSelectMultiple(attrs={"size": "8"}),
         required=True,
     )

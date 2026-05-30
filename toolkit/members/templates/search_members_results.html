@@ -71,7 +71,7 @@ $(document).ready(function() {
 {% endif %}
 <td>{{ member.mailout|yesno }}</td>
 <td>{% if member.volunteer %}
-        {% if member.volunteer.active %}
+        {% if member.volunteer.is_active %}
             <form method="get" action="{% url "edit-volunteer" member.volunteer.pk %}"><input type="submit" value="Edit"></form>
         {% else %}
             Retired
