@@ -910,6 +910,7 @@ class SiteConfigurationForm(forms.ModelForm):
             "image_copyright_guidance_url",
             "alt_text_guidance_url",
             "access_rider_guidance_url",
+            "lost_and_found_retain_days",
             "bulletin_default_expiry_days",
             "bulletin_guidance",
             "bulletin_post_permission",
@@ -938,12 +939,8 @@ class SiteConfigurationForm(forms.ModelForm):
             "banner_text": forms.Textarea(
                 attrs={"rows": 3, "class": "form-control"}
             ),
-            "collectives_intro": forms.Textarea(
-                attrs={"rows": 4, "class": "form-control"}
-            ),
-            "donations_intro": forms.Textarea(
-                attrs={"rows": 6, "class": "form-control"}
-            ),
+            "collectives_intro": HtmlTextarea(),
+            "donations_intro": HtmlTextarea(),
             "bulletin_guidance": forms.Textarea(
                 attrs={"rows": 6, "class": "form-control"}
             ),
