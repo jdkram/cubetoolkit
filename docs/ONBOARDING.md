@@ -132,6 +132,18 @@ For production setup (interactive password prompts per account):
 docker compose exec toolkit /venv/bin/python3 manage.py configure_toolkit_users
 ```
 
+After the first run, visit `/toolkit/site-config/` as a Panopticon user and review the site settings. The defaults are calibrated for the Cube Microplex; an S+S install should set at least these:
+
+| Setting | S+S value |
+|---------|-----------|
+| Films start on time | ✓ |
+| Rota clear email prompt | off |
+| Show archive images | off |
+| Images start date | 1 May 2018 |
+| Rota show tags | off |
+| Max count per role | 30 |
+| General training enabled | off |
+
 ### 5. Stop the services
 
 ```bash

@@ -3,11 +3,11 @@ import datetime
 from unittest.mock import patch
 
 from django.test import TestCase
-from django.test.utils import override_settings
 from django.db import IntegrityError
 from django.core.exceptions import ValidationError
 
 from toolkit.members.models import Member, TrainingRecord, Volunteer
+from toolkit.diary.models import Role
 
 from .common import MembersTestsMixin
 
@@ -53,10 +53,11 @@ class TestTrainingRecord(MembersTestsMixin, TestCase):
         self.assertRaises(IntegrityError, record.save)
 
     def test_clean_save_fail_role_when_general(self):
+        role = Role.objects.first()
         record = TrainingRecord(
             training_type=TrainingRecord.GENERAL_TRAINING,
             volunteer=self.vol_1,
-            role=self.vol_1.roles.all()[0],
+            role=role,
             trainer="Nike Air Jordan",
             notes="A#",
             training_date=datetime.date(year=2010, month=2, day=27),
@@ -65,7 +66,6 @@ class TestTrainingRecord(MembersTestsMixin, TestCase):
         # This isn't (currently) enforced:
         record.save()
 
-    @override_settings(DEFAULT_TRAINING_EXPIRY_MONTHS=6)
     @patch("toolkit.members.models.get_site_config")
     @patch("toolkit.members.models.timezone_now")
     def test_has_expired_true(self, now_mock, config_mock):
@@ -87,7 +87,6 @@ class TestTrainingRecord(MembersTestsMixin, TestCase):
         self.assertTrue(record.has_expired(expiry_age=0))
         self.assertFalse(record.has_expired(expiry_age=7))
 
-    @override_settings(DEFAULT_TRAINING_EXPIRY_MONTHS=6)
     @patch("toolkit.members.models.timezone_now")
     def test_has_expired_false(self, now_mock):
 

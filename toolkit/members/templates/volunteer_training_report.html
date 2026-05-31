@@ -119,6 +119,7 @@ Show:<br>
   </ul>
 </div>
 {% endfor %}
+{% if general_training_enabled %}
 <div>
   <h2>General Safety Training</h2>
   <ul>
@@ -140,5 +141,6 @@ Show:<br>
   {% endfor %}
   </ul>
 </div>
+{% endif %}
 
 {% endblock %}

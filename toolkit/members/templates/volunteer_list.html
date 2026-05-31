@@ -118,6 +118,7 @@ Active {{ VENUE.name }} volunteers: {{ active_count }}</p>
                     {% else %}
                        <p><em><b>No GDPR opt-in</b></em></p>
                     {% endif %}
+                    {% if general_training_enabled %}
                     {% with volunteer.general_training.0 as general_training %}
                     {% if not general_training %}
                     <em>Needs {{ general_training_desc }}</em><br>
@@ -125,8 +126,8 @@ Active {{ VENUE.name }} volunteers: {{ active_count }}</p>
                     <em>{{ general_training_desc }} out of date ({{ general_training.training_date|date:"d/m/Y" }})</em><br>
                     {% endif %}
                     {% endwith %}
+                    {% endif %}
                     <p><b>notes:</b> {{ volunteer.notes|default:"" }}</p>
-                    <p><b>roles:</b>{{ volunteer.roles.all|join:", "|lower|default:"<em>Request role information</em>" }}</p>
                     <p>{{ member.email|urlize|default:"<em>Request email address</em>" }}<br>
                     {% if member.address %}<br>{% endif %}
                     {% if member.postcode %}{{ member.postcode }}<br>{% endif %}

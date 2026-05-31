@@ -171,11 +171,6 @@ class VolunteerForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self._is_superuser = is_superuser
 
-        # Force ordering of roles list to be by "standard" role type, then name
-        self.fields["roles"].queryset = self.fields["roles"].queryset.order_by(
-            "-standard", "name"
-        )
-
         # Suspension is a Panopticon-only safeguarding action; anonymised is
         # set only by the anonymise flow. Filter accordingly.
         excluded = {toolkit.members.models.Volunteer.STATUS_ANONYMISED}
@@ -214,7 +209,7 @@ class VolunteerForm(forms.ModelForm):
     class Meta:
         model = toolkit.members.models.Volunteer
         fields = (
-            "portrait", "notes", "roles", "status",
+            "portrait", "notes", "status",
             "access_intro", "access_needs", "access_links",
             "emergency_contact_name", "emergency_contact_relationship", "emergency_contact_phone",
             "dir_share_listed", "dir_share_name_style",
@@ -225,7 +220,6 @@ class VolunteerForm(forms.ModelForm):
         )
         widgets = {
             "notes": forms.Textarea(attrs={"wrap": "soft", "rows": 4}),
-            "roles": forms.CheckboxSelectMultiple(),
             "status": forms.RadioSelect(),
             "access_intro": forms.Textarea(attrs={"rows": 3, "maxlength": 500}),
             "access_needs": forms.Textarea(attrs={"rows": 5}),
@@ -278,6 +272,14 @@ class TrainingRecordForm(forms.ModelForm):
     class Meta:
         model = TrainingRecord
         fields = ("training_type", "role", "trainer", "training_date", "notes")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from toolkit.diary.models import get_site_config
+        if not get_site_config().general_training_enabled:
+            self.fields["training_type"].choices = [
+                (TrainingRecord.ROLE_TRAINING, "Role Specific Training")
+            ]
 
 
 class GroupTrainingForm(forms.Form):
