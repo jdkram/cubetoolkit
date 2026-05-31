@@ -23,6 +23,23 @@
     .access-tier strong {
         color: #333;
     }
+    .index-link-groups ul {
+        list-style: none;
+        padding-left: 0;
+        margin-bottom: 0.25rem;
+    }
+    .index-link-groups li {
+        padding: 0.2rem 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .index-link-groups li:last-child {
+        border-bottom: none;
+    }
+    .index-link-groups h3 {
+        margin-top: 1.25rem;
+        margin-bottom: 0.25rem;
+        font-size: 1.1rem;
+    }
     .dashboard-empty {
         color: #888;
         font-size: 0.9em;
@@ -360,7 +377,6 @@
   {% endif %}
 
 </div>
-<hr class="mt-0 mb-4">
 <script>
 (function() {
     var KEYS = ['dash_bulletins','dash_upcoming_shifts','dash_starred_events','dash_rota_gaps','dash_new_showings','dash_shopping','dash_training','dash_unconfirmed'];
@@ -498,13 +514,13 @@
 
 {# Superuser-managed link groups — no heading, categories self-label #}
 {% if object_list or user.is_superuser %}
-<hr class="mt-2 mb-3">
+<hr class="mt-4 mb-3">
+<div class="index-link-groups">
 {% if user.is_superuser %}
 <div class="text-end mb-2">
   <a href="{% url "create-index-link" %}" class="btn btn-sm btn-outline-secondary">+ Add link</a>
   <a href="{% url "create-index-category" %}" class="btn btn-sm btn-outline-secondary">+ Add group</a>
 </div>
-{% endif %}
 {% endif %}
 {% if object_list %}
 <ul>
@@ -527,6 +543,8 @@
 </ul>
 {% elif user.is_superuser %}
 <p class="text-muted"><small>No link groups yet.</small></p>
+{% endif %}
+</div>
 {% endif %}
 
 <hr>

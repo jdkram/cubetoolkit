@@ -33,16 +33,7 @@ body {
   background: none;
   border: none;
 }
-/* Muted access-tier reminder tags — shown next to nav items that require elevated permissions.
- * Opacity works in both navbar (white text on dark) and dropdown (dark text on white) contexts. */
-.nav-tier {
-  font-size: 0.62em;
-  font-weight: 400;
-  opacity: 0.5;
-  margin-left: 0.2em;
-  vertical-align: middle;
-  letter-spacing: 0.01em;
-}
+
 </style>
 {% endblock %}
 
@@ -81,15 +72,21 @@ body {
 
           {% if perms.toolkit.write %}
           <li class="nav-item">
-            <a class="nav-link" href="{% url "default-edit" %}">Diary<span class="nav-tier">Prog</span></a>
+            <a class="nav-link" href="{% url "default-edit" %}">Diary</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="{% url "diary-edit-calendar" %}">Calendar<span class="nav-tier">Prog</span></a>
+            <a class="nav-link" href="{% url "diary-edit-calendar" %}">Calendar</a>
           </li>
           {% endif %}
 
-          <li class="nav-item">
-            <a class="nav-link" href="{% url "default-view" %}">Website</a>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="{% url "default-view" %}" id="dropdown-website" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Website</a>
+            <div class="dropdown-menu" aria-labelledby="dropdown-website">
+              <a class="dropdown-item" href="{% url "default-view" %}">Public programme</a>
+              {% if user.is_superuser %}
+              <a class="dropdown-item" href="{% url "wagtailadmin_home" %}">Wagtail CMS</a>
+              {% endif %}
+            </div>
           </li>
 
           <li class="nav-item dropdown">
@@ -108,14 +105,14 @@ body {
               <a class="dropdown-item" href="{% url "toolkit-access" %}">Access levels</a>
               {% if user.is_superuser %}
               <div class="dropdown-divider"></div>
-              <a class="dropdown-item" href="{% url "labs-donations-manage" %}">Manage donations<span class="nav-tier">Panop</span></a>
+              <a class="dropdown-item" href="{% url "labs-donations-manage" %}">Manage donations</a>
               {% endif %}
             </div>
           </li>
 
           {% if perms.toolkit.write %}
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="dropdown-meta" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Meta<span class="nav-tier">Prog</span></a>
+            <a class="nav-link dropdown-toggle" href="#" id="dropdown-meta" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Meta</a>
             <div class="dropdown-menu" aria-labelledby="dropdown-meta">
               <a class="dropdown-item" href="{% url "edit_event_tags" %}">Tags</a>
               <a class="dropdown-item" href="{% url "edit_event_templates" %}">Templates</a>
@@ -127,7 +124,7 @@ body {
               <a class="dropdown-item" href="{% url "edit-printed-programmes" %}">Upload printed programmes</a>
               {% if user.is_superuser %}
               <div class="dropdown-divider"></div>
-              <a class="dropdown-item" href="{% url "edit_roles" %}">Roles<span class="nav-tier">Panop</span></a>
+              <a class="dropdown-item" href="{% url "edit_roles" %}">Roles</a>
               {% endif %}
             </div>
           </li>
@@ -135,7 +132,7 @@ body {
 
           {% if user.is_superuser %}
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="{% url "search-members" %}" id="dropdown-members" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Members<span class="nav-tier">Panop</span></a>
+            <a class="nav-link dropdown-toggle" href="{% url "search-members" %}" id="dropdown-members" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Members</a>
             <div class="dropdown-menu" aria-labelledby="dropdown-members">
               <a class="dropdown-item" href="{% url "add-member" %}">Add Member</a>
               <a class="dropdown-item" href="{% url "search-members" %}">Search Members</a>
@@ -150,7 +147,7 @@ body {
           </li>
 
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="{% url "view-volunteer-summary" %}" id="dropdown-volunteers" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Volunteers<span class="nav-tier">Panop</span></a>
+            <a class="nav-link dropdown-toggle" href="{% url "view-volunteer-summary" %}" id="dropdown-volunteers" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Volunteers</a>
             <div class="dropdown-menu" aria-labelledby="dropdown-volunteers">
               <a class="dropdown-item" href="{% url "view-volunteer-summary" %}">Summary</a>
               <a class="dropdown-item" href="{% url "view-volunteer-list" %}">Profiles</a>
@@ -166,16 +163,14 @@ body {
             </div>
           </li>
 
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="dropdown-admin" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Admin<span class="nav-tier">Panop</span></a>
-            <div class="dropdown-menu" aria-labelledby="dropdown-admin">
-              <a class="dropdown-item" href="{% url "edit-site-configuration" %}">Site settings</a>
-              <a class="dropdown-item" href="{% url "wagtailadmin_home" %}">Wagtail CMS</a>
-              {% if VENUE.show_user_management %}
-              <a class="dropdown-item" href="/toolkit/admin/">Administration backend</a>
-              {% endif %}
-            </div>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url "edit-site-configuration" %}">Site settings</a>
           </li>
+          {% if VENUE.show_user_management %}
+          <li class="nav-item">
+            <a class="nav-link" href="/toolkit/admin/">Admin backend</a>
+          </li>
+          {% endif %}
           {% endif %}
 
           {% if user.volunteer.pk %}
