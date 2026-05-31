@@ -110,6 +110,55 @@ Editing {{ event_list_name }}
       white-space: nowrap;
   }
 
+  /* Sticky thead: overflow-x:clip on the wrapper avoids creating a scroll
+     container (which overflow-x:auto does), so position:sticky can escape
+     to the viewport rather than being confined to the div. */
+  .diary-month-table-wrap {
+      overflow-x: clip;
+  }
+  table.table thead th {
+      position: sticky;
+      top: 3.6rem;
+      z-index: 20;
+      background: white;
+  }
+
+  /* ── Responsive tiers ────────────────────────────────────────── */
+
+  /* Tier 1 (≤1000px): tighten fixed columns; truncate room header text.
+     max-width:0 is the trick that makes text-overflow fire on fixed-layout
+     table cells — the col width still wins for actual sizing. */
+  @media (max-width: 1000px) {
+      col.col-bookedby { width: 7rem; }
+      col.col-other    { width: 5.5rem; }
+      table.table thead th.room-col {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          max-width: 0;
+      }
+  }
+
+  /* Tier 2 (≤768px): re-enable horizontal scroll (sacrifices sticky headers,
+     which don't work usefully inside an overflow-x:auto container anyway);
+     hide Booked by column (less useful on a quick mobile glance). */
+  @media (max-width: 768px) {
+      .diary-month-table-wrap { overflow-x: auto; }
+      table.table thead th    { position: static; }
+      table.table             { min-width: 38rem; }
+      col.col-bookedby,
+      th.col-bookedby,
+      td.col-bookedby         { display: none; }
+  }
+
+  /* Tier 3 (≤480px): also hide Other column; table can be a bit narrower. */
+  @media (max-width: 480px) {
+      col.col-other,
+      th.other-col,
+      td.other-col            { display: none; }
+      table.table             { min-width: 28rem; }
+  }
+
   /* "Other rooms" column — narrow, no colour stripe */
   th.other-col, td.other-col {
       min-width: 5rem;
@@ -280,7 +329,7 @@ function filter_events() {
 {% for day, time_groups in dates.items %}
   {% ifchanged day|date:"Y-m" %}
     {% if not forloop.first %}</tbody></table></div>{% endif %}
-    <div class="table-responsive"><table class="table">
+    <div class="table-responsive diary-month-table-wrap"><table class="table">
     <colgroup>
       <col class="col-date">
       <col class="col-time">
@@ -302,7 +351,7 @@ function filter_events() {
       {% else %}
         <th>Event</th>
       {% endif %}
-      <th class="room-col">Booked by</th>
+      <th class="room-col col-bookedby">Booked by</th>
     </tr></thead>
     <tbody>
   {% endifchanged %}
@@ -345,7 +394,7 @@ function filter_events() {
           <a href="{% url "add-event" %}?date={{ day|date:"j-m-Y" }}&time={{ slot_local|date:"G:i" }}" class="other-room-add">+</a>
         </td>
       {% endif %}
-      <td class="room-col">{% for s in slot_showings %}{{ s.booked_by }}{% if not s.confirmed %} <span class="pencilled-at" title="Pencilled in on {{ s.created_at|date:"d-m-y" }}">(&#x270f;&#xfe0f;{{ s.created_at|date:"d-m-y" }})</span>{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+      <td class="room-col col-bookedby">{% for s in slot_showings %}{{ s.booked_by }}{% if not s.confirmed %} <span class="pencilled-at" title="Pencilled in on {{ s.created_at|date:"d-m-y" }}">(&#x270f;&#xfe0f;{{ s.created_at|date:"d-m-y" }})</span>{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
     </tr>
     {% else %}
     {% for showing in slot_showings %}
@@ -372,7 +421,7 @@ function filter_events() {
         </a>
         {{ showing.sold_out|yesno:"(marked SOLD OUT)," }}
       </td>
-      <td class="room-col">{{ showing.booked_by }}{% if not showing.confirmed %} <span class="pencilled-at" title="Pencilled in on {{ showing.created_at|date:"d-m-y" }}">(&#x270f;&#xfe0f;{{ showing.created_at|date:"d-m-y" }})</span>{% endif %}</td>
+      <td class="room-col col-bookedby">{{ showing.booked_by }}{% if not showing.confirmed %} <span class="pencilled-at" title="Pencilled in on {{ showing.created_at|date:"d-m-y" }}">(&#x270f;&#xfe0f;{{ showing.created_at|date:"d-m-y" }})</span>{% endif %}</td>
     </tr>
     {% endwith %}
     {% endfor %}
@@ -388,7 +437,7 @@ function filter_events() {
       {% else %}
         <td></td>
       {% endif %}
-      <td class="room-col"></td>
+      <td class="room-col col-bookedby"></td>
     </tr>
   {% endfor %}
   {% endwith %}{% endwith %}
