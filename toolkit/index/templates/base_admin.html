@@ -163,14 +163,15 @@ body {
             </div>
           </li>
 
-          <li class="nav-item">
-            <a class="nav-link" href="{% url "edit-site-configuration" %}">Site settings</a>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="{% url "edit-site-configuration" %}" id="dropdown-admin" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Admin</a>
+            <div class="dropdown-menu" aria-labelledby="dropdown-admin">
+              <a class="dropdown-item" href="{% url "edit-site-configuration" %}">Site settings</a>
+              {% if VENUE.show_user_management %}
+              <a class="dropdown-item" href="/toolkit/admin/">Admin backend</a>
+              {% endif %}
+            </div>
           </li>
-          {% if VENUE.show_user_management %}
-          <li class="nav-item">
-            <a class="nav-link" href="/toolkit/admin/">Admin backend</a>
-          </li>
-          {% endif %}
           {% endif %}
 
           {% if user.volunteer.pk %}
