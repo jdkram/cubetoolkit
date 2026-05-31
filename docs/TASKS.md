@@ -5815,4 +5815,70 @@ A volunteer is **solo-eligible** for a role when, for every blocking requirement
 - **Phase 2 (~8–12h):** `blocking` mode + `ShadowLog` + shadow-progression gate + rota slot eligibility display.
 - **Phase 3 (~6–10h):** format-specific difficulty; expiry dashboard tie-in (§8.9); fold legacy `TrainingRecord` into the new model per §8.8.
 
+---
+
+### 9.101 — Lost & found log 🔵 S (8–14h)
+
+**Context.** The Green Room accumulates unclaimed items with no record of when they arrived, who found them, or when they can be disposed of. Coordinators have no way to answer "was a blue jacket handed in last Friday?" without physically searching the pile. Disposal is ad-hoc and undocumented.
+
+**Goal.** A lightweight, mobile-friendly logging tool that gives every found item a numbered identity and a clear lifecycle: unclaimed → claimed or disposed.
+
+**Core workflow.**
+
+```
+Volunteer finds item
+  → opens toolkit on phone, logs it in ~30 seconds
+  → sticks a sticky with the item number on it (hand-written or printed label)
+  → puts it in the designated spot
+
+Owner enquires → panopticon searches list, marks as claimed
+After X days  → system flags item → panopticon marks disposed
+```
+
+**Data model — `FoundItem`.**
+
+| Field | Type | Notes |
+|---|---|---|
+| `short_id` | auto sequential | Displayed as "L-042". Printed/written on the physical label |
+| `description` | CharField (200) | What it is. Required, kept brief |
+| `location_found` | CharField (100) | "Bar", "Cinema", "Toilets" — free text |
+| `found_on` | DateField | Defaults to today |
+| `logged_by` | CharField (100) | Free-text name — avoids login friction for non-system volunteers |
+| `photo` | ImageField | Optional. Helps owners identify items |
+| `status` | choices | `unclaimed` / `claimed` / `disposed` |
+| `claimed_by` | CharField | Optional note when claimed |
+| `claimed_on` | DateField | Set on claim action |
+| `disposed_on` | DateField | Set on disposal action |
+| `disposal_method` | choices | `binned` / `donated` / `returned` / `other` |
+| `notes` | TextField | Anything else |
+
+`retain_days` lives in `SiteConfiguration` (default: 60). Items past this threshold are flagged in the list view.
+
+**Views.**
+
+| View | Access | Notes |
+|---|---|---|
+| Log new item | Any logged-in user | Mobile-optimised. Minimal required fields: description + location. Auto-sets date. Shows resulting ID on success so volunteer can write it on the label |
+| Item list | Panopticon | All unclaimed items. Items past `retain_days` flagged amber. Tabs: unclaimed / claimed / disposed |
+| Item detail | Panopticon | Full record + claim / dispose action buttons |
+| Printable label | Panopticon | Big `L-042` + date + description, print-optimised |
+
+**Design decisions.**
+
+- **No QR codes in MVP.** They add a library dependency and printing complexity. A hand-written number on a sticker is sufficient; the list view is the lookup interface.
+- **Login required for logging.** Reduces garbage entries. The `logged_by` CharField means volunteers who aren't in the auth system can still be recorded by name — a logged-in volunteer fills it in on their behalf.
+- **Disposal is manual, not automatic.** The system flags overdue items; a panopticon confirms and records the method. Preserves the audit trail.
+- **Photo is optional** but the field should be in the model from day one; retrofitting it later means a migration and template rewrite.
+
+**Not in MVP.**
+- Public-facing "I lost something" search page
+- Email alerts when items are flagged for disposal
+- Bulk disposal action
+- QR code label generation
+- Integration with floorplan / Green Room booking
+
+**Lives in:** `toolkit/labs/` — new model, views, and templates alongside existing Labs features.
+
+**Size estimate:** 🔵 S if photo is deferred, 🟡 M if photo upload is included in MVP.
+
 **Size estimate:** 🟡 M — ~22–34h across all three phases; MVP (phase 1) alone is 🔵 S (~8–12h). Requires 8.1 (rota↔volunteer FK, done) for the gate to know who is signing up.
