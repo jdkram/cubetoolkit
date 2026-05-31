@@ -46,46 +46,14 @@ VENUE = {
 
 WAGTAIL_SITE_NAME = "The Star and Shadow"
 
-# Prompt volunteers to email when clearing a rota slot.
-# SEED-ONLY — overridden by SiteConfiguration at runtime.
-ROTA_CLEAR_EMAIL_PROMPT_ENABLED = False
-
 # Disable 'allow editing from magic IP range' for now
 CUBE_IP_ADDRESSES = ()
 
 DEFAULT_MUGSHOT = "/static/content/ss_logo_e3cae3_pink3.jpg"
 
-# Hide event images for shows before the S+S digital archive began.
-# Volunteers (authenticated users) always see images regardless.
-# SEED-ONLY — overridden by SiteConfiguration at runtime.
-SHOW_ARCHIVE_IMAGES = False
-# SEED-ONLY — overridden by SiteConfiguration at runtime.
-IMAGES_START_DATE = "1 May 2018"
-
-# S+S films start at the advertised time — no adverts or trailers.
-# SEED-ONLY — overridden by SiteConfiguration at runtime.
-FILMS_START_ON_TIME = True
-
-# Tags are not yet well-used at S+S; hide them from the rota to reduce clutter.
-# SEED-ONLY — overridden by SiteConfiguration at runtime.
-ROTA_SHOW_TAGS = False
-
 # Currently only used for setting an outer limit on what year printed
 # programmes can be uploaded
 DAWN_OF_TIME = 1998
-
-# URL to an image copyright / image rights guidance document (e.g. on NextCloud).
-# When set, a link ("image copyright guidance") appears below the image upload
-# field on the event edit form (diary/templates/form_event.html), alongside a
-# ⚠️ reminder to check image rights before uploading. Helps programmers find
-# freely-licensed images and avoid copyright issues.
-# Set to None to hide the link entirely.
-IMAGE_COPYRIGHT_GUIDANCE_URL = "https://example.com/TODO-replace-with-nextcloud-url"  # TODO: replace with real URL
-
-# URL for alt text writing guidance shown alongside the alt text field on image
-# upload. Set to None to show the field without a link.
-# SEED-ONLY — overridden by SiteConfiguration at runtime.
-ALT_TEXT_GUIDANCE_URL = "https://design102.blog.gov.uk/2022/01/14/whats-the-alternative-how-to-write-good-alt-text/"
 
 ###############################################################################
 #
@@ -101,9 +69,4 @@ TEMPLATES[0]["DIRS"] = (
     os.path.join(BASE_DIR, "star_and_shadow_templates"),
     os.path.join(BASE_DIR, "templates"),
 )
-
-# S+S-specific limits and configuration
-# Increase rota role count limit from default 8 to 30 to accommodate larger volunteer rotas
-# See docs/LIVESITE_FIXES.md § "Rota role count limitation" for context
-MAX_COUNT_PER_ROLE = 30
 

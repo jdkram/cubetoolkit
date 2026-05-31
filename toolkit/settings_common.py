@@ -92,21 +92,6 @@ EMAIL_HOST = "localhost"
 EMAIL_PORT = 25
 # TODO add username and password
 
-# Default number of days ahead for which to include detailed copy in the
-# member's mailout
-MAILOUT_DETAILS_DAYS_AHEAD = 9
-# Default number of days ahead for which to include listings in the member's
-# mailout
-MAILOUT_LISTINGS_DAYS_AHEAD = 14
-
-# The maximum number of each type of role that can be assigned to a showing
-# (so, for example, can't have more than this number of bar staff)
-MAX_COUNT_PER_ROLE = 8
-
-# If True, clearing a rota slot prompts the user to email the volunteer.
-# Set to False in environments where that prompt is unwanted (e.g. S+S).
-ROTA_CLEAR_EMAIL_PROMPT_ENABLED = True
-
 # Probably don't want to change these: subdirectories of MEDIA directory where
 # volunteer images get saved:
 VOLUNTEER_PORTRAIT_DIR = "volunteers"
@@ -118,8 +103,6 @@ DAWN_OF_TIME = 1998
 # Used to indicate if volunteer/member added dates are when they were actually
 # added, vs. if they were bulk imported from the old toolkit
 DAWN_OF_TOOLKIT = datetime.date(year=2014, month=2, day=12)
-
-DEFAULT_TRAINING_EXPIRY_MONTHS = 12
 
 # Colour used for the calendar view if multiroom isn't enabled:
 CALENDAR_DEFAULT_COLOUR = "#888888"
@@ -135,22 +118,6 @@ MULTIROOM_ENABLED = False
 HTML_MAILOUT_ENABLED = True
 MEMBERSHIP_EXPIRY_ENABLED = False
 MEMBERSHIP_LENGTH_DAYS = 365
-
-# When True (default), event images are always shown on the public website.
-# When False, images are hidden for events where all showings pre-date
-# IMAGES_START_DATE. Volunteers (authenticated users) always see images.
-SHOW_ARCHIVE_IMAGES = True
-# Only used when SHOW_ARCHIVE_IMAGES = False. Format: "1 May 2018".
-IMAGES_START_DATE = None
-
-# When True, a banner is shown on the public event detail page stating that
-# films start at the advertised time with no adverts or trailers.
-FILMS_START_ON_TIME = False
-
-# When True, event tag badges are shown on the edit rota page alongside the
-# per-showing tag filter bar. Set to False to hide tags until metadata quality
-# justifies the visual weight.
-ROTA_SHOW_TAGS = True
 
 # Extra domains permitted in EventLink URLs, beyond the built-in whitelist
 # (riseup.net, nextcloud.com, nextcloud.org, chat.whatsapp.com, linktr.ee).
