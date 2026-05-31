@@ -91,10 +91,6 @@ body {
               <div class="dropdown-divider"></div>
               <a class="dropdown-item" href="{% url "toolkit-access" %}">Access levels</a>
               <a class="dropdown-item" href="{% url "labs-donations-manage" %}">Manage donations</a>
-              {% if user.is_superuser %}
-              <div class="dropdown-divider"></div>
-              <a class="dropdown-item" href="{% url "view-volunteer-pool-health" %}">Volunteer pool maintenance</a>
-              {% endif %}
             </div>
           </li>
           {% if perms.toolkit.write %}
@@ -132,6 +128,9 @@ body {
                  <a class="dropdown-item" href="{% url "view-volunteer-export" %}">Export volunteers as CSV</a>
                  <a class="dropdown-item" href="{% url "view-volunteer-role-report" %}">Volunteer role report</a>
                  <a class="dropdown-item" href="{% url "view-volunteer-training-report" %}">Volunteer training report</a>
+                 <div class="dropdown-divider"></div>
+                 <a class="dropdown-item" href="{% url "bulk-award-qualification" %}">Bulk award qualifications</a>
+                 <a class="dropdown-item" href="{% url "view-volunteer-pool-health" %}">Pool maintenance</a>
                </div>
              </li>
              <li class="nav-item">
