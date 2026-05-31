@@ -3,60 +3,60 @@
 
 [[notes]]
 room_id = "room-cinema"
-body = "Capacity: 90 seated. Projector: Sony SRX-R515P 4K. 16mm projector available — contact Cinema collective to arrange. Emergency exits: side door (unlocks with green lever) and fire door at screen end."
+body = "Capacity: 100 seated. Seats F4 and F5 are currently out of action - please use revised seating plan. Emergency exits: side door (unlocks with green lever) and fire door at screen end."
 
 [[notes]]
 room_id = "room-venue"
-body = "Flexible space — 120 standing, 80 with chairs. PA system in the tech store cupboard. Load-in via back entrance. Key is on the main keyring."
+body = "Flexible space, 200 max capacity. PA system controlled from the kitchen. Decorations are up til DATE after which it's safe to take them down."
 
 [[notes]]
 room_id = "room-bar"
-body = "Bar stock and cash handled by Bar collective. Float in the cash box in the bar office cupboard. Contactless terminal needs charging if unused for a week."
+body = "Wine bottles are now on the far left shelf, and we're working our way through the odds and ends we got in for EVENT before replenishing stock."
 
 [[notes]]
 room_id = "room-cafe"
-body = "Café rota on the noticeboard. Coffee machine: clean the group head after every session — instructions laminated above the machine. Closing time checklist in the kitchen drawer."
+body = "Coffee machine in the kitchen to be used for decaff, if needed. Please note new cleardown checklist at end of shift, especially important ahead of hygiene inspection."
 
 [[notes]]
 room_id = "room-workshop"
-body = "Power tools: check the inspection tags are in date before use. Ventilation: open both windows when sanding or spraying. First aid kit on the shelf above the fire extinguisher."
+body = "Batteries for the Makitas have been playing up, please don't try and charge the one marked as defective, awaiting next fixit / ewaste disposal."
 
 [[notes]]
 room_id = "room-screen-printing-room"
-body = "Inks stored by colour in the cabinet on the left. Squeegees hang on the far wall — clean immediately after use or they're ruined. Emulsion (in the fridge) expires 3 months after opening."
+body = "We're struggling to resupply the Riso, please be cautious with the red ink. Please take care to hang the squeegees back up after using."
 
 [[notes]]
 room_id = "room-dark-room"
-body = "No food or drinks. Red safe-light only when paper is out. Developer and fixer in labelled bottles — dispose of exhausted chemicals via the hazardous waste collection, not the sink."
+body = "Developer and fixer in labelled bottles need using by end of month (MONTH). As ever, please dispose of exhausted chemicals via the hazardous waste collection, not the sink."
 
 [[notes]]
 room_id = "room-projection-booth"
-body = "DCP server: Christie IMB. Playlist import via USB or network share. Dovetail login pinned inside the cupboard door. Do not adjust the lamp hours without logging it in the projection log."
+body = "Blu-Rays for FILM and ANOTHER FILM are left on the shelf. Path for 35mm needs to be clear ahead of screening on DATE."
 
 [[notes]]
 room_id = "room-kitchen"
-body = "Food hygiene: anyone cooking for events must have level 2 certificate — contact the Kitchen collective. Temperature log on the clipboard. Commercial dishwasher: use the eco cycle unless heavily soiled."
+body = "Dishwasher's been leaking again - please shout on Operations if it's doing this consistently, it's been descaled but we might have a wider issue than just that."
 
 [[notes]]
 room_id = "room-green-room"
-body = "Performer green room. Lockable with the green room key (separate from main keyring — ask front of house). Mini fridge stocked by Front of House. Wi-Fi password on the noticeboard."
+body = "Lost and found is about to all get chucked. Bookshelves to be collected by PERSON at DATE, sorry for them taking so much space rn."
 
 [[notes]]
 room_id = "room-meeting-room"
-body = "Bookable via the meeting room calendar on Nextcloud. Whiteboard markers in the tray — please check they work before your meeting. HDMI cable in the top drawer. Laptop stand folds and stores under the table."
+body = "Ethernet cable for meeting laptop has a duff connector - it works, just won't clip in. NAME to replace soon."
 
 [[notes]]
 room_id = "room-it-cupboard"
-body = "Patch panel top-left. Router and managed switch on the second shelf. Passwords and network diagram in the IT folder on Nextcloud (ask a sysadmin for access). Spare cables in the box on the floor — badly organised, sorry."
+body = "If you're unplugging anything from the patch panel, please check the diagrams on the left wall first, and leave a note for the next person. Laptop graveyard needs clearing out soon, those batteries ain't getting any younger."
 
 [[notes]]
 room_id = "room-store-cupboard"
-body = "Cleaning supplies on the left shelves. Paint (white gloss, white emulsion) on the floor at the back. The laminator is here too — heat up for 5 minutes before use. Lost property box: items kept 3 months then donated."
+body = "The freezer was only meant to be plugged in temporarily, as it's quite in the way - please don't add any new items to it while we clear it down and merge its inventory with the main one."
 
 [[notes]]
 room_id = "room-cleaning-cupboard"
-body = "Mop buckets: fill to the line, not higher — they're heavy. Colour-coded cloths: red=toilets, blue=kitchen, green=bar/café, yellow=general. Stock list on the inside of the door — update it when you take the last of something."
+body = "NAME coming in DATE to check on supply levels and do a re-order, please add notes here if there's anything above and beyond the usual stuff you need in."
 
 [[notes]]
 room_id = "room-accessible-toilet"
-body = "RADAR key on the main keyring. Baby changing table folds out from the left wall. Emergency pull cord — do not tie up."
+body = "RADAR key went walkabout, spare is in the box labelled CHANGING PLACES"
