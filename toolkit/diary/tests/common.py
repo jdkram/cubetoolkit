@@ -439,15 +439,11 @@ class DiaryTestsMixin(fixtures.TestWithFixtures):
         # Volunteers:
         v1 = Volunteer(member=m3, user=u1)
         v1.save()
-        v1.roles.set([r1, r3])
-        v1.save()
 
         v2 = Volunteer(member=m4, user=u2)
         v2.save()
 
         v3 = Volunteer(member=m5, user=u3)
-        v3.save()
-        v3.roles.set([r3])
         v3.save()
 
 

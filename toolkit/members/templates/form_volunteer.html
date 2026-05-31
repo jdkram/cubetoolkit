@@ -229,7 +229,7 @@ canvas { display: none; }
 $(document).ready(function() {
   setupPage();
   document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) { new bootstrap.Tooltip(el); });
-{% if volunteer.id %}
+{% if volunteer.id and request.user.is_superuser %}
   setupTraining({
     csrf_token: '{{ csrf_token }}',
     add_training_record_url: '{% url "add-volunteer-training-record" volunteer_id=volunteer.id %}',
@@ -263,6 +263,30 @@ $(document).ready(function() {
     <div class="vol-section" id="vol-notes">
       <h4>Notes</h4>
       {{ vol_form.notes.errors }}{{ vol_form.notes }}
+    </div>
+
+    <!-- Volunteer status -->
+    <div class="vol-section" id="vol-status">
+      <h4>Volunteer status</h4>
+      <p class="status-intro">This controls what a volunteer can do. Each option below says exactly what changes. Only <strong>Suspended</strong> stops someone logging in — the others just take them off the rota and mailing list.</p>
+      <div class="status-list">
+        {% for radio in vol_form.status %}
+        <div class="status-option {{ radio.choice_value }}">
+          <label style="cursor:pointer;">
+            {{ radio.tag }} <span class="status-name">{{ radio.choice_label }}</span>
+          </label>
+          {% if radio.choice_value == "active" %}
+            <span class="status-desc"><strong>Can log in.</strong> Shown on the rota and receives mailouts. This is the normal state for a current volunteer.</span>
+          {% elif radio.choice_value == "dormant" %}
+            <span class="status-desc"><strong>Can still log in.</strong> Taken off the rota and the mailing list while they're on a break. Set them back to Active when they return.</span>
+          {% elif radio.choice_value == "retired" %}
+            <span class="status-desc"><strong>Can still log in</strong> to see their own record. Taken off the rota and the mailing list. Use this when someone has left the volunteer team for good.</span>
+          {% elif radio.choice_value == "suspended" %}
+            <span class="status-desc"><strong>Locks them out straight away</strong> — they are logged out and cannot log back in. They are also removed from every upcoming shift and taken off the rota and mailing list. Use this to restrict someone's access while a concern is being looked into. Setting them back to Active restores their login and puts them back on the rota and mailing list — but the shifts they were removed from are <strong>not</strong> added back, so they would need to sign up for those again.</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
     </div>
 
     <!-- Access rider -->
@@ -303,28 +327,6 @@ $(document).ready(function() {
       </div>
     </div>
 
-    <!-- Roles -->
-    <div class="vol-section" id="roles">
-      {{ vol_form.roles.errors }}
-      {% for c in vol_form.roles.field.queryset %}
-        {% ifchanged c.standard %}
-          {% if not forloop.first %}</ul>{% endif %}
-          <h4>{{ c.standard|yesno:"Event roles,Other roles" }}</h4>
-          {% if c.standard %}
-          <p class="role-section-note">These are declared on your profile but don't currently gate what you can sign up for — any volunteer can sign up for any shift. <em>Programmer</em> here is a scheduling label; diary edit access is set separately in the Permissions section.</p>
-          {% endif %}
-          <ul>
-        {% endifchanged %}
-        <li{% if c.standard %} class="standard_role"{% endif %}>
-          <label for="{{ vol_form.roles.auto_id }}_{{ forloop.counter0 }}">
-            <input id="{{ vol_form.roles.auto_id }}_{{ forloop.counter0 }}"
-                   type="checkbox" value="{{ c.id }}" name="{{ vol_form.prefix }}-roles"
-                   {% if c.id in vol_form.roles.value %}checked{% endif %}> {{ c }}
-          </label>
-        </li>
-      {% endfor %}
-      </ul>
-    </div>
 
   </div><!-- #vol-left -->
 
@@ -373,6 +375,7 @@ $(document).ready(function() {
           <td>GDPR opt-in:</td>
           <td>{{ volunteer.member.gdpr_opt_in|date:"d/m/Y" }}</td>
         </tr>
+        {% if general_training_enabled %}
         {% with volunteer.latest_general_training_record as gt %}
           {% if not gt %}
             <tr><td colspan="2" class="needs-training">No General Safety Training!</td></tr>
@@ -388,6 +391,7 @@ $(document).ready(function() {
             </tr>
           {% endif %}
         {% endwith %}
+        {% endif %}
         <tr>
           <td>Last updated:</td>
           <td>{{ volunteer.updated_at|date:"d/m/Y" }}</td>
@@ -399,30 +403,6 @@ $(document).ready(function() {
         </tr>
         {% endif %}
       </table>
-    </div>
-
-    <!-- Volunteer status -->
-    <div class="vol-section" id="vol-status">
-      <h4>Volunteer status</h4>
-      <p class="status-intro">This controls what a volunteer can do. Each option below says exactly what changes. Only <strong>Suspended</strong> stops someone logging in — the others just take them off the rota and mailing list.</p>
-      <div class="status-list">
-        {% for radio in vol_form.status %}
-        <div class="status-option {{ radio.choice_value }}">
-          <label style="cursor:pointer;">
-            {{ radio.tag }} <span class="status-name">{{ radio.choice_label }}</span>
-          </label>
-          {% if radio.choice_value == "active" %}
-            <span class="status-desc"><strong>Can log in.</strong> Shown on the rota and receives mailouts. This is the normal state for a current volunteer.</span>
-          {% elif radio.choice_value == "dormant" %}
-            <span class="status-desc"><strong>Can still log in.</strong> Taken off the rota and the mailing list while they're on a break. Set them back to Active when they return.</span>
-          {% elif radio.choice_value == "retired" %}
-            <span class="status-desc"><strong>Can still log in</strong> to see their own record. Taken off the rota and the mailing list. Use this when someone has left the volunteer team for good.</span>
-          {% elif radio.choice_value == "suspended" %}
-            <span class="status-desc"><strong>Locks them out straight away</strong> — they are logged out and cannot log back in. They are also removed from every upcoming shift and taken off the rota and mailing list. Use this to restrict someone's access while a concern is being looked into. Setting them back to Active restores their login and puts them back on the rota and mailing list — but the shifts they were removed from are <strong>not</strong> added back, so they would need to sign up for those again.</span>
-          {% endif %}
-        </div>
-        {% endfor %}
-      </div>
     </div>
 
     <!-- Collectives -->
@@ -582,17 +562,24 @@ $(document).ready(function() {
 
 <!-- ── Training record (outside main form) ─────────────────────── -->
 <a name="training-record"></a>
-{% if training_record_form %}
+{# Training records are always visible to any volunteer on their own profile. #}
+{# Add/delete controls are panopticon-only (those endpoints require is_superuser). #}
+{% if volunteer.id %}
 <div id="training-record">
   <h3>Training record</h3>
+  <p style="font-size:0.9em; color:#555; margin-bottom:0.5rem;">
+    A log of training sessions attended, including General Safety Training. This is a historical record of <em>what training happened and when</em>. To control which roles a volunteer can sign up for, use <a href="#vol-qualifications">Qualifications</a> below.
+  </p>
+  {% if request.user.is_superuser and training_record_form %}
   <form action="" method="POST" enctype="multipart/form-data">
+  {% endif %}
   <table class="table">
     <tr>
       <th>Role</th>
       <th>Date of training</th>
       <th>Trainer</th>
       <th>Notes</th>
-      <th>Delete</th>
+      {% if request.user.is_superuser %}<th>Delete</th>{% endif %}
     </tr>
     {% for record in volunteer.training_records.all %}
     <tr>
@@ -606,15 +593,16 @@ $(document).ready(function() {
       <td>{{ record.training_date|date:"d/m/Y" }}</td>
       <td>{{ record.trainer }}</td>
       <td>{% if record.notes %}<a class="toggle-notes" href="#">(+)</a>{% endif %}</td>
-      <td><a class="delete-training" title="delete" href="{% url "delete-volunteer-training-record" training_record_id=record.id %}">[X]</a></td>
+      {% if request.user.is_superuser %}<td><a class="delete-training" title="delete" href="{% url "delete-volunteer-training-record" training_record_id=record.id %}">[X]</a></td>{% endif %}
     </tr>
     <tr class="training-notes">
       <th>Notes:</th>
-      <td colspan="4">{{ record.notes }}</td>
+      <td colspan="{% if request.user.is_superuser %}4{% else %}3{% endif %}">{{ record.notes }}</td>
     </tr>
     {% empty %}
-    <tr><td colspan="5">No training records for this volunteer</td></tr>
+    <tr><td colspan="{% if request.user.is_superuser %}5{% else %}4{% endif %}">No training records for this volunteer</td></tr>
     {% endfor %}
+    {% if request.user.is_superuser and training_record_form %}
     <tr id="new-record-row"><th colspan="5">New record</th></tr>
     <tr id="form-errors">
       <td></td><td></td><td></td><td></td><td></td>
@@ -631,7 +619,62 @@ $(document).ready(function() {
       <td colspan="4" id="training-notes">{{ training_record_form.notes }}</td>
     </tr>
     <tr><td colspan="5"><input type="submit" value="Add training record"></td></tr>
+    {% endif %}
   </table>
+  {% if request.user.is_superuser and training_record_form %}
+  </form>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- ── Qualifications (panopticon only) ────────────────────────── -->
+{# Named credentials that gate rota sign-up. Managed here by Panopticons. #}
+{% if request.user.is_superuser and volunteer.id %}
+<div id="vol-qualifications" style="margin-top:1rem;">
+  <h3>Qualifications</h3>
+  <p style="font-size:0.9em; color:#555; margin-bottom:0.5rem;">
+    Qualifications are role clearances that gate rota sign-up — a record that this volunteer is currently cleared for a role (e.g. Bar). Add one when you've verified they've completed the relevant induction.
+    Manage the list of qualifications at <a href="{% url 'edit_roles' %}">Meta &rsaquo; Roles</a>.
+  </p>
+  <table class="table table-sm" style="max-width:600px;">
+    <thead class="thead-light">
+      <tr><th>Qualification</th><th>Granted on</th><th>Granted by</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for vq in volunteer.qualifications.all %}
+      <tr>
+        <td>{{ vq.qualification.name }}</td>
+        <td>{{ vq.granted_on|date:"d/m/Y" }}</td>
+        <td>{{ vq.granted_by|default:"—" }}</td>
+        <td>
+          <form method="post" action="{% url 'remove-volunteer-qualification' vq.pk %}" style="display:inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-danger"
+                    onclick="return confirm('Remove {{ vq.qualification.name }} qualification from {{ volunteer.member.name }}?')">Remove</button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4" class="text-muted">No qualifications recorded.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <form method="post" action="{% url 'add-volunteer-qualification' volunteer.id %}" class="d-flex align-items-end" style="gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem;">
+    {% csrf_token %}
+    <div>
+      <label for="qual-select" style="font-size:0.9em; font-weight:500; display:block;">Add qualification</label>
+      <select id="qual-select" name="qualification_id" class="form-control form-control-sm" style="min-width:180px;" required>
+        <option value="">— choose —</option>
+        {% for qual in all_qualifications %}
+        <option value="{{ qual.pk }}">{{ qual.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="qual-granted-by" style="font-size:0.9em; font-weight:500; display:block;">Granted by (optional)</label>
+      <input id="qual-granted-by" type="text" name="granted_by" class="form-control form-control-sm" style="min-width:180px;" placeholder="Your name">
+    </div>
+    <button type="submit" class="btn btn-sm btn-outline-primary">Add qualification</button>
   </form>
 </div>
 {% endif %}

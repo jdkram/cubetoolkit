@@ -48,6 +48,7 @@ import toolkit.diary.forms as diary_forms
 import toolkit.diary.validators as diary_validators
 import toolkit.diary.edit_prefs as edit_prefs
 from toolkit.diary.poster import generate_event_placeholder
+from toolkit.members.models import Qualification, VolunteerQualification
 from toolkit.util.image import adjust_colour
 
 # Shared utility method:
@@ -1320,7 +1321,7 @@ def view_event_field(request, field, year=None, month=None, day=None):
         showings_qs
         .order_by("start")
         #              following prefetch is for the rota view
-        .prefetch_related("rotaentry_set__role", "rotaentry_set__volunteer__member")
+        .prefetch_related("rotaentry_set__role__required_qualification", "rotaentry_set__volunteer__member")
         .select_related()
     )
 
@@ -1573,7 +1574,7 @@ def edit_event_tags(request):
 @user_passes_test(lambda u: u.is_superuser)
 def edit_roles(request):
     # This is pretty slow, but it's not a commonly used bit of the UI.
-    active_qs = Role.objects.filter(archived=False)
+    active_qs = Role.objects.filter(archived=False).select_related("required_qualification")
     archived_qs = Role.objects.filter(archived=True)
 
     RoleFormset = modelformset_factory(
@@ -1586,6 +1587,8 @@ def edit_roles(request):
             "beginner_friendly",
             "wheelchair_accessible",
             "keyholder_only",
+            "required_qualification",
+            "qualification_gate",
         ),
         can_delete=False,
     )
@@ -1611,6 +1614,52 @@ def edit_roles(request):
             except Role.DoesNotExist:
                 pass
             return HttpResponseRedirect(reverse("edit_roles"))
+        elif action == "add_qualification":
+            qual_name = request.POST.get("qualification_name", "").strip()
+            qual_notes = request.POST.get("qualification_notes", "").strip()
+            if qual_name:
+                qual, created = Qualification.objects.get_or_create(name=qual_name)
+                if created:
+                    qual.notes = qual_notes
+                    qual.save()
+                    messages.add_message(request, messages.SUCCESS, f"Qualification '{qual_name}' added.")
+                else:
+                    messages.add_message(request, messages.WARNING, f"Qualification '{qual_name}' already exists.")
+            return HttpResponseRedirect(reverse("edit_roles"))
+        elif action == "edit_qualification":
+            qual_id = request.POST.get("qualification_id")
+            try:
+                qual = Qualification.objects.get(pk=qual_id)
+                new_name = request.POST.get("qualification_name", "").strip()
+                new_notes = request.POST.get("qualification_notes", "").strip()
+                if not new_name:
+                    messages.add_message(request, messages.ERROR, "Qualification name cannot be blank.")
+                elif new_name != qual.name and Qualification.objects.filter(name=new_name).exists():
+                    messages.add_message(request, messages.ERROR, f"A qualification named '{new_name}' already exists.")
+                else:
+                    qual.name = new_name
+                    qual.notes = new_notes
+                    qual.save()
+                    messages.add_message(request, messages.SUCCESS, f"Qualification '{qual.name}' updated.")
+            except Qualification.DoesNotExist:
+                pass
+            return HttpResponseRedirect(reverse("edit_roles"))
+        elif action == "delete_qualification":
+            qual_id = request.POST.get("qualification_id")
+            try:
+                qual = Qualification.objects.get(pk=qual_id)
+                if qual.required_for_roles.exists():
+                    messages.add_message(
+                        request, messages.ERROR,
+                        f"Cannot delete '{qual.name}' — it is required by one or more roles. "
+                        "Remove the requirement from those roles first."
+                    )
+                else:
+                    qual.delete()
+                    messages.add_message(request, messages.SUCCESS, f"Qualification '{qual.name}' deleted.")
+            except Qualification.DoesNotExist:
+                pass
+            return HttpResponseRedirect(reverse("edit_roles"))
         else:
             formset = RoleFormset(request.POST, queryset=active_qs)
             if formset.is_valid():
@@ -1624,6 +1673,7 @@ def edit_roles(request):
     return render(request, "form_edit_roles.html", {
         "formset": formset,
         "archived_roles": archived_qs,
+        "all_qualifications": Qualification.objects.all(),
     })
 
 
@@ -1870,12 +1920,39 @@ class EditRotaView(PermissionRequiredMixin, View):
         except Exception:
             pass
 
+        # Track whether this sign-up triggers an advisory qualification notice.
+        qualification_advisory: str | None = None
+
         if name == "signup":
             # Tap-to-toggle self-signup for any user tier (superusers included).
             # Superusers use their [e] button for free-text edits, which sends the
             # typed name rather than the 'signup' sentinel.
             if not linked_volunteer:
                 return HttpResponse("No volunteer account linked", status=400)
+
+            # Qualification gate: check only when signing up (not clearing).
+            # Superusers bypass so coordinators can always place someone manually.
+            if not request.user.is_superuser:
+                role = rota_entry.role
+                if role and role.required_qualification and role.qualification_gate != Role.GATE_OFF:
+                    has_qual = VolunteerQualification.objects.filter(
+                        volunteer=linked_volunteer,
+                        qualification=role.required_qualification,
+                    ).exists()
+                    if not has_qual:
+                        if role.qualification_gate == Role.GATE_BLOCKING:
+                            return HttpResponse(
+                                f"This role requires the '{role.required_qualification.name}' qualification. "
+                                "Please speak to a coordinator if you believe you're qualified.",
+                                status=403,
+                                content_type="text/plain",
+                            )
+                        # advisory: allow but attach a notice header the JS will surface
+                        qualification_advisory = (
+                            f"This role normally requires the '{role.required_qualification.name}' "
+                            "qualification. If you haven't done it yet, please speak to a coordinator."
+                        )
+
             rota_entry.volunteer = linked_volunteer
             rota_entry.name = linked_volunteer.member.name
         elif linked_volunteer and name and not request.user.is_superuser:
@@ -1905,10 +1982,10 @@ class EditRotaView(PermissionRequiredMixin, View):
 
         rota_entry.save()
 
-        response = escape(rota_entry.name)
-
-        # Returned text is displayed as the rota entry:
-        return HttpResponse(response, content_type="text/plain")
+        response = HttpResponse(escape(rota_entry.name), content_type="text/plain")
+        if qualification_advisory:
+            response["X-Qualification-Advisory"] = qualification_advisory
+        return response
 
 
 @permission_required("diary.change_rotaentry")
@@ -2009,9 +2086,14 @@ def edit_site_configuration(request):
             ],
         ),
         (
+            "Calendar",
+            ["calendar_slot_min_hour"],
+        ),
+        (
             "Programme limits",
             [
                 "max_count_per_role",
+                "max_showing_dates_shown",
                 "programme_copy_summary_max_chars",
                 "programme_event_terms_min_words",
                 "programme_media_max_size_mb",
@@ -2026,9 +2108,11 @@ def edit_site_configuration(request):
             [
                 "membership_length_days",
                 "default_training_expiry_months",
+                "general_training_enabled",
                 "volunteer_dormancy_days",
                 "volunteer_never_logged_in_grace_days",
                 "volunteer_purge_days",
+                "volunteer_digest_day",
             ],
         ),
         (
@@ -2048,8 +2132,12 @@ def edit_site_configuration(request):
             ["eventlink_extra_allowed_domains"],
         ),
         (
-            "Public site navigation",
-            ["show_donations_in_public_nav"],
+            "Collectives",
+            ["collectives_intro"],
+        ),
+        (
+            "Donations page",
+            ["donations_intro", "show_donations_in_public_nav"],
         ),
         (
             "Site-wide banner",

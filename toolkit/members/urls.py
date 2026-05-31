@@ -18,6 +18,9 @@ from toolkit.members.volunteer_views import (
     reactivate_self,
     view_volunteer_directory,
     volunteer_digest_unsubscribe,
+    add_volunteer_qualification,
+    remove_volunteer_qualification,
+    bulk_award_qualification,
 )
 
 from toolkit.members.member_views import (
@@ -110,6 +113,21 @@ volunteer_urls = [
         name="send-volunteer-password-reset",
     ),
     re_path(r"^reactivate/$", reactivate_self, name="volunteer-reactivate-self"),
+    re_path(
+        r"^bulk-award-qualification/$",
+        bulk_award_qualification,
+        name="bulk-award-qualification",
+    ),
+    re_path(
+        r"^(?P<volunteer_id>\d+)/add-qualification$",
+        add_volunteer_qualification,
+        name="add-volunteer-qualification",
+    ),
+    re_path(
+        r"^qualification/(?P<vq_id>\d+)/remove$",
+        remove_volunteer_qualification,
+        name="remove-volunteer-qualification",
+    ),
     re_path(r"^directory/$", view_volunteer_directory, name="volunteer-directory"),
     re_path(r"^digest/unsubscribe/$", volunteer_digest_unsubscribe, name="volunteer-digest-unsubscribe"),
 ]

@@ -33,6 +33,8 @@ class RoleForm(forms.ModelForm):
             "beginner_friendly",
             "wheelchair_accessible",
             "keyholder_only",
+            "required_qualification",
+            "qualification_gate",
         )
 
 
@@ -895,11 +897,14 @@ class SiteConfigurationForm(forms.ModelForm):
             "programme_media_max_size_mb",
             "mailout_details_days_ahead",
             "mailout_listings_days_ahead",
+            "calendar_slot_min_hour",
             "membership_length_days",
             "default_training_expiry_months",
+            "general_training_enabled",
             "volunteer_dormancy_days",
             "volunteer_never_logged_in_grace_days",
             "volunteer_purge_days",
+            "volunteer_digest_day",
             "rota_gap_min_missing",
             "rota_gap_min_pct",
             "image_copyright_guidance_url",
@@ -910,6 +915,7 @@ class SiteConfigurationForm(forms.ModelForm):
             "bulletin_post_permission",
             "eventlink_extra_allowed_domains",
             "collectives_intro",
+            "donations_intro",
             "show_donations_in_public_nav",
             "banner_active",
             "banner_level",
@@ -934,6 +940,12 @@ class SiteConfigurationForm(forms.ModelForm):
             ),
             "collectives_intro": forms.Textarea(
                 attrs={"rows": 4, "class": "form-control"}
+            ),
+            "donations_intro": forms.Textarea(
+                attrs={"rows": 6, "class": "form-control"}
+            ),
+            "bulletin_guidance": forms.Textarea(
+                attrs={"rows": 6, "class": "form-control"}
             ),
             "eventlink_extra_allowed_domains": forms.Textarea(
                 attrs={"rows": 4, "class": "form-control font-monospace"}

@@ -282,11 +282,6 @@ class Volunteer(models.Model):
         blank=True,
     )
 
-    # Roles
-    roles = models.ManyToManyField(
-        Role, db_table="Volunteer_Roles", blank=True
-    )
-
     # Collective memberships
     collectives = models.ManyToManyField(
         "labs.Collective", blank=True, related_name="volunteers"
@@ -493,7 +488,7 @@ class Volunteer(models.Model):
                 self.portrait.delete(save=False)
                 self.portrait = None
             self.status = Volunteer.STATUS_ANONYMISED
-            self.roles.clear()
+            self.qualifications.all().delete()
             self.collectives.clear()
             self.save()
 
@@ -615,6 +610,53 @@ class TrainingRecord(models.Model):
             expiry_age = get_site_config().default_training_expiry_months
         threshold = timezone_now().date() - monthdelta(expiry_age)
         return self.training_date and self.training_date < threshold
+
+
+class Qualification(models.Model):
+    """A named credential a volunteer can hold — e.g. "Bar" or "Projectionist level 1".
+
+    Sits alongside TrainingRecord (the audit log of training events). This model
+    answers "is this person currently cleared for this role?" rather than "what
+    training sessions have they attended?". Panopticons award qualifications
+    manually on the volunteer edit page.
+    """
+
+    name = models.CharField(max_length=128, unique=True)
+    notes = models.TextField(
+        blank=True,
+        default="",
+        help_text="Internal notes: what this covers, who can award it, etc.",
+    )
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class VolunteerQualification(models.Model):
+    volunteer = models.ForeignKey(
+        "Volunteer", related_name="qualifications", on_delete=models.CASCADE
+    )
+    qualification = models.ForeignKey(
+        Qualification, related_name="holders", on_delete=models.CASCADE
+    )
+    granted_on = models.DateField(default=datetime.date.today)
+    granted_by = models.CharField(
+        max_length=128,
+        blank=True,
+        default="",
+        help_text="Name of the person who recorded this (leave blank if self-recorded).",
+    )
+    notes = models.TextField(blank=True, default="")
+
+    class Meta:
+        unique_together = [("volunteer", "qualification")]
+        ordering = ["qualification__name"]
+
+    def __str__(self) -> str:
+        return f"{self.volunteer} — {self.qualification}"
 
 
 class AnonymisationLog(models.Model):

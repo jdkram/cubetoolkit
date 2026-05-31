@@ -59,8 +59,18 @@ function edit_rota(jQuery, rota_edit_base_url, edit_rota_notes_url_prefix, vol_e
             url: rota_edit_base_url,
             type: 'POST',
             data: { id: entryId, value: value, csrfmiddlewaretoken: CSRF_TOKEN },
-            success: onSuccess,
-            error: function() { window.location.reload(); },
+            success: function(data, status, xhr) {
+                var advisory = xhr.getResponseHeader('X-Qualification-Advisory');
+                if (advisory) { window.alert(advisory); }
+                onSuccess(data);
+            },
+            error: function(xhr) {
+                if (xhr.status === 403) {
+                    window.alert(xhr.responseText);
+                } else {
+                    window.location.reload();
+                }
+            },
             complete: function() { span.removeClass('rota-signup-loading'); }
         });
     }

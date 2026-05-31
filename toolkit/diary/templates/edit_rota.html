@@ -577,6 +577,12 @@
     .rota_role--described {
         cursor: pointer;
     }
+    .rota_role--gated {
+        text-decoration: underline;
+        text-decoration-style: dotted;
+        text-underline-offset: 2px;
+        cursor: help;
+    }
     .rota-role-desc {
         display: block;
         font-size: 0.8em;
@@ -1325,10 +1331,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         <a class="showing-public-link"
                            href="{% noprefix_url 'single-showing-view' showing.pk %}"
                            title="Public programme view">↗</a>
-                        <a class="showing-anchor-link"
-                           href="#showing-{{ showing.pk }}"
+                        {% with yr=showing.start|date:"Y" mo=showing.start|date:"n" %}<a class="showing-anchor-link"
+                           href="{% noprefix_url 'rota-edit-month' year=yr month=mo %}#showing-{{ showing.pk }}"
                            title="Copy link to this entry"
-                           onclick="navigator.clipboard.writeText(window.location.origin + window.location.pathname + '#showing-{{ showing.pk }}'); return false;">§</a>
+                           onclick="navigator.clipboard.writeText(window.location.origin + '{% noprefix_url 'rota-edit-month' year=yr month=mo %}#showing-{{ showing.pk }}'); return false;">§</a>{% endwith %}
                         </span>
                     </span>
                     {# Title row: event name (links to edit or public view) + optional tags #}
@@ -1357,7 +1363,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     data-wheelchair="{{ rota_entry.role.wheelchair_accessible|yesno:'1,0' }}"
                     data-keyholder="{{ rota_entry.role.keyholder_only|yesno:'1,0' }}"
                     data-programmer="{{ rota_entry.role.programmer_contact|yesno:'1,0' }}">
-                <span class="rota_role{% if rota_entry.role.description %} rota_role--described{% endif %}"{% if rota_entry.role.description %} title="{{ rota_entry.role.description }}"{% endif %}>{{ rota_entry|role_label:showing }}</span>
+                {% with role=rota_entry.role %}
+                <span class="rota_role{% if role.description %} rota_role--described{% endif %}{% if role.has_active_gate %} rota_role--gated{% endif %}"{% if role.description or role.has_active_gate %} title="{% if role.description %}{{ role.description }}{% if role.has_active_gate %} · {% endif %}{% endif %}{% if role.has_active_gate %}Requires: {{ role.required_qualification.name }}{% if role.qualification_gate == 'advisory' %} (advisory){% elif role.qualification_gate == 'blocking' %} (required){% endif %}{% endif %}"{% endif %}>{{ rota_entry|role_label:showing }}</span>
+                {% endwith %}
                 &nbsp;
                 {% if showing.in_past %}
                     <span{% if rota_entry.pronouns %} class="rota_name--with-pronouns" title="{{ rota_entry.pronouns }}"{% endif %}>{% if rota_entry.volunteer %}{{ rota_entry.volunteer.member.name }}{% else %}{{ rota_entry.name }}{% endif %}</span>

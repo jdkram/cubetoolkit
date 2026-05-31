@@ -37,7 +37,7 @@ from toolkit.diary.models import (
     Showing,
 )
 from toolkit.index.models import IndexCategory, IndexLink
-from toolkit.members.models import Member, Volunteer
+from toolkit.members.models import Member, Volunteer, Qualification, VolunteerQualification
 
 from toolkit.util.management.commands.seed_data import (
     ROLES,
@@ -222,6 +222,7 @@ class Command(BaseCommand):
             "roles": 0,
             "tags": 0,
             "event_templates": 0,
+            "qualifications": 0,
             "volunteers": 0,
             "events": 0,
             "showings": 0,
@@ -470,6 +471,46 @@ class Command(BaseCommand):
             if not Volunteer.objects.filter(member=_demo_member).exists():
                 Volunteer.objects.create(user=_demo_user, member=_demo_member)
                 counts["volunteers"] += 1
+
+        # Qualifications — seed named credentials and award them to relevant volunteers
+        _QUALIFICATIONS = [
+            ("Bar", [
+                "Rex Hollis", "Nell Arundel", "Beef", "Nadia Kurosawa", "Zara Moon",
+                # many volunteers get bar trained over time; a realistic spread:
+                "Sasha Pryce", "Jules Travers", "Remy Okafor", "Cleo Marchetti",
+                "Lena Barrow", "Ivan Solis", "Cheddar",
+            ]),
+            ("Projectionist level 1", [
+                "Elia Silveira", "Tomás Ferreira", "Sparks", "Lila Estraven",
+            ]),
+            ("Cafe", [
+                "Sasha Pryce", "Reuben Ashford", "Phoebe Lund", "Fig",
+            ]),
+        ]
+        for qual_name, vol_names in _QUALIFICATIONS:
+            qual, created = Qualification.objects.get_or_create(name=qual_name)
+            if created:
+                counts["qualifications"] += 1
+            for vol_name in vol_names:
+                volunteer = volunteer_objects.get(vol_name)
+                if volunteer:
+                    VolunteerQualification.objects.get_or_create(
+                        volunteer=volunteer,
+                        qualification=qual,
+                        defaults={
+                            "granted_by": "seed_dev_data",
+                            "granted_on": datetime.date(2023, 1, 1),
+                        },
+                    )
+
+        # Set required_qualification on bar roles now that qualifications exist
+        _bar_qual = Qualification.objects.filter(name="Bar").first()
+        if _bar_qual:
+            for _role_name in ("Bar Staff - Shift 1", "Bar Staff - Shift 2", "Bar Shadow"):
+                Role.objects.filter(name=_role_name).update(
+                    required_qualification=_bar_qual,
+                    qualification_gate=Role.GATE_ADVISORY,
+                )
 
         # Rooms
         rooms_dict = {}
@@ -813,6 +854,7 @@ class Command(BaseCommand):
                 f"  Roles:           {counts['roles']} new\n"
                 f"  Tags:            {counts['tags']} new\n"
                 f"  Event templates: {counts['event_templates']} new\n"
+                f"  Qualifications:  {counts['qualifications']} new\n"
                 f"  Volunteers:      {counts['volunteers']} new\n"
                 f"  Events:          {counts['events']} new\n"
                 f"  Showings:        {counts['showings']} new\n"

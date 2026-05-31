@@ -53,15 +53,10 @@ class TestVolunteerListViews(MembersTestsMixin, TestCase):
         self._test_list_page_common(url, include_retired=True)
 
     def test_role_report_loads(self):
+        # Role assignment on volunteers has been removed; the role report is now a stub.
         url = reverse("view-volunteer-role-report")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-
-        self.assertContains(response, "Volunteer One")
-        self.assertContains(response, "Volunteer Three")
-        # No role assigned:
-        self.assertNotContains(response, "Volunteer Two")
-
         self.assertTemplateUsed(response, "volunteer_role_report.html")
 
 
@@ -386,11 +381,6 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
             new_member.volunteer.notes, "plays the balalaika really badly"
         )
 
-        roles = new_member.volunteer.roles.all()
-
-        self.assertEqual(len(roles), 2)
-        self.assertEqual(roles[0].id, 2)
-        self.assertEqual(roles[1].id, 3)
 
     def test_post_new_vol_invalid_missing_data(self):
         url = reverse("add-volunteer")
@@ -450,8 +440,6 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
         self.assertEqual(member.volunteer.notes, "")
         # Won't have changed without "clear" being checked:
         self.assertEqual(member.volunteer.portrait, "/tmp/path/to/portrait")
-
-        self.assertEqual(member.volunteer.roles.count(), 0)
 
     def test_post_edit_vol_all_data(self):
         init_vol_count = Volunteer.objects.count()
@@ -519,11 +507,6 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
             member.volunteer.notes, "plays the balalaika really badly"
         )
 
-        roles = member.volunteer.roles.all()
-
-        self.assertEqual(len(roles), 2)
-        self.assertEqual(roles[0].id, 2)
-        self.assertEqual(roles[1].id, 3)
 
     def test_post_update_vol_invalid_missing_data(self):
         url = reverse("edit-volunteer", kwargs={"volunteer_id": 1})
@@ -758,8 +741,6 @@ class TestAddTraining(MembersTestsMixin, TestCase):
         role = Role.objects.get(id=2)
         vol = Volunteer.objects.get(id=1)
 
-        self.assertFalse(role in vol.roles.all())
-
         trainer = "Friendly Trainer \u0187hri\u01a8topher"
         notes = " No notes\nare noted... here. "
 
@@ -803,10 +784,6 @@ class TestAddTraining(MembersTestsMixin, TestCase):
         self.assertEqual(
             record.training_date, datetime.date(day=1, month=2, year=2015)
         )
-        if is_general:
-            self.assertFalse(role in vol.roles.all())
-        else:
-            self.assertTrue(role in vol.roles.all())
 
     def test_add_role_training(self):
         self._test_add_training_common(is_general=False)
@@ -994,7 +971,6 @@ class TestAddGroupTraining(MembersTestsMixin, TestCase):
                 )
                 self.assertEqual(recs[0].role, None)
             else:
-                self.assertTrue(role in vol.roles.all())
                 self.assertEqual(
                     recs[0].training_type, TrainingRecord.ROLE_TRAINING
                 )
@@ -1115,7 +1091,6 @@ class TestViewVolunteerTraining(MembersTestsMixin, TestCase):
 
         for vol in volunteers:
             self.assertTrue(vol.is_active)
-            vol.roles.add(role)
             record = TrainingRecord(
                 volunteer=vol,
                 training_type=TrainingRecord.ROLE_TRAINING,
@@ -1174,58 +1149,22 @@ class TestViewVolunteerTraining(MembersTestsMixin, TestCase):
         volunteers[1].status = Volunteer.STATUS_RETIRED
         volunteers[1].save()
 
-        # Make vol[2] not have the role:
-        volunteers[2].roles.remove(role)
-
-        # ...so should just have one training record:
+        # Vol[1] is inactive, vol[2] has a training record; both active volunteers
+        # with role-specific training now appear in the report:
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "volunteer_training_report.html")
-        self.assertContains(
-            response,
-            """
-            <div class="role_info" id="id_role_info_1">
-              <h2>Role 1 (standard)</h2>
-              <ul>
-
-                  <li class="training_record" data-training-time="1462316400">
-                    <a href="/volunteers/1/edit#training-record">
-                      Volunteer One
-                    </a>
-                    &mdash; last trained 04/05/2016
-                  </li>
-
-              </ul>
-            </div>""",
-            html=True,
-        )
-        self.assertNotContains(response, "Role 2")
-        self.assertContains(
-            response,
-            """
-            <div>
-              <h2>General Safety Training</h2>
-              <ul>
-                  <li class="training_record" data-training-time="0">
-                    <a href="/volunteers/1/edit">
-                      Volunteer One
-                    </a>
-                    &mdash; never trained
-                  </li>
-                  <li class="training_record" data-training-time="1462230000">
-                    <a href="/volunteers/3/edit">
-                      Volunteer Three
-                    </a>
-                    &mdash;
-                        last trained 03/05/2016
-                  </li>
-              </ul>
-            </div>""",
-            html=True,
-        )
-
+        # Role 1 section contains both active trained volunteers
+        self.assertContains(response, "Role 1 (standard)")
+        self.assertContains(response, "Volunteer One")
+        self.assertContains(response, "Volunteer Three")
+        self.assertContains(response, "last trained 04/05/2016")
+        # Inactive vol[1] should not appear in role section
         self.assertNotContains(response, "Volunteer Two")
+        # Vol[4] was never given training records
         self.assertNotContains(response, "Volunteer Four")
+        # General safety training section
+        self.assertContains(response, "General Safety Training")
 
     def test_no_post(self):
         url = reverse("view-volunteer-training-report")
@@ -1299,11 +1238,6 @@ class TestAnonymiseVolunteer(MembersTestsMixin, TestCase):
         self.vol_1.refresh_from_db()
         self.assertFalse(self.vol_1.is_active)
         self.assertEqual(self.vol_1.notes, "")
-
-    def test_anonymise_clears_roles(self):
-        self._post_confirm()
-        self.vol_1.refresh_from_db()
-        self.assertEqual(self.vol_1.roles.count(), 0)
 
     def test_anonymise_deletes_training_records(self):
         role = Role.objects.first()

@@ -41,22 +41,21 @@ logger.setLevel(logging.DEBUG)
 def view_volunteer_list(request):
     show_retired = request.GET.get("show-retired", None) is not None
     show_dormant = request.GET.get("show-dormant", None) is not None
-    # Get all volunteers, sorted by name:
-    qs = TrainingRecord.objects.filter(
-        training_type=TrainingRecord.GENERAL_TRAINING
-    ).order_by("-training_date")
+    gst_enabled = get_site_config().general_training_enabled
 
     volunteers = (
         Volunteer.objects.order_by("member__name")
         .select_related()
-        .prefetch_related("roles")
         .prefetch_related("member")
-        .prefetch_related(
-            Prefetch(
-                "training_records", queryset=qs, to_attr="general_training"
-            )
-        )
     )
+
+    if gst_enabled:
+        qs = TrainingRecord.objects.filter(
+            training_type=TrainingRecord.GENERAL_TRAINING
+        ).order_by("-training_date")
+        volunteers = volunteers.prefetch_related(
+            Prefetch("training_records", queryset=qs, to_attr="general_training")
+        )
 
     if show_retired:
         pass  # show everything
@@ -71,6 +70,7 @@ def view_volunteer_list(request):
         "retired_data_included": show_retired,
         "dormant_data_included": show_dormant,
         "active_count": active_count,
+        "general_training_enabled": gst_enabled,
         "general_training_desc": TrainingRecord.GENERAL_TRAINING_DESC,
     }
     return render(request, "volunteer_list.html", context)
@@ -335,28 +335,8 @@ def bulk_anonymise_volunteers(request):
 @panopticon_required
 @require_safe
 def view_volunteer_role_report(request):
-    # Build dict of role names -> volunteer names
-    role_vol_map = {}
-    # Query for active volunteers, sorted by name
-    volunteer_query = (
-        Role.objects.filter(volunteer__status=Volunteer.STATUS_ACTIVE)
-        .values_list("name", "volunteer__id", "volunteer__member__name")
-        .order_by("volunteer__member__name", "name")
-    )
-
-    for role, vol_id, vol_name in volunteer_query:
-        role_vol_map.setdefault(role, []).append(vol_name)
-
-    # Now sort role_vol_map by role name:
-    role_vol_map = sorted(
-        role_vol_map.items(), key=lambda role_name_tuple: role_name_tuple[0]
-    )
-    # (now got a list  of (role, (name1, name2, ...)) tuples, rather than a
-    # dict, but that's fine)
-
-    context = {
-        "role_vol_map": role_vol_map,
-    }
+    # Volunteer role assignment has been removed; this view is now a stub.
+    context = {"role_vol_map": []}
     return render(request, "volunteer_role_report.html", context)
 
 
@@ -558,6 +538,8 @@ def edit_volunteer(request, volunteer_id, create_new=False):
     else:
         training_record_form = None
 
+    from toolkit.members.models import Qualification
+    site_config = get_site_config()
     context = {
         "pagetitle": "Add Volunteer" if create_new else "Edit Volunteer",
         "default_mugshot": settings.DEFAULT_MUGSHOT,
@@ -567,7 +549,9 @@ def edit_volunteer(request, volunteer_id, create_new=False):
         "mem_form": mem_form,
         "training_record_form": training_record_form,
         "dawn_of_toolkit": settings.DAWN_OF_TOOLKIT,
-        "site_config": get_site_config(),
+        "site_config": site_config,
+        "general_training_enabled": site_config.general_training_enabled,
+        "all_qualifications": Qualification.objects.all(),
     }
     return render(request, "form_volunteer.html", context)
 
@@ -594,8 +578,6 @@ def add_volunteer_training_record(request, volunteer_id):
         )
 
         if new_record.training_type == TrainingRecord.ROLE_TRAINING:
-            # Now make sure the volunteer has that role selected:
-            volunteer.roles.add(new_record.role)
             training_description = str(new_record.role)
         else:
             training_description = new_record.GENERAL_TRAINING_DESC
@@ -640,8 +622,10 @@ def view_volunteer_training_records(request):
     # Two sets of data, the complicated one (training records) and the simpler
     # one (all active volunteers, for the 'general' dates.)
     records = (
-        TrainingRecord.objects.filter(volunteer__status=Volunteer.STATUS_ACTIVE)
-        .filter(volunteer__roles=F("role"))
+        TrainingRecord.objects.filter(
+            volunteer__status=Volunteer.STATUS_ACTIVE,
+            training_type=TrainingRecord.ROLE_TRAINING,
+        )
         .select_related()
         .prefetch_related("role")
     )
@@ -671,26 +655,23 @@ def view_volunteer_training_records(request):
         key=lambda r_l: r_l[0].name.lower(),
     )
 
-    # Second data set - all active volunteers.
-    qs = TrainingRecord.objects.filter(
-        training_type=TrainingRecord.GENERAL_TRAINING
-    ).order_by("-training_date")
+    gst_enabled = get_site_config().general_training_enabled
 
-    volunteers = (
-        Volunteer.objects.active()
-        .order_by("member__name")
-        .select_related()
-        # Use above queryset to prepopulate a 'general_training'
-        # attribute on the retrieved volunteers (to keep the number
-        # of queries sane)
-        .prefetch_related(
-            Prefetch(
-                "training_records", queryset=qs, to_attr="general_training"
-            )
+    # Second data set - all active volunteers with GST records (only when GST is enabled).
+    volunteers = Volunteer.objects.active().order_by("member__name").select_related()
+    if gst_enabled:
+        qs = TrainingRecord.objects.filter(
+            training_type=TrainingRecord.GENERAL_TRAINING
+        ).order_by("-training_date")
+        volunteers = volunteers.prefetch_related(
+            Prefetch("training_records", queryset=qs, to_attr="general_training")
         )
-    )
 
-    context = {"report_data": role_map_list, "volunteers": volunteers}
+    context = {
+        "report_data": role_map_list,
+        "volunteers": volunteers,
+        "general_training_enabled": gst_enabled,
+    }
     return render(request, "volunteer_training_report.html", context)
 
 
@@ -719,9 +700,6 @@ def add_volunteer_training_group_record(request):
                     volunteer=volunteer,
                 )
                 record.save()
-                if training_type == TrainingRecord.ROLE_TRAINING:
-                    # Now make sure the volunteer has that role selected:
-                    volunteer.roles.add(role)
 
             if training_type == TrainingRecord.ROLE_TRAINING:
                 messages.add_message(
@@ -980,3 +958,127 @@ def volunteer_digest_unsubscribe(request):
     volunteer.save(update_fields=["weekly_digest"])
 
     return render(request, "volunteer_digest_unsubscribe.html", {"success": True})
+
+
+@panopticon_required
+def bulk_award_qualification(request):
+    from toolkit.members.models import Qualification, VolunteerQualification
+
+    all_qualifications = Qualification.objects.order_by("name")
+
+    # Resolve the selected qualification (if any) from GET or POST
+    qual_id = request.POST.get("qualification_id") or request.GET.get("qualification_id")
+    selected_qual = None
+    if qual_id:
+        try:
+            selected_qual = Qualification.objects.get(pk=qual_id)
+        except Qualification.DoesNotExist:
+            messages.error(request, "Qualification not found.")
+
+    if request.method == "POST" and selected_qual:
+        raw_ids = request.POST.getlist("volunteer_ids")
+        try:
+            selected_ids = [int(i) for i in raw_ids if i]
+        except ValueError:
+            messages.error(request, "Invalid volunteer selection.")
+            return HttpResponseRedirect(reverse("bulk-award-qualification"))
+
+        if not selected_ids:
+            messages.warning(request, "No volunteers selected.")
+        else:
+            existing = set(
+                VolunteerQualification.objects.filter(
+                    volunteer_id__in=selected_ids,
+                    qualification=selected_qual,
+                ).values_list("volunteer_id", flat=True)
+            )
+            to_create = [vid for vid in selected_ids if vid not in existing]
+            granted_by = request.user.get_full_name() or request.user.username
+            VolunteerQualification.objects.bulk_create([
+                VolunteerQualification(
+                    volunteer_id=vid,
+                    qualification=selected_qual,
+                    granted_by=granted_by,
+                )
+                for vid in to_create
+            ])
+            skipped = len(selected_ids) - len(to_create)
+            msg = f"'{selected_qual.name}' awarded to {len(to_create)} volunteer(s)."
+            if skipped:
+                msg += f" {skipped} already held it and were skipped."
+            messages.success(request, msg)
+            logger.info(
+                "Bulk award: '%s' granted to %d volunteers by %s (%d skipped)",
+                selected_qual.name, len(to_create), request.user.username, skipped,
+            )
+        return HttpResponseRedirect(
+            reverse("bulk-award-qualification") + f"?qualification_id={selected_qual.pk}"
+        )
+
+    # Build volunteer list — active only, with their current qualifications prefetched
+    volunteers = (
+        Volunteer.objects.filter(status=Volunteer.STATUS_ACTIVE)
+        .select_related("member")
+        .prefetch_related("qualifications__qualification")
+        .order_by("member__name")
+    )
+
+    # Annotate each volunteer with whether they already hold the selected qual
+    if selected_qual:
+        holders = set(
+            VolunteerQualification.objects.filter(
+                qualification=selected_qual
+            ).values_list("volunteer_id", flat=True)
+        )
+        for vol in volunteers:
+            vol.already_holds = vol.pk in holders
+    else:
+        for vol in volunteers:
+            vol.already_holds = False
+
+    hide_holders = request.GET.get("hide-holders") is not None and selected_qual is not None
+
+    context = {
+        "all_qualifications": all_qualifications,
+        "selected_qual": selected_qual,
+        "volunteers": volunteers,
+        "hide_holders": hide_holders,
+    }
+    return render(request, "bulk_award_qualification.html", context)
+
+
+@panopticon_required
+@require_POST
+def add_volunteer_qualification(request, volunteer_id):
+    from toolkit.members.models import Qualification, VolunteerQualification
+    volunteer = get_object_or_404(Volunteer, id=volunteer_id)
+    qual_id = request.POST.get("qualification_id")
+    granted_by = request.POST.get("granted_by", "").strip()
+    try:
+        qualification = Qualification.objects.get(pk=qual_id)
+    except Qualification.DoesNotExist:
+        messages.error(request, "Qualification not found.")
+        return HttpResponseRedirect(reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id}))
+    _, created = VolunteerQualification.objects.get_or_create(
+        volunteer=volunteer,
+        qualification=qualification,
+        defaults={"granted_by": granted_by},
+    )
+    if created:
+        messages.success(request, f"'{qualification.name}' qualification recorded for {volunteer.member.name}.")
+    else:
+        messages.warning(request, f"{volunteer.member.name} already holds the '{qualification.name}' qualification.")
+    return HttpResponseRedirect(reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id}) + "#vol-qualifications")
+
+
+@panopticon_required
+@require_POST
+def remove_volunteer_qualification(request, vq_id):
+    from toolkit.members.models import VolunteerQualification
+    vq = get_object_or_404(VolunteerQualification, pk=vq_id)
+    volunteer_id = vq.volunteer_id
+    qual_name = vq.qualification.name
+    vol_name = vq.volunteer.member.name
+    vq.delete()
+    messages.success(request, f"'{qual_name}' qualification removed from {vol_name}.")
+    return HttpResponseRedirect(reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id}) + "#vol-qualifications")

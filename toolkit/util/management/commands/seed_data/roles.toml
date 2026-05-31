@@ -1,6 +1,9 @@
 # Roles used on the rota. standard=true roles appear by default on new event templates.
 # Badge flags: keyholder_only, beginner_friendly, not_wheelchair_accessible.
 # Add new roles here — no code changes needed.
+#
+# Qualification gates (required_qualification / qualification_gate) are set in
+# seed_dev_data.py after qualifications exist, not here.
 
 [[roles]]
 name = "Keyholder"

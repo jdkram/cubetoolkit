@@ -76,6 +76,35 @@ class Role(models.Model):
         "empty slots show a warning on the rota to encourage sign-up.",
     )
 
+    GATE_OFF = "off"
+    GATE_ADVISORY = "advisory"
+    GATE_BLOCKING = "blocking"
+    GATE_MODE_CHOICES = [
+        (GATE_OFF, "Off"),
+        (GATE_ADVISORY, "Advisory"),
+        (GATE_BLOCKING, "Blocking"),
+    ]
+
+    required_qualification = models.ForeignKey(
+        "members.Qualification",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="required_for_roles",
+        help_text="Qualification volunteers must hold to sign up for this role.",
+    )
+    qualification_gate = models.CharField(
+        max_length=10,
+        choices=GATE_MODE_CHOICES,
+        default=GATE_OFF,
+        help_text="What happens when a volunteer without the required qualification tries to sign up.",
+    )
+
+    @property
+    def has_active_gate(self):
+        """True when this role has a qualification requirement that actually fires (not 'off')."""
+        return bool(self.required_qualification_id and self.qualification_gate != self.GATE_OFF)
+
     class Meta:
         db_table = "Roles"
         ordering = ["name"]
@@ -1258,11 +1287,23 @@ class SiteConfiguration(models.Model):
     # --- Mailout ---
     mailout_details_days_ahead = models.PositiveSmallIntegerField(
         default=9,
-        help_text="Days ahead to include detailed event copy in the members mailout.",
+        help_text=(
+            "This setting controls the members mailout — the periodic programme newsletter "
+            "sent to people on the membership list (not volunteers, not the public website). "
+            "Events whose next showing falls within this many days from the mailout send date "
+            "will have their full event copy (synopsis, terms, etc.) included in the mailout. "
+            "Events further away than this threshold, but within the listings window below, "
+            "appear as brief listings only. Default is 9 days."
+        ),
     )
     mailout_listings_days_ahead = models.PositiveSmallIntegerField(
         default=14,
-        help_text="Days ahead to include listings in the members mailout.",
+        help_text=(
+            "The outer window for the members mailout. Events whose next showing falls within "
+            "this many days from the mailout send date will appear as brief listings (title, "
+            "date, and time) even if they are outside the detailed copy window above. "
+            "Events beyond this window are not included in the mailout at all. Default is 14 days."
+        ),
     )
 
     # --- Membership ---
@@ -1272,7 +1313,11 @@ class SiteConfiguration(models.Model):
     )
     default_training_expiry_months = models.PositiveSmallIntegerField(
         default=12,
-        help_text="Months after which volunteer training records are considered expired.",
+        help_text=(
+            "Months after which a training record is shown as 'out of date' on the volunteer list. "
+            "This is informational only — it does not affect rota sign-up. "
+            "The training gate checks for any record, however old."
+        ),
     )
 
     # --- Dashboard ---
@@ -1293,6 +1338,16 @@ class SiteConfiguration(models.Model):
     )
 
     # --- Volunteers ---
+    general_training_enabled = models.BooleanField(
+        default=True,
+        help_text=(
+            "Show General Safety Training records and prompts across the volunteer list, "
+            "profile 'Key dates', and training report. Disable if your venue does not run "
+            "General Safety Training — role-specific training records remain available "
+            "regardless of this setting. The GST training type is also hidden from the "
+            "'add training record' form when disabled."
+        ),
+    )
     volunteer_dormancy_days = models.PositiveSmallIntegerField(
         default=365,
         help_text=(
@@ -1458,7 +1513,18 @@ class SiteConfiguration(models.Model):
     )
     bulletin_guidance = models.TextField(
         blank=True,
-        default="",
+        default=(
+            "Use bulletins for short notices relevant to the whole volunteer community: "
+            "policy changes, updated contact details, new resources, or anything a volunteer "
+            "needs to know before their next event.\n\n"
+            "Good examples: \"Keyholders can now be contacted via keyholders@lists.example.com "
+            "— please use this if your event needs a keyholder.\" / \"The Managing Immediate "
+            "Risk Policy has been updated and applies to all volunteers: [link]\" / \"The "
+            "projection booth door code has changed — use the code previously assigned to the "
+            "cleaning cupboard.\"\n\n"
+            "Before you post, remember that bulletins go to all 500+ active volunteers. "
+            "If you need to send a callout ahead of an event, mailing lists are a better route."
+        ),
         help_text=(
             "Guidance shown on the 'Post a bulletin' form. Use this to set local "
             "conventions: what kinds of notices belong here, how to write them, "

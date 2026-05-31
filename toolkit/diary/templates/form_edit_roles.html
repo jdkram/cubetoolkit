@@ -65,6 +65,13 @@
               <th class="text-center" style="width:50px" title="🌱 Good first role">🌱</th>
               <th class="text-center" style="width:50px" title="♿ Confirmed wheelchair-accessible">♿</th>
               <th class="text-center" style="width:50px" title="🔑 Keyholder slot">🔑</th>
+              <th style="width:160px">Requires qualification</th>
+              <th style="width:115px">
+                Gate
+                <span class="badge text-bg-secondary ms-1" style="font-weight:normal; font-size:0.7em; cursor:default;"
+                      data-bs-toggle="tooltip" data-bs-placement="left"
+                      title="Off — no check. Advisory — volunteer is warned but can still sign up. Blocking — sign-up is refused without the qualification (Panopticons bypass).">?</span>
+              </th>
               <th class="text-center" style="width:70px">Archive</th>
             </tr>
           </thead>
@@ -72,7 +79,7 @@
           {% for form in formset %}
             {% if form.errors %}
             <tr class="table-danger">
-              <td colspan="7">
+              <td colspan="9">
                 <strong>Error:</strong>
                 {{ form.name.errors.as_text }}
                 {{ form.standard.errors.as_text }}
@@ -89,6 +96,8 @@
                 <td class="text-center">{{ form.beginner_friendly }}</td>
                 <td class="text-center">{{ form.wheelchair_accessible }}</td>
                 <td class="text-center">{{ form.keyholder_only }}</td>
+                <td>{{ form.required_qualification }}</td>
+                <td>{{ form.qualification_gate }}</td>
                 <td>{{ form.id }}</td>
               {% else %}
                 <td>{{ form.name }}{{ form.id }}</td>
@@ -97,6 +106,8 @@
                 <td class="text-center">{{ form.beginner_friendly }}</td>
                 <td class="text-center">{{ form.wheelchair_accessible }}</td>
                 <td class="text-center">{{ form.keyholder_only }}</td>
+                <td>{{ form.required_qualification }}</td>
+                <td>{{ form.qualification_gate }}</td>
                 <td class="text-center">
                   {% if form.id.value %}
                     <button type="button" class="btn btn-sm btn-outline-warning archive-btn"
@@ -111,10 +122,79 @@
         </table>
         </div>
         <div class="card-footer d-flex justify-content-between align-items-center">
-          <small class="text-muted">New roles are added at the bottom of the list. 🌱 = good first role &nbsp;·&nbsp; ♿ = confirmed wheelchair-accessible &nbsp;·&nbsp; 🔑 = keyholder slot.</small>
+          <small class="text-muted">New roles are added at the bottom of the list. 🌱 = good first role &nbsp;·&nbsp; ♿ = wheelchair-accessible &nbsp;·&nbsp; 🔑 = keyholder. Gate: <strong>Advisory</strong> warns the volunteer but allows sign-up &nbsp;·&nbsp; <strong>Blocking</strong> refuses it (Panopticons bypass both). Gate only fires when a qualification is set.</small>
           <button type="submit" class="btn btn-primary">Save changes</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  {# Qualifications management #}
+  <div class="card mt-3">
+    <div class="card-header d-flex flex-wrap align-items-center" style="gap:0.5rem">
+      <h4 class="mb-0 card-header-title">Qualifications</h4>
+      <small class="text-muted">Named credentials volunteers can hold — e.g. "Bar", "Projectionist level 1". Award these on individual volunteer profiles. Roles reference qualifications to gate sign-up.</small>
+    </div>
+    <div class="card-body p-0">
+      {% if all_qualifications %}
+      <table class="table table-sm table-bordered mb-0">
+        <thead class="thead-light">
+          <tr>
+            <th>Name</th>
+            <th>Notes</th>
+            <th>Required by</th>
+            <th style="width:70px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for qual in all_qualifications %}
+          <tr data-qual-id="{{ qual.pk }}">
+            <td><strong class="qual-display-name">{{ qual.name }}</strong></td>
+            <td><small class="text-muted qual-display-notes">{{ qual.notes|default:"" }}</small></td>
+            <td><small>{% for role in qual.required_for_roles.all %}{{ role.name }}{% if not forloop.last %}, {% endif %}{% empty %}<em class="text-muted">none</em>{% endfor %}</small></td>
+            <td class="text-center" style="white-space:nowrap">
+              <button type="button" class="btn btn-sm btn-outline-secondary qual-edit-btn" data-qual-id="{{ qual.pk }}">Edit</button>
+              <form method="post" style="display:inline">
+                {% csrf_token %}
+                <input type="hidden" name="_action" value="delete_qualification">
+                <input type="hidden" name="qualification_id" value="{{ qual.pk }}">
+                <button type="submit" class="btn btn-sm btn-outline-danger"
+                        onclick="return confirm('Delete qualification \'{{ qual.name }}\'?')">Delete</button>
+              </form>
+            </td>
+          </tr>
+          <tr class="qual-edit-row" id="qual-edit-{{ qual.pk }}" style="display:none; background:#f8f9fa">
+            <td colspan="4">
+              <form method="post" class="d-flex flex-wrap align-items-center" style="gap:0.5rem; padding:0.4rem 0">
+                {% csrf_token %}
+                <input type="hidden" name="_action" value="edit_qualification">
+                <input type="hidden" name="qualification_id" value="{{ qual.pk }}">
+                <input type="text" name="qualification_name" class="form-control form-control-sm" style="max-width:200px"
+                       value="{{ qual.name }}" placeholder="Name" required>
+                <input type="text" name="qualification_notes" class="form-control form-control-sm" style="max-width:340px"
+                       value="{{ qual.notes }}" placeholder="Internal notes (optional)">
+                <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                <button type="button" class="btn btn-sm btn-link qual-edit-cancel" data-qual-id="{{ qual.pk }}">Cancel</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="p-3 mb-0 text-muted">No qualifications defined yet.</p>
+      {% endif %}
+      <div class="card-footer">
+        <form method="post" class="d-flex flex-wrap align-items-center" style="gap:0.5rem">
+          {% csrf_token %}
+          <input type="hidden" name="_action" value="add_qualification">
+          <input type="text" name="qualification_name" class="form-control form-control-sm" style="max-width:200px"
+                 placeholder="Name" required>
+          <input type="text" name="qualification_notes" class="form-control form-control-sm" style="max-width:340px"
+                 placeholder="Internal notes (optional)">
+          <button type="submit" class="btn btn-sm btn-outline-primary">Add</button>
+        </form>
+      </div>
     </div>
   </div>
 
@@ -184,6 +264,21 @@ document.addEventListener("DOMContentLoaded", function() {
             if (!confirm(msg)) return;
             document.getElementById("archive-role-id").value = id;
             document.getElementById("archive-form").submit();
+        });
+    });
+
+    document.querySelectorAll(".qual-edit-btn").forEach(function(btn) {
+        btn.addEventListener("click", function() {
+            var id = btn.dataset.qualId;
+            document.getElementById("qual-edit-" + id).style.display = "";
+            btn.style.display = "none";
+        });
+    });
+    document.querySelectorAll(".qual-edit-cancel").forEach(function(btn) {
+        btn.addEventListener("click", function() {
+            var id = btn.dataset.qualId;
+            document.getElementById("qual-edit-" + id).style.display = "none";
+            document.querySelector(".qual-edit-btn[data-qual-id='" + id + "']").style.display = "";
         });
     });
 });

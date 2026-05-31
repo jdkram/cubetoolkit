@@ -127,22 +127,16 @@ class MembersTestsMixin:
             portrait=f"{settings.MEDIA_ROOT}/path/to/portrait",
         )
         self.vol_1.save()
-        self.vol_1.roles.set([r1, r3])
-        self.vol_1.save()
 
         self.vol_2 = Volunteer(member=self.mem_5, user=u_vol2)
         self.vol_2.save()
 
         self.vol_3 = Volunteer(member=self.mem_6, user=u_vol3)
         self.vol_3.save()
-        self.vol_3.roles.set([r3])
-        self.vol_3.save()
 
         self.vol_4 = Volunteer(
             member=self.mem_7, user=u_vol4, status="retired", notes="Subliminal, superluminous"
         )
-        self.vol_4.save()
-        self.vol_4.roles.set([r3])
         self.vol_4.save()
 
     def _setup_test_users(self):
