@@ -2124,6 +2124,10 @@ def edit_site_configuration(request):
             ["image_copyright_guidance_url", "alt_text_guidance_url", "access_rider_guidance_url"],
         ),
         (
+            "Lost & found",
+            ["lost_and_found_retain_days"],
+        ),
+        (
             "Bulletins",
             ["bulletin_default_expiry_days", "bulletin_guidance", "bulletin_post_permission"],
         ),

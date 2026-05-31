@@ -1,20 +1,83 @@
 {% extends "base_admin.html" %}
-{% load crispy_forms_tags %}
 
 {% block title %}Site configuration{% endblock %}
 
 {% block css %}
 {{ block.super }}
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/messages.css">
-<style type="text/css">
+<style>
+  .config-layout {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+  }
+
+  /* Sticky jump-to sidebar */
+  .config-nav {
+    flex: 0 0 14rem;
+    position: sticky;
+    top: 5rem;
+    max-height: calc(100vh - 6rem);
+    overflow-y: auto;
+  }
+  .config-nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .config-nav li + li {
+    border-top: 1px solid #dee2e6;
+  }
+  .config-nav a {
+    display: block;
+    padding: 0.45rem 0.75rem;
+    font-size: 0.83rem;
+    color: #495057;
+    text-decoration: none;
+    border-radius: 4px;
+  }
+  .config-nav a:hover {
+    background: #f0f4f8;
+    color: #212529;
+  }
+  .config-nav-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #6c757d;
+    padding: 0.5rem 0.75rem 0.3rem;
+  }
+
+  /* Content column */
+  .config-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Section cards */
   .config-section {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+    scroll-margin-top: 5rem;
   }
-  .config-section .card-header {
+  .config-section-header {
     font-weight: 600;
+    font-size: 0.95rem;
+    padding: 0.65rem 1rem;
+    border-bottom: 1px solid #dee2e6;
+    background: #f8f9fa;
+    border-radius: 6px 6px 0 0;
   }
-.config-section .form-text {
+  .config-section-body {
+    padding: 1rem 1rem 0.25rem;
+  }
+  .config-section .form-text {
     color: #666;
-    font-size: 0.85em;
+    font-size: 0.83em;
+    margin-top: 0.2rem;
   }
   .config-section input[type="text"],
   .config-section input[type="url"],
@@ -26,73 +89,82 @@
   .config-section input[type="number"] {
     max-width: 8rem;
   }
+
   .panopticon-banner {
     background: #fff3cd;
     border-left: 4px solid #ffc107;
     padding: 0.6rem 0.9rem;
-    margin-bottom: 1rem;
-    font-size: 0.9em;
+    margin-bottom: 1.25rem;
+    font-size: 0.88em;
+    border-radius: 0 4px 4px 0;
+  }
+
+  @media (max-width: 767px) {
+    .config-layout { flex-direction: column; }
+    .config-nav { position: static; max-height: none; flex: none; width: 100%; }
   }
 </style>
 {% endblock %}
 
 {% block body %}
-<div class="container-fluid mt-3">
+<h1>Site configuration</h1>
 
-  <h1>Site configuration</h1>
+<div class="panopticon-banner">
+  <strong>Panopticon only.</strong> These settings affect everyone using the toolkit. Changes apply immediately.
+</div>
 
-  <div class="panopticon-banner">
-    <strong>Panopticon only.</strong> These settings affect everyone using the
-    toolkit. Changes apply immediately. Defaults match the values in the
-    settings file at the time of the last deploy.
-  </div>
+<form method="post" novalidate>
+  {% csrf_token %}
 
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+  {% endif %}
 
-  <form method="post" novalidate>
-    {% csrf_token %}
+  <div class="config-layout">
 
-    {% if form.non_field_errors %}
-      <div class="alert alert-danger">{{ form.non_field_errors }}</div>
-    {% endif %}
+    <nav class="config-nav" aria-label="Jump to section">
+      <div class="config-nav-label">Jump to</div>
+      <ul>
+        {% for label, fields in grouped_fields %}
+        <li><a href="#section-{{ forloop.counter }}">{{ label }}</a></li>
+        {% endfor %}
+      </ul>
+    </nav>
 
-    <div class="row g-3">
-    {% for label, fields in grouped_fields %}
-    <div class="col-12 col-md-6">
-      <div class="card config-section h-100">
-        <div class="card-header">{{ label }}</div>
-        <div class="card-body">
+    <div class="config-content">
+      {% for label, fields in grouped_fields %}
+      <div class="config-section" id="section-{{ forloop.counter }}">
+        <div class="config-section-header">{{ label }}</div>
+        <div class="config-section-body">
           {% for field in fields %}
-            <div class="mb-3">
-              {% if field.field.widget.input_type == "checkbox" %}
-                <div class="form-check">
-                  {{ field }}
-                  <label class="form-check-label" for="{{ field.id_for_label }}">
-                    {{ field.label }}
-                  </label>
-                </div>
-              {% else %}
-                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          <div class="mb-3">
+            {% if field.field.widget.input_type == "checkbox" %}
+              <div class="form-check">
                 {{ field }}
-              {% endif %}
-              {% if field.help_text %}
-                <small class="form-text">{{ field.help_text }}</small>
-              {% endif %}
-              {% if field.errors %}
-                <div class="text-danger small mt-1">{{ field.errors }}</div>
-              {% endif %}
-            </div>
+                <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              </div>
+            {% else %}
+              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+            {% endif %}
+            {% if field.help_text %}
+              <small class="form-text">{{ field.help_text }}</small>
+            {% endif %}
+            {% if field.errors %}
+              <div class="text-danger small mt-1">{{ field.errors }}</div>
+            {% endif %}
+          </div>
           {% endfor %}
         </div>
       </div>
-    </div>
-    {% endfor %}
+      {% endfor %}
+
+      <div class="mb-4">
+        <button type="submit" class="btn btn-primary">Save changes</button>
+        <a href="{% url 'toolkit-index' %}" class="btn btn-link">Cancel</a>
+      </div>
     </div>
 
-    <div class="mt-4 mb-4">
-      <button type="submit" class="btn btn-primary">Save changes</button>
-      <a href="{% url 'toolkit-index' %}" class="btn btn-link">Cancel</a>
-    </div>
-  </form>
-
-</div>
+  </div>
+</form>
 {% endblock %}
