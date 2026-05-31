@@ -33,6 +33,16 @@ body {
   background: none;
   border: none;
 }
+/* Muted access-tier reminder tags — shown next to nav items that require elevated permissions.
+ * Opacity works in both navbar (white text on dark) and dropdown (dark text on white) contexts. */
+.nav-tier {
+  font-size: 0.62em;
+  font-weight: 400;
+  opacity: 0.5;
+  margin-left: 0.2em;
+  vertical-align: middle;
+  letter-spacing: 0.01em;
+}
 </style>
 {% endblock %}
 
@@ -60,86 +70,122 @@ body {
 
       <div class="collapse navbar-collapse" id="navbarsExampleDefault">
         <ul class="navbar-nav me-auto">
+
           <li class="nav-item">
             <a class="nav-link" href="{% url "toolkit-index" %}">Home</a>
           </li>
-          {% if perms.toolkit.write %}
-          <li class="nav-item">
-            <a class="nav-link" href="{% url "default-edit" %}">Diary</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{% url "diary-edit-calendar" %}">Calendar</a>
-          </li>
-          {% endif %}
+
           <li class="nav-item">
             <a class="nav-link" href="{% url "rota-edit" %}">Rota</a>
           </li>
+
+          {% if perms.toolkit.write %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url "default-edit" %}">Diary<span class="nav-tier">Prog</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url "diary-edit-calendar" %}">Calendar<span class="nav-tier">Prog</span></a>
+          </li>
+          {% endif %}
+
           <li class="nav-item">
             <a class="nav-link" href="{% url "default-view" %}">Website</a>
           </li>
+
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" id="dropdown-labs" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Labs</a>
             <div class="dropdown-menu" aria-labelledby="dropdown-labs">
+              <a class="dropdown-item" href="{% url "labs-bulletins" %}">Bulletins</a>
               <a class="dropdown-item" href="{% url "labs-collectives" %}">Collectives</a>
               <a class="dropdown-item" href="{% url "volunteer-directory" %}">Volunteer directory</a>
-              <a class="dropdown-item" href="{% url "labs-bulletins" %}">Bulletins</a>
               <div class="dropdown-divider"></div>
               <a class="dropdown-item" href="{% url "labs-floorplan" %}">Building Map</a>
               <a class="dropdown-item" href="{% url "labs-jobs" %}">Jobs board</a>
               <a class="dropdown-item" href="{% url "labs-shopping" %}">Shopping list</a>
               <a class="dropdown-item" href="{% url "labs-donations" %}">Donations wishlist</a>
               <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="{% url "view-rota-vacancies" %}">Rota vacancies</a>
               <a class="dropdown-item" href="{% url "toolkit-access" %}">Access levels</a>
-              <a class="dropdown-item" href="{% url "labs-donations-manage" %}">Manage donations</a>
+              {% if user.is_superuser %}
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="{% url "labs-donations-manage" %}">Manage donations<span class="nav-tier">Panop</span></a>
+              {% endif %}
             </div>
           </li>
+
           {% if perms.toolkit.write %}
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="dropdown-meta" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Meta</a>
+            <a class="nav-link dropdown-toggle" href="#" id="dropdown-meta" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Meta<span class="nav-tier">Prog</span></a>
             <div class="dropdown-menu" aria-labelledby="dropdown-meta">
               <a class="dropdown-item" href="{% url "edit_event_tags" %}">Tags</a>
               <a class="dropdown-item" href="{% url "edit_event_templates" %}">Templates</a>
               <a class="dropdown-item" href="{% url "edit_rooms" %}">Rooms</a>
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="{% url "view_event_field" field="copy" %}">Copy report</a>
+              <a class="dropdown-item" href="{% url "view_event_field" field="copy_summary" %}">Copy summary report</a>
+              <a class="dropdown-item" href="{% url "view_event_field" field="terms" %}">Terms report</a>
+              <a class="dropdown-item" href="{% url "edit-printed-programmes" %}">Upload printed programmes</a>
               {% if user.is_superuser %}
               <div class="dropdown-divider"></div>
-              <a class="dropdown-item" href="{% url "edit_roles" %}">Roles</a>
+              <a class="dropdown-item" href="{% url "edit_roles" %}">Roles<span class="nav-tier">Panop</span></a>
               {% endif %}
             </div>
           </li>
           {% endif %}
-          {% if user.is_superuser %}
-             <li class="nav-item dropdown">
-               <a class="nav-link dropdown-toggle" href="{% url "search-members" %}" id="dropdown-members" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Members</a>
-               <div class="dropdown-menu" aria-labelledby="dropdown-members">
-                 <a class="dropdown-item" href="{% url "add-member" %}">Add Member</a>
-                 <a class="dropdown-item" href="{% url "search-members" %}">Search Members</a>
-                 <a class="dropdown-item" href="{% url "member-statistics" %}">Member Statistics</a>
-                 <a class="dropdown-item" href="{% url "member-duplicates" %}">Member Duplicates</a>
-                 {% if MEMBERSHIP_EXPIRY_ENABLED %}<a class="dropdown-item" href="{% url "member-expired" %}">Expired Members</a>{% endif %}
-               </div>
-             </li>
 
-             <li class="nav-item dropdown">
-               <a class="nav-link dropdown-toggle" href="{% url "view-volunteer-summary" %}" id="dropdown-volunteers" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Volunteers</a>
-               <div class="dropdown-menu" aria-labelledby="dropdown-volunteers">
-                 <a class="dropdown-item" href="{% url "view-volunteer-summary" %}">Volunteers summary</a>
-                 <a class="dropdown-item" href="{% url "view-volunteer-list" %}">Volunteers profiles</a>
-                 <a class="dropdown-item" href="{% url "add-volunteer" %}">Add new volunteer</a>
-                 <a class="dropdown-item" href="{% url "view-volunteer-export" %}">Export volunteers as CSV</a>
-                 <a class="dropdown-item" href="{% url "view-volunteer-role-report" %}">Volunteer role report</a>
-                 <a class="dropdown-item" href="{% url "view-volunteer-training-report" %}">Volunteer training report</a>
-                 <div class="dropdown-divider"></div>
-                 <a class="dropdown-item" href="{% url "bulk-award-qualification" %}">Bulk award qualifications</a>
-                 <a class="dropdown-item" href="{% url "view-volunteer-pool-health" %}">Pool maintenance</a>
-               </div>
-             </li>
-             <li class="nav-item">
-               <a class="nav-link" href="{% url "edit-site-configuration" %}">Site settings</a>
-             </li>
+          {% if user.is_superuser %}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="{% url "search-members" %}" id="dropdown-members" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Members<span class="nav-tier">Panop</span></a>
+            <div class="dropdown-menu" aria-labelledby="dropdown-members">
+              <a class="dropdown-item" href="{% url "add-member" %}">Add Member</a>
+              <a class="dropdown-item" href="{% url "search-members" %}">Search Members</a>
+              <a class="dropdown-item" href="{% url "member-statistics" %}">Statistics</a>
+              <a class="dropdown-item" href="{% url "member-duplicates" %}">Duplicates</a>
+              {% if MEMBERSHIP_EXPIRY_ENABLED %}<a class="dropdown-item" href="{% url "member-expired" %}">Expired Members</a>{% endif %}
+              <a class="dropdown-item" href="{% url "member-homepages" %}">Member homepages</a>
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="{% url "members-mailout" %}">Send mailout</a>
+              <a class="dropdown-item" href="{% url "mailer:jobs-list" %}">Mailout job status</a>
+            </div>
+          </li>
+
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="{% url "view-volunteer-summary" %}" id="dropdown-volunteers" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Volunteers<span class="nav-tier">Panop</span></a>
+            <div class="dropdown-menu" aria-labelledby="dropdown-volunteers">
+              <a class="dropdown-item" href="{% url "view-volunteer-summary" %}">Summary</a>
+              <a class="dropdown-item" href="{% url "view-volunteer-list" %}">Profiles</a>
+              <a class="dropdown-item" href="{% url "add-volunteer" %}">Add volunteer</a>
+              <a class="dropdown-item" href="{% url "view-volunteer-export" %}">Export CSV</a>
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="{% url "view-volunteer-role-report" %}">Role report</a>
+              <a class="dropdown-item" href="{% url "view-volunteer-training-report" %}">Training report</a>
+              <a class="dropdown-item" href="{% url "add-volunteer-training-group-record" %}">Add training records</a>
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="{% url "bulk-award-qualification" %}">Bulk award qualifications</a>
+              <a class="dropdown-item" href="{% url "view-volunteer-pool-health" %}">Pool maintenance</a>
+            </div>
+          </li>
+
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="dropdown-admin" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Admin<span class="nav-tier">Panop</span></a>
+            <div class="dropdown-menu" aria-labelledby="dropdown-admin">
+              <a class="dropdown-item" href="{% url "edit-site-configuration" %}">Site settings</a>
+              <a class="dropdown-item" href="{% url "wagtailadmin_home" %}">Wagtail CMS</a>
+              {% if VENUE.show_user_management %}
+              <a class="dropdown-item" href="/toolkit/admin/">Administration backend</a>
+              {% endif %}
+            </div>
+          </li>
           {% endif %}
+
           {% if user.volunteer.pk %}
           <li class="nav-item">
             <a class="nav-link" href="{% url "edit-volunteer" user.volunteer.pk %}"><span class="fa fa-user"></span> {{ user.volunteer.member.name }}</a>
+          </li>
+          {% endif %}
+          {% if VENUE.show_user_management %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url "password_change" %}">Change password</a>
           </li>
           {% endif %}
           <li class="nav-item">
@@ -148,6 +194,7 @@ body {
               <button class="nav-link" type="submit">Log out</button>
             </form>
           </li>
+
         </ul>
         {% block header-navbar-extra-post %}{% endblock %}
       </div>
