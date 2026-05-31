@@ -83,6 +83,7 @@ body {
             <a class="nav-link dropdown-toggle" href="{% url "default-view" %}" id="dropdown-website" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Website</a>
             <div class="dropdown-menu" aria-labelledby="dropdown-website">
               <a class="dropdown-item" href="{% url "default-view" %}">Public programme</a>
+              <a class="dropdown-item" href="{% url "labs-donations" %}">Donations wishlist</a>
               {% if user.is_superuser %}
               <a class="dropdown-item" href="{% url "wagtailadmin_home" %}">Wagtail CMS</a>
               {% endif %}
@@ -98,8 +99,9 @@ body {
               <div class="dropdown-divider"></div>
               <a class="dropdown-item" href="{% url "labs-floorplan" %}">Building Map</a>
               <a class="dropdown-item" href="{% url "labs-jobs" %}">Jobs board</a>
+              <a class="dropdown-item" href="{% url "labs-found-item-log" %}">Log found item</a>
+              <a class="dropdown-item" href="{% url "labs-found-items" %}">Lost &amp; found list</a>
               <a class="dropdown-item" href="{% url "labs-shopping" %}">Shopping list</a>
-              <a class="dropdown-item" href="{% url "labs-donations" %}">Donations wishlist</a>
               <div class="dropdown-divider"></div>
               <a class="dropdown-item" href="{% url "view-rota-vacancies" %}">Rota vacancies</a>
               <a class="dropdown-item" href="{% url "toolkit-access" %}">Access levels</a>

@@ -1,0 +1,218 @@
+{% extends "base_admin.html" %}
+
+{% block title %}{{ item.label_id }} — Lost &amp; found{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+  .laf-detail-card {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 1.25rem 1.5rem;
+    max-width: 640px;
+    margin-bottom: 1.5rem;
+  }
+  .laf-label-id {
+    font-family: monospace;
+    font-size: 2rem;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+  }
+  .laf-dl dt {
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: 0.75rem;
+  }
+  .laf-dl dd {
+    margin: 0.1rem 0 0;
+    font-size: 0.95rem;
+  }
+  .status-badge {
+    display: inline-block;
+    font-size: 0.78rem;
+    font-weight: bold;
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .status-unclaimed { background: #0d6efd; color: #fff; }
+  .status-claimed   { background: #198754; color: #fff; }
+  .status-disposed  { background: #6c757d; color: #fff; }
+  .type-badge {
+    display: inline-block;
+    font-size: 0.78rem;
+    font-weight: bold;
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+  }
+  .type-found { background: #0d6efd22; color: #0a58ca; border: 1px solid #0d6efd44; }
+  .type-lost  { background: #dc354522; color: #b02a37; border: 1px solid #dc354544; }
+  .overdue-badge {
+    display: inline-block;
+    font-size: 0.78rem;
+    font-weight: bold;
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    background: #ffc107;
+    color: #333;
+    margin-left: 0.4rem;
+  }
+  .laf-action-section {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 1rem 1.25rem;
+    max-width: 640px;
+    margin-bottom: 1rem;
+  }
+  .laf-action-section h4 {
+    margin: 0 0 0.75rem;
+    font-size: 1rem;
+  }
+  .laf-private-note {
+    font-size: 0.8rem;
+    color: #856404;
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 4px;
+    padding: 0.4rem 0.6rem;
+    margin-top: 0.25rem;
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+<p><a href="{% url "labs-found-items" %}">&larr; Lost &amp; found list</a></p>
+
+<div class="laf-detail-card">
+  <div class="laf-label-id">
+    {{ item.label_id }}
+    {% if item.report_type == 'found' %}
+      <span class="type-badge type-found" style="vertical-align: middle; margin-left: 0.4rem;">Found</span>
+    {% else %}
+      <span class="type-badge type-lost" style="vertical-align: middle; margin-left: 0.4rem;">Lost</span>
+    {% endif %}
+    <span class="status-badge status-{{ item.status }}" style="vertical-align: middle; margin-left: 0.3rem;">{{ item.status_display }}</span>
+    {% if item.is_overdue %}<span class="overdue-badge" style="vertical-align: middle;">Overdue</span>{% endif %}
+  </div>
+
+  <dl class="laf-dl">
+    <dt>Description</dt>
+    <dd>{{ item.description }}</dd>
+
+    <dt>{% if item.report_type == 'lost' %}Location last seen{% else %}Location found{% endif %}</dt>
+    <dd>{{ item.location_found }}</dd>
+
+    <dt>{% if item.report_type == 'lost' %}Date reported{% else %}Date found{% endif %}</dt>
+    <dd>{{ item.found_on|date:"d F Y" }}</dd>
+
+    <dt>Logged by</dt>
+    <dd>{{ item.logged_by }}</dd>
+
+    {% if item.reporter_contact %}
+    <dt>Reporter's contact <span style="font-weight:normal; font-size:0.85em;">(private)</span></dt>
+    <dd>
+      {{ item.reporter_contact|linebreaksbr }}
+      <div class="laf-private-note">Contact this person via the volunteer who logged the report, not directly.</div>
+    </dd>
+    {% endif %}
+
+    {% if item.notes %}
+    <dt>Notes</dt>
+    <dd>{{ item.notes|linebreaksbr }}</dd>
+    {% endif %}
+
+    {% if item.status == 'claimed' %}
+    <dt>{% if item.report_type == 'lost' %}Resolution{% else %}Claimed by{% endif %}</dt>
+    <dd>{{ item.claimed_by }}</dd>
+    <dt>{% if item.report_type == 'lost' %}Resolved on{% else %}Claimed on{% endif %}</dt>
+    <dd>{{ item.claimed_on|date:"d F Y"|default:"" }}</dd>
+    {% endif %}
+
+    {% if item.status == 'disposed' %}
+    {% if item.report_type == 'found' %}
+    <dt>Disposal method</dt>
+    <dd>{{ item.get_disposal_method_display }}</dd>
+    <dt>Disposed on</dt>
+    <dd>{{ item.disposed_on|date:"d F Y"|default:"" }}</dd>
+    {% else %}
+    <dt>Closed on</dt>
+    <dd>{{ item.disposed_on|date:"d F Y"|default:"" }}</dd>
+    {% endif %}
+    {% endif %}
+  </dl>
+
+  {% if item.photo %}
+  <div style="margin-top: 1rem;">
+    <img src="{{ item.photo.url }}" alt="Photo of found item" style="max-width: 100%; border-radius: 4px; border: 1px solid #dee2e6;">
+  </div>
+  {% endif %}
+</div>
+
+{% if item.report_type == 'found' %}
+<p>
+  <a href="{% url "labs-found-item-label" item.pk %}" class="btn btn-outline-secondary btn-sm" target="_blank">Print label</a>
+</p>
+{% endif %}
+
+{% if item.status == 'unclaimed' %}
+
+{% if item.report_type == 'found' %}
+<div class="laf-action-section">
+  <h4>Mark as claimed</h4>
+  <form method="post" action="{% url "labs-found-item-claim" item.pk %}">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="id_claimed_by" class="form-label">{{ claim_form.claimed_by.label }}</label>
+      {{ claim_form.claimed_by }}
+      {% if claim_form.claimed_by.help_text %}
+      <div class="form-text">{{ claim_form.claimed_by.help_text }}</div>
+      {% endif %}
+    </div>
+    <button type="submit" class="btn btn-success">Mark as claimed</button>
+  </form>
+</div>
+
+<div class="laf-action-section">
+  <h4>Mark as disposed</h4>
+  <form method="post" action="{% url "labs-found-item-dispose" item.pk %}">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="id_disposal_method" class="form-label">{{ dispose_form.disposal_method.label }}</label>
+      {{ dispose_form.disposal_method }}
+    </div>
+    <button type="submit" class="btn btn-secondary">Mark as disposed</button>
+  </form>
+</div>
+{% else %}
+<div class="laf-action-section">
+  <h4>Mark as reunited</h4>
+  <form method="post" action="{% url "labs-found-item-claim" item.pk %}">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="id_claimed_by" class="form-label">How was it resolved?</label>
+      {{ claim_form.claimed_by }}
+      <div class="form-text">e.g. "Item found in cinema and returned" or "Owner contacted, collecting Tuesday."</div>
+    </div>
+    <button type="submit" class="btn btn-success">Mark as reunited</button>
+  </form>
+</div>
+
+<div class="laf-action-section">
+  <h4>Close report</h4>
+  <form method="post" action="{% url "labs-found-item-dispose" item.pk %}">
+    {% csrf_token %}
+    <input type="hidden" name="disposal_method" value="other">
+    <p style="font-size: 0.9rem; color: #6c757d; margin: 0 0 0.75rem;">Use this if the search has been abandoned — item never found, owner stopped following up, etc.</p>
+    <button type="submit" class="btn btn-secondary">Close report</button>
+  </form>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}

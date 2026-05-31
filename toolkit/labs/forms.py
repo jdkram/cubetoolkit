@@ -5,7 +5,7 @@ from django.utils.html import mark_safe
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, HTML
 from toolkit.diary.form_widgets import HtmlTextarea
-from .models import Bulletin, Collective, CollectiveLink, DonationItem, Job, COLLECTIVE_PALETTE
+from .models import Bulletin, Collective, CollectiveLink, DonationItem, FoundItem, Job, COLLECTIVE_PALETTE
 
 
 class ColourPickerWidget(forms.TextInput):
@@ -249,3 +249,44 @@ class DonationsIntroForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_tag = False
+
+
+class FoundItemLogForm(forms.ModelForm):
+    class Meta:
+        model = FoundItem
+        fields = ("report_type", "description", "location_found", "found_on", "logged_by", "reporter_contact", "photo", "notes")
+        widgets = {
+            "report_type": forms.RadioSelect(attrs={"class": "laf-type-radio"}),
+            "description": forms.TextInput(attrs={"class": "form-control", "autocomplete": "off"}),
+            "location_found": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. Bar, Cinema, Toilets"}),
+            "found_on": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "logged_by": forms.TextInput(attrs={"class": "form-control"}),
+            "reporter_contact": forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "Name, phone number, email — whatever they're comfortable leaving"}),
+            "notes": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["photo"].required = False
+        self.fields["notes"].required = False
+        self.fields["reporter_contact"].required = False
+        self.fields["reporter_contact"].label = "Reporter's contact details (private)"
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+
+
+class FoundItemClaimForm(forms.Form):
+    claimed_by = forms.CharField(
+        max_length=200,
+        label="Claimed by",
+        help_text="Name or contact details of the person collecting the item.",
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+
+
+class FoundItemDisposeForm(forms.Form):
+    disposal_method = forms.ChoiceField(
+        choices=FoundItem.DISPOSAL_CHOICES,
+        label="Disposal method",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )

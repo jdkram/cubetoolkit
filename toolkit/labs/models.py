@@ -471,6 +471,85 @@ class ProcurementPledge(models.Model):
 
 # ── Loft inventory ─────────────────────────────────────────────────────────────
 
+class FoundItem(models.Model):
+    TYPE_FOUND = "found"
+    TYPE_LOST = "lost"
+    TYPE_CHOICES = [
+        (TYPE_FOUND, "Found item"),
+        (TYPE_LOST, "Lost report"),
+    ]
+
+    STATUS_UNCLAIMED = "unclaimed"
+    STATUS_CLAIMED = "claimed"
+    STATUS_DISPOSED = "disposed"
+    STATUS_CHOICES = [
+        (STATUS_UNCLAIMED, "Unclaimed"),
+        (STATUS_CLAIMED, "Claimed"),
+        (STATUS_DISPOSED, "Disposed"),
+    ]
+
+    DISPOSAL_BINNED = "binned"
+    DISPOSAL_DONATED = "donated"
+    DISPOSAL_RETURNED = "returned"
+    DISPOSAL_OTHER = "other"
+    DISPOSAL_CHOICES = [
+        (DISPOSAL_BINNED, "Binned"),
+        (DISPOSAL_DONATED, "Donated"),
+        (DISPOSAL_RETURNED, "Returned to owner"),
+        (DISPOSAL_OTHER, "Other"),
+    ]
+
+    report_type = models.CharField(max_length=8, choices=TYPE_CHOICES, default=TYPE_FOUND)
+    description = models.CharField(max_length=200)
+    location_found = models.CharField(max_length=100)
+    found_on = models.DateField(default=datetime.date.today)
+    logged_by = models.CharField(max_length=100)
+    reporter_contact = models.TextField(
+        blank=True,
+        default="",
+        help_text="Private contact details for the person who lost the item. Not shown in the list view.",
+    )
+    photo = models.ImageField(upload_to="lost-and-found/", blank=True)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=STATUS_UNCLAIMED)
+    claimed_by = models.CharField(max_length=200, blank=True, default="")
+    claimed_on = models.DateField(null=True, blank=True)
+    disposed_on = models.DateField(null=True, blank=True)
+    disposal_method = models.CharField(max_length=12, choices=DISPOSAL_CHOICES, blank=True, default="")
+    notes = models.TextField(blank=True, default="")
+
+    class Meta:
+        db_table = "labs_found_items"
+        ordering = ["-found_on", "-pk"]
+
+    def __str__(self):
+        return f"L-{self.pk:03d}: {self.description}"
+
+    @property
+    def label_id(self):
+        return f"L-{self.pk:03d}"
+
+    @property
+    def is_overdue(self):
+        from toolkit.diary.models import get_site_config
+        if self.report_type != self.TYPE_FOUND or self.status != self.STATUS_UNCLAIMED:
+            return False
+        retain_days = get_site_config().lost_and_found_retain_days
+        if retain_days <= 0:
+            return False
+        threshold = datetime.date.today() - datetime.timedelta(days=retain_days)
+        return self.found_on <= threshold
+
+    def status_display(self):
+        """Context-appropriate status label depending on report type."""
+        if self.report_type == self.TYPE_LOST:
+            return {
+                self.STATUS_UNCLAIMED: "Seeking",
+                self.STATUS_CLAIMED: "Reunited",
+                self.STATUS_DISPOSED: "Closed",
+            }.get(self.status, self.status)
+        return self.get_status_display()
+
+
 class LoftItemPhoto(models.Model):
     item = models.ForeignKey(LoftItem, on_delete=models.CASCADE, related_name="photos")
     image = models.ImageField(upload_to="loft-photos/")

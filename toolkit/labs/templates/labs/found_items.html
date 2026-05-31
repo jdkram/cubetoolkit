@@ -1,0 +1,150 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Lost &amp; found{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+  .laf-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 2px solid #dee2e6;
+    padding-bottom: 0;
+  }
+  .laf-tab {
+    padding: 0.4rem 1rem;
+    border-radius: 4px 4px 0 0;
+    text-decoration: none;
+    font-size: 0.9rem;
+    color: #495057;
+    border: 1px solid transparent;
+    border-bottom: none;
+    position: relative;
+    bottom: -2px;
+  }
+  .laf-tab.active {
+    background: #fff;
+    border-color: #dee2e6;
+    border-bottom-color: #fff;
+    color: #212529;
+    font-weight: 600;
+  }
+  .laf-tab:hover:not(.active) { background: #f8f9fa; }
+  .laf-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+  .laf-table th {
+    background: #343a40;
+    color: #fff;
+    padding: 0.5rem 0.6rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.82rem;
+    white-space: nowrap;
+  }
+  .laf-table td {
+    padding: 0.45rem 0.6rem;
+    vertical-align: top;
+    border-bottom: 1px solid #dee2e6;
+  }
+  .laf-table tbody tr:hover { background: #f8f9fa; }
+  .laf-id {
+    font-family: monospace;
+    font-size: 1rem;
+    font-weight: bold;
+    white-space: nowrap;
+  }
+  .type-badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: bold;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .type-found { background: #0d6efd22; color: #0a58ca; border: 1px solid #0d6efd44; }
+  .type-lost  { background: #dc354522; color: #b02a37; border: 1px solid #dc354544; }
+  .overdue-badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: bold;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    background: #ffc107;
+    color: #333;
+    margin-left: 0.3rem;
+  }
+  .text-muted-sm { font-size: 0.8rem; color: #6c757d; }
+  .table-scroll { overflow-x: auto; }
+</style>
+{% endblock %}
+
+{% block body %}
+<div style="display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
+  <h2 style="margin: 0;">Lost &amp; found</h2>
+  <a href="{% url "labs-found-item-log" %}" class="btn btn-primary btn-sm">+ Log item</a>
+</div>
+
+<div class="laf-tabs">
+  <a href="?tab=unclaimed" class="laf-tab {% if tab == 'unclaimed' %}active{% endif %}">Open</a>
+  <a href="?tab=claimed" class="laf-tab {% if tab == 'claimed' %}active{% endif %}">Resolved</a>
+  <a href="?tab=disposed" class="laf-tab {% if tab == 'disposed' %}active{% endif %}">Closed / disposed</a>
+</div>
+
+{% if not items %}
+  <p><em>Nothing here.</em></p>
+{% else %}
+<div class="table-scroll">
+  <table class="laf-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Type</th>
+        <th>Date</th>
+        <th>Description</th>
+        <th>Location</th>
+        <th>Logged by</th>
+        {% if tab == 'claimed' %}<th>Resolution</th><th>Date</th>{% endif %}
+        {% if tab == 'disposed' %}<th>Outcome</th><th>Date</th>{% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td class="laf-id">
+          <a href="{% url "labs-found-item" item.pk %}">{{ item.label_id }}</a>
+        </td>
+        <td>
+          {% if item.report_type == 'found' %}
+            <span class="type-badge type-found">Found</span>
+          {% else %}
+            <span class="type-badge type-lost">Lost</span>
+          {% endif %}
+        </td>
+        <td class="text-muted-sm" style="white-space: nowrap;">
+          {{ item.found_on|date:"d M Y" }}
+          {% if item.is_overdue %}<span class="overdue-badge">Overdue</span>{% endif %}
+        </td>
+        <td>{{ item.description }}</td>
+        <td class="text-muted-sm">{{ item.location_found }}</td>
+        <td class="text-muted-sm">{{ item.logged_by }}</td>
+        {% if tab == 'claimed' %}
+          <td class="text-muted-sm">{{ item.claimed_by }}</td>
+          <td class="text-muted-sm" style="white-space: nowrap;">{{ item.claimed_on|date:"d M Y"|default:"" }}</td>
+        {% endif %}
+        {% if tab == 'disposed' %}
+          <td class="text-muted-sm">
+            {% if item.report_type == 'lost' %}Closed{% else %}{{ item.get_disposal_method_display }}{% endif %}
+          </td>
+          <td class="text-muted-sm" style="white-space: nowrap;">{{ item.disposed_on|date:"d M Y"|default:"" }}</td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

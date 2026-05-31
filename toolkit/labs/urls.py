@@ -43,4 +43,10 @@ urlpatterns = [
     re_path(r"^shopping/pledge/(?P<flag_id>\d+)/cancel/$", views.shopping_pledge_cancel, name="labs-shopping-pledge-cancel"),
     re_path(r"^shopping/(?P<item_id>\d+)/supplier/add/$", views.shopping_supplier_add, name="labs-shopping-supplier-add"),
     re_path(r"^shopping/supplier/(?P<supplier_id>\d+)/delete/$", views.shopping_supplier_delete, name="labs-shopping-supplier-delete"),
+    re_path(r"^lost-and-found/$", views.found_item_log, name="labs-found-item-log"),
+    re_path(r"^lost-and-found/list/$", views.found_item_list, name="labs-found-items"),
+    re_path(r"^lost-and-found/(?P<item_id>\d+)/$", views.found_item_detail, name="labs-found-item"),
+    re_path(r"^lost-and-found/(?P<item_id>\d+)/claim/$", views.found_item_claim, name="labs-found-item-claim"),
+    re_path(r"^lost-and-found/(?P<item_id>\d+)/dispose/$", views.found_item_dispose, name="labs-found-item-dispose"),
+    re_path(r"^lost-and-found/(?P<item_id>\d+)/label/$", views.found_item_label, name="labs-found-item-label"),
 ]

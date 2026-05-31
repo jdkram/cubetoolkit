@@ -1,0 +1,185 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Lost &amp; found — log{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+  .laf-log-card {
+    max-width: 520px;
+    margin: 0 auto;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 1.5rem;
+  }
+  .laf-type-toggle {
+    display: flex;
+    gap: 0;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+  .laf-type-toggle label {
+    flex: 1;
+    text-align: center;
+    padding: 0.65rem 0.5rem;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    background: #f8f9fa;
+    transition: background 0.15s, color 0.15s;
+    border: none;
+    margin: 0;
+  }
+  .laf-type-toggle label:first-child {
+    border-right: 1px solid #dee2e6;
+  }
+  .laf-type-toggle input[type=radio] {
+    display: none;
+  }
+  .laf-type-toggle input[type=radio]:checked + label {
+    background: #0d6efd;
+    color: #fff;
+  }
+  .laf-field {
+    margin-bottom: 1rem;
+  }
+  .laf-field label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.93rem;
+    margin-bottom: 0.3rem;
+  }
+  .laf-field .form-text {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+  }
+  .laf-hint {
+    font-size: 0.82rem;
+    color: #6c757d;
+    margin-top: 1rem;
+    border-top: 1px solid #dee2e6;
+    padding-top: 0.75rem;
+  }
+  .laf-private-note {
+    font-size: 0.8rem;
+    color: #856404;
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 4px;
+    padding: 0.4rem 0.6rem;
+    margin-top: 0.3rem;
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+<h2>Lost &amp; found</h2>
+
+<div class="laf-log-card">
+  <form method="post" enctype="multipart/form-data" id="laf-form">
+    {% csrf_token %}
+
+    {# Type toggle — rendered manually so we can wire the JS #}
+    <div class="laf-type-toggle" role="group" aria-label="What are you reporting?">
+      <input type="radio" name="report_type" id="type_found" value="found" checked>
+      <label for="type_found">I found something</label>
+      <input type="radio" name="report_type" id="type_lost" value="lost">
+      <label for="type_lost">Someone's lost something</label>
+    </div>
+
+    <div class="laf-field">
+      <label for="id_description">Description</label>
+      {{ form.description }}
+      <div class="form-text" id="desc-hint-found">What is it? Keep it brief — colour, type, distinguishing features.</div>
+      <div class="form-text" id="desc-hint-lost" style="display:none;">What did they lose? Colour, type, any distinguishing features.</div>
+    </div>
+
+    <div class="laf-field">
+      <label for="id_location_found" id="location-label">Where was it found?</label>
+      {{ form.location_found }}
+    </div>
+
+    <div class="laf-field">
+      <label for="id_found_on" id="date-label">Date found</label>
+      {{ form.found_on }}
+    </div>
+
+    <div class="laf-field">
+      <label for="id_logged_by">Your name</label>
+      {{ form.logged_by }}
+      <div class="form-text" id="loggedby-hint-found">You'll be the contact if someone comes looking.</div>
+      <div class="form-text" id="loggedby-hint-lost" style="display:none;">You're the point of contact — the reporter's details stay private to this system.</div>
+    </div>
+
+    <div class="laf-field" id="field-reporter-contact" style="display:none;">
+      <label for="id_reporter_contact">{{ form.reporter_contact.label }}</label>
+      {{ form.reporter_contact }}
+      <div class="laf-private-note">Only visible to logged-in volunteers — not shown to the public.</div>
+    </div>
+
+    <div class="laf-field" id="field-photo">
+      <label for="id_photo">Photo <span style="font-weight:normal; color:#6c757d;">(optional)</span></label>
+      {{ form.photo }}
+    </div>
+
+    <div class="laf-field">
+      <label for="id_notes">Notes <span style="font-weight:normal; color:#6c757d;">(optional)</span></label>
+      {{ form.notes }}
+    </div>
+
+    <div style="margin-top: 1.25rem;">
+      <button type="submit" class="btn btn-primary btn-lg w-100" id="submit-btn">Log item</button>
+    </div>
+  </form>
+
+  <p class="laf-hint" id="hint-found">
+    If you can manage it, writing the item ID on a sticky note and attaching it to the item makes things easier when someone comes looking — but realistically that probably won't happen. Logging it somewhere is what matters, so that we know when it's reasonable to chuck stuff out.
+  </p>
+  <p class="laf-hint" id="hint-lost" style="display:none;">
+    Once logged, anyone searching the list will be able to see the description. If something matching turns up in the found items, they can contact you directly.
+  </p>
+</div>
+
+<p style="margin-top: 1.5rem; font-size: 0.9rem; text-align: center;">
+  <a href="{% url "labs-found-items" %}">View full lost &amp; found list &rarr;</a>
+</p>
+
+<script>
+(function () {
+  var radios = document.querySelectorAll('input[name="report_type"]');
+  var fieldPhoto = document.getElementById('field-photo');
+  var fieldContact = document.getElementById('field-reporter-contact');
+  var locationLabel = document.getElementById('location-label');
+  var dateLabel = document.getElementById('date-label');
+  var submitBtn = document.getElementById('submit-btn');
+  var hintFound = document.getElementById('hint-found');
+  var hintLost = document.getElementById('hint-lost');
+  var descHintFound = document.getElementById('desc-hint-found');
+  var descHintLost = document.getElementById('desc-hint-lost');
+  var loggedbyHintFound = document.getElementById('loggedby-hint-found');
+  var loggedbyHintLost = document.getElementById('loggedby-hint-lost');
+
+  function update() {
+    var isLost = document.getElementById('type_lost').checked;
+    fieldPhoto.style.display = isLost ? 'none' : '';
+    fieldContact.style.display = isLost ? '' : 'none';
+    locationLabel.textContent = isLost ? 'Where was it last seen?' : 'Where was it found?';
+    dateLabel.textContent = isLost ? 'Date last seen / date reported' : 'Date found';
+    submitBtn.textContent = isLost ? 'Log lost report' : 'Log found item';
+    hintFound.style.display = isLost ? 'none' : '';
+    hintLost.style.display = isLost ? '' : 'none';
+    descHintFound.style.display = isLost ? 'none' : '';
+    descHintLost.style.display = isLost ? '' : 'none';
+    loggedbyHintFound.style.display = isLost ? 'none' : '';
+    loggedbyHintLost.style.display = isLost ? '' : 'none';
+  }
+
+  radios.forEach(function (r) { r.addEventListener('change', update); });
+  update();
+}());
+</script>
+{% endblock %}

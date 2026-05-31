@@ -14,7 +14,7 @@ from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from toolkit.labs.models import Collective, CollectiveLink, DonationItem, Job, RoomNote, COLLECTIVE_PALETTE
+from toolkit.labs.models import Collective, CollectiveLink, DonationItem, FoundItem, Job, RoomNote, COLLECTIVE_PALETTE
 
 DATA_DIR = Path(__file__).parent / "seed_data"
 
@@ -39,6 +39,7 @@ class Command(BaseCommand):
             self.stdout.write("Wiping existing labs data...")
             Collective.objects.all().delete()
             DonationItem.objects.all().delete()
+            FoundItem.objects.all().delete()
             Job.objects.all().delete()
             RoomNote.objects.all().delete()
             self.stdout.write("Done.")
@@ -46,6 +47,7 @@ class Command(BaseCommand):
         counts = {
             "collectives": self._seed_collectives(),
             "donations": self._seed_donations(),
+            "found_items": self._seed_found_items(),
             "jobs": self._seed_jobs(),
             "room_notes": self._seed_room_notes(),
         }
@@ -55,6 +57,7 @@ class Command(BaseCommand):
                 f"\nLabs seed data created:\n"
                 f"  Collectives:     {counts['collectives']} new\n"
                 f"  Donation items:  {counts['donations']} new\n"
+                f"  Found items:     {counts['found_items']} new\n"
                 f"  Jobs:            {counts['jobs']} new\n"
                 f"  Room notes:      {counts['room_notes']} new\n"
             )
@@ -107,6 +110,33 @@ class Command(BaseCommand):
             _, made = Job.objects.get_or_create(
                 title=item["title"],
                 defaults={**item, "posted_by": admin_user, "resolved_at": resolved_at},
+            )
+            if made:
+                created += 1
+        return created
+
+    def _seed_found_items(self):
+        data = _load("found_items.toml")
+        today = datetime.date.today()
+        created = 0
+        for item in data["found_items"]:
+            days_ago = item.pop("days_ago", 0)
+            claimed_days_ago = item.pop("claimed_days_ago", 0)
+            disposed_days_ago = item.pop("disposed_days_ago", 0)
+
+            found_on = today - datetime.timedelta(days=days_ago)
+            claimed_on = (today - datetime.timedelta(days=claimed_days_ago)) if claimed_days_ago else None
+            disposed_on = (today - datetime.timedelta(days=disposed_days_ago)) if disposed_days_ago else None
+
+            _, made = FoundItem.objects.get_or_create(
+                description=item["description"],
+                logged_by=item["logged_by"],
+                defaults={
+                    **item,
+                    "found_on": found_on,
+                    "claimed_on": claimed_on,
+                    "disposed_on": disposed_on,
+                },
             )
             if made:
                 created += 1

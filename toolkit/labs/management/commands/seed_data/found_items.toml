@@ -1,0 +1,162 @@
+# Lost & found seed data
+# report_type: "found" or "lost"
+# status: "unclaimed" | "claimed" | "disposed"
+# days_ago: how many days ago found_on should be set (relative to today)
+
+[[found_items]]
+report_type = "found"
+description = "Black wool scarf, no label"
+location_found = "Cinema"
+days_ago = 5
+logged_by = "Priya"
+status = "unclaimed"
+
+[[found_items]]
+report_type = "found"
+description = "Pair of reading glasses in a soft case"
+location_found = "Bar"
+days_ago = 12
+logged_by = "Marcus"
+status = "unclaimed"
+
+[[found_items]]
+report_type = "found"
+description = "Reusable water bottle, green, dented lid"
+location_found = "Venue"
+days_ago = 8
+logged_by = "Jess"
+status = "unclaimed"
+
+[[found_items]]
+report_type = "found"
+description = "Child's glove (single, left hand, red)"
+location_found = "Cinema entrance"
+days_ago = 3
+logged_by = "Sam"
+status = "unclaimed"
+
+[[found_items]]
+report_type = "found"
+description = "Small notebook, blue cover, handwritten notes inside"
+location_found = "Green Room"
+days_ago = 90
+logged_by = "Lena"
+status = "unclaimed"
+notes = "Might be someone's ideas book — seems personal. Has initials 'R.T.' on the inside cover."
+
+[[found_items]]
+report_type = "found"
+description = "Bike lock key on a plain ring"
+location_found = "Bar"
+days_ago = 75
+logged_by = "Tomás"
+status = "unclaimed"
+
+[[found_items]]
+report_type = "found"
+description = "Canvas tote bag with a 'Keep Folkestone Weird' print, empty"
+location_found = "Venue"
+days_ago = 2
+logged_by = "Priya"
+status = "unclaimed"
+
+[[found_items]]
+report_type = "found"
+description = "USB-C charging cable, white"
+location_found = "Meeting Room"
+days_ago = 18
+logged_by = "Sam"
+status = "claimed"
+claimed_by = "Owner came in and described it — gave to them at the bar."
+claimed_days_ago = 14
+
+[[found_items]]
+report_type = "found"
+description = "Headphones, over-ear, black, no brand visible"
+location_found = "Cinema"
+days_ago = 30
+logged_by = "Lena"
+status = "claimed"
+claimed_by = "Phoned ahead, collected Tuesday evening."
+claimed_days_ago = 20
+
+[[found_items]]
+report_type = "found"
+description = "Purple umbrella"
+location_found = "Cinema entrance"
+days_ago = 120
+logged_by = "Marcus"
+status = "disposed"
+disposal_method = "donated"
+disposed_days_ago = 30
+
+[[found_items]]
+report_type = "found"
+description = "Broken sunglasses in a case"
+location_found = "Bar"
+days_ago = 95
+logged_by = "Jess"
+status = "disposed"
+disposal_method = "binned"
+disposed_days_ago = 10
+
+[[found_items]]
+report_type = "lost"
+description = "Pink insulated water bottle, sticker on the side"
+location_found = "Somewhere in the building — had it during the film"
+days_ago = 4
+logged_by = "Tomás"
+reporter_contact = "Fatima — gave her number to Tomás directly"
+status = "unclaimed"
+
+[[found_items]]
+report_type = "lost"
+description = "Bike U-lock, silver Kryptonite, no key"
+location_found = "Outside front entrance or bike shed"
+days_ago = 7
+logged_by = "Sam"
+reporter_contact = "Left email with Sam: bikes@example.invalid"
+status = "unclaimed"
+notes = "Owner thinks it fell off their bag. Was locked to the railings last they knew."
+
+[[found_items]]
+report_type = "lost"
+description = "MagSafe laptop charger (older 85W T-tip)"
+location_found = "Workshop or meeting room"
+days_ago = 14
+logged_by = "Priya"
+reporter_contact = "Member of public — name Callum, said he'd check back."
+status = "unclaimed"
+
+[[found_items]]
+report_type = "lost"
+description = "Prescription medication in a pharmacy bag"
+location_found = "Unknown — noticed it missing after the event"
+days_ago = 1
+logged_by = "Lena"
+reporter_contact = "Very worried — contact Lena urgently if found"
+status = "unclaimed"
+notes = "Time-sensitive. Person was distressed. Lena has their number."
+
+[[found_items]]
+report_type = "lost"
+description = "Set of house keys on a lamb keyring"
+location_found = "Bar area or toilets"
+days_ago = 20
+logged_by = "Marcus"
+reporter_contact = "Gave Marcus their email."
+status = "claimed"
+claimed_by = "Keys turned up in cinema — handed back at bar on Thursday."
+claimed_days_ago = 15
+
+[[found_items]]
+report_type = "lost"
+description = "Denim jacket with embroidered patches"
+location_found = "Venue — left during a gig"
+days_ago = 45
+logged_by = "Jess"
+reporter_contact = "Instagram DM to @starshadow — passed to Jess."
+status = "disposed"
+disposal_method = "other"
+disposed_days_ago = 5
+notes = "Never found. Owner stopped following up after a month."

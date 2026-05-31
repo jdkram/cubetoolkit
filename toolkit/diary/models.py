@@ -1503,6 +1503,15 @@ class SiteConfiguration(models.Model):
         ),
     )
 
+    # --- Lost & found ---
+    lost_and_found_retain_days = models.PositiveSmallIntegerField(
+        default=60,
+        help_text=(
+            "Number of days to retain unclaimed lost and found items before flagging for disposal. "
+            "Set to 0 to disable flagging."
+        ),
+    )
+
     # --- Bulletins ---
     bulletin_default_expiry_days = models.PositiveSmallIntegerField(
         default=30,
