@@ -334,6 +334,61 @@ If migration fails:
 
 ---
 
+---
+
+## Post-migration: Qualification gates (rota sign-up)
+
+The toolkit supports gating rota sign-up by named qualifications (e.g. "Bar", "Projectionist level 1"). The gate is configured per-role at **Meta → Roles** and enforced when a volunteer taps to sign up. Superusers/Panopticons always bypass the gate.
+
+**Default state after migration:** All roles default to `gate = Off` — no sign-up checks are active. This is intentional. The qualification records need to be populated before any gate can be trusted.
+
+**Recommended sequence after going live:**
+
+1. **Create qualifications.** Go to Meta → Roles and use the Qualifications panel to add the credential names used on your site (e.g. "Bar", "Projectionist level 1", "Cafe").
+
+2. **Audit bar-trained volunteers.** Cross-reference the bar mailing list against active volunteers. For each bar-trained volunteer, visit their profile and award the "Bar" qualification. This is the most critical gate — bar training is widely held and reliably tracked via the mailing list.
+
+3. **Audit projectionists.** Check whether projection training has been recorded in the system (training records tab on each volunteer profile). The data may be sparse — do not enable a blocking gate until you are confident the records are complete. Start with Advisory mode.
+
+4. **Backfill qualifications from existing training records.** If the site has role training records (visible on volunteer profiles under the Training tab), you can use the backfill command to award qualifications automatically rather than doing it one volunteer at a time. This is most useful for qualifications that have been consistently recorded as role training — for example, projection training if every projector-trained volunteer has a training record against the projection role.
+
+   **Prerequisite:** The role must already have `required_qualification` set (step 1 above). The command only acts on roles that have a qualification configured.
+
+   ```bash
+   # Preview — shows what would be awarded without writing anything
+   docker compose exec toolkit /venv/bin/python3 manage.py \
+       backfill_qualifications_from_training --dry-run
+
+   # Run for real
+   docker compose exec toolkit /venv/bin/python3 manage.py \
+       backfill_qualifications_from_training
+
+   # Optional: record who triggered the backfill
+   docker compose exec toolkit /venv/bin/python3 manage.py \
+       backfill_qualifications_from_training --granted-by "Marcus (projection backfill Jan 2027)"
+   ```
+
+   **What it does:**
+   - Finds all ROLE_TRAINING records where the role has a `required_qualification`
+   - Awards that qualification to the volunteer using the earliest training date as `granted_on`
+   - Skips volunteers who already hold the qualification (safe to re-run)
+   - Does not touch GENERAL_TRAINING records (GST has no qualification equivalent)
+
+   **Caveats:**
+   - It awards based on "has a training record" not "training is current." Expired training records still trigger an award. If you want to filter by currency, do a dry run first and inspect the output before committing.
+   - Bar training is almost certainly *not* consistently recorded as role training records in your system. Award Bar qualifications manually via volunteer profiles, or use the mailing list as the authoritative source.
+
+5. **Set gate mode.** Once qualification records are populated and verified, go to Meta → Roles. Set "Requires qualification" to the relevant credential and set "Gate" to Advisory (warns the volunteer but allows sign-up) or Blocking (prevents sign-up without the qualification). **Start with Advisory.** Move to Blocking only after a period of live use confirms the records are reliable.
+
+6. **Ongoing maintenance.** When a new volunteer completes bar induction, award them the "Bar" qualification on their profile. This is a manual step — there is no automatic sync with mailing lists.
+
+**Notes:**
+- Qualifications are intentionally separate from `TrainingRecord` (which logs training *events*). A `TrainingRecord` says "this person attended a session"; a `VolunteerQualification` says "this person is currently cleared for this role." Both models are kept deliberately: `TrainingRecord` is also where **General Safety Training** lives (surfaced as the "Safety trained" date on the volunteer profile), which has no equivalent in qualifications. There is therefore no need to convert or drop `TrainingRecord` data on migration — the two coexist.
+- The advisory notice is shown as a browser alert when the volunteer taps to sign up. They can proceed regardless.
+- The blocking gate returns a plain-text error and cancels the sign-up. The volunteer sees a message directing them to a coordinator.
+
+---
+
 ## Files Referenced
 
 - `migrate-staging-db.sh` — Automated migration script
