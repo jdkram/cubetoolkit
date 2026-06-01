@@ -1,0 +1,171 @@
+{% extends "base_admin.html" %}
+
+{% block title %}{% if editing %}Edit listing{% else %}Offer something{% endif %} — community exchange{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+  .exchange-form-card {
+    max-width: 640px;
+  }
+  .listing-type-radios .form-check {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 0.75rem 1rem 0.75rem 2.5rem;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+  }
+  .listing-type-radios .form-check:has(input:checked) {
+    border-color: #0d6efd;
+    background: #f0f7ff;
+  }
+  .listing-type-radios .form-check-label { cursor: pointer; font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="mb-2">
+  <a href="{% url "labs-exchange" %}" class="text-muted small">← Back to exchange</a>
+</div>
+
+<h2>{% if editing %}Edit listing{% else %}Offer something{% endif %}</h2>
+
+<div class="card exchange-form-card">
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Listing type</label>
+        <div class="listing-type-radios">
+          {% for val, label in form.listing_type.field.choices %}
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="listing_type" id="lt-{{ val }}"
+              value="{{ val }}"{% if form.listing_type.value == val %} checked{% endif %}>
+            <label class="form-check-label" for="lt-{{ val }}">{{ label }}</label>
+          </div>
+          {% endfor %}
+        </div>
+        {% if form.listing_type.errors %}
+        <div class="text-danger small">{{ form.listing_type.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold" for="{{ form.name.id_for_label }}">Name</label>
+        {{ form.name }}
+        <div class="form-text">What is it? Be specific enough that people know what they're getting.</div>
+        {% if form.name.errors %}<div class="text-danger small">{{ form.name.errors }}</div>{% endif %}
+      </div>
+
+      <div class="row mb-3">
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold" for="{{ form.category.id_for_label }}">Category</label>
+          {{ form.category }}
+          {% if form.category.errors %}<div class="text-danger small">{{ form.category.errors }}</div>{% endif %}
+        </div>
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold" for="{{ form.condition.id_for_label }}">Condition</label>
+          {{ form.condition }}
+          {% if form.condition.errors %}<div class="text-danger small">{{ form.condition.errors }}</div>{% endif %}
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold" for="{{ form.description.id_for_label }}">Description</label>
+        {{ form.description }}
+        <div class="form-text">What it is, what it's for, any relevant details.</div>
+        {% if form.description.errors %}<div class="text-danger small">{{ form.description.errors }}</div>{% endif %}
+      </div>
+
+      {# Share-only fields — shown/hidden by JS based on listing_type selection #}
+      <div id="share-fields" style="display:none;">
+        <div class="mb-3">
+          <label class="form-label fw-semibold" for="{{ form.quantity.id_for_label }}">
+            Quantity <span class="text-muted fw-normal">(optional)</span>
+          </label>
+          {{ form.quantity }}
+          <div class="form-text">How much is there? e.g. "about 10kg", "3 trays", "a big bag".</div>
+          {% if form.quantity.errors %}<div class="text-danger small">{{ form.quantity.errors }}</div>{% endif %}
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold" for="{{ form.available_until.id_for_label }}">
+            Available until <span class="text-muted fw-normal">(optional)</span>
+          </label>
+          {{ form.available_until }}
+          <div class="form-text">Show urgency — useful for food that will go off. Displayed prominently on the listing.</div>
+          {% if form.available_until.errors %}<div class="text-danger small">{{ form.available_until.errors }}</div>{% endif %}
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold" for="{{ form.location_notes.id_for_label }}">Collection / pickup notes</label>
+        {{ form.location_notes }}
+        <div class="form-text">How should someone arrange to get it? e.g. "Bring to the next event", "DM me on the list".</div>
+        {% if form.location_notes.errors %}<div class="text-danger small">{{ form.location_notes.errors }}</div>{% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold" for="{{ form.notes.id_for_label }}">Extra notes</label>
+        {{ form.notes }}
+        <div class="form-text">Quirks, usage tips, or anything useful to know.</div>
+        {% if form.notes.errors %}<div class="text-danger small">{{ form.notes.errors }}</div>{% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold" for="{{ form.image.id_for_label }}">Photo <span class="text-muted fw-normal">(optional)</span></label>
+        {% if form.instance.image %}
+        <div class="mb-2">
+          <img src="{{ form.instance.image.url }}" alt="" style="height:80px; border-radius:4px;">
+          <span class="text-muted small ms-2">Current image</span>
+        </div>
+        {% endif %}
+        {{ form.image }}
+        {% if form.image.errors %}<div class="text-danger small">{{ form.image.errors }}</div>{% endif %}
+      </div>
+
+      {% if request.user.is_superuser %}
+      <details class="mb-3">
+        <summary class="text-muted small">Owner / status (panopticon)</summary>
+        <div class="mt-2 row g-2">
+          <div class="col-sm-6">
+            <label class="form-label" for="{{ form.owner_type.id_for_label }}">Owner type</label>
+            {{ form.owner_type }}
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label" for="{{ form.owner_volunteer.id_for_label }}">Owner volunteer</label>
+            {{ form.owner_volunteer }}
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label" for="{{ form.status.id_for_label }}">Status</label>
+            {{ form.status }}
+          </div>
+        </div>
+      </details>
+      {% endif %}
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">{% if editing %}Save changes{% else %}List it{% endif %}</button>
+        <a href="{% if editing %}{% url "labs-exchange-item" item_id=item.pk %}{% else %}{% url "labs-exchange" %}{% endif %}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block js %}
+{{ block.super }}
+<script>
+(function () {
+  var shareFields = document.getElementById('share-fields');
+  function updateShareFields() {
+    var selected = document.querySelector('input[name="listing_type"]:checked');
+    shareFields.style.display = (selected && selected.value === 'share') ? '' : 'none';
+  }
+  document.querySelectorAll('input[name="listing_type"]').forEach(function (el) {
+    el.addEventListener('change', updateShareFields);
+  });
+  updateShareFields();
+}());
+</script>
+{% endblock js %}

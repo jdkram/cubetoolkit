@@ -565,3 +565,181 @@ class LoftItemPhoto(models.Model):
 
     def __str__(self):
         return f"Photo for {self.item.name} ({self.pk})"
+
+
+class ExchangeItem(models.Model):
+    """
+    Community exchange — covers both lending (borrow + return) and giving (free to a good home).
+    listing_type distinguishes the two flows; status meanings differ accordingly.
+    """
+
+    TYPE_LEND = "lend"
+    TYPE_GIVE = "give"
+    TYPE_SHARE = "share"
+    TYPE_CHOICES = [
+        (TYPE_LEND, "🔧 Lend — borrow and return"),
+        (TYPE_GIVE, "🎁 Give away — free to a good home"),
+        (TYPE_SHARE, "🥔 Share — help yourself to some"),
+    ]
+
+    CATEGORY_TOOLS = "tools"
+    CATEGORY_KITCHEN = "kitchen"
+    CATEGORY_AV = "av"
+    CATEGORY_CLOTHING = "clothing"
+    CATEGORY_BOOKS = "books"
+    CATEGORY_GARDEN = "garden"
+    CATEGORY_FURNITURE = "furniture"
+    CATEGORY_OTHER = "other"
+    CATEGORY_CHOICES = [
+        (CATEGORY_TOOLS, "Tools"),
+        (CATEGORY_KITCHEN, "Kitchen"),
+        (CATEGORY_AV, "AV & tech"),
+        (CATEGORY_CLOTHING, "Clothing"),
+        (CATEGORY_BOOKS, "Books & media"),
+        (CATEGORY_GARDEN, "Garden"),
+        (CATEGORY_FURNITURE, "Furniture"),
+        (CATEGORY_OTHER, "Other"),
+    ]
+
+    CONDITION_NEW = "new"
+    CONDITION_GOOD = "good"
+    CONDITION_FAIR = "fair"
+    CONDITION_ATTENTION = "attention"
+    CONDITION_CHOICES = [
+        (CONDITION_NEW, "New"),
+        (CONDITION_GOOD, "Good"),
+        (CONDITION_FAIR, "Fair"),
+        (CONDITION_ATTENTION, "Needs attention"),
+    ]
+
+    OWNER_COLLECTIVE = "collective"
+    OWNER_VOLUNTEER = "volunteer"
+    OWNER_CHOICES = [
+        (OWNER_COLLECTIVE, "S+S collective"),
+        (OWNER_VOLUNTEER, "Volunteer"),
+    ]
+
+    # Status meanings by type:
+    #   lend:  available → on_loan → available (cycle); withdrawn to remove
+    #   give:  available → claimed; withdrawn to remove
+    #   share: available → all_gone; withdrawn to remove
+    STATUS_AVAILABLE = "available"
+    STATUS_ON_LOAN = "on_loan"
+    STATUS_CLAIMED = "claimed"
+    STATUS_ALL_GONE = "all_gone"
+    STATUS_MISSING = "missing"
+    STATUS_WITHDRAWN = "withdrawn"
+    STATUS_CHOICES = [
+        (STATUS_AVAILABLE, "Available"),
+        (STATUS_ON_LOAN, "On loan"),
+        (STATUS_CLAIMED, "Claimed"),
+        (STATUS_ALL_GONE, "All gone"),
+        (STATUS_MISSING, "Missing"),
+        (STATUS_WITHDRAWN, "Withdrawn"),
+    ]
+
+    listing_type = models.CharField(max_length=8, choices=TYPE_CHOICES, default=TYPE_GIVE)
+    name = models.CharField(max_length=128)
+    description = models.TextField(blank=True, default="")
+    category = models.CharField(max_length=16, choices=CATEGORY_CHOICES, default=CATEGORY_OTHER)
+    condition = models.CharField(max_length=16, choices=CONDITION_CHOICES, default=CONDITION_GOOD)
+    owner_type = models.CharField(max_length=16, choices=OWNER_CHOICES, default=OWNER_VOLUNTEER)
+    owner_volunteer = models.ForeignKey(
+        "members.Volunteer",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="exchange_items",
+        help_text="Only visible to logged-in users. Set when owner is a volunteer.",
+    )
+    location_notes = models.CharField(
+        max_length=256,
+        blank=True,
+        default="",
+        help_text="Where to collect or arrange pickup — e.g. 'Bring to the next event' or 'Ask at the bar'.",
+    )
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_AVAILABLE)
+    quantity = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        help_text="How much is there? e.g. 'about 10kg', '3 trays', 'a big bag'. Share listings only.",
+    )
+    available_until = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Optional — show urgency. Useful for food that will go off. Share listings only.",
+    )
+    notes = models.TextField(
+        blank=True,
+        default="",
+        help_text="Quirks, usage notes, or anything relevant to whoever borrows/takes it.",
+    )
+    image = models.ImageField(upload_to="exchange/", blank=True)
+    active = models.BooleanField(default=True)
+    added_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    borrowed_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    borrowed_by_name = models.CharField(
+        max_length=128,
+        blank=True,
+        default="",
+        help_text="Free-text name for verbal/in-person loans. Shown instead of username if set.",
+    )
+    added_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "labs_exchange_items"
+        ordering = ["listing_type", "category", "name"]
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def is_available(self):
+        return self.status == self.STATUS_AVAILABLE
+
+    @property
+    def borrower_display(self):
+        """Best available name for who currently has the item."""
+        if self.borrowed_by_name:
+            return self.borrowed_by_name
+        if self.borrowed_by_id:
+            try:
+                vol = self.borrowed_by.volunteer
+                return vol.member.name
+            except Exception:
+                pass
+            return self.borrowed_by.username
+        return None
+
+    def status_label(self):
+        """Human label that accounts for listing_type context."""
+        if self.listing_type == self.TYPE_LEND:
+            return {
+                self.STATUS_AVAILABLE: "Available to borrow",
+                self.STATUS_ON_LOAN: "On loan",
+                self.STATUS_CLAIMED: "Claimed",
+                self.STATUS_ALL_GONE: "All gone",
+                self.STATUS_MISSING: "Missing",
+                self.STATUS_WITHDRAWN: "Withdrawn",
+            }.get(self.status, self.get_status_display())
+        if self.listing_type == self.TYPE_SHARE:
+            return {
+                self.STATUS_AVAILABLE: "Available — help yourself",
+                self.STATUS_ON_LOAN: "In progress",
+                self.STATUS_CLAIMED: "All gone",
+                self.STATUS_ALL_GONE: "All gone",
+                self.STATUS_WITHDRAWN: "No longer available",
+            }.get(self.status, self.get_status_display())
+        return {
+            self.STATUS_AVAILABLE: "Available",
+            self.STATUS_ON_LOAN: "On loan",
+            self.STATUS_CLAIMED: "Gone to a good home",
+            self.STATUS_ALL_GONE: "All gone",
+            self.STATUS_WITHDRAWN: "No longer available",
+        }.get(self.status, self.get_status_display())

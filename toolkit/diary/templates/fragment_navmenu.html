@@ -53,6 +53,9 @@
             <li><a href="{% url "labs-shopping" %}"><span>Shopping list</span></a></li>
             <li><a href="{% url "labs-donations" %}"><span>Donations wishlist</span></a></li>
             <li><a href="{% url "labs-donations-manage" %}"><span>Manage donations</span></a></li>
+            {% if site_config.community_exchange_enabled %}
+            <li><a href="{% url "labs-exchange" %}"><span>Community exchange</span></a></li>
+            {% endif %}
         </ul>
     </li>
     {% if perms.toolkit.write %}

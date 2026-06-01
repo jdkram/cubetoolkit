@@ -102,6 +102,9 @@ body {
               <a class="dropdown-item" href="{% url "labs-found-item-log" %}">Log found item</a>
               <a class="dropdown-item" href="{% url "labs-found-items" %}">Lost &amp; found list</a>
               <a class="dropdown-item" href="{% url "labs-shopping" %}">Shopping list</a>
+              {% if site_config.community_exchange_enabled %}
+              <a class="dropdown-item" href="{% url "labs-exchange" %}">Community exchange</a>
+              {% endif %}
               <div class="dropdown-divider"></div>
               <a class="dropdown-item" href="{% url "view-rota-vacancies" %}">Rota vacancies</a>
               <a class="dropdown-item" href="{% url "toolkit-access" %}">Access levels</a>

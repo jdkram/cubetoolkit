@@ -1088,12 +1088,15 @@ def exchange_list(request):
     category = request.GET.get("category", "")
     show_unavailable = request.GET.get("unavailable", "") == "1"
 
-    if listing_type in (ExchangeItem.TYPE_LEND, ExchangeItem.TYPE_GIVE):
+    if listing_type in (ExchangeItem.TYPE_LEND, ExchangeItem.TYPE_GIVE, ExchangeItem.TYPE_SHARE):
         items = items.filter(listing_type=listing_type)
     if category:
         items = items.filter(category=category)
     if not show_unavailable:
-        items = items.exclude(status=ExchangeItem.STATUS_WITHDRAWN)
+        items = items.exclude(status__in=[
+            ExchangeItem.STATUS_WITHDRAWN,
+            ExchangeItem.STATUS_ALL_GONE,
+        ])
 
     return render(request, "labs/exchange.html", {
         "items": items,
@@ -1198,3 +1201,97 @@ def exchange_withdraw(request, item_id):
     item.save()
     messages.success(request, f"'{item.name}' withdrawn from the exchange.")
     return redirect("labs-exchange")
+
+
+@login_required
+@require_POST
+def exchange_mark_on_loan(request, item_id):
+    cfg = get_site_config()
+    if not cfg.community_exchange_enabled:
+        from django.http import Http404
+        raise Http404
+
+    item = get_object_or_404(ExchangeItem, pk=item_id, active=True)
+    if item.listing_type != ExchangeItem.TYPE_LEND:
+        return HttpResponseForbidden()
+    if item.status != ExchangeItem.STATUS_AVAILABLE:
+        messages.warning(request, f"'{item.name}' isn't available to borrow right now.")
+        return redirect("labs-exchange-item", item_id=item.pk)
+    item.status = ExchangeItem.STATUS_ON_LOAN
+    item.borrowed_by = request.user
+    item.borrowed_by_name = request.POST.get("borrowed_by_name", "").strip()
+    item.save()
+    messages.success(request, f"'{item.name}' marked as on loan.")
+    return redirect("labs-exchange-item", item_id=item.pk)
+
+
+@login_required
+@require_POST
+def exchange_mark_returned(request, item_id):
+    cfg = get_site_config()
+    if not cfg.community_exchange_enabled:
+        from django.http import Http404
+        raise Http404
+
+    item = get_object_or_404(ExchangeItem, pk=item_id, active=True)
+    if item.listing_type != ExchangeItem.TYPE_LEND:
+        return HttpResponseForbidden()
+    if item.status not in (ExchangeItem.STATUS_ON_LOAN, ExchangeItem.STATUS_MISSING):
+        messages.warning(request, f"'{item.name}' isn't currently marked as on loan or missing.")
+        return redirect("labs-exchange-item", item_id=item.pk)
+    was_missing = item.status == ExchangeItem.STATUS_MISSING
+    item.status = ExchangeItem.STATUS_AVAILABLE
+    item.borrowed_by = None
+    item.borrowed_by_name = ""
+    item.save()
+    if was_missing:
+        messages.success(request, f"'{item.name}' marked as found — available to borrow again.")
+    else:
+        messages.success(request, f"'{item.name}' marked as returned — available to borrow again.")
+    return redirect("labs-exchange-item", item_id=item.pk)
+
+
+@login_required
+@require_POST
+def exchange_mark_all_gone(request, item_id):
+    cfg = get_site_config()
+    if not cfg.community_exchange_enabled:
+        from django.http import Http404
+        raise Http404
+
+    item = get_object_or_404(ExchangeItem, pk=item_id, active=True)
+    if item.listing_type != ExchangeItem.TYPE_SHARE:
+        return HttpResponseForbidden()
+    can_edit = request.user.is_superuser or (
+        item.owner_volunteer
+        and hasattr(request.user, "volunteer")
+        and item.owner_volunteer == request.user.volunteer
+    )
+    if not can_edit:
+        return HttpResponseForbidden()
+    item.status = ExchangeItem.STATUS_ALL_GONE
+    item.save()
+    messages.success(request, f"'{item.name}' marked as all gone.")
+    return redirect("labs-exchange")
+
+
+@login_required
+@require_POST
+def exchange_mark_missing(request, item_id):
+    cfg = get_site_config()
+    if not cfg.community_exchange_enabled:
+        from django.http import Http404
+        raise Http404
+
+    item = get_object_or_404(ExchangeItem, pk=item_id, active=True)
+    can_edit = request.user.is_superuser or (
+        item.owner_volunteer
+        and hasattr(request.user, "volunteer")
+        and item.owner_volunteer == request.user.volunteer
+    )
+    if not can_edit:
+        return HttpResponseForbidden()
+    item.status = ExchangeItem.STATUS_MISSING
+    item.save()
+    messages.warning(request, f"'{item.name}' marked as missing.")
+    return redirect("labs-exchange-item", item_id=item.pk)

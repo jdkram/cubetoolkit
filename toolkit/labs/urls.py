@@ -49,4 +49,13 @@ urlpatterns = [
     re_path(r"^lost-and-found/(?P<item_id>\d+)/claim/$", views.found_item_claim, name="labs-found-item-claim"),
     re_path(r"^lost-and-found/(?P<item_id>\d+)/dispose/$", views.found_item_dispose, name="labs-found-item-dispose"),
     re_path(r"^lost-and-found/(?P<item_id>\d+)/label/$", views.found_item_label, name="labs-found-item-label"),
+    re_path(r"^exchange/$", views.exchange_list, name="labs-exchange"),
+    re_path(r"^exchange/add/$", views.exchange_add, name="labs-exchange-add"),
+    re_path(r"^exchange/(?P<item_id>\d+)/$", views.exchange_item, name="labs-exchange-item"),
+    re_path(r"^exchange/(?P<item_id>\d+)/edit/$", views.exchange_edit, name="labs-exchange-edit"),
+    re_path(r"^exchange/(?P<item_id>\d+)/withdraw/$", views.exchange_withdraw, name="labs-exchange-withdraw"),
+    re_path(r"^exchange/(?P<item_id>\d+)/mark-on-loan/$", views.exchange_mark_on_loan, name="labs-exchange-mark-on-loan"),
+    re_path(r"^exchange/(?P<item_id>\d+)/mark-returned/$", views.exchange_mark_returned, name="labs-exchange-mark-returned"),
+    re_path(r"^exchange/(?P<item_id>\d+)/mark-all-gone/$", views.exchange_mark_all_gone, name="labs-exchange-mark-all-gone"),
+    re_path(r"^exchange/(?P<item_id>\d+)/mark-missing/$", views.exchange_mark_missing, name="labs-exchange-mark-missing"),
 ]

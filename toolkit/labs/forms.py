@@ -5,7 +5,7 @@ from django.utils.html import mark_safe
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, HTML
 from toolkit.diary.form_widgets import HtmlTextarea
-from .models import Bulletin, Collective, CollectiveLink, DonationItem, FoundItem, Job, COLLECTIVE_PALETTE
+from .models import Bulletin, Collective, CollectiveLink, DonationItem, ExchangeItem, FoundItem, Job, COLLECTIVE_PALETTE
 
 
 class ColourPickerWidget(forms.TextInput):
@@ -290,3 +290,46 @@ class FoundItemDisposeForm(forms.Form):
         label="Disposal method",
         widget=forms.Select(attrs={"class": "form-select"}),
     )
+
+
+class ExchangeItemForm(forms.ModelForm):
+    class Meta:
+        model = ExchangeItem
+        fields = (
+            "listing_type",
+            "name",
+            "description",
+            "category",
+            "condition",
+            "quantity",
+            "available_until",
+            "owner_type",
+            "owner_volunteer",
+            "location_notes",
+            "status",
+            "notes",
+            "image",
+        )
+        widgets = {
+            "listing_type": forms.RadioSelect(attrs={"class": "form-check-input"}),
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "description": forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
+            "category": forms.Select(attrs={"class": "form-select"}),
+            "condition": forms.Select(attrs={"class": "form-select"}),
+            "quantity": forms.TextInput(attrs={"class": "form-control"}),
+            "available_until": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "owner_type": forms.Select(attrs={"class": "form-select"}),
+            "owner_volunteer": forms.Select(attrs={"class": "form-select"}),
+            "location_notes": forms.TextInput(attrs={"class": "form-control"}),
+            "status": forms.Select(attrs={"class": "form-select"}),
+            "notes": forms.Textarea(attrs={"rows": 2, "class": "form-control"}),
+        }
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from toolkit.members.models import Volunteer
+        self.fields["owner_volunteer"].queryset = (
+            Volunteer.objects.active().select_related("member").order_by("member__name")
+        )
+        self.fields["owner_volunteer"].label_from_instance = lambda v: v.member.name
+        self.fields["owner_volunteer"].required = False

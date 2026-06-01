@@ -237,6 +237,7 @@ class Command(BaseCommand):
             "shopping_flags": 0,
             "jobs": 0,
             "map_notes": 0,
+            "exchange_items": 0,
         }
 
         # Roles
@@ -842,6 +843,206 @@ class Command(BaseCommand):
             },
         )
 
+        # Seed bulletin_guidance on SiteConfiguration so the 'Post a bulletin'
+        # form has useful example text in dev.
+        from toolkit.diary.models import SiteConfiguration
+
+        _BULLETIN_GUIDANCE = (
+            "Use bulletins for short notices that are relevant to the whole volunteer community "
+            "right now — things people need to know before their next shift, or time-sensitive "
+            "updates about the building, programme, or online tools.\n\n"
+            "Good examples:\n"
+            "• Keyholders can now be contacted via the address totally_real@list.name\n"
+            "• Password to Ticketsource has changed - see link section at the bottom of the toolkit homepage\n"
+            "• Email lists are temporarily down\n\n"
+            "Not a good fit for bulletins:\n"
+            "• Long policy discussions (use the mailing list instead)\n"
+            "• Event-specific notes (put them in the rota notes for that showing)\n"
+            "• Things only relevant to one collective (post on your collective channel)\n\n"
+            "Keep it short: two or three sentences is usually enough. If you need more space, "
+            "you can signpost to something else, or consider using the email lists."
+        )
+        cfg, _ = SiteConfiguration.objects.get_or_create(pk=1)
+        if not cfg.bulletin_guidance:
+            cfg.bulletin_guidance = _BULLETIN_GUIDANCE
+            cfg.save(update_fields=["bulletin_guidance"])
+
+        # Community exchange items (9.79)
+        from toolkit.labs.models import ExchangeItem
+
+        _exchange_items = [
+            {
+                "name": "DeWalt 18V cordless drill",
+                "listing_type": ExchangeItem.TYPE_LEND,
+                "category": ExchangeItem.CATEGORY_TOOLS,
+                "condition": ExchangeItem.CONDITION_GOOD,
+                "owner_type": ExchangeItem.OWNER_VOLUNTEER,
+                "owner_name": "Rex Hollis",
+                "location_notes": "Bring to the next event and ask Rex",
+                "notes": "Two batteries included. Charger needed overnight.",
+                "status": ExchangeItem.STATUS_AVAILABLE,
+            },
+            {
+                "name": "Folding workbench",
+                "listing_type": ExchangeItem.TYPE_LEND,
+                "category": ExchangeItem.CATEGORY_TOOLS,
+                "condition": ExchangeItem.CONDITION_FAIR,
+                "owner_type": ExchangeItem.OWNER_COLLECTIVE,
+                "location_notes": "Workshop cupboard, left side",
+                "notes": "Slightly wobbly on the left leg — tighten before use.",
+                "status": ExchangeItem.STATUS_AVAILABLE,
+            },
+            {
+                "name": "Jigsaw (electric)",
+                "listing_type": ExchangeItem.TYPE_LEND,
+                "category": ExchangeItem.CATEGORY_TOOLS,
+                "condition": ExchangeItem.CONDITION_GOOD,
+                "owner_type": ExchangeItem.OWNER_VOLUNTEER,
+                "owner_name": "Nell Arundel",
+                "location_notes": "DM Nell on the volunteers list",
+                "status": ExchangeItem.STATUS_AVAILABLE,
+            },
+            {
+                "name": "IKEA bookshelf (Billy, white, 80cm)",
+                "listing_type": ExchangeItem.TYPE_GIVE,
+                "category": ExchangeItem.CATEGORY_FURNITURE,
+                "condition": ExchangeItem.CONDITION_GOOD,
+                "owner_type": ExchangeItem.OWNER_VOLUNTEER,
+                "owner_name": "Lila Estraven",
+                "location_notes": "You'll need a car or van — too big to carry",
+                "description": "Moving house, no room for it. In good nick, no damage.",
+                "status": ExchangeItem.STATUS_AVAILABLE,
+            },
+            {
+                "name": "Box of assorted books",
+                "listing_type": ExchangeItem.TYPE_GIVE,
+                "category": ExchangeItem.CATEGORY_BOOKS,
+                "condition": ExchangeItem.CONDITION_GOOD,
+                "owner_type": ExchangeItem.OWNER_VOLUNTEER,
+                "owner_name": "Sasha Pryce",
+                "location_notes": "Can bring to any event",
+                "description": "Mostly fiction, some theory. See me at the bar to look through.",
+                "status": ExchangeItem.STATUS_AVAILABLE,
+            },
+            {
+                "name": "Chest freezer (under-counter, 60L)",
+                "listing_type": ExchangeItem.TYPE_GIVE,
+                "category": ExchangeItem.CATEGORY_KITCHEN,
+                "condition": ExchangeItem.CONDITION_FAIR,
+                "owner_type": ExchangeItem.OWNER_VOLUNTEER,
+                "owner_name": "Jules Travers",
+                "location_notes": "You collect — it's heavy",
+                "description": "Works fine, just very loud at night. Ideal for a garage or workshop.",
+                "status": ExchangeItem.STATUS_AVAILABLE,
+            },
+            {
+                "name": "Roland MIDI keyboard (25-key)",
+                "listing_type": ExchangeItem.TYPE_GIVE,
+                "category": ExchangeItem.CATEGORY_AV,
+                "condition": ExchangeItem.CONDITION_GOOD,
+                "owner_type": ExchangeItem.OWNER_VOLUNTEER,
+                "owner_name": "Tomás Ferreira",
+                "location_notes": "Can bring to a rehearsal space or S+S event",
+                "description": "USB-powered, works perfectly. I never use it.",
+                "status": ExchangeItem.STATUS_AVAILABLE,
+            },
+            {
+                "name": "Hand trowels (set of 3)",
+                "listing_type": ExchangeItem.TYPE_GIVE,
+                "category": ExchangeItem.CATEGORY_GARDEN,
+                "condition": ExchangeItem.CONDITION_FAIR,
+                "owner_type": ExchangeItem.OWNER_VOLUNTEER,
+                "owner_name": "Cleo Marchetti",
+                "location_notes": "Ask at bar or message via volunteers list",
+                "status": ExchangeItem.STATUS_AVAILABLE,
+            },
+            {
+                "name": "PA speaker (Behringer B112D)",
+                "listing_type": ExchangeItem.TYPE_LEND,
+                "category": ExchangeItem.CATEGORY_AV,
+                "condition": ExchangeItem.CONDITION_GOOD,
+                "owner_type": ExchangeItem.OWNER_COLLECTIVE,
+                "location_notes": "Projection booth — ask a keyholder",
+                "notes": "For small events only. Log your loan on the equipment sheet.",
+                "status": ExchangeItem.STATUS_ON_LOAN,
+            },
+            {
+                "name": "Sewing machine (Singer Simple)",
+                "listing_type": ExchangeItem.TYPE_LEND,
+                "category": ExchangeItem.CATEGORY_OTHER,
+                "condition": ExchangeItem.CONDITION_GOOD,
+                "owner_type": ExchangeItem.OWNER_VOLUNTEER,
+                "owner_name": "Phoebe Lund",
+                "location_notes": "Arrange collection with Phoebe",
+                "description": "Basic home sewing machine. Good for repairs and simple projects.",
+                "status": ExchangeItem.STATUS_AVAILABLE,
+            },
+            {
+                "name": "Bread maker",
+                "listing_type": ExchangeItem.TYPE_GIVE,
+                "category": ExchangeItem.CATEGORY_KITCHEN,
+                "condition": ExchangeItem.CONDITION_GOOD,
+                "owner_type": ExchangeItem.OWNER_VOLUNTEER,
+                "owner_name": "Remy Okafor",
+                "location_notes": "Can bring to S+S",
+                "description": "Used twice. Still in original box. Comes with recipe booklet.",
+                "status": ExchangeItem.STATUS_CLAIMED,
+            },
+            {
+                "name": "Potatoes (Community Kitchen surplus)",
+                "listing_type": ExchangeItem.TYPE_SHARE,
+                "category": ExchangeItem.CATEGORY_KITCHEN,
+                "owner_type": ExchangeItem.OWNER_COLLECTIVE,
+                "quantity": "about 10kg",
+                "available_until": datetime.date.today() + datetime.timedelta(days=5),
+                "location_notes": "Kitchen fridge/store — help yourself at any event",
+                "description": "CK bought in bulk and won't get through them before next month's session. Please take some!",
+                "status": ExchangeItem.STATUS_AVAILABLE,
+            },
+            {
+                "name": "Crisps (past best before, perfectly fine)",
+                "listing_type": ExchangeItem.TYPE_SHARE,
+                "category": ExchangeItem.CATEGORY_KITCHEN,
+                "owner_type": ExchangeItem.OWNER_COLLECTIVE,
+                "quantity": "several multipacks",
+                "location_notes": "Bar shelf — grab a bag",
+                "description": "Best before was last week but they're completely fine. Mixed flavours.",
+                "status": ExchangeItem.STATUS_AVAILABLE,
+            },
+            {
+                "name": "Twin Peaks event badges",
+                "listing_type": ExchangeItem.TYPE_SHARE,
+                "category": ExchangeItem.CATEGORY_OTHER,
+                "owner_type": ExchangeItem.OWNER_COLLECTIVE,
+                "quantity": "about 30 left",
+                "location_notes": "Box behind the bar — take one (or two)",
+                "description": "Leftover from the Twin Peaks screening. Assorted designs. Volunteers first but take as many as you like.",
+                "status": ExchangeItem.STATUS_AVAILABLE,
+            },
+        ]
+        counts["exchange_items"] = 0
+        for item_data in _exchange_items:
+            if ExchangeItem.objects.filter(name=item_data["name"]).exists():
+                continue
+            owner_vol = None
+            if item_data.get("owner_name"):
+                owner_vol = volunteer_objects.get(item_data["owner_name"])
+            ExchangeItem.objects.create(
+                name=item_data["name"],
+                listing_type=item_data["listing_type"],
+                category=item_data["category"],
+                condition=item_data.get("condition", ExchangeItem.CONDITION_GOOD),
+                owner_type=item_data["owner_type"],
+                owner_volunteer=owner_vol,
+                location_notes=item_data.get("location_notes", ""),
+                description=item_data.get("description", ""),
+                notes=item_data.get("notes", ""),
+                quantity=item_data.get("quantity", ""),
+                available_until=item_data.get("available_until"),
+                status=item_data["status"],
+            )
+            counts["exchange_items"] += 1
+
         # Bulk test volunteers (performance testing only)
         if options["bulk_volunteers"] > 0:
             counts["volunteers"] += self._seed_bulk_volunteers(
@@ -869,6 +1070,7 @@ class Command(BaseCommand):
                 f"  Shopping flags:  {counts['shopping_flags']} new\n"
                 f"  Jobs:            {counts['jobs']} new\n"
                 f"  Map notes:       {counts['map_notes']} new\n"
+                f"  Exchange items:  {counts['exchange_items']} new\n"
             )
         )
 

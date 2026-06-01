@@ -1,6 +1,6 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]; status: "#ai-written"
 from django.contrib import admin
-from .models import Bulletin, Collective, ConsumableItem, DonationItem, FoundItem, Job, NeedFlag, SupplierRecord
+from .models import Bulletin, Collective, ConsumableItem, DonationItem, ExchangeItem, FoundItem, Job, NeedFlag, SupplierRecord
 
 
 @admin.register(Collective)
@@ -60,6 +60,16 @@ class JobAdmin(admin.ModelAdmin):
     list_display = ("title", "area", "urgency", "safety_risk", "skill_needed", "resolved", "posted_by", "claimed_by", "posted_at")
     list_filter = ("urgency", "resolved", "safety_risk", "skill_needed", "keyholder_required", "location_type")
     ordering = ("resolved", "urgency", "-posted_at")
+
+
+@admin.register(ExchangeItem)
+class ExchangeItemAdmin(admin.ModelAdmin):
+    list_display = ("name", "listing_type", "category", "condition", "status", "owner_type", "active", "added_at")
+    list_filter = ("listing_type", "category", "status", "owner_type", "active")
+    list_editable = ("status", "active")
+    search_fields = ("name", "description", "notes")
+    raw_id_fields = ("owner_volunteer",)
+    ordering = ("listing_type", "category", "name")
 
 
 @admin.register(FoundItem)

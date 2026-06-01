@@ -1,0 +1,193 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Community exchange{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+  .exchange-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+  .exchange-filters .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .exchange-filters label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    margin: 0;
+  }
+  .exchange-filters select {
+    font-size: 0.85rem;
+    padding: 0.25rem 0.5rem;
+  }
+  .exchange-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(22rem, 100%), 1fr));
+    gap: 1rem;
+  }
+  .exchange-card {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+  }
+  .exchange-card__img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    background: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: #adb5bd;
+  }
+  .exchange-card__img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .exchange-card__body {
+    padding: 0.75rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .exchange-card__title {
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+  }
+  .exchange-card__meta {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+  }
+  .exchange-card__desc {
+    font-size: 0.88rem;
+    flex: 1;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+  }
+  .exchange-card__footer {
+    margin-top: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .type-badge {
+    font-size: 0.75rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 3px;
+    font-weight: 600;
+  }
+  .type-lend { background: #dbeafe; color: #1e40af; }
+  .type-give { background: #dcfce7; color: #166534; }
+  .type-share { background: #fef9c3; color: #854d0e; }
+  .status-unavailable { opacity: 0.55; }
+  .urgency-tag {
+    font-size: 0.75rem;
+    color: #991b1b;
+    font-weight: 600;
+  }
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #6c757d;
+  }
+  .empty-state .empty-icon { font-size: 3rem; margin-bottom: 0.5rem; }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+  <h2>Community exchange</h2>
+  <a href="{% url "labs-exchange-add" %}" class="btn btn-primary btn-sm">+ Offer something</a>
+</div>
+
+<p class="text-muted" style="font-size:0.9rem;">Got tools to lend, stuff to give away, or surplus food to share out? List it here.</p>
+
+<form method="get" class="exchange-filters">
+  <div class="filter-group">
+    <label for="f-type">Type</label>
+    <select id="f-type" name="type" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="">All</option>
+      {% for val, label in type_choices %}
+      <option value="{{ val }}"{% if listing_type == val %} selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter-group">
+    <label for="f-cat">Category</label>
+    <select id="f-cat" name="category" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="">All categories</option>
+      {% for val, label in category_choices %}
+      <option value="{{ val }}"{% if category == val %} selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter-group ms-auto">
+    <label class="form-check-label" for="f-unavail" style="font-size:0.82rem;">
+      <input id="f-unavail" type="checkbox" name="unavailable" value="1"{% if show_unavailable %} checked{% endif %} class="form-check-input" onchange="this.form.submit()">
+      Show unavailable
+    </label>
+  </div>
+</form>
+
+{% if items %}
+<div class="exchange-grid">
+  {% for item in items %}
+  <a href="{% url "labs-exchange-item" item_id=item.pk %}" class="text-decoration-none text-body">
+    <div class="exchange-card{% if item.status == 'withdrawn' or item.status == 'claimed' or item.status == 'all_gone' %} status-unavailable{% endif %}">
+      <div class="exchange-card__img">
+        {% if item.image %}
+        <img src="{{ item.image.url }}" alt="{{ item.name }}">
+        {% else %}
+        {% if item.listing_type == 'lend' %}🔧{% elif item.listing_type == 'share' %}🥔{% else %}🎁{% endif %}
+        {% endif %}
+      </div>
+      <div class="exchange-card__body">
+        <div class="exchange-card__title">{{ item.name }}</div>
+        <div class="exchange-card__meta">
+          {{ item.get_category_display }}{% if item.listing_type != 'share' %} · {{ item.get_condition_display }}{% endif %}
+          {% if item.quantity %}<span class="ms-1 text-body-secondary">· {{ item.quantity }}</span>{% endif %}
+        </div>
+        {% if item.available_until %}
+        {# urgency tag shown on the card — just the date, detail page has the warning box #}
+        <div class="urgency-tag mb-1">⚠️ Until {{ item.available_until|date:"j N" }}</div>
+        {% endif %}
+        {% if item.description %}
+        <div class="exchange-card__desc text-muted">{{ item.description }}</div>
+        {% endif %}
+        <div class="exchange-card__footer">
+          <span class="type-badge type-{{ item.listing_type }}">
+            {% if item.listing_type == 'lend' %}🔧 Lend{% elif item.listing_type == 'share' %}🥔 Share{% else %}🎁 Free{% endif %}
+          </span>
+          <span class="badge {% if item.status == 'available' %}bg-success{% elif item.status == 'on_loan' %}bg-warning text-dark{% elif item.status == 'missing' %}bg-danger{% else %}bg-secondary{% endif %}">
+            {{ item.status_label }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">📦</div>
+  <p>Nothing listed yet{% if listing_type or category %} matching these filters{% endif %}.</p>
+  <a href="{% url "labs-exchange-add" %}" class="btn btn-outline-primary btn-sm">Be the first to offer something</a>
+</div>
+{% endif %}
+{% endblock %}
