@@ -5882,3 +5882,56 @@ After X days  → system flags item → panopticon marks disposed
 **Size estimate:** 🔵 S if photo is deferred, 🟡 M if photo upload is included in MVP.
 
 **Size estimate:** 🟡 M — ~22–34h across all three phases; MVP (phase 1) alone is 🔵 S (~8–12h). Requires 8.1 (rota↔volunteer FK, done) for the gate to know who is signing up.
+
+---
+
+### 9.102 — Replace Masonry.js with CSS Grid on the programme index 🔵 S (6–10h)
+
+**Problem.**
+
+The programme index uses Masonry.js to pack `.showing` cards into a waterfall layout. This causes several compounding problems:
+
+- **Reading order is broken.** Masonry fills columns top-to-bottom, so the visual sequence diverges from the DOM/chronological order. A card in column 2, row 1 may be chronologically earlier than a card at the bottom of column 1 — visually it reads as later. For a cinema programme where "what's on next?" is the primary question, this is a significant UX failure.
+- **Accessibility.** Screen readers follow DOM order (chronological); sighted users follow visual column order. These diverge — a violation of WCAG 1.3.2 (meaningful sequence) and a practical failure for keyboard navigation.
+- **Fragility.** Every filter operation, image load, and resize requires a Masonry relayout call. The absolute-positioning Masonry applies to items creates opaque interactions with padding and image sizing (demonstrated during the June 2026 mobile UX session).
+- **No span/feature cards.** The index view never used `grid-item--width2/3`, so none of Masonry's editorial-collage capability is actually in play — the only reason it's being used is to avoid whitespace from variable card heights.
+
+**Proposed solution: CSS Grid (Option A).**
+
+Replace Masonry with a standard CSS Grid. Cards flow left-to-right and wrap to the next row. Column count adjusts at breakpoints using `auto-fill`/`minmax`. Card height is determined by content — no JS, no relayout, no absolute positioning.
+
+```css
+.programme {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+}
+```
+
+Visual order = DOM order = chronological. Full-width posters on mobile are trivial. No JS needed for layout.
+
+**Migration scope.**
+
+| Area | Change |
+|---|---|
+| `site-common.js` | Remove Masonry init, `imagesLoaded` relayout, and `$('.programme').masonry(masonry_opts)` in the grid/list switcher. Remove `$(window).load` layout call. |
+| `view_showing_index.html` | Remove `.showing-sizer` and `.gutter-sizer` sizing divs |
+| `programme.js` | Remove `$(".programme").masonry("layout")` call after filter |
+| `programme.css` | Replace `.showing-sizer`, `.gutter-sizer`, and all Masonry-dependent breakpoint rules with a CSS Grid declaration. Remove `position: relative` on `.programme` (no longer needed to contain absolutely-positioned children). |
+| `base_public.html` / `view_showing_index.html` | No change needed — `masonry.pkgd.min.js` and `imagesloaded.pkgd.min.js` can be removed from the `<script>` block once the migration is confirmed stable. |
+
+**What stays the same.**
+
+- The list/grid switcher still works — the grid view is toggled with `show()`/`hide()` as before, the Masonry relayout call is simply dropped.
+- The search filter still works — `filter-hidden` toggling `display:none` on cards is unaffected by the layout method.
+- The S+S visual identity is unchanged. Clean grid may actually suit the site's typographic character better than the waterfall.
+
+**Aesthetic trade-off.**
+
+The main loss is the "editorial collage" feel of variable-height packing. The gain is visual clarity and a layout that actually communicates chronological order. The list view remains for users who want strict sequencing; the grid view's job is scannable visual browsing, and a clean grid does that well.
+
+**Approach: branch and trial.**
+
+Implement on a feature branch (`grid-layout-trial` or similar) so the visual result can be reviewed against the live Masonry version before merging. No model/migration changes needed — pure CSS/JS/template work.
+
+**Size estimate:** 🔵 S (6–10h) — mostly CSS cleanup; the logic changes are small.

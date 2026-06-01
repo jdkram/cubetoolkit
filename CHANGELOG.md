@@ -6,6 +6,52 @@ Each release below is tagged (`v2026.03.0` through `v2026.05.7`) and represents 
 
 ---
 
+## v2026.06.1 — Community Tools & Safety Improvements
+
+**Tagged at:** `2026.06.1` (2026-06-01)
+
+A batch of community-facing Labs features alongside hardening work: a tool/item exchange, lost and found, role qualification gates, and a Docker boot-time safety net that catches misconfigured upload directories before they cause runtime errors.
+
+### What's new
+
+- **Community exchange** — volunteers can list items to lend (borrow and return), give away (free to a good home), or share (help yourself). Filterable card grid with status lifecycle (available / on loan / missing / all gone / withdrawn). Gated behind a `community_exchange_enabled` site setting
+- **Role qualification gates** — panopticons define named qualifications (e.g. "Bar", "Projection"), grant them per-volunteer on the profile page, and attach them to roles as advisory (warns on sign-up) or blocking (refuses with 403) gates. Panopticons always bypass
+- **Lost & found log** — sequential human-readable IDs (L-001 format), photo upload, tabbed list, detail/claim/dispose/printable-label workflow, overdue flagging from a configurable `lost_and_found_retain_days` site setting
+- **General training flag** — `general_training_enabled` site setting gates GST nudges in the volunteer list, profile Key dates row, training report, and training form
+- **Mobile programme improvements** — keyword search bar merged into the volunteer-notice row; dismissible volunteer notice; one card per showing in the grid view
+- **Collectives public directory** — `public_copy` and `listed_publicly` fields on `Collective`; public-facing `/collectives/` page (no login required)
+- **Docker upload directory safety net** — `check_media_dirs` management command scans all model upload paths at container startup and refuses to start if any are missing or unwritable
+- **Bug fixes** — rolling login activity windows (30/365 days, replacing calendar month/year); Changing Places label position on building floorplan; pre-existing site config test data out of sync with current fields
+
+### How to demo
+
+1. `git checkout v2026.06.1`
+2. `docker compose up --build -d`
+3. `docker compose exec toolkit /venv/bin/python3 manage.py configure_toolkit_users --password password`
+4. `docker compose exec toolkit /venv/bin/python3 manage.py seed_dev_data`
+5. Log in as `admin` / `password`
+
+| Page to show | URL | What to point out |
+|---|---|---|
+| Community exchange | `/labs/exchange/` | Card grid; Add item; mark on loan / returned / all gone |
+| Site settings | `/diary/edit/siteconfiguration/` | Toggle `community_exchange_enabled` |
+| Role qualifications | `/diary/edit/roles/` | Qualification field + gate dropdown on each role |
+| Volunteer profile | `/volunteers/<pk>/edit/` | Grant qualifications section (Panopticon only) |
+| Lost & found | `/labs/lost-and-found/` | Log, list, detail, printable label |
+
+### State of the code
+
+- 808 tests passing
+- 55 migrations in `diary`, 23 in `members`, 22 in `labs`
+
+### Known rough edges
+
+- Exchange photos are stored but not resized — very large uploads may be slow to serve
+- Qualification gates require panopticons to manually maintain grants; no bulk import yet
+- Simplelists integration for collectives mailing lists (9.87) still deferred
+
+---
+
 ## v2026.05.7 — Volunteer Lifecycle & Maintenance
 
 **Tagged at:** `2026.05.7` (2026-05-30)
