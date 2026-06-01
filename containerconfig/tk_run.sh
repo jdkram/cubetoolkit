@@ -21,6 +21,8 @@ case "$COMMAND" in
         # source directories (no collectstatic needed) and auto-reloads on changes.
         echo "Running database migrations"
         /venv/bin/python3 /site/manage.py migrate
+        echo "Checking media directories"
+        /venv/bin/python3 /site/manage.py check_media_dirs
         exec /venv/bin/python3 /site/manage.py runserver 0.0.0.0:8000
         ;;
     gunicorn)
@@ -28,6 +30,8 @@ case "$COMMAND" in
         # collectstatic at build time (see Dockerfile).
         echo "Running database migrations"
         /venv/bin/python3 /site/manage.py migrate
+        echo "Checking media directories"
+        /venv/bin/python3 /site/manage.py check_media_dirs
         GUNICORN_EXTRA_ARGS=()
         if [[ "${GUNICORN_RELOAD:-}" == "1" ]]; then
             echo "Hot-reload enabled"

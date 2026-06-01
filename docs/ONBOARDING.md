@@ -460,6 +460,23 @@ The entrypoint script is [containerconfig/tk_run.sh](containerconfig/tk_run.sh).
 
 **In development**, `docker-compose.yml` uses `tk_run runserver` — Django's built-in development server. This serves static files directly from source (no `collectstatic` step needed) and auto-reloads on code changes.
 
+#### Adding a new file or image upload field
+
+If you add an `ImageField` or `FileField` to a model, you must also add the corresponding directory to the Dockerfile. The container runs as a non-root user and cannot create new subdirectories under `/site/media/` at runtime.
+
+**Steps:**
+
+1. Note the `upload_to` value on your field, e.g. `upload_to="my-uploads/"`.
+2. Add it to the media directory list in the Dockerfile:
+   ```dockerfile
+   && install -D --owner=toolkit --group=toolkit --directory /site/media/my-uploads \
+   ```
+3. Rebuild: `docker compose up --build -d`
+
+**Why it fails without this:** `install -D` creates parent directories as root. `/site/media/` itself is owned by root unless explicitly listed first (it is — that's why it appears first in the Dockerfile). Any subdirectory not pre-created at build time cannot be `mkdir`-ed at runtime, and the first upload attempt raises `PermissionError`.
+
+**Automatic safety net:** `tk_run.sh` runs `manage.py check_media_dirs` at every container startup. This scans all models for `ImageField`/`FileField` `upload_to` paths and checks they exist and are writable. If any are missing, the container refuses to start with a clear error message listing what's missing. You will not ship a broken upload silently.
+
 `docker-compose.override.yml` is applied automatically on top of `docker-compose.yml`. It adds extra bind mounts for `toolkit/` and `star_and_shadow_templates/` so that Python and template changes propagate into the running container immediately.
 
 **In production**, `docker-compose-production.yml` uses `gunicorn` for the web app and `mailerd` in a separate container for sending email.
@@ -615,6 +632,47 @@ Each job logs its start time, completion, and any failure with an exit code.
 ---
 
 ## Troubleshooting
+
+### `PermissionError` on file upload / "media directory missing" at startup
+
+**Symptom A — at startup:** The container starts, then immediately exits with:
+
+```text
+FAIL  foo/  (myapp.MyModel.image): directory does not exist
+1 media directory missing or not writable under /site/media.
+Add them to the Dockerfile and rebuild, or create them manually.
+```
+
+**Symptom B — at first upload:** A view that handles an `ImageField` or `FileField` crashes with:
+
+```text
+PermissionError: [Errno 13] Permission denied: '/site/media/foo'
+```
+
+**Cause:** A model has an `ImageField` or `FileField` with `upload_to="foo/"`, but `/site/media/foo/` was never created in the Docker image. The container user (`toolkit`) cannot create new subdirectories at runtime because `/site/media/` is owned by root.
+
+**Fix — with a rebuild (normal):**
+
+Add the missing directory to the Dockerfile's media list and rebuild:
+
+```dockerfile
+&& install -D --owner=toolkit --group=toolkit --directory /site/media/foo \
+```
+
+```bash
+docker compose up --build -d
+```
+
+**Fix — without a rebuild (quick dev fix):**
+
+```bash
+docker compose exec --user root toolkit mkdir -p /site/media/foo
+docker compose exec --user root toolkit chown toolkit:toolkit /site/media/foo
+```
+
+Then update the Dockerfile anyway so the next image build includes it.
+
+---
 
 ### "Duplicate column name" / migration crash on startup
 
