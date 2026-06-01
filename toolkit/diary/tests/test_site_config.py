@@ -72,8 +72,11 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
             "films_start_on_time_banner_text": "Films start at the listed time.",
             "rota_show_tags": "on",
             "rota_clear_email_prompt_enabled": "on",
+            "rota_clear_email_prompt_text": config.rota_clear_email_prompt_text,
+            "vols_email": "",
             "show_archive_images": "on",
             "images_start_date": "",
+            "breakeven_guidance_note": "",
             "breakeven_fc_standard_threshold": str(
                 config.breakeven_fc_standard_threshold
             ),
@@ -89,26 +92,35 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
             "programme_media_max_size_mb": str(config.programme_media_max_size_mb),
             "mailout_details_days_ahead": str(config.mailout_details_days_ahead),
             "mailout_listings_days_ahead": str(config.mailout_listings_days_ahead),
+            "calendar_slot_min_hour": str(config.calendar_slot_min_hour),
             "membership_length_days": str(config.membership_length_days),
             "default_training_expiry_months": str(
                 config.default_training_expiry_months
             ),
+            "general_training_enabled": "on",
             "volunteer_dormancy_days": str(config.volunteer_dormancy_days),
             "volunteer_never_logged_in_grace_days": str(
                 config.volunteer_never_logged_in_grace_days
             ),
             "volunteer_purge_days": str(config.volunteer_purge_days),
+            "volunteer_digest_day": str(config.volunteer_digest_day),
             "rota_gap_min_missing": str(config.rota_gap_min_missing),
             "rota_gap_min_pct": str(config.rota_gap_min_pct),
             "image_copyright_guidance_url": "",
             "alt_text_guidance_url": "",
             "access_rider_guidance_url": "",
+            "lost_and_found_retain_days": str(config.lost_and_found_retain_days),
             "bulletin_default_expiry_days": str(config.bulletin_default_expiry_days),
             "bulletin_guidance": "",
             "bulletin_post_permission": config.bulletin_post_permission,
             "eventlink_extra_allowed_domains": "",
+            "collectives_intro": "",
+            "donations_intro": "",
+            "show_donations_in_public_nav": "",
+            "banner_active": "",
             "banner_level": config.banner_level,
             "banner_text": "",
+            "banner_dismissible": "on",
         }
         response = self.client.post(self.url, post_data)
         self.assertEqual(response.status_code, 302)

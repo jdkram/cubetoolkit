@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta
 
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import SetPasswordForm
@@ -160,11 +160,9 @@ def view_volunteer_summary(request):
     active_count = volunteers.filter(status=Volunteer.STATUS_ACTIVE).count()
     dormant_count = volunteers.filter(status=Volunteer.STATUS_DORMANT).count()
 
-    now = datetime.now(tz=timezone.utc)
-    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
-    logged_in_this_month = base_qs.filter(user__last_login__gte=month_start).count()
-    logged_in_this_year = base_qs.filter(user__last_login__gte=year_start).count()
+    now = timezone.now()
+    logged_in_last_30_days = base_qs.filter(user__last_login__gte=now - timedelta(days=30)).count()
+    logged_in_last_365_days = base_qs.filter(user__last_login__gte=now - timedelta(days=365)).count()
 
     context = {
         "volunteers": volunteers,
@@ -172,8 +170,8 @@ def view_volunteer_summary(request):
         "dormant_count": dormant_count,
         "sort_type": sort_type,
         "dawn_of_toolkit": settings.DAWN_OF_TOOLKIT,
-        "logged_in_this_month": logged_in_this_month,
-        "logged_in_this_year": logged_in_this_year,
+        "logged_in_last_30_days": logged_in_last_30_days,
+        "logged_in_last_365_days": logged_in_last_365_days,
     }
     return render(request, "volunteer_summary.html", context)
 
