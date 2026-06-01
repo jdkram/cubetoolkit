@@ -634,6 +634,65 @@ span.tags {
     text-decoration: underline;
 }
 
+/* Dismiss button on the volunteer notice */
+.volunteer-notice-dismiss {
+    background: none;
+    border: none;
+    padding: 0 0 0 0.5em;
+    cursor: pointer;
+    font: inherit;
+    font-size: 1.1em;
+    color: inherit;
+    opacity: 0.5;
+    line-height: 1;
+}
+.volunteer-notice-dismiss:hover {
+    opacity: 1;
+}
+
+/* Mobile nav search — sits to the right of the burger button */
+.mobile-nav-search {
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-right: 8px;
+}
+.mobile-nav-search input[type=search] {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 34px;
+    padding: 0 0.5em;
+    border: 1px solid rgba(8, 32, 128, 0.3);
+    background: rgba(255, 255, 255, 0.9);
+    color: rgb(8, 32, 128);
+    font: inherit;
+    font-size: 0.85em;
+    box-sizing: border-box;
+}
+.mobile-nav-search input[type=search]::placeholder {
+    color: rgba(8, 32, 128, 0.35);
+    font-style: italic;
+}
+.mobile-nav-search input[type=search]:focus {
+    outline: 2px solid rgba(8, 32, 128, 0.5);
+    outline-offset: 0;
+}
+.filter-reset-btn--nav {
+    background: none;
+    border: none;
+    padding: 0 0.3em;
+    cursor: pointer;
+    font: inherit;
+    font-size: 1.1em;
+    color: rgb(8, 32, 128);
+    opacity: 0.5;
+    line-height: 1;
+}
+.filter-reset-btn--nav:hover {
+    opacity: 1;
+}
+
 .showing-overflow-hint {
     font-style: italic;
     opacity: 0.65;
@@ -671,6 +730,17 @@ span.tags {
     gap: 0.4rem;
     flex-shrink: 0;
     margin-left: auto;
+}
+
+/* Hide desktop filter bar on mobile — search lives in the nav bar there */
+@media screen and (max-width: 999px) {
+    .programme-filter-bar {
+        display: none;
+    }
+    .programme-header-row {
+        margin-top: 8px;
+        margin-bottom: 8px;
+    }
 }
 
 #programme-search {

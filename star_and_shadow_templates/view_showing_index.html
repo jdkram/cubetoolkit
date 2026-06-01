@@ -53,16 +53,34 @@ setup_page(true);
 </div><!-- end .print-media -->
 {% endblock navmenu-footer %}
 
+{% block mobile_nav_right %}
+<div class="mobile-nav-search">
+    <input type="search" data-prog-search placeholder="Search…" autocomplete="off" aria-label="Search events">
+    <button type="button" data-prog-reset class="filter-reset-btn filter-reset-btn--nav" hidden>&times;</button>
+</div>
+{% endblock %}
+
 {% block body %}
 {{ block.super }}
 <div class="programme-header-row">
     {% if is_volunteer %}
-    <div class="volunteer-notice">You&#8217;re logged in as a volunteer &#8212; private events are shown. <form method="post" action="{% url 'logout' %}" style="display:inline;margin:0">{% csrf_token %}<button type="submit" class="volunteer-signout-btn">Sign out</button></form></div>
+    <div class="volunteer-notice" id="volunteer-notice">You&#8217;re logged in as a volunteer &#8212; private events are shown. <form method="post" action="{% url 'logout' %}" style="display:inline;margin:0">{% csrf_token %}<button type="submit" class="volunteer-signout-btn">Sign out</button></form><button type="button" class="volunteer-notice-dismiss" aria-label="Dismiss">&times;</button></div>
+    <script>
+    (function(){
+        var n = document.getElementById('volunteer-notice');
+        if (!n) return;
+        try { if (sessionStorage.getItem('volunteer-notice-dismissed')) { n.style.display = 'none'; } } catch(e){}
+        n.querySelector('.volunteer-notice-dismiss').addEventListener('click', function(){
+            n.style.display = 'none';
+            try { sessionStorage.setItem('volunteer-notice-dismissed', '1'); } catch(e){}
+        });
+    })();
+    </script>
     {% endif %}
     <div class="programme-filter-bar">
         <label for="programme-search" class="programme-search-label">Search:</label>
-        <input type="search" id="programme-search" placeholder="Filter by title, tag…" autocomplete="off">
-        <button type="button" id="filter-reset" class="filter-reset-btn" hidden>Clear</button>
+        <input type="search" id="programme-search" data-prog-search placeholder="Filter by title, tag…" autocomplete="off">
+        <button type="button" id="filter-reset" data-prog-reset class="filter-reset-btn" hidden>Clear</button>
     </div>
 </div>
 <div class="programme">
