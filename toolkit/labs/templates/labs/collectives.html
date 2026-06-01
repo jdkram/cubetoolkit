@@ -170,8 +170,8 @@
   <div class="help-box">
     <strong>Joining a collective here</strong> records your membership in the toolkit — it shows up in your profile,
     on the volunteer directory, and in rota context. It does <em>not</em> yet subscribe you to the collective's
-    mailing list. To subscribe to a mailing list, use the
-    <a href="https://www.starandshadow.org.uk/toolkit/working-groups/">working groups sign-up page</a>.
+    mailing list.{% if mailing_list_signup_url %} To subscribe to a mailing list, use the
+    <a href="{{ mailing_list_signup_url }}">working groups sign-up page</a>.{% endif %}
   </div>
   <div class="help-box">
     <strong>Editing:</strong> use the <em>Edit</em> button on any card to update its text — any volunteer can do this.

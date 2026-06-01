@@ -1434,6 +1434,17 @@ class SiteConfiguration(models.Model):
             "Plain text. Leave blank to use the built-in default."
         ),
     )
+    collectives_mailing_list_signup_url = models.URLField(
+        blank=True,
+        default="",
+        max_length=500,
+        verbose_name="Mailing list sign-up URL",
+        help_text=(
+            "URL for the mailing list sign-up page, shown in the help box on the "
+            "<a href='/toolkit/labs/collectives/'>Collectives page</a>. "
+            "Leave blank to hide the mailing list hint entirely."
+        ),
+    )
 
     # --- Donations page ---
     donations_intro = models.TextField(
@@ -1500,6 +1511,15 @@ class SiteConfiguration(models.Model):
         help_text=(
             "Allow visitors to dismiss the banner. Their choice is stored in "
             "their browser only, and resets when the banner text changes."
+        ),
+    )
+
+    # --- Community exchange ---
+    community_exchange_enabled = models.BooleanField(
+        default=False,
+        help_text=(
+            "Enable the community exchange — a browseable catalogue where volunteers can lend tools "
+            "or give away items to one another. When off, the section is hidden from the nav."
         ),
     )
 

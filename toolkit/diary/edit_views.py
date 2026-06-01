@@ -2124,6 +2124,10 @@ def edit_site_configuration(request):
             ["image_copyright_guidance_url", "alt_text_guidance_url", "access_rider_guidance_url"],
         ),
         (
+            "Community exchange",
+            ["community_exchange_enabled"],
+        ),
+        (
             "Lost & found",
             ["lost_and_found_retain_days"],
         ),
@@ -2137,7 +2141,7 @@ def edit_site_configuration(request):
         ),
         (
             "Collectives",
-            ["collectives_intro"],
+            ["collectives_intro", "collectives_mailing_list_signup_url"],
         ),
         (
             "Donations page",

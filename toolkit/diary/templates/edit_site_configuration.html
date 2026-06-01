@@ -2,6 +2,11 @@
 
 {% block title %}Site configuration{% endblock %}
 
+{% block script %}
+{{ block.super }}
+{{ form.media }}
+{% endblock %}
+
 {% block css %}
 {{ block.super }}
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/messages.css">
@@ -148,7 +153,7 @@
               {{ field }}
             {% endif %}
             {% if field.help_text %}
-              <small class="form-text">{{ field.help_text }}</small>
+              <small class="form-text">{{ field.help_text|safe }}</small>
             {% endif %}
             {% if field.errors %}
               <div class="text-danger small mt-1">{{ field.errors }}</div>

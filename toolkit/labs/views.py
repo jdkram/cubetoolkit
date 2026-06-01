@@ -20,6 +20,7 @@ from .models import (
     BulletinRead,
     Collective,
     ConsumableItem,
+    ExchangeItem,
     FoundItem,
     NeedFlag,
     ProcurementPledge,
@@ -160,10 +161,12 @@ def collectives(request):
     except Exception:
         user_collective_slugs = frozenset()
         user_is_volunteer = False
+    config = get_site_config()
     return render(request, "labs/collectives.html", {
         "collectives": items,
         "user_collective_slugs": user_collective_slugs,
         "user_is_volunteer": user_is_volunteer,
+        "mailing_list_signup_url": config.collectives_mailing_list_signup_url,
     })
 
 
@@ -1068,3 +1071,130 @@ def found_item_dispose(request, item_id):
 def found_item_label(request, item_id):
     item = get_object_or_404(FoundItem, pk=item_id)
     return render(request, "labs/found_item_label.html", {"item": item})
+
+
+# ── Community exchange ────────────────────────────────────────────────────────
+
+@login_required
+def exchange_list(request):
+    cfg = get_site_config()
+    if not cfg.community_exchange_enabled:
+        from django.http import Http404
+        raise Http404
+
+    items = ExchangeItem.objects.filter(active=True).select_related("owner_volunteer__member")
+
+    listing_type = request.GET.get("type", "")
+    category = request.GET.get("category", "")
+    show_unavailable = request.GET.get("unavailable", "") == "1"
+
+    if listing_type in (ExchangeItem.TYPE_LEND, ExchangeItem.TYPE_GIVE):
+        items = items.filter(listing_type=listing_type)
+    if category:
+        items = items.filter(category=category)
+    if not show_unavailable:
+        items = items.exclude(status=ExchangeItem.STATUS_WITHDRAWN)
+
+    return render(request, "labs/exchange.html", {
+        "items": items,
+        "listing_type": listing_type,
+        "category": category,
+        "show_unavailable": show_unavailable,
+        "type_choices": ExchangeItem.TYPE_CHOICES,
+        "category_choices": ExchangeItem.CATEGORY_CHOICES,
+    })
+
+
+@login_required
+def exchange_item(request, item_id):
+    cfg = get_site_config()
+    if not cfg.community_exchange_enabled:
+        from django.http import Http404
+        raise Http404
+
+    item = get_object_or_404(ExchangeItem, pk=item_id, active=True)
+    can_edit = request.user.is_superuser or (
+        item.owner_volunteer
+        and hasattr(request.user, "volunteer")
+        and item.owner_volunteer == request.user.volunteer
+    )
+    return render(request, "labs/exchange_item.html", {"item": item, "can_edit": can_edit})
+
+
+@login_required
+def exchange_add(request):
+    cfg = get_site_config()
+    if not cfg.community_exchange_enabled:
+        from django.http import Http404
+        raise Http404
+
+    if request.method == "POST":
+        form = lab_forms.ExchangeItemForm(request.POST, request.FILES, user=request.user)
+        if form.is_valid():
+            item = form.save(commit=False)
+            item.added_by = request.user
+            if item.owner_type == ExchangeItem.OWNER_VOLUNTEER and not item.owner_volunteer:
+                if hasattr(request.user, "volunteer"):
+                    item.owner_volunteer = request.user.volunteer
+            item.save()
+            messages.success(request, f"'{item.name}' added to the community exchange.")
+            return redirect("labs-exchange-item", item_id=item.pk)
+    else:
+        initial = {}
+        if hasattr(request.user, "volunteer"):
+            initial["owner_volunteer"] = request.user.volunteer
+        form = lab_forms.ExchangeItemForm(initial=initial, user=request.user)
+
+    return render(request, "labs/exchange_form.html", {"form": form, "editing": False})
+
+
+@login_required
+def exchange_edit(request, item_id):
+    cfg = get_site_config()
+    if not cfg.community_exchange_enabled:
+        from django.http import Http404
+        raise Http404
+
+    item = get_object_or_404(ExchangeItem, pk=item_id, active=True)
+    can_edit = request.user.is_superuser or (
+        item.owner_volunteer
+        and hasattr(request.user, "volunteer")
+        and item.owner_volunteer == request.user.volunteer
+    )
+    if not can_edit:
+        return HttpResponseForbidden("You can only edit items you listed yourself.")
+
+    if request.method == "POST":
+        form = lab_forms.ExchangeItemForm(request.POST, request.FILES, instance=item, user=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"'{item.name}' updated.")
+            return redirect("labs-exchange-item", item_id=item.pk)
+    else:
+        form = lab_forms.ExchangeItemForm(instance=item, user=request.user)
+
+    return render(request, "labs/exchange_form.html", {"form": form, "item": item, "editing": True})
+
+
+@login_required
+@require_POST
+def exchange_withdraw(request, item_id):
+    cfg = get_site_config()
+    if not cfg.community_exchange_enabled:
+        from django.http import Http404
+        raise Http404
+
+    item = get_object_or_404(ExchangeItem, pk=item_id, active=True)
+    can_edit = request.user.is_superuser or (
+        item.owner_volunteer
+        and hasattr(request.user, "volunteer")
+        and item.owner_volunteer == request.user.volunteer
+    )
+    if not can_edit:
+        return HttpResponseForbidden()
+
+    item.active = False
+    item.status = ExchangeItem.STATUS_WITHDRAWN
+    item.save()
+    messages.success(request, f"'{item.name}' withdrawn from the exchange.")
+    return redirect("labs-exchange")
