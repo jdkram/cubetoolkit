@@ -180,7 +180,7 @@ was trained for which role, when, by whom). In practice at Star and Shadow these
 - Cancel a pending or in-progress job
 - Members have a unique unsubscribe token for one-click unsubscribe links in emails
 
-**Note (Star and Shadow):** at S&S the toolkit mailout system is **not currently deployed or used**, I think? At least according to the code I have access to. I don't really understand what the live S&S code does for emails. All volunteer and member communications go through Simplelists mailing lists, managed outside the toolkit. The toolkit's email code (the `mailerd` daemon, the job queue, the compose view) is present in the codebase and functional, but the `DJANGO_SETTINGS_MODULE` for the S&S instance does not configure an outbound SMTP server for bulk sends, and the mailout UI is not linked from the internal dashboard. The only email the S&S instance sends is transactional (account creation, password reset). See section 4.3 for the workflow diagram — it describes how the system *can* work, not how S&S uses it today. If S&S were to adopt the toolkit mailout system, a review of the Simplelists migration implications (section 9.6) would be needed first.
+**Note (Star and Shadow):** at S&S the toolkit mailout system is used for the members list. Volunteer communications typically go through Simplelists mailing lists, managed outside the toolkit, though some users still use the members list. There also may be members who aren't volunteers, grandfathered in - these are people who have signed up to get communications from the Star & Shadow but haven't got corresponding volunteer accounts. Requires access to Panopticon level / raw database to check. See section 4.3 for the workflow diagram.
 
 ### 1.6 CMS content pages (internal)
 
@@ -310,7 +310,7 @@ flowchart TD
 
 **Current pain points:** entirely manual, no link between the Google Form and the Toolkit, admins must remember to act on notification emails. Account creation and password-set emails are now automated — see §4.6.
 
-### 4.3 Sending a mailout (Cube Microplex only; not used at S&S)
+### 4.3 Sending a mailout
 
 ```mermaid
 sequenceDiagram
@@ -616,10 +616,10 @@ The Star and Shadow operates through a network of informal working groups and co
 | System | How it connects | Notes |
 |---|---|---|
 | **TicketSource** | Outbound link only — `ticket_link` URL on an Event. API exists but not integrated. | The `ticket_link` field is a plain URL. TicketSource does expose a REST API (`api.ticketsource.io`) that supports reading events (title, description, dates, venues), customers, and bookings. The API key is available in the TicketSource account settings. Potential near-term use: pull booking counts into post-screening film rights reminder emails (section 9.14) — gives programmers the headline ticket number without requiring them to log in to TicketSource before submitting their report. Longer-term: sync event descriptions from toolkit to TicketSource to save programmers copy-pasting. Write access to event descriptions via the API has not been confirmed — the API may be read-only for event data. |
-| **Simplelists** | Manual human process — emails to `vols_admin_address` prompt admins to add/remove from lists | Simplelists does expose a REST API at `https://www.simplelists.com/api/2/` (v2, documented at `simplelists.com/api/docs/2/protocol/`). Auth is HTTP Basic with an API key. Key endpoints: `GET/POST/DELETE /membership/` (manage list subscriptions), `GET/POST /contacts/` (manage contact records), `GET /lists/` (list all lists). Rate limit is 3× the account's address book size per hour. The API key is tied to a Simplelists account with admin access — someone with access to the S+S Simplelists account would need to generate one. At S&S, Simplelists is the primary channel for all volunteer and member communications; the toolkit mailout system is not used for this purpose. See TASKS.md §9.87 for the proposed collective → list sync (currently parked — requires live site access and the API key). |
+| **Simplelists** | Manual human process — emails to `vols_admin_address` prompt admins to add/remove from lists | Simplelists does expose a REST API at `https://www.simplelists.com/api/2/` (v2, documented at `simplelists.com/api/docs/2/protocol/`). Auth is HTTP Basic with an API key. Key endpoints: `GET/POST/DELETE /membership/` (manage list subscriptions), `GET/POST /contacts/` (manage contact records), `GET /lists/` (list all lists). Rate limit is 3× the account's address book size per hour. The API key is tied to a Simplelists account with admin access — someone with access to the S+S Simplelists account would need to generate one. At S&S, Simplelists is the primary channel for volunteer communications. The toolkit mailout system is used separately for the members list. See TASKS.md §9.87 for the proposed collective → list sync (currently parked — requires live site access and the API key). |
 | **Google Workspace** | Email hosting for `@starandshadow.org.uk` accounts | No integration with the toolkit. All venue email accounts live here. |
 | **Google Forms** | Volunteer induction form is external; details entered manually into Toolkit | No integration |
-| **SMTP server** | Outbound email from `mailerd` daemon and from notification emails | Configured via `EMAIL_HOST` / `EMAIL_PORT`. Not currently active for the S&S instance. |
+| **SMTP server** | Outbound email from `mailerd` daemon and from notification emails | Configured via `EMAIL_HOST` / `EMAIL_PORT`. Used at S&S for the members list mailouts and transactional email. |
 | **Wagtail CMS** | Embedded within the application | Not a separate service |
 | **YouTube** | Outbound links only — tutorial videos hosted on the venue's YouTube channel | Previously self-hosted; moved to YouTube for reliability and features (chapter tagging is particularly useful for navigating longer tutorials). Used for volunteer training content: how to use TicketSource, how to create an event in the Toolkit, etc. No API integration. |
 | **EPOSnow** | None | Point-of-sale system used for bar and box office tills. Records bar, cafe, and door ticket sales (outside TicketSource). Gift vouchers are also tracked here (see rota notes for booking-level references). Currently a data silo — no integration with the toolkit. Relevant future consideration: pulling event-level sales data (bar + door + TicketSource) to calculate actual revenue vs. projected break-even. Film rights agreements often require ticket count reporting; EPOSnow would be part of any consolidated financial report. Integration would require EPOSnow's API (EPOSnow does expose a REST API for authorised accounts). Not a near-term priority. |
@@ -685,7 +685,7 @@ Integration fragility, from most to least resilient:
 
 ### 7.8 Email infrastructure (Star and Shadow)
 
-Email at S&S is hosted on **Google Workspace** under the `starandshadow.org.uk` domain. **Simplelists** handles all mailing list communications (volunteer lists, member newsletters). The toolkit only sends transactional email (account creation, password reset).
+Email at S&S is hosted on **Google Workspace** under the `starandshadow.org.uk` domain. **Simplelists** handles volunteer mailing list communications. The toolkit mailout system is used for the members list; transactional email (account creation, password reset) also goes through the toolkit.
 
 Key email accounts:
 
