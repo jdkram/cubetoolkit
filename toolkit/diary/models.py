@@ -172,6 +172,12 @@ class MediaItem(models.Model):
         ),
     )
     caption = models.CharField(max_length=256, blank=True)
+    # Normalised crop box (0.0–1.0 relative to source image dimensions).
+    # Null = no crop set; thumbnail uses the default proportional resize.
+    crop_x = models.FloatField(null=True, blank=True)
+    crop_y = models.FloatField(null=True, blank=True)
+    crop_w = models.FloatField(null=True, blank=True)
+    crop_h = models.FloatField(null=True, blank=True)
 
     class Meta:
         db_table = "MediaItems"
@@ -1282,6 +1288,30 @@ class SiteConfiguration(models.Model):
     programme_media_max_size_mb = models.PositiveSmallIntegerField(
         default=5,
         help_text="Maximum size in megabytes for an uploaded event image.",
+    )
+    thumbnail_crop_width = models.PositiveSmallIntegerField(
+        default=600,
+        help_text=(
+            "Width in pixels of the cropped index thumbnail. Pairs with the height below to set "
+            "the crop aspect ratio shown in the image crop tool on each event edit page. "
+            "<strong>2:3 portrait (600×900) is the right default</strong> — it matches the US "
+            "theatrical one-sheet, the format used by TMDb, IMDb, Letterboxd, and the major "
+            "archive sites (Criterion, MUBI, TCM) for both modern releases and digitised "
+            "classics going back to the silent era. "
+            "If you frequently show UK films and use the British quad (which is landscape 4:3), "
+            "consider 600×450. For a clean square grid, use 600×600. "
+            "Changes here affect the crop box aspect ratio immediately but do "
+            "<em>not</em> regenerate existing thumbnails — re-save each event image to apply."
+        ),
+    )
+    thumbnail_crop_height = models.PositiveSmallIntegerField(
+        default=900,
+        help_text=(
+            "Height in pixels of the cropped index thumbnail. See width above. "
+            "Common ratios: 600×900 (2:3 portrait — film one-sheet standard), "
+            "600×600 (1:1 square), 600×450 (4:3 — suits UK quad and lobby card art), "
+            "600×400 (3:2 landscape)."
+        ),
     )
 
     # --- Mailout ---
