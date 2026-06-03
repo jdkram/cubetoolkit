@@ -1043,11 +1043,9 @@ class EditEventView(PermissionRequiredMixin, View):
 
     permission_required = "toolkit.write"
 
-    def _save(self, event, media_item, form, media_form, generated_media_id=None, crop=None):
+    def _save(self, event, media_item, form, media_form, generated_media_id=None):
         # Some factored out code: method is passed valid event and media form,
         # and commits the data.
-        # crop is either None (no crop data submitted) or a 4-tuple
-        # (crop_x, crop_y, crop_w, crop_h) of normalised floats.
 
         # When the form was created the copy was converted to HTML, so when
         # saved always clear the "legacy" flag:
@@ -1055,19 +1053,15 @@ class EditEventView(PermissionRequiredMixin, View):
         # Then save the main form:
         form.save()
 
-        def _apply_crop(item):
-            if crop is not None:
-                item.crop_x, item.crop_y, item.crop_w, item.crop_h = crop
-
         # Handle generated poster (from AJAX generation) - takes priority
         if generated_media_id:
             try:
                 generated_media = MediaItem.objects.get(pk=generated_media_id)
+                # Update alt_text from form if provided
                 alt_text = media_form.cleaned_data.get("alt_text", "")
                 if alt_text:
                     generated_media.alt_text = alt_text
-                _apply_crop(generated_media)
-                generated_media.save()
+                    generated_media.save()
                 event.set_main_mediaitem(generated_media)
                 return
             except MediaItem.DoesNotExist:
@@ -1089,15 +1083,10 @@ class EditEventView(PermissionRequiredMixin, View):
             # Note that if the image is changed the old image is not deleted
             # from disk. This is Django's default behaviour, and matches what
             # the old toolkit used to do. No image thrown away!
-            _apply_crop(media_item)
             media_form.save()
             event.set_main_mediaitem(media_item)
-        else:
-            # media_file is None: no new file, no clear — keep existing image.
-            # Still update crop if it changed.
-            if crop is not None and media_item.pk:
-                _apply_crop(media_item)
-                media_item.save(update_fields=["crop_x", "crop_y", "crop_w", "crop_h"])
+        # If the media_form was submitted with blank file name/no data then
+        # don't save it (caption is ignored)
 
     def post(self, request, event_id):
         # Handle POSTing of the "edit event" form. The slightly higher than
@@ -1127,22 +1116,7 @@ class EditEventView(PermissionRequiredMixin, View):
         if form.is_valid() and media_form.is_valid():
             event._saved_by = request.user
             generated_media_id = request.POST.get("generated_media_id")
-            crop = None
-            try:
-                cx = float(request.POST["crop_x"])
-                cy = float(request.POST["crop_y"])
-                cw = float(request.POST["crop_w"])
-                ch = float(request.POST["crop_h"])
-                if (
-                    0.0 <= cx <= 1.0
-                    and 0.0 <= cy <= 1.0
-                    and 0.0 < cw <= 1.0
-                    and 0.0 < ch <= 1.0
-                ):
-                    crop = (cx, cy, cw, ch)
-            except (KeyError, ValueError, TypeError):
-                pass
-            self._save(event, media_item, form, media_form, generated_media_id, crop)
+            self._save(event, media_item, form, media_form, generated_media_id)
             messages.add_message(
                 request,
                 messages.SUCCESS,
@@ -1190,8 +1164,6 @@ class EditEventView(PermissionRequiredMixin, View):
             "breakeven_guidance_note": cfg.breakeven_guidance_note,
             "breakeven_fc_standard_threshold": cfg.breakeven_fc_standard_threshold,
             "breakeven_fc_music_threshold": cfg.breakeven_fc_music_threshold,
-            "thumbnail_crop_width": cfg.thumbnail_crop_width,
-            "thumbnail_crop_height": cfg.thumbnail_crop_height,
         }
 
         return render(request, "form_event.html", context)
@@ -2125,8 +2097,6 @@ def edit_site_configuration(request):
                 "programme_copy_summary_max_chars",
                 "programme_event_terms_min_words",
                 "programme_media_max_size_mb",
-                "thumbnail_crop_width",
-                "thumbnail_crop_height",
             ],
         ),
         (

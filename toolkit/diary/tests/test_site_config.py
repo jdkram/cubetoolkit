@@ -90,8 +90,6 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
                 config.programme_event_terms_min_words
             ),
             "programme_media_max_size_mb": str(config.programme_media_max_size_mb),
-            "thumbnail_crop_width": str(config.thumbnail_crop_width),
-            "thumbnail_crop_height": str(config.thumbnail_crop_height),
             "mailout_details_days_ahead": str(config.mailout_details_days_ahead),
             "mailout_listings_days_ahead": str(config.mailout_listings_days_ahead),
             "calendar_slot_min_hour": str(config.calendar_slot_min_hour),

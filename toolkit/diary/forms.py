@@ -262,7 +262,7 @@ class MediaItemForm(forms.ModelForm):
                 attrs={"rows": 3, "style": "resize: vertical;", "class": "form-control"}
             ),
         }
-        exclude = ("mimetype", "caption", "crop_x", "crop_y", "crop_w", "crop_h")
+        exclude = ("mimetype", "caption")
 
     def clean_media_file(self):
         media_file = self.cleaned_data.get("media_file", None)
@@ -895,8 +895,6 @@ class SiteConfigurationForm(forms.ModelForm):
             "programme_copy_summary_max_chars",
             "programme_event_terms_min_words",
             "programme_media_max_size_mb",
-            "thumbnail_crop_width",
-            "thumbnail_crop_height",
             "mailout_details_days_ahead",
             "mailout_listings_days_ahead",
             "calendar_slot_min_hour",

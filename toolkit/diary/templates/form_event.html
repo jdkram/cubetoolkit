@@ -1,11 +1,10 @@
 {% extends "form_base.html" %}
-{% load crispy_forms_tags static %}
+{% load crispy_forms_tags %}
 {% block title %}
 Event Details for {{ event.name }}
 {% endblock %}
 {% block css %}
 {{ block.super }}
-<link rel="stylesheet" href="{% static 'diary/css/cropper.min.css' %}">
 <style>
     #remaining_chars { font-weight: bold; }
     .field-tip {
@@ -307,11 +306,8 @@ $(document).ready(function () {
 
     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) { new bootstrap.Tooltip(el); });
 
-    // Poster generation AJAX and image crop tool
+    // Poster generation AJAX
     (function() {
-        var CROP_ASPECT = {{ thumbnail_crop_width }} / {{ thumbnail_crop_height }};
-
-        // --- Poster generation vars ---
         var generateBtn = document.getElementById('generate-poster-btn');
         var removeBtn = document.getElementById('remove-generated-btn');
         var fileInput = document.getElementById('id_media_file');
@@ -323,112 +319,12 @@ $(document).ready(function () {
         var colourInput = document.getElementById('poster-accent-colour');
         var csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
-        // --- Crop tool vars ---
-        var cropRow   = document.getElementById('crop-tool-row');
-        var cropImg   = document.getElementById('crop-tool-img');
-        var inputCropX = document.getElementById('id_crop_x');
-        var inputCropY = document.getElementById('id_crop_y');
-        var inputCropW = document.getElementById('id_crop_w');
-        var inputCropH = document.getElementById('id_crop_h');
-        var cropper    = null;
-        var cropTouched = false;
-        // Preserve original server-rendered crop values so removePreview can restore them
-        var origCropX = inputCropX.value;
-        var origCropY = inputCropY.value;
-        var origCropW = inputCropW.value;
-        var origCropH = inputCropH.value;
-        // URL of the existing image pre-loaded on page render (if any)
-        var existingImageUrl = cropImg ? (cropImg.getAttribute('src') || '') : '';
-
-        function restoreExistingCrop() {
-            if (!cropper) return;
-            var cx = parseFloat(inputCropX.value);
-            var cy = parseFloat(inputCropY.value);
-            var cw = parseFloat(inputCropW.value);
-            var ch = parseFloat(inputCropH.value);
-            if (!isNaN(cx) && !isNaN(cw) && cw > 0 && !isNaN(ch) && ch > 0) {
-                var imgData = cropper.getImageData();
-                cropper.setData({
-                    x: cx * imgData.naturalWidth,
-                    y: cy * imgData.naturalHeight,
-                    width: cw * imgData.naturalWidth,
-                    height: ch * imgData.naturalHeight
-                });
-                cropTouched = true;
-            }
-        }
-
-        function initCropper(doRestoreCrop) {
-            if (!cropImg || !window.Cropper) return;
-            if (cropper) { cropper.destroy(); }
-            cropTouched = false;
-            cropper = new Cropper(cropImg, {
-                aspectRatio: CROP_ASPECT,
-                viewMode: 1,
-                zoomable: false,
-                scalable: false,
-                rotatable: false,
-                autoCropArea: 0.85,
-                crop: function() { cropTouched = true; },
-                ready: function() {
-                    if (doRestoreCrop) { restoreExistingCrop(); }
-                }
-            });
-        }
-
-        function showCropRow(url, doRestoreCrop) {
-            if (!cropRow || !url) return;
-            cropRow.style.display = '';
-            cropImg.src = url;
-            initCropper(doRestoreCrop || false);
-        }
-
-        function hideCropRow() {
-            if (!cropRow) return;
-            cropRow.style.display = 'none';
-            if (cropper) { cropper.destroy(); cropper = null; }
-        }
-
-        // Save crop data to hidden inputs before form submit
-        document.getElementById('forms').querySelector('form').addEventListener('submit', function() {
-            if (cropper && cropTouched) {
-                var data    = cropper.getData(true);
-                var imgData = cropper.getImageData();
-                if (imgData.naturalWidth > 0 && imgData.naturalHeight > 0) {
-                    inputCropX.value = (data.x / imgData.naturalWidth).toFixed(6);
-                    inputCropY.value = (data.y / imgData.naturalHeight).toFixed(6);
-                    inputCropW.value = (data.width / imgData.naturalWidth).toFixed(6);
-                    inputCropH.value = (data.height / imgData.naturalHeight).toFixed(6);
-                }
-            }
-        });
-
-        // File input: show crop tool with preview when a new file is selected
-        if (fileInput) {
-            fileInput.addEventListener('change', function() {
-                if (this.files && this.files[0]) {
-                    inputCropX.value = ''; inputCropY.value = '';
-                    inputCropW.value = ''; inputCropH.value = '';
-                    showCropRow(URL.createObjectURL(this.files[0]), false);
-                }
-            });
-        }
-
-        // Initialise crop tool on page load if there is an existing image
-        if (existingImageUrl) {
-            showCropRow(existingImageUrl, true);
-        }
-
-        // --- Poster generation ---
         function showPreview(data) {
             hiddenInput.value = data.media_id;
             previewImg.src = data.url;
             filenameSpan.textContent = data.filename;
             fileGroup.style.display = 'none';
             previewDiv.style.display = 'flex';
-            inputCropX.value = ''; inputCropY.value = '';
-            inputCropW.value = ''; inputCropH.value = '';
-            showCropRow(data.url, false);
         }
 
         function removePreview() {
@@ -438,32 +334,33 @@ $(document).ready(function () {
             previewDiv.style.display = 'none';
             fileGroup.style.display = 'flex';
             // Note: we don't delete the MediaItem server-side; it just won't be attached to the event
-            if (existingImageUrl) {
-                inputCropX.value = origCropX; inputCropY.value = origCropY;
-                inputCropW.value = origCropW; inputCropH.value = origCropH;
-                showCropRow(existingImageUrl, true);
-            } else {
-                hideCropRow();
-            }
         }
 
         function generatePoster() {
             var url = '{% url "generate-event-poster" event_id=event.id %}';
             var colour = colourInput ? colourInput.value : null;
-
+            
             generateBtn.disabled = true;
+            var originalText = generateBtn.innerHTML;
             generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...';
 
             var formData = new FormData();
-            if (colour) { formData.append('colour', colour); }
+            if (colour) {
+                formData.append('colour', colour);
+            }
 
             fetch(url, {
                 method: 'POST',
-                headers: { 'X-CSRFToken': csrftoken, 'X-Requested-With': 'XMLHttpRequest' },
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
                 body: formData
             })
             .then(function(response) {
-                if (!response.ok) { throw new Error('HTTP ' + response.status); }
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
                 return response.json();
             })
             .then(function(data) {
@@ -473,7 +370,9 @@ $(document).ready(function () {
                     alert('Failed to generate poster: ' + (data.error || 'Unknown error'));
                 }
             })
-            .catch(function(err) { alert('Error generating poster: ' + err.message); })
+            .catch(function(err) {
+                alert('Error generating poster: ' + err.message);
+            })
             .finally(function() {
                 generateBtn.disabled = false;
                 generateBtn.innerHTML = '<span aria-hidden="true">&#x1F3A8;</span> Generate poster';
@@ -485,7 +384,6 @@ $(document).ready(function () {
     }());
 });
 </script>
-<script src="{% static 'diary/js/cropper.min.js' %}"></script>
 {% endblock %}
 
 {% block body %}
@@ -580,12 +478,8 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
         </div>
     </div>
 
-    {# Hidden fields for generated poster ID and crop box coordinates (set via JS) #}
+    {# Hidden field for generated poster (set via AJAX) #}
     <input type="hidden" name="generated_media_id" id="generated_media_id" value="">
-    <input type="hidden" name="crop_x" id="id_crop_x" value="{{ media_form.instance.crop_x|default:'' }}">
-    <input type="hidden" name="crop_y" id="id_crop_y" value="{{ media_form.instance.crop_y|default:'' }}">
-    <input type="hidden" name="crop_w" id="id_crop_w" value="{{ media_form.instance.crop_w|default:'' }}">
-    <input type="hidden" name="crop_h" id="id_crop_h" value="{{ media_form.instance.crop_h|default:'' }}">
 
     {# Media file field with generate button #}
     <div class="mb-3 row" id="media_file_group">
@@ -640,25 +534,6 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
                 </div>
             </div>
             <small class="form-text text-muted">Save the form to confirm this image.</small>
-        </div>
-    </div>
-
-    {# Image crop tool — JS shows this row when an image is present or previewed #}
-    <div class="mb-3 row" id="crop-tool-row" style="display:none">
-        <label class="col-sm-2 col-form-label">Crop thumbnail</label>
-        <div class="col-sm-10">
-            <div style="max-width: 400px;">
-                <img id="crop-tool-img"
-                     src="{% if media_form.instance.pk and media_form.instance.media_file %}{{ media_form.instance.media_file.url }}{% endif %}"
-                     alt="Image crop tool"
-                     style="max-width: 100%; display: block;">
-            </div>
-            <small class="form-text text-muted mt-2">
-                Drag the box to set the region shown as the index thumbnail
-                ({{ thumbnail_crop_width }}&thinsp;&times;&thinsp;{{ thumbnail_crop_height }}px &mdash;
-                <a href="{% url 'edit-site-configuration' %}#section-4">change in settings</a>).
-                If you don't set a crop, the full image is resized proportionally.
-            </small>
         </div>
     </div>
 
