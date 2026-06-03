@@ -72,6 +72,7 @@
 | ~~**P**~~ | ~~EventTags page: pre-Bootstrap styling + confusing Promoted/drag UX~~ | ✅ 2026-03-03 — Bootstrap 4 card layout; drag handle hidden on non-promoted tags; footer help text explains In menu / drag model |
 | ~~**Q**~~ | ~~Roles page: pre-Bootstrap styling~~ | ✅ 2026-03-03 — Bootstrap 4 card + table layout; read-only badge; yellow new-row highlight |
 | ~~**N**~~ | ~~Nav "Rota" link pointed at public `/diary/rota/` instead of edit `/diary/edit/rota/`~~ | ✅ 2026-03-02 |
+| **AM** | `/diary/copy` index shows "Closed for private event." for every private/hidden showing | 🟢 XS — suppress these rows in the S+S template; the copy section below already filters them, the index should too. Actively misleading: S+S is closed by default, and private events can run alongside public ones so "Closed" is factually wrong. |
 
 ---
 

@@ -5935,3 +5935,289 @@ The main loss is the "editorial collage" feel of variable-height packing. The ga
 Implement on a feature branch (`grid-layout-trial` or similar) so the visual result can be reviewed against the live Masonry version before merging. No model/migration changes needed — pure CSS/JS/template work.
 
 **Size estimate:** 🔵 S (6–10h) — mostly CSS cleanup; the logic changes are small.
+
+---
+
+### 9.103 — Subtle event-type tints on programme cards 🟢 XS (1–2h)
+
+**Problem.**
+All programme cards look identical at a glance. A very subtle background tint per event category would help volunteers and audiences quickly scan the programme by type (film vs music vs cafe vs workshop) without visual clutter.
+
+**Approach.**
+CSS attribute selector on the existing `data-tags` attribute already rendered on each `.showing` card. No model changes, no template changes, pure CSS.
+
+```css
+.showing[data-tags~="film"]        { background: rgba(210, 225, 248, 0.62); }
+.showing[data-tags~="music"]       { background: rgba(238, 215, 248, 0.62); }
+.showing[data-tags~="cafe"]        { background: rgba(215, 245, 222, 0.62); }
+.showing[data-tags~="workshop"]    { background: rgba(250, 242, 215, 0.62); }
+.showing[data-tags~="performance"] { background: rgba(248, 218, 228, 0.62); }
+.showing[data-tags~="party"]       { background: rgba(252, 232, 212, 0.62); }
+```
+
+**Priority:** First matching tag in `data-tags` wins. If an event has both `film` and `workshop`, `film` wins because it appears first in the attribute (tags are in insertion order).
+
+**Specificity note:** These selectors have specificity 0,2,0 (class + attribute). `.showing-internal` (also 0,2,0) must be declared AFTER these rules so internal events always override the type tints. Currently correct in `programme.css`.
+
+**Size estimate:** 🟢 XS — already implemented. Included here as documentation and in case of future tuning.
+
+---
+
+### 9.104 — Programme RSS/Atom feed 🔵 S (4–8h)
+
+**Why it matters.**
+RSS is the lowest-friction way for regulars to follow the programme without checking the website or joining a mailing list. Jonny specifically values this. Feed readers (Feedly, NetNewsWire, self-hosted aggregators) pick up new showings automatically.
+
+**Proposed feed.**
+A standard Atom feed (`/programme/feed/` or `/diary/feed/`) of upcoming public showings, ordered by start date. Per item:
+
+| Field | Source |
+|---|---|
+| Title | `{event.name}` — `{showing.start|date:"l j F, H:i"}` |
+| Link | `single-event-view` URL |
+| Published | `showing.created` (or event date added) |
+| Updated | Latest of event/showing save times |
+| Summary | `event.copy_summary` |
+| Content | `event.copy_html` |
+
+**Out of scope (MVP):** per-tag filtered feeds, iCal (separate feature 9.10.4).
+
+**Django implementation:** use `django.contrib.syndication.views.Feed` — no extra dependencies. Subclass `Feed`, override `items()`, `item_title()`, `item_link()`, `item_description()`. Wire into the S+S URL conf. Add `<link rel="alternate" type="application/rss+xml">` to `<head>` in `base_public.html`.
+
+**Size estimate:** 🔵 S (4–8h) — the syndication framework handles most of the boilerplate.
+
+---
+
+### 9.105 — Configurable programme filter buttons 🔵 S (8–14h)
+
+**Problem.**
+The programme page has a text search box but no way to quickly narrow to a broad category (film, music, cafe, meeting). The existing `type-view` links in the nav sidebar are too hidden to be useful for casual browsing. Tag colour tints (9.103) were tried but made the page visually noisy without adding enough navigational value.
+
+**Goal.**
+Add a row of filter buttons above the programme grid -- **All | Film | Music | Cafe | Meeting** (or whatever groups the venue configures) -- that filter cards client-side, working alongside the text search (AND logic). Panopticon users control which buttons appear, and which tags map to which button, via the existing `/diary/edit/eventtags/` page.
+
+---
+
+**Model change: `EventTag.filter_group`.**
+
+Add a nullable `CharField` to `EventTag`:
+
+```python
+filter_group = models.CharField(
+    max_length=50,
+    null=True,
+    blank=True,
+    help_text="If set, this tag contributes to the named filter group on the public programme page.",
+)
+```
+
+The allowed values are not enforced at the DB level; they are validated against `settings.PROGRAMME_FILTER_GROUPS` (see below). A tag with `filter_group=None` does not appear in any filter button. Multiple tags can share a `filter_group` value (e.g. "party" and "music" both map to "music"), so the buttons are coarser than the full tag vocabulary.
+
+---
+
+**Settings: `PROGRAMME_FILTER_GROUPS`.**
+
+Add to `settings_common.py` (overridable per venue):
+
+```python
+# Ordered list of (slug, label) pairs that appear as programme filter buttons.
+# Only groups that have at least one active tag assigned to them are rendered.
+PROGRAMME_FILTER_GROUPS = [
+    ("film",    "Film"),
+    ("music",   "Music"),
+    ("cafe",    "Cafe"),
+    ("meeting", "Meeting"),
+]
+```
+
+The slug must match values used in `EventTag.filter_group`. The label is the button text. Order determines button order. Venues can add, remove, or rename groups by overriding this setting.
+
+The edit view should validate `filter_group` values against this list (or present only the valid choices in the dropdown, derived from the setting at form-render time).
+
+---
+
+**Edit view: `/diary/edit/eventtags/`.**
+
+Add `filter_group` to the formset's `fields` tuple. In the template, add a "Filter group" `<select>` dropdown column to the tag row, alongside the existing "Nav" checkbox. Options:
+
+```
+— (none)
+Film
+Music
+Cafe
+Meeting
+```
+
+The choices are generated from `settings.PROGRAMME_FILTER_GROUPS` at render time, so adding a new group to settings immediately makes it selectable without a code change.
+
+The form field should use a `ChoiceField` or `TypedChoiceField` with the empty choice as `("", "—")`. A custom `ModelForm` for `EventTag` will be needed to build the choices dynamically from settings rather than hardcoding them.
+
+---
+
+**Programme view: pass filter group map to template.**
+
+In `public_views.py`, query active tags that have a `filter_group` set:
+
+```python
+from django.conf import settings
+
+filter_tags = (
+    EventTag.objects
+    .filter(archived=False, filter_group__isnull=False)
+    .exclude(filter_group="")
+    .values("slug", "filter_group")
+)
+# Build slug → group dict for JS
+tag_filter_map = {t["slug"]: t["filter_group"] for t in filter_tags}
+# Build ordered list of groups that actually have tags, preserving settings order
+configured_groups = settings.PROGRAMME_FILTER_GROUPS  # [(slug, label), ...]
+active_group_slugs = set(tag_filter_map.values())
+filter_groups = [(slug, label) for slug, label in configured_groups if slug in active_group_slugs]
+```
+
+Pass `filter_groups` and `tag_filter_map` to the template context.
+
+---
+
+**Template: render filter buttons.**
+
+In `view_showing_index.html` (S+S override), add a button row inside `.programme-filter-bar`, before or after the search input:
+
+```html
+{% if filter_groups %}
+<div class="programme-tag-filters" role="group" aria-label="Filter by type">
+    <button type="button" class="prog-filter-btn prog-filter-btn--active" data-filter-group="">All</button>
+    {% for slug, label in filter_groups %}
+    <button type="button" class="prog-filter-btn" data-filter-group="{{ slug }}">{{ label }}</button>
+    {% endfor %}
+</div>
+{% endif %}
+```
+
+Emit the tag→group map as an inline script so the JS can use it without a fetch:
+
+```html
+<script>window.PROG_TAG_FILTER_MAP = {{ tag_filter_map|json_script_value }};</script>
+```
+
+(Use Django's `json_script` template tag or a custom filter to safely serialise the dict.)
+
+---
+
+**JS: extend filter logic.**
+
+Extend `programme.js` to track an active filter group alongside the text search term. The two conditions are ANDed: a card is visible only if it matches both.
+
+```js
+var activeGroup = "";  // "" = All
+
+function cardMatchesGroup(card, group) {
+    if (!group) { return true; }
+    var tags = (card.dataset.tags || "").split(" ");
+    var map  = window.PROG_TAG_FILTER_MAP || {};
+    return tags.some(function (slug) { return map[slug] === group; });
+}
+
+function applyFilter(term, group) {
+    // group defaults to current activeGroup if not passed
+    if (group === undefined) { group = activeGroup; }
+    activeGroup = group;
+    term = (term || "").toLowerCase().trim();
+    // ... existing logic plus:
+    document.querySelectorAll(".programme > .showing").forEach(function (card) {
+        var textMatch  = !term || (card.dataset.searchText || "").toLowerCase().indexOf(term) !== -1;
+        var groupMatch = cardMatchesGroup(card, group);
+        card.classList.toggle("filter-hidden", !(textMatch && groupMatch));
+    });
+    // ... sync inputs, reset buttons, URL params (add ?group= alongside ?search=)
+    updateFilterButtons(group);
+}
+
+function updateFilterButtons(group) {
+    document.querySelectorAll(".prog-filter-btn").forEach(function (btn) {
+        btn.classList.toggle("prog-filter-btn--active", btn.dataset.filterGroup === group);
+    });
+}
+```
+
+Wire button clicks:
+
+```js
+document.querySelectorAll(".prog-filter-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+        applyFilter(currentSearchTerm(), this.dataset.filterGroup);
+    });
+});
+```
+
+Restore group from URL on load (e.g. `?group=film`).
+
+---
+
+**CSS: button styles.**
+
+Add to `programme.css`. Buttons should feel like tabs or toggle chips, not primary actions. Suggested approach: pill-shaped, neutral background, bold text on active, no heavy border:
+
+```css
+.programme-tag-filters {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.prog-filter-btn {
+    padding: 0.2rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid #ccc;
+    background: #f5f5f5;
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+
+.prog-filter-btn--active {
+    background: #222;
+    color: #fff;
+    border-color: #222;
+}
+```
+
+---
+
+**Disable colour tints (9.103).**
+
+Comment out the six `.showing[data-tags~="..."]` tint rules in `programme.css`. Keep them in place -- they may be revived as an accessibility option. The `filter_group` mapping provides enough tag-type signal via the filter buttons without needing the tints.
+
+---
+
+**Migration.**
+
+Standard `makemigrations diary` + `migrate`. The new field is nullable with `blank=True`, so no data migration is needed and existing rows default to `None`.
+
+After migrating, run `seed_dev_data` (or manually assign groups in the admin) to set `filter_group` on the seed tags so the buttons appear in development.
+
+---
+
+**Out of scope for this task.**
+- Making filter buttons appear in the mobile nav search bar (can be added later)
+- Accessibility option to re-enable colour tints per user preference
+- Per-venue button label overrides beyond what `PROGRAMME_FILTER_GROUPS` already covers
+
+---
+
+**Size estimate:** 🔵 S (8–14h) — model + migration + form + view + template + JS. Most complexity is in the JS filter extension and wiring the settings-driven choices into the form cleanly.
+
+---
+
+### 9.106 — Varied alt text in seed data for accessibility testing 🟢 XS (1–2h)
+
+**Problem.**
+`seed_dev_data.py` currently sets `alt_text=f"Placeholder image for {event_name}"` for every media item -- all identical in structure, none descriptive enough to test accessibility tooling meaningfully.
+
+**Goal.**
+Replace the uniform placeholder with a small pool of varied mock alt texts so screen reader testing, automated WCAG audits (axe, WAVE), and manual keyboard walkthroughs have something realistic to work with. Accuracy doesn't matter -- variety and plausible length do.
+
+**Approach.**
+Define a list of ~15--20 fake but varied alt texts in `seed_dev_data.py` (e.g. "Black and white film still of two figures in a doorway", "Hand-drawn poster with bold yellow type on red", "Photograph of a band on a small stage, crowd in foreground") and assign them round-robin or randomly to seed media items. Some should be intentionally long, some short, a few blank (to test the missing-alt-text case in audits).
+
+**Size estimate:** 🟢 XS (1--2h) — pure seed data change, no model or migration needed.
+
