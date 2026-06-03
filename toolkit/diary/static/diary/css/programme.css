@@ -653,13 +653,21 @@ span.tags {
     display: none;
 }
 
-/* ─── Programme filter buttons (category tabs) ──────────────────────── */
+/* ─── Programme type filter row (always visible, including mobile) ──── */
 
-.programme-tag-filters {
+.programme-type-filter-row {
     display: flex;
-    gap: 0.4rem;
-    flex-wrap: wrap;
-    align-items: center;
+    flex-wrap: nowrap;
+    gap: 0.35rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin: 6px 1.5625% 10px;
+    padding-bottom: 2px;
+}
+
+.programme-type-filter-row::-webkit-scrollbar {
+    display: none;
 }
 
 .prog-filter-btn {
@@ -671,6 +679,7 @@ span.tags {
     font-size: 0.75em;
     line-height: 1.4;
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .prog-filter-btn--active {
@@ -682,6 +691,49 @@ span.tags {
 .prog-filter-btn:hover:not(.prog-filter-btn--active) {
     background: #e0e0e0;
     border-color: #aaa;
+}
+
+@media screen and (min-width: 475px) {
+    .programme-type-filter-row {
+        margin-left: 1.0526%;
+        margin-right: 1.0526%;
+    }
+}
+
+@media screen and (min-width: 600px) {
+    .programme-type-filter-row {
+        margin-left: 0.625%;
+        margin-right: 0.625%;
+    }
+}
+
+@media screen and (min-width: 1000px) {
+    .programme-type-filter-row {
+        width: 820px;
+        margin-left: 6px;
+        margin-right: 6px;
+        flex-wrap: wrap;
+    }
+}
+
+@media screen and (min-width: 1260px) {
+    .programme-type-filter-row {
+        width: 1090px;
+    }
+}
+
+@media screen and (min-width: 1600px) {
+    .programme-type-filter-row {
+        width: 1356px;
+    }
+}
+
+@media screen and (min-width: 1900px) {
+    .programme-type-filter-row {
+        width: 1670px;
+        margin-left: 10px;
+        margin-right: 10px;
+    }
 }
 
 /* Reduce the programme grid's top margin — the header row already provides
