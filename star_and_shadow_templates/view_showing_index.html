@@ -80,20 +80,20 @@ setup_page(true);
     })();
     </script>
     {% endif %}
+    {% if filter_groups %}
+    <div class="programme-type-filter-row" role="group" aria-label="Filter by type">
+        <button type="button" class="prog-filter-btn prog-filter-btn--active" data-filter-group="">All</button>
+        {% for slug, label in filter_groups %}
+        <button type="button" class="prog-filter-btn" data-filter-group="{{ slug }}">{{ label }}</button>
+        {% endfor %}
+    </div>
+    {% endif %}
     <div class="programme-filter-bar">
         <label for="programme-search" class="programme-search-label">Search:</label>
         <input type="search" id="programme-search" data-prog-search placeholder="Filter by title, tag…" autocomplete="off">
         <button type="button" id="filter-reset" data-prog-reset class="filter-reset-btn" hidden>Clear</button>
     </div>
 </div>
-{% if filter_groups %}
-<div class="programme-type-filter-row" role="group" aria-label="Filter by type">
-    <button type="button" class="prog-filter-btn prog-filter-btn--active" data-filter-group="">All</button>
-    {% for slug, label in filter_groups %}
-    <button type="button" class="prog-filter-btn" data-filter-group="{{ slug }}">{{ label }}</button>
-    {% endfor %}
-</div>
-{% endif %}
 <div class="programme">
 {% for showing in showings_grid %}
     {% with event=showing.event event_slug=showing.event.name|slugify media_item=showing.event.media.all.0 %}

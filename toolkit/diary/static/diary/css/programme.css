@@ -456,12 +456,11 @@ p.sameday {
  * on demand without cluttering every card at a glance. */
 span.tags {
     background-color: rgba(32, 32, 128, 0.6);
-    opacity: 0;
-    transition: opacity 0.15s ease;
+    visibility: hidden;
 }
 
 .showing:hover span.tags {
-    opacity: 1;
+    visibility: visible;
 }
 
 
@@ -663,19 +662,30 @@ span.tags {
 
 /* ─── Programme type filter row (always visible, including mobile) ──── */
 
+/* Inside .programme-header-row on desktop; standalone scrollable strip on mobile.
+ * No external margins — the parent row handles spacing. */
 .programme-type-filter-row {
     display: flex;
     flex-wrap: nowrap;
+    align-items: center;
     gap: 0.35rem;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    margin: 6px 1.5625% 10px;
-    padding-bottom: 2px;
+    flex-shrink: 0;
 }
 
 .programme-type-filter-row::-webkit-scrollbar {
     display: none;
+}
+
+/* On mobile the header-row wraps; the filter strip takes its own full line */
+@media screen and (max-width: 999px) {
+    .programme-type-filter-row {
+        flex-basis: 100%;
+        order: -1;
+        margin-bottom: 4px;
+    }
 }
 
 /* Base size: desktop. Tighter variant below for mobile. */
@@ -709,46 +719,10 @@ span.tags {
     border-color: #aaa;
 }
 
-@media screen and (min-width: 475px) {
-    .programme-type-filter-row {
-        margin-left: 1.0526%;
-        margin-right: 1.0526%;
-    }
-}
-
-@media screen and (min-width: 600px) {
-    .programme-type-filter-row {
-        margin-left: 0.625%;
-        margin-right: 0.625%;
-    }
-}
-
 @media screen and (min-width: 1000px) {
     .programme-type-filter-row {
-        width: 820px;
-        margin-left: 6px;
-        margin-right: 6px;
         flex-wrap: wrap;
-    }
-}
-
-@media screen and (min-width: 1260px) {
-    .programme-type-filter-row {
-        width: 1090px;
-    }
-}
-
-@media screen and (min-width: 1600px) {
-    .programme-type-filter-row {
-        width: 1356px;
-    }
-}
-
-@media screen and (min-width: 1900px) {
-    .programme-type-filter-row {
-        width: 1670px;
-        margin-left: 10px;
-        margin-right: 10px;
+        overflow-x: visible;
     }
 }
 
