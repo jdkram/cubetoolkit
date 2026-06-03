@@ -23,6 +23,26 @@ If a comment needs more than one line, use multiple single-line `{# ... #}` tags
 
 ---
 
+## Never use `.only()` on models with a custom `__init__`
+
+Several models in this codebase cache field values in `__init__` for validation:
+
+| Model | Cached fields |
+|---|---|
+| `EventTag` | `read_only`, `name`, `slug` |
+| `Event` | (similar pattern) |
+| `Showing` | (similar pattern) |
+| `RotaEntry` | (similar pattern) |
+| `Role` | (similar pattern) |
+| `Member` | (similar pattern) |
+| `Volunteer` | (similar pattern) |
+
+Using `.only("pk", "some_field")` on any of these defers the cached fields. Accessing a deferred field inside `__init__` calls `refresh_from_db`, which constructs a new instance, which calls `__init__` again -- infinite recursion, one DB round-trip per frame. The page hangs until the stack overflows.
+
+**Rule:** use `.values("pk", "some_field")` (returns dicts) instead. Access results as `t["pk"]`, not `t.pk`.
+
+---
+
 ## Standing rule: keep docs/ in sync with the code
 
 **After every code change, update the relevant docs.**

@@ -4,6 +4,14 @@ import logging
 import csv
 import os
 
+# Same escapes Django uses internally for json_script — prevents </script> injection.
+_JSON_SCRIPT_ESCAPES = str.maketrans({"<": "\\u003c", ">": "\\u003e", "&": "\\u0026"})
+
+
+def _safe_json(data):
+    """json.dumps with HTML-special chars escaped — safe to embed in a <script> block."""
+    return json.dumps(data).translate(_JSON_SCRIPT_ESCAPES)
+
 from collections import OrderedDict
 
 from django.http import (
@@ -1139,6 +1147,8 @@ class EditEventView(PermissionRequiredMixin, View):
                     and 0.0 <= cy <= 1.0
                     and 0.0 < cw <= 1.0
                     and 0.0 < ch <= 1.0
+                    and cx + cw <= 1.0
+                    and cy + ch <= 1.0
                 ):
                     crop = (cx, cy, cw, ch)
             except (KeyError, ValueError, TypeError):
@@ -1185,11 +1195,11 @@ class EditEventView(PermissionRequiredMixin, View):
         cfg = get_site_config()
 
         tag_descriptions = {
-            str(t.pk): t.description
+            str(t["pk"]): t["description"]
             for t in EventTag.objects.filter(archived=False)
             .exclude(description="")
             .exclude(description__isnull=True)
-            .only("pk", "description")
+            .values("pk", "description")
         }
 
         context = {
@@ -1202,7 +1212,7 @@ class EditEventView(PermissionRequiredMixin, View):
             "breakeven_fc_music_threshold": cfg.breakeven_fc_music_threshold,
             "thumbnail_crop_width": cfg.thumbnail_crop_width,
             "thumbnail_crop_height": cfg.thumbnail_crop_height,
-            "tag_descriptions_json": mark_safe(json.dumps(tag_descriptions)),
+            "tag_descriptions_json": mark_safe(_safe_json(tag_descriptions)),
         }
 
         return render(request, "form_event.html", context)

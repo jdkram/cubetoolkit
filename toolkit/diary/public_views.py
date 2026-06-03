@@ -3,6 +3,16 @@ import json
 import logging
 import calendar
 
+# Characters that must be escaped when embedding JSON directly in a <script> block.
+# json.dumps does not escape these, so </script> in a value would close the block.
+# Same escapes Django uses internally for the json_script template tag.
+_JSON_SCRIPT_ESCAPES = str.maketrans({"<": "\\u003c", ">": "\\u003e", "&": "\\u0026"})
+
+
+def _safe_json(data):
+    """json.dumps with HTML-special chars escaped — safe to embed in a <script> block."""
+    return json.dumps(data).translate(_JSON_SCRIPT_ESCAPES)
+
 from collections import OrderedDict
 
 
@@ -143,7 +153,7 @@ def _view_diary(request, startdate, enddate, tag=None, extra_title=None):
         "filter_groups": filter_groups,
         # JSON-serialised slug → filter_group map for inline JS. Values are slug strings
         # from settings/DB (no user input), so embedding after json.dumps is safe.
-        "tag_filter_map_json": mark_safe(json.dumps(tag_filter_map)),
+        "tag_filter_map_json": mark_safe(_safe_json(tag_filter_map)),
     }
 
     return render(request, "view_showing_index.html", context)
