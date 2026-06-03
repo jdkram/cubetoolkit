@@ -84,8 +84,6 @@ setup_page(true);
     </div>
 </div>
 <div class="programme">
-    <div class="showing-sizer"></div>
-    <div class="gutter-sizer"></div>
 {% for showing in showings_grid %}
     {% with event=showing.event event_slug=showing.event.name|slugify media_item=showing.event.media.all.0 %}
     {% if is_volunteer and event.private or is_volunteer and showing.hide_in_programme %}

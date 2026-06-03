@@ -20,8 +20,6 @@
                 card.classList.toggle("filter-hidden", !match);
             });
 
-            $(".programme").masonry("layout");
-
             // Switch from list to grid when a filter is active
             if (term && $(".list").hasClass("active")) {
                 $(".list").removeClass("active");
