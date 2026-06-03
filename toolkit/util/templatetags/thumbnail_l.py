@@ -3,6 +3,7 @@ import logging
 import os
 
 from django.conf import settings
+from django.core.cache import cache
 from django.template import Library
 
 from easy_thumbnails.files import get_thumbnailer
@@ -71,11 +72,13 @@ def thumbnail_url(source, alias):
             crop_w = instance.crop_w
             crop_h = instance.crop_h
             if None not in (crop_y, crop_w, crop_h) and crop_w > 0 and crop_h > 0:
-                from toolkit.diary.models import get_site_config
-
-                config = get_site_config()
-                target_w = config.thumbnail_crop_width or 600
-                target_h = config.thumbnail_crop_height or 900
+                dims = cache.get("thumbnail_crop_dims")
+                if dims is None:
+                    from toolkit.diary.models import get_site_config
+                    cfg = get_site_config()
+                    dims = (cfg.thumbnail_crop_width or 600, cfg.thumbnail_crop_height or 900)
+                    cache.set("thumbnail_crop_dims", dims, timeout=60)
+                target_w, target_h = dims
                 url = _crop_thumbnail_url(source, crop_x, crop_y, crop_w, crop_h, target_w, target_h)
                 if url:
                     return url

@@ -34,10 +34,10 @@ def _find_bold_font():
 
 
 def _layout_lines(words):
-    """One word per line; short connector words (≤2 chars) merge with the next word.
+    """One word per line; short connector words (≤3 chars) merge with the next word.
 
-    This keeps articles and prepositions (A, AN, OF, IN, ...) attached to the
-    word they modify rather than floating alone on a line.
+    This keeps articles and prepositions (A, AN, THE, OF, IN, FOR, ...) attached
+    to the word they modify rather than floating alone on a line.
     """
     lines = []
     i = 0

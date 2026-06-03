@@ -63,7 +63,7 @@ description = "Social events and parties, usually with DJ or live music. Distinc
 name = "cafe"
 promoted = false
 filter_group = "cafe"
-description = "Café-focused events — brunches, pop-ups, community kitchen. The café is a key part of the event."
+description = "Café-focused events — regular Sundays, pop-ups, community kitchen (kinda). The café is a key part of the event."
 
 [[tags]]
 name = "online"
@@ -73,12 +73,12 @@ description = "Events with an online component — livestreamed, hybrid, or full
 [[tags]]
 name = "subtitles"
 promoted = true
-description = "Film screening with pre-baked subtitles (burned-in or hard-coded). Use 'closed-captions' for editable/HoH captions."
+description = "Film screening with pre-baked subtitles (burned-in or hard-coded). Typically used for language translation, only dialogue is subtitled."
 
 [[tags]]
 name = "closed-captions"
 promoted = true
-description = "Screening or event with closed captions (soft subtitles, typically for hard-of-hearing audiences)."
+description = "Screening or event with closed captions (soft subtitles, typically for hard-of-hearing audiences, often includes descriptive audio: e.g. [door slams])."
 
 [[tags]]
 name = "free"
@@ -88,7 +88,7 @@ description = "Free-admission events. Also set the pricing field to 'Free' — b
 [[tags]]
 name = "outside-hire"
 promoted = false
-description = "Events run by an external organisation hiring the venue. Tick the Outside Hire checkbox on the event instead — this tag is for public programme filtering only."
+description = "Events run by an external organisation hiring the venue. Tick the Outside Hire checkbox on the event too — this tag is for public programme filtering only."
 
 
 # Background colours used when generating placeholder event images,
