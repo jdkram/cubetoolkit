@@ -267,15 +267,24 @@ class Command(BaseCommand):
         for tag_data in TAGS:
             tag_name = tag_data["name"]
             filter_group = tag_data.get("filter_group") or None
+            description = tag_data.get("description") or None
             tag, created = EventTag.objects.get_or_create(name=tag_name)
             if created:
                 tag.filter_group = filter_group
+                tag.description = description
                 tag.clean()
                 tag.save()
                 counts["tags"] += 1
-            elif tag.filter_group != filter_group:
-                tag.filter_group = filter_group
-                tag.save(update_fields=["filter_group"])
+            else:
+                update_fields = []
+                if tag.filter_group != filter_group:
+                    tag.filter_group = filter_group
+                    update_fields.append("filter_group")
+                if tag.description != description:
+                    tag.description = description
+                    update_fields.append("description")
+                if update_fields:
+                    tag.save(update_fields=update_fields)
 
         # Event templates
         for tmpl_data in EVENT_TEMPLATES:

@@ -26,7 +26,7 @@ import django.utils.timezone as timezone
 from django.contrib.auth.decorators import permission_required, user_passes_test
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.views.decorators.http import require_POST, require_http_methods
-from django.utils.html import escape
+from django.utils.html import escape, mark_safe
 
 from toolkit.diary.models import (
     Showing,
@@ -1183,6 +1183,15 @@ class EditEventView(PermissionRequiredMixin, View):
         media_form = diary_forms.MediaItemForm(instance=media_item)
 
         cfg = get_site_config()
+
+        tag_descriptions = {
+            str(t.pk): t.description
+            for t in EventTag.objects.filter(archived=False)
+            .exclude(description="")
+            .exclude(description__isnull=True)
+            .only("pk", "description")
+        }
+
         context = {
             "event": event,
             "event_form": form,
@@ -1193,6 +1202,7 @@ class EditEventView(PermissionRequiredMixin, View):
             "breakeven_fc_music_threshold": cfg.breakeven_fc_music_threshold,
             "thumbnail_crop_width": cfg.thumbnail_crop_width,
             "thumbnail_crop_height": cfg.thumbnail_crop_height,
+            "tag_descriptions_json": mark_safe(json.dumps(tag_descriptions)),
         }
 
         return render(request, "form_event.html", context)
@@ -1571,16 +1581,24 @@ def edit_event_tags(request):
             required=False,
             label="Filter group",
         )
+        description = django_forms.CharField(
+            required=False,
+            label="When to use",
+            widget=django_forms.TextInput(attrs={"placeholder": "e.g. Use for hands-on learning sessions."}),
+        )
 
         class Meta:
             model = EventTag
-            fields = ("name", "promoted", "sort_order", "filter_group")
+            fields = ("name", "promoted", "sort_order", "filter_group", "description")
 
         def clean_filter_group(self) -> str | None:
             return self.cleaned_data["filter_group"] or None
 
+        def clean_description(self) -> str | None:
+            return self.cleaned_data["description"] or None
+
     event_tag_formset = modelformset_factory(
-        EventTag, form=EventTagForm, fields=("name", "promoted", "sort_order", "filter_group"), can_delete=False
+        EventTag, form=EventTagForm, fields=("name", "promoted", "sort_order", "filter_group", "description"), can_delete=False
     )
 
     if request.method == "POST":

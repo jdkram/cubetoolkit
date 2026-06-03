@@ -19,6 +19,7 @@
     gap: 0.5rem;
     padding: 0.4rem 0.75rem;
     border-bottom: 1px solid #dee2e6;
+    flex-wrap: wrap;
   }
 
   #sortable li:last-child {
@@ -61,6 +62,20 @@
   .tag-options label {
     margin-bottom: 0;
     font-weight: normal;
+  }
+
+  .tag-description-input {
+    flex: 1 1 240px;
+    min-width: 0;
+  }
+
+  .tag-description-input input {
+    width: 100%;
+    font-size: 0.85em;
+    color: #555;
+    padding: 0.2rem 0.4rem;
+    border: 1px solid #ced4da;
+    border-radius: 0;
   }
 
   .archived-section {
@@ -203,6 +218,12 @@ function updateOrdering() {
               {% endif %}
             </span>
 
+            {% if form.id.value %}
+            <span class="tag-description-input" title="Guidance shown as a tooltip on the event edit form">
+              {{ form.description }}
+            </span>
+            {% endif %}
+
             <span class="tag-options">
               {% if form.id.value %}
                 <label title="Show this tag as a filter link under 'Programme' in the public website navigation">
@@ -229,7 +250,7 @@ function updateOrdering() {
         </ul>
 
         <div class="card-footer d-flex justify-content-between align-items-center">
-          <small class="text-muted">Tick <strong>Nav</strong> to show a tag as a filter link. Set <strong>Filter group</strong> to make a tag contribute to a programme filter button. Drag rows to set order.</small>
+          <small class="text-muted">Tick <strong>Nav</strong> to show a tag as a filter link. Set <strong>Filter group</strong> to wire it to a programme filter button. <strong>When to use</strong> text appears as a tooltip when programmers select tags on event forms. Drag rows to set order.</small>
           <button type="submit" class="btn btn-primary">Save all changes</button>
         </div>
       </form>
