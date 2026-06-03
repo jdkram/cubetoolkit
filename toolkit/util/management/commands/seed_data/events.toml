@@ -27,7 +27,8 @@ rota_notes = """bring your lovely selves and recipes and let's eat stuff from th
 roles = ["Keyholder", "Programmer", "Cafe (Level 1)", "Extra Hands (no training needed)"]
 day_offset = 3
 hour = 14
-image_url = "https://images.pexels.com/photos/1267320/pexels-photo-1267320.jpeg?auto=compress&cs=tinysrgb&w=800"
+image_url = "https://images.pexels.com/photos/1267320/pexels-photo-1267320.jpeg?auto=compress&cs=tinysrgb&w=1200&h=800&fit=crop"
+auto_crop = "center"
 room = "Café"
 
 [[events]]
@@ -40,7 +41,7 @@ rota_notes = "A chill get together for all volunteers, perfect if you are new or
 roles = ["Keyholder", "Programmer", "Bar Staff - Shift 1"]
 day_offset = 5
 hour = 19
-image_url = "https://images.pexels.com/photos/3171837/pexels-photo-3171837.jpeg?auto=compress&cs=tinysrgb&w=800"
+image_url = "https://images.pexels.com/photos/3171837/pexels-photo-3171837.jpeg?auto=compress&cs=tinysrgb&w=600&h=900&fit=crop"
 room = "Venue Space"
 
 [[events]]
@@ -53,7 +54,7 @@ rota_notes = """Please feel free to join us all and share your experiences of vo
 roles = ["Programmer", "Inductor - 1 (trained)", "Inductor - 2 (shadowing)"]
 day_offset = 7
 hour = 18
-image_url = "https://images.pexels.com/photos/3184418/pexels-photo-3184418.jpeg?auto=compress&cs=tinysrgb&w=800"
+image_url = "https://images.pexels.com/photos/3184418/pexels-photo-3184418.jpeg?auto=compress&cs=tinysrgb&w=600&h=900&fit=crop"
 room = "Meeting"
 
 [[events]]
@@ -67,7 +68,7 @@ rota_notes = """Keyholder Training for those who have been proposed and agreed a
 roles = ["Keyholder", "Programmer", "Extra Hands (no training needed)"]
 day_offset = 10
 hour = 11
-image_url = "https://images.pexels.com/photos/279810/pexels-photo-279810.jpeg?auto=compress&cs=tinysrgb&w=800"
+image_url = "https://images.pexels.com/photos/279810/pexels-photo-279810.jpeg?auto=compress&cs=tinysrgb&w=600&h=900&fit=crop"
 room = "Meeting"
 
 [[events]]
@@ -81,7 +82,8 @@ rota_notes = "Doors 30 min before start. Projectionist set up 90 min early. The 
 roles = ["Keyholder", "Programmer", "Projectionist - DCP", "Box Office - Admission Tickets", "Bar Staff - Shift 1", "Usher - Fire Trained"]
 day_offset = 12
 hour = 20
-image_url = "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=800"
+image_url = "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=1600&h=900&fit=crop"
+auto_crop = "right"
 room = "Cinema"
 
 [[events]]
@@ -94,7 +96,7 @@ rota_notes = "Cleaning 10am, brunch noon. Cafe open 10:00 til 1:30pm. \nWowee I 
 roles = ["Keyholder", "Programmer", "Cleaner", "Cafe (Level 1)", "Cafe Shadowing"]
 day_offset = 14
 hour = 10
-image_url = "https://images.pexels.com/photos/4239091/pexels-photo-4239091.jpeg?auto=compress&cs=tinysrgb&w=800"
+image_url = "https://images.pexels.com/photos/4239091/pexels-photo-4239091.jpeg?auto=compress&cs=tinysrgb&w=600&h=900&fit=crop"
 room = "Venue Space"
 
 [[events]]
@@ -108,7 +110,7 @@ rota_notes = "Doors 10:30am. Film 11am. Projectionist set up by 10am. Bar open b
 roles = ["Keyholder", "Programmer", "Projectionist - MP4", "Box Office - Admission Tickets", "Bar Staff - Shift 1"]
 day_offset = 19
 hour = 13
-image_url = "https://images.pexels.com/photos/33129/popcorn-movie-party-entertainment.jpg?auto=compress&cs=tinysrgb&w=800"
+image_url = "https://images.pexels.com/photos/33129/popcorn-movie-party-entertainment.jpg?auto=compress&cs=tinysrgb&w=600&h=900&fit=crop"
 room = "Cinema"
 
 [[events]]
@@ -122,7 +124,8 @@ rota_notes = "Set up from 3pm. Fill venue space and bar with consoles — origin
 roles = ["Keyholder", "Programmer", "Extra Hands (no training needed)", "Extra Hands (no training needed)", "Bar Staff - Shift 1"]
 day_offset = 21
 hour = 16
-image_url = "https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg?auto=compress&cs=tinysrgb&w=800"
+image_url = "https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg?auto=compress&cs=tinysrgb&w=1600&h=900&fit=crop"
+auto_crop = "left"
 room = "Venue Space"
 
 [[events]]
@@ -135,7 +138,7 @@ rota_notes = "Agenda circulated Friday. Please review proposals beforehand."
 roles = ["Programmer", "Facilitator", "Minute taker"]
 day_offset = 25
 hour = 18
-image_url = "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=800"
+image_url = "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=600&h=900&fit=crop"
 room = "Meeting"
 
 [[events]]
@@ -149,7 +152,7 @@ rota_notes = "Please read the cafe handbook before attending."
 roles = ["Programmer", "Inductor - 1 (trained)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)", "Trainee (inducted)"]
 day_offset = 26
 hour = 11
-image_url = "https://images.pexels.com/photos/1307698/pexels-photo-1307698.jpeg?auto=compress&cs=tinysrgb&w=800"
+image_url = "https://images.pexels.com/photos/1307698/pexels-photo-1307698.jpeg?auto=compress&cs=tinysrgb&w=600&h=900&fit=crop"
 room = "Café"
 
 [[events]]
@@ -163,7 +166,7 @@ rota_notes = """Two films, short break between. Projectionist: check format care
 roles = ["Keyholder", "Programmer", "Projectionist - DCP", "Projectionist - MP4", "Box Office - Admission Tickets", "Bar Staff - Shift 1", "Usher - Fire Trained"]
 day_offset = 28
 hour = 20
-image_url = "https://images.pexels.com/photos/269140/pexels-photo-269140.jpeg?auto=compress&cs=tinysrgb&w=800"
+image_url = "https://images.pexels.com/photos/269140/pexels-photo-269140.jpeg?auto=compress&cs=tinysrgb&w=600&h=900&fit=crop"
 room = "Cinema"
 
 # ── Special volunteer events (quirky S&S traditions) ─────────────────────────
@@ -180,7 +183,7 @@ rota_notes = "Volunteer-only ritual ceremony. We can't overstate how important i
 roles = ["Keyholder", "Programmer", "Sound Technician level 1", "Facilitator"]
 day_offset = 5
 hour = 20
-image_url = "https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=800"
+image_url = "https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=600&h=900&fit=crop"
 room = "Venue Space"
 
 [[events]]
@@ -208,7 +211,7 @@ rota_notes = """Badger gig, so can't stress enough how important it is that we k
 roles = ["Keyholder", "Programmer", "Sound Technician level 1", "Sound Technician level 2", "Bar Staff - Shift 1", "Bar Staff - Shift 2", "Box Office - Admission Tickets", "Usher - Fire Trained"]
 day_offset = 15
 hour = 19
-image_url = "https://images.pexels.com/photos/3807517/pexels-photo-3807517.jpeg?auto=compress&cs=tinysrgb&w=800"
+image_url = "https://images.pexels.com/photos/3807517/pexels-photo-3807517.jpeg?auto=compress&cs=tinysrgb&w=600&h=900&fit=crop"
 room = "Venue Space"
 
 [[events]]
@@ -222,7 +225,7 @@ rota_notes = """Simultaneous film convergence! Doors at noon, screenings 1pm-9pm
 roles = ["Keyholder", "Programmer", "Projectionist - DCP", "Projectionist - MP4", "Box Office - Admission Tickets", "Bar Staff - Shift 1", "Bar Staff - Shift 2", "Usher - Fire Trained", "Audio Visual Technician"]
 day_offset = 20
 hour = 13
-image_url = "https://images.pexels.com/photos/7974/pexels-photo.jpeg?auto=compress&cs=tinysrgb&w=800"
+image_url = "https://images.pexels.com/photos/7974/pexels-photo.jpeg?auto=compress&cs=tinysrgb&w=600&h=900&fit=crop"
 room = "Cinema"
 
 [[events]]
@@ -237,7 +240,7 @@ rota_notes = """currently plumbed in kegs off limits - please do a stock take be
 roles = ["Keyholder", "Programmer", "Bar Staff - Shift 1", "Bar Staff - Shift 2"]
 day_offset = 6
 hour = 18
-image_url = "https://images.pexels.com/photos/3407814/pexels-photo-3407814.jpeg?auto=compress&cs=tinysrgb&w=800"
+image_url = "https://images.pexels.com/photos/3407814/pexels-photo-3407814.jpeg?auto=compress&cs=tinysrgb&w=600&h=900&fit=crop"
 room = "Venue Space"
 
 [[events]]
@@ -252,7 +255,7 @@ rota_notes = """Freezer archaeology expedition! Bring thick gloves & emotional r
 roles = ["Keyholder", "Programmer", "Facilitator"]
 day_offset = 8
 hour = 19
-image_url = "https://images.pexels.com/photos/5850537/pexels-photo-5850537.jpeg?auto=compress&cs=tinysrgb&w=800"
+image_url = "https://images.pexels.com/photos/5850537/pexels-photo-5850537.jpeg?auto=compress&cs=tinysrgb&w=600&h=900&fit=crop"
 room = "Café"
 
 [[events]]
@@ -266,7 +269,7 @@ rota_notes = """Doors 7pm, event 7:30pm. Keyholder: loft access needed, please b
 roles = ["Keyholder", "Programmer", "Facilitator", "Audio Visual Technician", "Bar Staff - Shift 1", "Usher - Fire Trained"]
 day_offset = 11
 hour = 19
-image_url = "https://images.pexels.com/photos/1303081/pexels-photo-1303081.jpeg?auto=compress&cs=tinysrgb&w=800"
+image_url = "https://images.pexels.com/photos/1303081/pexels-photo-1303081.jpeg?auto=compress&cs=tinysrgb&w=600&h=900&fit=crop"
 room = "Venue Space"
 
 # ── Flag test events (test specific UI states) ───────────────────────────────
@@ -284,7 +287,7 @@ confirmed = true
 roles = ["Keyholder", "Programmer", "Projectionist - DCP", "Box Office - Admission Tickets", "Bar Staff - Shift 1", "Usher - Fire Trained"]
 day_offset = 42
 hour = 15
-image_url = "https://images.pexels.com/photos/1659438/pexels-photo-1659438.jpeg?auto=compress&cs=tinysrgb&w=800"
+image_url = "https://images.pexels.com/photos/1659438/pexels-photo-1659438.jpeg?auto=compress&cs=tinysrgb&w=600&h=900&fit=crop"
 room = "Cinema"
 
 [[events]]
@@ -300,7 +303,7 @@ roles = ["Keyholder", "Programmer"]
 day_offset = 55
 hour = 18
 confirmed = true
-image_url = "https://images.pexels.com/photos/3171837/pexels-photo-3171837.jpeg?auto=compress&cs=tinysrgb&w=800"
+image_url = "https://images.pexels.com/photos/3171837/pexels-photo-3171837.jpeg?auto=compress&cs=tinysrgb&w=600&h=900&fit=crop"
 room = "Venue Space"
 
 [[events]]
@@ -315,7 +318,7 @@ confirmed = false
 roles = ["Keyholder", "Programmer", "Projectionist - DCP", "Box Office - Admission Tickets", "Bar Staff - Shift 1", "Usher - Fire Trained"]
 day_offset = 63
 hour = 18
-image_url = "https://images.pexels.com/photos/269140/pexels-photo-269140.jpeg?auto=compress&cs=tinysrgb&w=800"
+image_url = "https://images.pexels.com/photos/269140/pexels-photo-269140.jpeg?auto=compress&cs=tinysrgb&w=600&h=900&fit=crop"
 room = "Cinema"
 
 [[events]]
@@ -331,7 +334,7 @@ discounted = true
 roles = ["Keyholder", "Programmer", "Projectionist - DCP", "Box Office - Admission Tickets", "Bar Staff - Shift 1", "Usher - Fire Trained"]
 day_offset = 77
 hour = 18
-image_url = "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=800"
+image_url = "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=600&h=900&fit=crop"
 room = "Cinema"
 
 [[events]]
@@ -345,18 +348,18 @@ confirmed = true
 roles = ["Keyholder", "Programmer", "Facilitator"]
 day_offset = 90
 hour = 10
-image_url = "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=800"
+image_url = "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=600&h=900&fit=crop"
 room = "Meeting"
 
 # ── Image format test events ──────────────────────────────────────────────────
-# These exist to exercise the index and detail templates with different aspect
-# ratios. Real programmers upload whatever they have — portrait posters,
-# landscape banners, phone-camera squares — so the templates need to handle all
-# of them gracefully without us baking in any assumptions.
+# These exist to exercise the index and detail templates with different source
+# aspect ratios. The programme grid uses object-fit: cover; aspect-ratio: 2/3,
+# so all images are CSS-cropped to portrait — but it's worth confirming that
+# portrait, square, and landscape sources all produce an acceptable crop.
 #
-# Portrait (2:3): TMDB film poster — closest to a real S+S poster upload.
-# Square (1:1):   Pexels photo cropped square — phone camera square mode.
-# Wide (16:9):    Pexels panoramic — venue banner / landscape promo image.
+# Portrait (2:3): TMDB film poster — ideal: fills the tile perfectly.
+# Square (1:1):   Pexels photo cropped square — CSS crops to portrait (top portion).
+# Wide (16:9):    Pexels panoramic — CSS crops to portrait (central strip).
 
 [[events]]
 name = "Image Test: Portrait Poster (2:3)"
@@ -382,6 +385,7 @@ roles = ["Keyholder", "Programmer"]
 day_offset = 121
 hour = 14
 image_url = "https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=800&h=800"
+auto_crop = "center"
 room = "Venue Space"
 
 [[events]]

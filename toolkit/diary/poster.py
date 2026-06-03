@@ -9,54 +9,68 @@ from io import BytesIO
 from django.core.files.base import ContentFile
 from PIL import Image, ImageDraw, ImageFont
 
-# Bundled font path (relative to this module)
-_BUNDLED_FONT = os.path.join(
+_FONTS_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "util",
-    "management",
-    "commands",
-    "seed_data",
-    "fonts",
-    "DejaVuSans-Bold.ttf",
+    "util", "management", "commands", "seed_data", "fonts",
 )
 
-# System fallback fonts (checked in order)
-_FONT_FALLBACKS = [
+# Preferred display fonts in order — heavy/black weight gives the best poster look
+_FONT_CANDIDATES = [
+    os.path.join(_FONTS_DIR, "Anton-Regular.ttf"),        # bundled — preferred
+    os.path.join(_FONTS_DIR, "DejaVuSans-Bold.ttf"),      # bundled fallback
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
     "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
     "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
-    "/usr/share/fonts/opentype/urw-base35/NimbusSans-Bold.otf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
 ]
 
 
 def _find_bold_font():
-    """Return path to a bold font, preferring bundled DejaVu."""
-    candidates = [_BUNDLED_FONT] + _FONT_FALLBACKS
-    for path in candidates:
+    """Return path to the best available display font."""
+    for path in _FONT_CANDIDATES:
         if os.path.exists(path):
             return path
     return None
 
 
-def make_poster_image(event_name, bg_colour, width=800, height=450):
+def _layout_lines(words):
+    """One word per line; short connector words (≤2 chars) merge with the next word.
+
+    This keeps articles and prepositions (A, AN, OF, IN, ...) attached to the
+    word they modify rather than floating alone on a line.
+    """
+    lines = []
+    i = 0
+    while i < len(words):
+        w = words[i]
+        if len(w) <= 3 and i + 1 < len(words):
+            lines.append(w + " " + words[i + 1])
+            i += 2
+        else:
+            lines.append(w)
+            i += 1
+    return lines or [""]
+
+
+def make_poster_image(event_name, bg_colour, width=600, height=900):
     """Generate a bold typographic poster: gradient background, text stretched to fill.
+
+    Layout: one word per line, each word scaled full-bleed to the image width.
+    Short connector words (≤2 chars) are joined to the following word.
 
     Args:
         event_name: The text to render (usually the event name).
         bg_colour: Tuple of (r, g, b) for the background gradient base.
-        width: Image width in pixels (default 800).
-        height: Image height in pixels (default 450).
+        width: Image width in pixels (default 600).
+        height: Image height in pixels (default 900).
 
     Returns:
         PIL Image object (RGB mode).
     """
     r0, g0, b0 = bg_colour
-    # Gradient: slightly lighter at top, darker at bottom
     top_c = (min(255, r0 + 40), min(255, g0 + 40), min(255, b0 + 50))
     bot_c = (max(0, r0 - 15), max(0, g0 - 15), max(0, b0 - 10))
 
-    # Build gradient pixel by pixel
     pixels = []
     for y in range(height):
         t = y / max(height - 1, 1)
@@ -69,45 +83,15 @@ def make_poster_image(event_name, bg_colour, width=800, height=450):
     img = Image.new("RGB", (width, height))
     img.putdata(pixels)
 
-    # Choose text colour based on background luminance
     lum = 0.299 * r0 + 0.587 * g0 + 0.114 * b0
     text_colour = (255, 255, 255) if lum < 128 else (0, 0, 0)
 
     font_path = _find_bold_font()
-    pad = 24
+    raw_lines = _layout_lines(event_name.upper().split())
 
-    # Wrap words into lines of roughly equal character length
-    words = event_name.upper().split()
-    total_chars = sum(len(w) for w in words)
-    if total_chars <= 10:
-        n_lines = 1
-    elif total_chars <= 22:
-        n_lines = 2
-    elif total_chars <= 40:
-        n_lines = 3
-    else:
-        n_lines = 4
-
-    target_per_line = total_chars / n_lines
-    raw_lines = []
-    current = []
-    current_len = 0
-    for word in words:
-        if current and current_len + len(word) > target_per_line and len(raw_lines) < n_lines - 1:
-            raw_lines.append(" ".join(current))
-            current = [word]
-            current_len = len(word)
-        else:
-            current.append(word)
-            current_len += len(word)
-    if current:
-        raw_lines.append(" ".join(current))
-
-    # Each line is rendered at high resolution then scaled to fill its slot exactly
-    usable_w = width - pad * 2
-    usable_h = height - pad * 2
-    gap = max(4, height // 80)
-    slot_h = (usable_h - gap * (len(raw_lines) - 1)) // len(raw_lines)
+    PROBE = 300
+    resample = getattr(Image.Resampling, "LANCZOS", Image.BICUBIC)
+    gap = max(2, height // 300)
 
     def font_at(size):
         if font_path:
@@ -117,24 +101,49 @@ def make_poster_image(event_name, bg_colour, width=800, height=450):
                 pass
         return ImageFont.load_default()
 
-    resample = getattr(Image.Resampling, "LANCZOS", Image.BICUBIC)
-    render_size = 300
-    y = pad
-    for line in raw_lines:
-        f = font_at(render_size)
-        probe = ImageDraw.Draw(Image.new("RGB", (1, 1)))
-        bb = probe.textbbox((0, 0), line, font=f)
+    probe_draw = ImageDraw.Draw(Image.new("RGB", (1, 1)))
+    f = font_at(PROBE)
+
+    # Measure natural height per line (uniformly scaled to fill width)
+    def measure(line):
+        bb = probe_draw.textbbox((0, 0), line, font=f)
         tw, th = bb[2] - bb[0], bb[3] - bb[1]
-        if tw <= 0 or th <= 0:
-            y += slot_h + gap
-            continue
+        return max(1, tw), max(1, th)
+
+    bboxes = [measure(l) for l in raw_lines]
+    natural_hs = [max(1, int(th * width / tw)) for tw, th in bboxes]
+
+    n = len(raw_lines)
+    total_text_h = sum(natural_hs) + gap * (n - 1)
+
+    # If block overflows, compress slot heights uniformly; otherwise centre vertically.
+    if total_text_h > height:
+        fit = height / total_text_h
+        slot_hs = [max(1, int(h * fit)) for h in natural_hs]
+        y0 = 0
+    else:
+        slot_hs = natural_hs
+        y0 = (height - total_text_h) // 2
+
+    # Render each line: scale to fill width uniformly (no 2D distortion).
+    # If the slot is shorter than the natural width-filling height (overflow case),
+    # scale to fit within the slot instead — lines may be slightly narrower than
+    # full width but letters are never clipped.
+    y = y0
+    for line, (tw, th), slot_h in zip(raw_lines, bboxes, slot_hs):
+        scale_x = width / tw
+        scale_y = slot_h / th
+        scale = min(scale_x, scale_y)   # uniform fit — no distortion, no clipping
+        rw = max(1, int(tw * scale))
+        rh = max(1, int(th * scale))
+        x = (width - rw) // 2          # centre horizontally within image
 
         text_img = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
-        ImageDraw.Draw(text_img).text(
-            (-bb[0], -bb[1]), line, fill=(*text_colour, 255), font=f
-        )
-        stretched = text_img.resize((usable_w, slot_h), resample=resample)
-        img.paste(stretched, (pad, y), stretched)
+        ImageDraw.Draw(text_img).text((-probe_draw.textbbox((0,0), line, font=f)[0],
+                                       -probe_draw.textbbox((0,0), line, font=f)[1]),
+                                      line, fill=(*text_colour, 255), font=f)
+        rendered = text_img.resize((rw, rh), resample=resample)
+        img.paste(rendered, (x, y), rendered)
         y += slot_h + gap
 
     return img
@@ -168,8 +177,15 @@ def generate_event_placeholder(event, tag=None, colour_hex=None):
         else:
             bg_colour = (180, 40, 40)  # Default deep red
 
-    # Generate the image
-    img = make_poster_image(event.name, bg_colour)
+    # Generate the image at the configured thumbnail dimensions
+    from toolkit.diary.models import get_site_config
+    cfg = get_site_config()
+    img = make_poster_image(
+        event.name,
+        bg_colour,
+        width=cfg.thumbnail_crop_width or 600,
+        height=cfg.thumbnail_crop_height or 900,
+    )
 
     # Save to BytesIO
     buffer = BytesIO()

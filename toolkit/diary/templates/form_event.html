@@ -426,9 +426,10 @@ $(document).ready(function () {
             filenameSpan.textContent = data.filename;
             fileGroup.style.display = 'none';
             previewDiv.style.display = 'flex';
-            inputCropX.value = ''; inputCropY.value = '';
-            inputCropW.value = ''; inputCropH.value = '';
-            showCropRow(data.url, false);
+            // Poster was generated at exactly the right proportions — default to full image.
+            inputCropX.value = '0'; inputCropY.value = '0';
+            inputCropW.value = '1'; inputCropH.value = '1';
+            showCropRow(data.url, true);
         }
 
         function removePreview() {
@@ -620,6 +621,11 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
                 <div class="invalid-feedback d-block">{{ media_form.media_file.errors }}</div>
             {% endif %}
             <small class="form-text text-muted mt-1">
+                Portrait images (taller than wide) work best &mdash; ideally {{ thumbnail_crop_width }}&thinsp;&times;&thinsp;{{ thumbnail_crop_height }}px or the same ratio ({{ thumbnail_crop_width }}:{{ thumbnail_crop_height }}).
+                Film posters are usually this shape. Landscape or square images will be cropped to fit.
+                Use the crop tool below to control exactly which region appears in the programme.
+            </small>
+            <small class="form-text text-muted mt-1">
                 &#x26A0;&#xFE0F; Please make sure you have the right to use any image you upload.
                 {% if IMAGE_COPYRIGHT_GUIDANCE_URL %}See our <a href="{{ IMAGE_COPYRIGHT_GUIDANCE_URL }}" target="_blank" rel="noopener">image copyright guidance</a> for help finding freely-licensed images.{% endif %}
             </small>
@@ -645,7 +651,7 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
 
     {# Image crop tool — JS shows this row when an image is present or previewed #}
     <div class="mb-3 row" id="crop-tool-row" style="display:none">
-        <label class="col-sm-2 col-form-label">Crop thumbnail</label>
+        <label class="col-sm-2 col-form-label">Programme crop</label>
         <div class="col-sm-10">
             <div style="max-width: 400px;">
                 <img id="crop-tool-img"
@@ -654,10 +660,10 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
                      style="max-width: 100%; display: block;">
             </div>
             <small class="form-text text-muted mt-2">
-                Drag the box to set the region shown as the index thumbnail
-                ({{ thumbnail_crop_width }}&thinsp;&times;&thinsp;{{ thumbnail_crop_height }}px &mdash;
+                Drag the box to choose exactly what appears in the programme grid
+                ({{ thumbnail_crop_width }}&thinsp;&times;&thinsp;{{ thumbnail_crop_height }}px portrait &mdash;
                 <a href="{% url 'edit-site-configuration' %}#section-4">change in settings</a>).
-                If you don't set a crop, the full image is resized proportionally.
+                What you select here is exactly what viewers see. If you don't set a crop, the full image is resized to fit.
             </small>
         </div>
     </div>

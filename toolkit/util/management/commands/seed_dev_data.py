@@ -666,7 +666,7 @@ class Command(BaseCommand):
             if not event.media.exists():
                 primary_tag = (event_data.get("tags") or ["default"])[0]
                 colour = TAG_COLOURS.get(primary_tag, TAG_COLOURS["default"])
-                if self._make_event_image(event, colour, event_data["name"], image_url=event_data.get("image_url"), image_path=event_data.get("image_path")):
+                if self._make_event_image(event, colour, event_data["name"], image_url=event_data.get("image_url"), image_path=event_data.get("image_path"), auto_crop=event_data.get("auto_crop")):
                     counts["images"] += 1
 
             # Event resource links — deterministic distribution
@@ -1643,113 +1643,11 @@ class Command(BaseCommand):
 
         return created_count
 
-    _BOLD_FONT_CANDIDATES = [
-        # Bundled font — always available regardless of host/container setup
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "seed_data", "fonts", "DejaVuSans-Bold.ttf"),
-        # System fallbacks (host machines)
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-        "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
-        "/usr/share/fonts/opentype/urw-base35/NimbusSans-Bold.otf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    ]
+    def _make_poster_image(self, event_name, bg_colour, width=600, height=900):
+        from toolkit.diary.poster import make_poster_image
+        return make_poster_image(event_name, bg_colour, width=width, height=height)
 
-    def _find_bold_font(self):
-        for path in self._BOLD_FONT_CANDIDATES:
-            if os.path.exists(path):
-                return path
-        return None
-
-    def _make_poster_image(self, event_name, bg_colour, width=800, height=450):
-        """Generate a bold typographic poster: gradient background, text stretched to fill."""
-        from PIL import ImageFont
-
-        r0, g0, b0 = bg_colour
-        top_c = (min(255, r0 + 40), min(255, g0 + 40), min(255, b0 + 50))
-        bot_c = (max(0, r0 - 15), max(0, g0 - 15), max(0, b0 - 10))
-        pixels = []
-        for y in range(height):
-            t = y / max(height - 1, 1)
-            pixels.extend([(
-                int(top_c[0] + (bot_c[0] - top_c[0]) * t),
-                int(top_c[1] + (bot_c[1] - top_c[1]) * t),
-                int(top_c[2] + (bot_c[2] - top_c[2]) * t),
-            )] * width)
-        img = Image.new("RGB", (width, height))
-        img.putdata(pixels)
-
-        lum = 0.299 * r0 + 0.587 * g0 + 0.114 * b0
-        text_colour = (255, 255, 255) if lum < 128 else (0, 0, 0)
-
-        font_path = self._find_bold_font()
-        pad = 24
-
-        # Wrap words into lines of roughly equal character length.
-        words = event_name.upper().split()
-        total_chars = sum(len(w) for w in words)
-        if total_chars <= 10:
-            n_lines = 1
-        elif total_chars <= 22:
-            n_lines = 2
-        elif total_chars <= 40:
-            n_lines = 3
-        else:
-            n_lines = 4
-
-        target_per_line = total_chars / n_lines
-        raw_lines = []
-        current = []
-        current_len = 0
-        for word in words:
-            if current and current_len + len(word) > target_per_line and len(raw_lines) < n_lines - 1:
-                raw_lines.append(" ".join(current))
-                current = [word]
-                current_len = len(word)
-            else:
-                current.append(word)
-                current_len += len(word)
-        if current:
-            raw_lines.append(" ".join(current))
-
-        # Each line is rendered at high resolution then scaled to fill its slot exactly —
-        # both full width and equal share of the height. This gives the blocky, full-bleed
-        # typographic poster effect.
-        usable_w = width - pad * 2
-        usable_h = height - pad * 2
-        gap = max(4, height // 80)
-        slot_h = (usable_h - gap * (len(raw_lines) - 1)) // len(raw_lines)
-
-        def font_at(size):
-            if font_path:
-                try:
-                    return ImageFont.truetype(font_path, size)
-                except Exception:
-                    pass
-            return ImageFont.load_default()
-
-        resample = getattr(Image.Resampling, "LANCZOS", Image.BICUBIC)
-        render_size = 300
-        y = pad
-        for line in raw_lines:
-            f = font_at(render_size)
-            probe = ImageDraw.Draw(Image.new("RGB", (1, 1)))
-            bb = probe.textbbox((0, 0), line, font=f)
-            tw, th = bb[2] - bb[0], bb[3] - bb[1]
-            if tw <= 0 or th <= 0:
-                y += slot_h + gap
-                continue
-
-            text_img = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
-            ImageDraw.Draw(text_img).text(
-                (-bb[0], -bb[1]), line, fill=(*text_colour, 255), font=f
-            )
-            stretched = text_img.resize((usable_w, slot_h), resample=resample)
-            img.paste(stretched, (pad, y), stretched)
-            y += slot_h + gap
-
-        return img
-
-    def _make_event_image(self, event, colour, event_name="Event", image_url=None, image_path=None):
+    def _make_event_image(self, event, colour, event_name="Event", image_url=None, image_path=None, auto_crop=None):
         """Download (with cache) or generate a placeholder image and attach it to the event."""
         try:
             img = None
@@ -1815,6 +1713,27 @@ class Command(BaseCommand):
                 media_file=ContentFile(buf.read(), name=f"{safe_name}.{ext}"),
                 alt_text=f"Placeholder image for {event_name}",
             )
+
+            # auto_crop: select a 2:3 vertical slice from landscape/square source images,
+            # simulating a volunteer choosing which part of a wide image to show.
+            if auto_crop and (image_url or image_path):
+                orig_w, orig_h = img.size
+                target_ratio = 2 / 3
+                if orig_w / orig_h > target_ratio + 0.05:  # wider than 2:3
+                    crop_h_px = orig_h
+                    crop_w_px = min(int(orig_h * target_ratio), orig_w)
+                    if auto_crop == "left":
+                        crop_x_px = 0
+                    elif auto_crop == "right":
+                        crop_x_px = orig_w - crop_w_px
+                    else:  # center
+                        crop_x_px = (orig_w - crop_w_px) // 2
+                    media_item.crop_x = round(crop_x_px / orig_w, 6)
+                    media_item.crop_y = 0.0
+                    media_item.crop_w = round(crop_w_px / orig_w, 6)
+                    media_item.crop_h = 1.0
+                    media_item.save(update_fields=["crop_x", "crop_y", "crop_w", "crop_h"])
+
             event.media.add(media_item)
             return media_item
         except Exception as e:
