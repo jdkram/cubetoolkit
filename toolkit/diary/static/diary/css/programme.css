@@ -653,6 +653,37 @@ span.tags {
     display: none;
 }
 
+/* ─── Programme filter buttons (category tabs) ──────────────────────── */
+
+.programme-tag-filters {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.prog-filter-btn {
+    padding: 0.2rem 0.75rem;
+    border: 1px solid #ccc;
+    background: #f5f5f5;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.75em;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.prog-filter-btn--active {
+    background: #222;
+    color: #fff;
+    border-color: #222;
+}
+
+.prog-filter-btn:hover:not(.prog-filter-btn--active) {
+    background: #e0e0e0;
+    border-color: #aaa;
+}
+
 /* Reduce the programme grid's top margin — the header row already provides
  * top spacing, and its own margin-bottom handles the gap to the tiles. */
 .programme-header-row + .programme {

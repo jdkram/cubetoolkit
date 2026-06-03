@@ -15,6 +15,7 @@ from django.http import (
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.conf import settings
+from django import forms as django_forms
 from django.forms.models import modelformset_factory
 from django.contrib import messages
 from django.views.generic import View
@@ -1560,8 +1561,26 @@ def edit_event_tags(request):
     active_qs = EventTag.objects.filter(archived=False)
     archived_qs = EventTag.objects.filter(archived=True)
 
+    _filter_group_choices = [("", "—")] + [
+        (slug, label) for slug, label in settings.PROGRAMME_FILTER_GROUPS
+    ]
+
+    class EventTagForm(django_forms.ModelForm):
+        filter_group = django_forms.ChoiceField(
+            choices=_filter_group_choices,
+            required=False,
+            label="Filter group",
+        )
+
+        class Meta:
+            model = EventTag
+            fields = ("name", "promoted", "sort_order", "filter_group")
+
+        def clean_filter_group(self) -> str | None:
+            return self.cleaned_data["filter_group"] or None
+
     event_tag_formset = modelformset_factory(
-        EventTag, fields=("name", "promoted", "sort_order"), can_delete=False
+        EventTag, form=EventTagForm, fields=("name", "promoted", "sort_order", "filter_group"), can_delete=False
     )
 
     if request.method == "POST":

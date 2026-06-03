@@ -1,13 +1,16 @@
 # Event tags. promoted=true tags appear in the programme filter sidebar.
+# filter_group maps the tag to a programme filter button (see PROGRAMME_FILTER_GROUPS in settings).
 # Add new tags here — no code changes needed.
 
 [[tags]]
 name = "film"
 promoted = true
+filter_group = "film"
 
 [[tags]]
 name = "music"
 promoted = true
+filter_group = "music"
 
 [[tags]]
 name = "workshop"
@@ -20,14 +23,17 @@ promoted = true
 [[tags]]
 name = "performance"
 promoted = true
+filter_group = "music"
 
 [[tags]]
 name = "meeting"
 promoted = true
+filter_group = "meeting"
 
 [[tags]]
 name = "induction"
 promoted = true
+filter_group = "meeting"
 
 [[tags]]
 name = "volunteer"
@@ -40,10 +46,12 @@ promoted = true
 [[tags]]
 name = "party"
 promoted = false
+filter_group = "music"
 
 [[tags]]
 name = "cafe"
 promoted = false
+filter_group = "cafe"
 
 [[tags]]
 name = "online"

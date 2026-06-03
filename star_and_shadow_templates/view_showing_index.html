@@ -18,6 +18,9 @@ setup_page(true);
 {% block script %}
 {{ block.super }}
 <script src="{{ STATIC_URL }}diary/js/programme.js"></script>
+{% if tag_filter_map_json %}
+<script>window.PROG_TAG_FILTER_MAP = {{ tag_filter_map_json }};</script>
+{% endif %}
 {% endblock script %}
 
 {% block site-description %}
@@ -78,6 +81,14 @@ setup_page(true);
     </script>
     {% endif %}
     <div class="programme-filter-bar">
+        {% if filter_groups %}
+        <div class="programme-tag-filters" role="group" aria-label="Filter by type">
+            <button type="button" class="prog-filter-btn prog-filter-btn--active" data-filter-group="">All</button>
+            {% for slug, label in filter_groups %}
+            <button type="button" class="prog-filter-btn" data-filter-group="{{ slug }}">{{ label }}</button>
+            {% endfor %}
+        </div>
+        {% endif %}
         <label for="programme-search" class="programme-search-label">Search:</label>
         <input type="search" id="programme-search" data-prog-search placeholder="Filter by title, tag…" autocomplete="off">
         <button type="button" id="filter-reset" data-prog-reset class="filter-reset-btn" hidden>Clear</button>

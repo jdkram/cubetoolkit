@@ -169,7 +169,7 @@ function updateOrdering() {
     <div class="card-header d-flex justify-content-between align-items-center">
       <h4 class="mb-0">Event Tags</h4>
       <small class="text-muted">
-        <strong>Nav</strong> tags appear as filter links under "Programme" in the public website navigation.
+        <strong>Nav</strong> tags appear as filter links in the sidebar. <strong>Filter group</strong> controls which programme filter button a tag maps to.
       </small>
     </div>
     <div class="card-body p-0" style="overflow-x: auto;">
@@ -208,6 +208,9 @@ function updateOrdering() {
                 <label title="Show this tag as a filter link under 'Programme' in the public website navigation">
                   {{ form.promoted }} Nav
                 </label>
+                <label title="Which programme filter button this tag maps to">
+                  {{ form.filter_group }}
+                </label>
                 {% if not form.instance.read_only %}
                   {{ form.id }}
                   <button type="button" class="btn btn-sm btn-outline-warning archive-btn"
@@ -226,7 +229,7 @@ function updateOrdering() {
         </ul>
 
         <div class="card-footer d-flex justify-content-between align-items-center">
-          <small class="text-muted">Tick <strong>Nav</strong> to show a tag as a filter link. Drag any row to set its order.</small>
+          <small class="text-muted">Tick <strong>Nav</strong> to show a tag as a filter link. Set <strong>Filter group</strong> to make a tag contribute to a programme filter button. Drag rows to set order.</small>
           <button type="submit" class="btn btn-primary">Save all changes</button>
         </div>
       </form>

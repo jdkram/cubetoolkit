@@ -232,6 +232,12 @@ class EventTag(models.Model):
         help_text="Archived tags are hidden from normal use. "
         "Tags used on past events cannot be permanently deleted.",
     )
+    filter_group = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        help_text="If set, this tag contributes to the named filter group on the public programme page.",
+    )
 
     objects = EventTagQuerySet.as_manager()
 
