@@ -15,6 +15,7 @@ filter_group = "music"
 [[tags]]
 name = "workshop"
 promoted = true
+filter_group = "workshop"
 
 [[tags]]
 name = "exhibition"

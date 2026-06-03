@@ -90,6 +90,7 @@ PROGRAMME_MEDIA_MAX_SIZE_MB = 5  # Megabytes (i.e. * 1024 * 1024 bytes)
 PROGRAMME_FILTER_GROUPS: list[tuple[str, str]] = [
     ("film", "Film"),
     ("music", "Music"),
+    ("workshop", "Workshop"),
     ("cafe", "Cafe"),
     ("meeting", "Meeting"),
 ]
