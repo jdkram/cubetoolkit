@@ -1,6 +1,17 @@
 import datetime
+import json
 import logging
 import calendar
+
+# Characters that must be escaped when embedding JSON directly in a <script> block.
+# json.dumps does not escape these, so </script> in a value would close the block.
+# Same escapes Django uses internally for the json_script template tag.
+_JSON_SCRIPT_ESCAPES = str.maketrans({"<": "\\u003c", ">": "\\u003e", "&": "\\u0026"})
+
+
+def _safe_json(data):
+    """json.dumps with HTML-special chars escaped — safe to embed in a <script> block."""
+    return json.dumps(data).translate(_JSON_SCRIPT_ESCAPES)
 
 from collections import OrderedDict
 
@@ -9,11 +20,11 @@ from django.db.models import Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import render, redirect
 from django.conf import settings
-from django.utils.html import conditional_escape
+from django.utils.html import conditional_escape, mark_safe
 import django.utils.timezone as timezone
 import django.views.generic as generic
 
-from toolkit.diary.models import Showing, Event, PrintedProgramme, get_site_config
+from toolkit.diary.models import Showing, Event, EventTag, PrintedProgramme, get_site_config
 from toolkit.diary.daterange import get_date_range
 from toolkit.diary.forms import SearchForm
 from toolkit.diary.calendar_links import build_ics
@@ -103,6 +114,19 @@ def _view_diary(request, startdate, enddate, tag=None, extra_title=None):
         events.setdefault(showing.event, []).append(showing)
         showings_grid.append(showing)
 
+    # Build programme filter button data from tags that have a filter_group set.
+    filter_tags = (
+        EventTag.objects.filter(archived=False, filter_group__isnull=False)
+        .exclude(filter_group="")
+        .values("slug", "filter_group")
+    )
+    tag_filter_map = {t["slug"]: t["filter_group"] for t in filter_tags}
+    configured_groups = getattr(settings, "PROGRAMME_FILTER_GROUPS", [])
+    active_group_slugs = set(tag_filter_map.values())
+    filter_groups = [
+        (slug, label) for slug, label in configured_groups if slug in active_group_slugs
+    ]
+
     context = {
         "cms_pages": cms_pages,
         "start": startdate,
@@ -125,6 +149,11 @@ def _view_diary(request, startdate, enddate, tag=None, extra_title=None):
         ),
         # True when user is logged in — template uses this to show volunteer badges
         "is_volunteer": is_volunteer,
+        # Programme filter buttons: [(slug, label), ...] for groups with active tags
+        "filter_groups": filter_groups,
+        # JSON-serialised slug → filter_group map for inline JS. Values are slug strings
+        # from settings/DB (no user input), so embedding after json.dumps is safe.
+        "tag_filter_map_json": mark_safe(_safe_json(tag_filter_map)),
     }
 
     return render(request, "view_showing_index.html", context)

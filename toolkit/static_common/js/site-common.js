@@ -1,27 +1,6 @@
 /* Common setup for public content pages */
 function setup_page(index_page) {
     $(document).ready(function($){
-        var masonry_opts_index = {
-            gutter: '.gutter-sizer',
-            columnWidth: '.showing-sizer',
-            itemSelector: '.showing'
-        };
-        var masonry_opts_other = {
-            percentPosition: true,
-            gutter: '.gutter-sizer',
-            columnWidth: '.grid-sizer',
-            itemSelector: '.grid-item'
-        }
-        var masonry_opts = index_page ? masonry_opts_index : masonry_opts_other;
-
-        /* init Masonry -------------------------------------------------------- */
-        var $grid = $('.programme').masonry(masonry_opts);
-
-        // re-layout Masonry after each image loads
-        $grid.imagesLoaded().progress(function() {
-           $grid.masonry('layout');
-        });
-
         /* set up small form factor menu --------------------------------------- */
         $("#mobile-menu-btn").click(function() {
             var toggle_el = $(this).data("toggle");
@@ -79,16 +58,8 @@ function setup_page(index_page) {
         $('a#gridbtn.switcher').click(function() {
             $('.list').animate({opacity:0},function() {
                 $('.list').removeClass('active');
-                $('.programme').show();
-                $('.programme').masonry(masonry_opts);
-                $('.programme').stop().animate({opacity: 1});
+                $('.programme').show().stop().animate({opacity: 1});
             });
         });
-    });
-
-    // Belt and braces: do a final masonry layout after all images are
-    // definitely loaded:
-    $(window).load(function() {
-        $('.programme').masonry('layout');
     });
 }

@@ -1,69 +1,94 @@
 # Event tags. promoted=true tags appear in the programme filter sidebar.
+# filter_group maps the tag to a programme filter button (see PROGRAMME_FILTER_GROUPS in settings).
 # Add new tags here — no code changes needed.
 
 [[tags]]
 name = "film"
 promoted = true
+filter_group = "film"
+description = "Film screenings and cinema events. Use for anything where the main draw is watching a film."
 
 [[tags]]
 name = "music"
 promoted = true
+filter_group = "music"
+description = "Live music gigs and concerts. Use 'performance' for theatrical or spoken-word events instead."
 
 [[tags]]
 name = "workshop"
 promoted = true
+filter_group = "workshop"
+description = "Hands-on learning sessions where attendees actively participate. Not for talks or screenings."
 
 [[tags]]
 name = "exhibition"
 promoted = true
+description = "Ongoing or drop-in visual art exhibitions. Use for shows people can wander into, not ticketed events."
 
 [[tags]]
 name = "performance"
 promoted = true
+filter_group = "music"
+description = "Live performance that isn't a film or a gig — theatre, spoken word, comedy, circus, dance."
 
 [[tags]]
 name = "meeting"
 promoted = true
+filter_group = "meeting"
+description = "Internal planning or decision-making meetings. Use 'induction' for onboarding sessions instead."
 
 [[tags]]
 name = "induction"
 promoted = true
+filter_group = "meeting"
+description = "Onboarding sessions for new volunteers — café induction, general induction, keyholder training, etc."
 
 [[tags]]
 name = "volunteer"
 promoted = false
+description = "Events that are specifically for volunteers only, not open to the general public."
 
 [[tags]]
 name = "training-for-volunteers"
 promoted = true
+description = "Training sessions open to volunteers — first aid, bar training, projection, etc. Different from 'induction'."
 
 [[tags]]
 name = "party"
 promoted = false
+filter_group = "music"
+description = "Social events and parties, usually with DJ or live music. Distinct from a gig in that it's celebratory/social."
 
 [[tags]]
 name = "cafe"
 promoted = false
+filter_group = "cafe"
+description = "Café-focused events — regular Sundays, pop-ups, community kitchen (kinda). The café is a key part of the event."
 
 [[tags]]
 name = "online"
 promoted = true
+description = "Events with an online component — livestreamed, hybrid, or fully remote. Add to other relevant tags too."
 
 [[tags]]
 name = "subtitles"
 promoted = true
+description = "Film screening with pre-baked subtitles (burned-in or hard-coded). Typically used for language translation, only dialogue is subtitled."
 
 [[tags]]
 name = "closed-captions"
 promoted = true
+description = "Screening or event with closed captions (soft subtitles, typically for hard-of-hearing audiences, often includes descriptive audio: e.g. [door slams])."
 
 [[tags]]
 name = "free"
 promoted = false
+description = "Free-admission events. Also set the pricing field to 'Free' — both should agree."
 
 [[tags]]
 name = "outside-hire"
 promoted = false
+description = "Events run by an external organisation hiring the venue. Tick the Outside Hire checkbox on the event too — this tag is for public programme filtering only."
 
 
 # Background colours used when generating placeholder event images,

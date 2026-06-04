@@ -84,6 +84,17 @@ PROGRAMME_EVENT_TERMS_MIN_WORDS = 3
 # Max size of uploaded diary media items (enforced by MediaItemForm)
 PROGRAMME_MEDIA_MAX_SIZE_MB = 5  # Megabytes (i.e. * 1024 * 1024 bytes)
 
+# Ordered list of (slug, label) pairs that appear as programme filter buttons.
+# Only groups that have at least one active tag assigned to them are rendered.
+# Override per venue. Slugs must match EventTag.filter_group values.
+PROGRAMME_FILTER_GROUPS: list[tuple[str, str]] = [
+    ("film", "Film"),
+    ("music", "Music"),
+    ("workshop", "Workshop"),
+    ("cafe", "Cafe"),
+    ("meeting", "Meeting"),
+]
+
 DEFAULT_MUGSHOT = "/static/members/default_mugshot.gif"
 
 # SMTP host/port settings. For complete list of relevant settings see:
