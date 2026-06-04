@@ -13,8 +13,11 @@
 
         function cardMatchesGroup(card, group) {
             if (!group) { return true; }
-            var tags = (card.dataset.tags || "").split(" ");
+            var tags = (card.dataset.tags || "").split(" ").filter(Boolean);
             var map  = window.PROG_TAG_FILTER_MAP || {};
+            if (group === "__other__") {
+                return !tags.some(function (slug) { return !!map[slug]; });
+            }
             return tags.some(function (slug) { return map[slug] === group; });
         }
 

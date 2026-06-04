@@ -594,10 +594,9 @@ span.tags {
     margin: 16px 1.5625% 20px;
 }
 
-/* Volunteer notice loses its standalone margin inside the row */
-.programme-header-row .volunteer-notice {
-    margin: 0;
-    flex: 1 1 auto;
+/* Volunteer notice sits above the header row; tighten its bottom margin */
+.volunteer-notice {
+    margin-bottom: 6px;
 }
 
 /* Search bar: compact, right-aligned within the row */

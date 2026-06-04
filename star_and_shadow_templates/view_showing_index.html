@@ -65,27 +65,28 @@ setup_page(true);
 
 {% block body %}
 {{ block.super }}
+{% if is_volunteer %}
+<div class="volunteer-notice" id="volunteer-notice">You&#8217;re logged in as a volunteer &#8212; private events are shown. <form method="post" action="{% url 'logout' %}" style="display:inline;margin:0">{% csrf_token %}<button type="submit" class="volunteer-signout-btn">Sign out</button></form><button type="button" class="volunteer-notice-dismiss" aria-label="Dismiss">&times;</button></div>
+<script>
+(function(){
+    var n = document.getElementById('volunteer-notice');
+    if (!n) return;
+    try { if (sessionStorage.getItem('volunteer-notice-dismissed')) { n.style.display = 'none'; } } catch(e){}
+    n.querySelector('.volunteer-notice-dismiss').addEventListener('click', function(){
+        n.style.display = 'none';
+        try { sessionStorage.setItem('volunteer-notice-dismissed', '1'); } catch(e){}
+    });
+})();
+</script>
+{% endif %}
 <div class="programme-header-row">
-    {% if is_volunteer %}
-    <div class="volunteer-notice" id="volunteer-notice">You&#8217;re logged in as a volunteer &#8212; private events are shown. <form method="post" action="{% url 'logout' %}" style="display:inline;margin:0">{% csrf_token %}<button type="submit" class="volunteer-signout-btn">Sign out</button></form><button type="button" class="volunteer-notice-dismiss" aria-label="Dismiss">&times;</button></div>
-    <script>
-    (function(){
-        var n = document.getElementById('volunteer-notice');
-        if (!n) return;
-        try { if (sessionStorage.getItem('volunteer-notice-dismissed')) { n.style.display = 'none'; } } catch(e){}
-        n.querySelector('.volunteer-notice-dismiss').addEventListener('click', function(){
-            n.style.display = 'none';
-            try { sessionStorage.setItem('volunteer-notice-dismissed', '1'); } catch(e){}
-        });
-    })();
-    </script>
-    {% endif %}
     {% if filter_groups %}
     <div class="programme-type-filter-row" role="group" aria-label="Filter by type">
         <button type="button" class="prog-filter-btn prog-filter-btn--active" data-filter-group="">All</button>
         {% for slug, label in filter_groups %}
         <button type="button" class="prog-filter-btn" data-filter-group="{{ slug }}">{{ label }}</button>
         {% endfor %}
+        <button type="button" class="prog-filter-btn" data-filter-group="__other__">Other</button>
     </div>
     {% endif %}
     <div class="programme-filter-bar">
