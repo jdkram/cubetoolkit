@@ -40,9 +40,17 @@ from django.db.models import FileField
 class Command(BaseCommand):
     help = "Verify that all ImageField/FileField upload_to directories exist and are writable."
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--create",
+            action="store_true",
+            help="Create missing directories instead of failing. Used by tk_run.sh at startup.",
+        )
+
     def handle(self, *args, **options):
         media_root = settings.MEDIA_ROOT
         verbosity = options.get("verbosity", 1)
+        create = options.get("create", False)
 
         if verbosity >= 2:
             self.stdout.write(f"MEDIA_ROOT: {media_root}")
@@ -61,6 +69,10 @@ class Command(BaseCommand):
             if ok:
                 if verbosity >= 2:
                     self.stdout.write(self.style.SUCCESS(f"  OK  {path}  ({source})"))
+            elif create:
+                os.makedirs(full_path, exist_ok=True)
+                if verbosity >= 1:
+                    self.stdout.write(self.style.WARNING(f"  CREATED  {path}  ({source})"))
             else:
                 failures.append((path, source, reason))
                 self.stderr.write(self.style.ERROR(f"  FAIL  {path}  ({source}): {reason}"))

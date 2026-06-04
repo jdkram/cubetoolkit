@@ -22,7 +22,7 @@ case "$COMMAND" in
         echo "Running database migrations"
         /venv/bin/python3 /site/manage.py migrate
         echo "Checking media directories"
-        /venv/bin/python3 /site/manage.py check_media_dirs
+        /venv/bin/python3 /site/manage.py check_media_dirs --create
         exec /venv/bin/python3 /site/manage.py runserver 0.0.0.0:8000
         ;;
     gunicorn)
@@ -31,7 +31,7 @@ case "$COMMAND" in
         echo "Running database migrations"
         /venv/bin/python3 /site/manage.py migrate
         echo "Checking media directories"
-        /venv/bin/python3 /site/manage.py check_media_dirs
+        /venv/bin/python3 /site/manage.py check_media_dirs --create
         GUNICORN_EXTRA_ARGS=()
         if [[ "${GUNICORN_RELOAD:-}" == "1" ]]; then
             echo "Hot-reload enabled"
