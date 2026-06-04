@@ -306,6 +306,23 @@ $(document).ready(function () {
 
     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) { new bootstrap.Tooltip(el); });
 
+    {% if tag_descriptions_json %}
+    {# Tag pill tooltips — show "when to use" guidance on each tag label #}
+    (function() {
+        var tagDesc = {{ tag_descriptions_json }};
+        document.querySelectorAll('.tag-pill input[type=checkbox]').forEach(function(cb) {
+            var desc = tagDesc[cb.value];
+            if (desc) {
+                var label = cb.closest('label');
+                label.setAttribute('data-bs-toggle', 'tooltip');
+                label.setAttribute('data-bs-placement', 'top');
+                label.setAttribute('title', desc);
+                new bootstrap.Tooltip(label);
+            }
+        });
+    }());
+    {% endif %}
+
     // Poster generation AJAX
     (function() {
         var generateBtn = document.getElementById('generate-poster-btn');

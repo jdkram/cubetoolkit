@@ -15,6 +15,7 @@ from django.http import (
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.conf import settings
+from django import forms as django_forms
 from django.forms.models import modelformset_factory
 from django.contrib import messages
 from django.views.generic import View
@@ -25,7 +26,7 @@ import django.utils.timezone as timezone
 from django.contrib.auth.decorators import permission_required, user_passes_test
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.views.decorators.http import require_POST, require_http_methods
-from django.utils.html import escape
+from django.utils.html import escape, mark_safe
 
 from toolkit.diary.models import (
     Showing,
@@ -56,6 +57,14 @@ from toolkit.diary.daterange import get_date_range
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+# Same escapes Django uses internally for json_script — prevents </script> injection.
+_JSON_SCRIPT_ESCAPES = str.maketrans({"<": "\\u003c", ">": "\\u003e", "&": "\\u0026"})
+
+
+def _safe_json(data):
+    """json.dumps with HTML-special chars escaped — safe to embed in a <script> block."""
+    return json.dumps(data).translate(_JSON_SCRIPT_ESCAPES)
 
 
 def _return_to_editindex(request):
@@ -1156,6 +1165,15 @@ class EditEventView(PermissionRequiredMixin, View):
         media_form = diary_forms.MediaItemForm(instance=media_item)
 
         cfg = get_site_config()
+
+        tag_descriptions = {
+            str(t["pk"]): t["description"]
+            for t in EventTag.objects.filter(archived=False)
+            .exclude(description="")
+            .exclude(description__isnull=True)
+            .values("pk", "description")
+        }
+
         context = {
             "event": event,
             "event_form": form,
@@ -1164,6 +1182,7 @@ class EditEventView(PermissionRequiredMixin, View):
             "breakeven_guidance_note": cfg.breakeven_guidance_note,
             "breakeven_fc_standard_threshold": cfg.breakeven_fc_standard_threshold,
             "breakeven_fc_music_threshold": cfg.breakeven_fc_music_threshold,
+            "tag_descriptions_json": mark_safe(_safe_json(tag_descriptions)),
         }
 
         return render(request, "form_event.html", context)
@@ -1532,8 +1551,39 @@ def edit_event_tags(request):
     active_qs = EventTag.objects.filter(archived=False)
     archived_qs = EventTag.objects.filter(archived=True)
 
+    _filter_group_choices = [("", "—")] + [
+        (slug, label) for slug, label in settings.PROGRAMME_FILTER_GROUPS
+    ]
+
+    class EventTagForm(django_forms.ModelForm):
+        filter_group = django_forms.ChoiceField(
+            choices=_filter_group_choices,
+            required=False,
+            label="Filter group",
+        )
+        description = django_forms.CharField(
+            required=False,
+            label="When to use",
+            widget=django_forms.TextInput(
+                attrs={"placeholder": "e.g. Use for hands-on learning sessions."}
+            ),
+        )
+
+        class Meta:
+            model = EventTag
+            fields = ("name", "promoted", "sort_order", "filter_group", "description")
+
+        def clean_filter_group(self):
+            return self.cleaned_data["filter_group"] or None
+
+        def clean_description(self):
+            return self.cleaned_data["description"] or None
+
     event_tag_formset = modelformset_factory(
-        EventTag, fields=("name", "promoted", "sort_order"), can_delete=False
+        EventTag,
+        form=EventTagForm,
+        fields=("name", "promoted", "sort_order", "filter_group", "description"),
+        can_delete=False,
     )
 
     if request.method == "POST":
