@@ -3,6 +3,9 @@ from django.contrib import admin
 from toolkit.diary.models import (
     Event,
     EventLink,
+    EventTemplate,
+    EventTemplateRole,
+    EventTemplateRoom,
     EventTermsRevision,
     MediaItem,
     Showing,
@@ -11,6 +14,33 @@ from toolkit.diary.models import (
     EventTag,
     SiteConfiguration,
 )
+
+
+class EventTemplateRoleInline(admin.TabularInline):
+    model = EventTemplateRole
+    extra = 1
+    fields = ("role", "count")
+
+
+class EventTemplateRoomInline(admin.TabularInline):
+    model = EventTemplateRoom
+    extra = 1
+    fields = ("room", "date_offset", "start_delta_minutes", "end_delta_minutes")
+
+
+@admin.register(EventTemplate)
+class EventTemplateAdmin(admin.ModelAdmin):
+    list_display = ("name",)
+    search_fields = ("name",)
+    filter_horizontal = ("tags",)
+    inlines = (EventTemplateRoleInline, EventTemplateRoomInline)
+    fieldsets = (
+        (None, {"fields": ("name", "tags")}),
+        ("Defaults applied to new events", {
+            "fields": ("pricing", "copy", "copy_summary", "terms", "film_information",
+                       "private", "outside_hire", "rota_notes"),
+        }),
+    )
 
 
 @admin.register(Room)

@@ -682,6 +682,7 @@ def batch_add_showings(request, event_id):
                 if room:
                     _create_room_booking(showing, room, event)
                 showing.clone_or_reset_rota(latest_showing)
+                showing.create_room_bookings_from_template()
                 created.append(showing)
 
             return render(
@@ -855,6 +856,7 @@ def add_event(request):
                 if room:
                     _create_room_booking(new_showing, room, new_event)
                 new_showing.reset_rota_to_default()
+                new_showing.create_room_bookings_from_template()
 
             messages.add_message(
                 request,

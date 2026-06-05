@@ -851,6 +851,44 @@ class Showing(models.Model):
                 self.rota_notes = tmpl.rota_notes
                 self.save(update_fields=["rota_notes"])
 
+    def create_room_bookings_from_template(self):
+        """Auto-create RoomBookings for this Showing from the event template's default rooms.
+
+        Skips rooms that already have a booking on this Showing to avoid
+        duplicating manually-selected rooms. Does not check for clashes with
+        other events — the clash warning on the edit-showing form covers that.
+        """
+        tmpl = self.event.template
+        if tmpl is None:
+            return
+        already_booked_room_ids = set(
+            self.room_bookings.values_list("room_id", flat=True)
+        )
+        for default in tmpl.default_rooms.select_related("room").all():
+            if default.room_id in already_booked_room_ids:
+                continue
+            start_offset = datetime.timedelta(minutes=default.start_delta_minutes)
+            booking_start = self.start + datetime.timedelta(days=default.date_offset) + start_offset
+            if default.end_delta_minutes is not None:
+                booking_end = self.start + datetime.timedelta(
+                    days=default.date_offset,
+                    minutes=default.end_delta_minutes,
+                )
+            elif self.event.duration:
+                booking_end = booking_start + datetime.timedelta(
+                    hours=self.event.duration.hour,
+                    minutes=self.event.duration.minute,
+                )
+            else:
+                booking_end = None
+            RoomBooking.objects.create(
+                showing=self,
+                room=default.room,
+                start=booking_start,
+                end=booking_end,
+                date_offset=default.date_offset,
+            )
+
     def clone_rota_from_showing(self, source_showing):
         assert self.pk is not None
         # Copy rota_notes alongside the rota entries so recurring events keep
@@ -982,6 +1020,55 @@ class EventTemplateRole(models.Model):
 
     def __str__(self):
         return f"{self.template.name} — {self.role.name} ×{self.count}"
+
+
+class EventTemplateRoom(models.Model):
+    """Default room booking for an EventTemplate.
+
+    When a new Showing is created from a template, one RoomBooking is
+    auto-created per EventTemplateRoom.
+
+    start_delta_minutes: offset (in minutes) from Showing.start when the
+      room booking begins. 0 = same time as the showing, -120 = 2 hours
+      before. Combined with date_offset so a "day before, from noon" booking
+      is start_delta_minutes=-480 (if showing is 20:00) with date_offset=-1.
+    end_delta_minutes: end offset in minutes from Showing.start. Null means
+      derive the end from the event duration (same as _create_room_booking).
+    date_offset: -1 = day before the showing, 0 = same day, +1 = day after.
+    """
+
+    template = models.ForeignKey(
+        EventTemplate, on_delete=models.CASCADE, related_name="default_rooms"
+    )
+    room = models.ForeignKey(Room, on_delete=models.PROTECT, related_name="template_defaults")
+    start_delta_minutes = models.IntegerField(
+        default=0,
+        help_text=(
+            "Start offset from Showing start (minutes). 0 = same time, -120 = 2 hours before."
+        ),
+    )
+    end_delta_minutes = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="End offset from Showing start (minutes). Leave blank to use event duration.",
+    )
+    date_offset = models.IntegerField(
+        default=0,
+        help_text="Days relative to the Showing: 0 = same day, -1 = day before, +1 = day after.",
+    )
+
+    class Meta:
+        db_table = "EventTemplateRooms"
+        ordering = ["date_offset", "start_delta_minutes"]
+        unique_together = [("template", "room", "date_offset")]
+
+    def __str__(self):
+        label = f"{self.template.name} — {self.room.name}"
+        if self.date_offset != 0:
+            label += f" (day {'before' if self.date_offset < 0 else 'after'})"
+        if self.start_delta_minutes != 0:
+            label += f" {self.start_delta_minutes:+}min"
+        return label
 
 
 class RotaEntry(models.Model):
