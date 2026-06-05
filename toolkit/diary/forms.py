@@ -261,9 +261,7 @@ class MediaItemForm(forms.ModelForm):
             "alt_text": forms.Textarea(
                 attrs={"rows": 3, "style": "resize: vertical;", "class": "form-control"}
             ),
-            "bar_colour": forms.TextInput(
-                attrs={"type": "color", "class": "form-control form-control-sm", "style": "width:60px;height:32px;padding:2px;"}
-            ),
+            "bar_colour": forms.HiddenInput(),
             "crop_x": forms.HiddenInput(),
             "crop_y": forms.HiddenInput(),
             "crop_w": forms.HiddenInput(),

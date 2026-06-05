@@ -427,9 +427,12 @@ document.addEventListener('DOMContentLoaded', function () {
     var inputCropH      = document.getElementById('id_crop_h');
     var barsToggle      = document.getElementById('bars-toggle');
     var barsPanel       = document.getElementById('bars-panel');
-    var colourInput     = document.getElementById('id_bar_colour');
+    var colourInput     = document.getElementById('id_bar_colour');   // hidden form field
+    var barColourPicker = document.getElementById('bar-colour-picker'); // cosmetic picker
+    var transparentBtn  = document.getElementById('bar-transparent-btn');
     var swatchContainer = document.getElementById('bar-colour-swatches');
     var cropper         = null;
+    var lastImageBounds = null; // image content area within the padded canvas
     // URL of the raw (un-padded) image.
     var rawImageUrl = cropImg ? (cropImg.getAttribute('src') || '') : '';
 
@@ -477,16 +480,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         ctx.drawImage(imgEl, pasteX, pasteY);
 
-        return {
-            dataUrl: canvas.toDataURL('image/jpeg', 0.9),
-            // Normalised position of the original image within the padded canvas.
-            imageBounds: {
-                cx: pasteX / canvasW,
-                cy: pasteY / canvasH,
-                cw: origW  / canvasW,
-                ch: origH  / canvasH
-            }
+        lastImageBounds = {
+            cx: pasteX / canvasW,
+            cy: pasteY / canvasH,
+            cw: origW  / canvasW,
+            ch: origH  / canvasH
         };
+        return { dataUrl: canvas.toDataURL('image/jpeg', 0.9), imageBounds: lastImageBounds };
     }
 
     // --- crop helpers ---
@@ -551,10 +551,13 @@ document.addEventListener('DOMContentLoaded', function () {
         initCropper(doRestoreCrop || false, defaultCrop || null);
     }
 
-    // Rebuild the cropper preview. Always pads to the target ratio — using the
-    // chosen colour if one is set, or a checkerboard to represent transparent bars.
-    // restoreSavedCrop: true on page load (put back saved coords); false on any change
-    // (clear coords and default to image-content bounds when padded).
+    // Rebuild the cropper preview. The padded canvas is always shown (transparent
+    // checkerboard or chosen colour in the bar areas).
+    //
+    // restoreSavedCrop = true  → keep the current hidden-input crop values
+    // restoreSavedCrop = false → clear them; default crop depends on bars toggle:
+    //   bars ON  → full canvas (0 0 1 1) so bars are visible
+    //   bars OFF → imageBounds (just the image content, bars cropped out)
     function refreshCropper(restoreSavedCrop) {
         if (!rawImageUrl) return;
         var colour = (colourInput && colourInput.value) ? colourInput.value : '';
@@ -565,9 +568,16 @@ document.addEventListener('DOMContentLoaded', function () {
         img.onload = function() {
             var result = buildPaddedResult(img, colour);
             if (result) {
-                // Default crop = original image bounds (not the bars).
-                showCropTool(result.dataUrl, restoreSavedCrop, restoreSavedCrop ? null : result.imageBounds);
+                var hasSavedCrop = inputCropX && inputCropX.value;
+                if (restoreSavedCrop && hasSavedCrop) {
+                    showCropTool(result.dataUrl, true, null);
+                } else if (barsToggle && barsToggle.checked) {
+                    showCropTool(result.dataUrl, false, {cx:0, cy:0, cw:1, ch:1});
+                } else {
+                    showCropTool(result.dataUrl, false, result.imageBounds);
+                }
             } else {
+                lastImageBounds = null;
                 showCropTool(rawImageUrl, restoreSavedCrop, null);
             }
         };
@@ -594,24 +604,47 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // --- bars toggle ---
+    // --- bars toggle and colour controls ---
 
     if (barsToggle && barsPanel) {
         barsToggle.addEventListener('change', function() {
             barsPanel.style.display = barsToggle.checked ? '' : 'none';
-            if (!barsToggle.checked && colourInput) { colourInput.value = ''; }
-            refreshCropper(false);
+            if (barsToggle.checked) {
+                // Expand crop to full canvas so bars are included.
+                if (cropper && lastImageBounds) { setCropData(0, 0, 1, 1); }
+                else { refreshCropper(false); }
+            } else {
+                // Contract crop back to image content; clear any colour.
+                if (colourInput) colourInput.value = '';
+                if (barColourPicker) barColourPicker.value = '#000000';
+                if (cropper && lastImageBounds) {
+                    setCropData(lastImageBounds.cx, lastImageBounds.cy, lastImageBounds.cw, lastImageBounds.ch);
+                } else { refreshCropper(false); }
+            }
         });
-        if (colourInput) {
-            // Regenerate padded preview when colour changes.
-            colourInput.addEventListener('change', function() {
-                refreshCropper(false);
+
+        // Transparent swatch: clear the colour, preview updates to checkerboard.
+        if (transparentBtn) {
+            transparentBtn.addEventListener('click', function() {
+                if (colourInput) colourInput.value = '';
+                if (barColourPicker) barColourPicker.value = '#000000';
+                if (rawImageUrl) refreshCropper(true);
             });
         }
-        // Initialise toggle and panel state from existing bar_colour value.
+
+        // Cosmetic colour picker: sync to hidden form field.
+        if (barColourPicker) {
+            barColourPicker.addEventListener('input', function() {
+                if (colourInput) colourInput.value = barColourPicker.value;
+                if (rawImageUrl) refreshCropper(true);
+            });
+        }
+
+        // Initialise toggle and panel from existing bar_colour value.
         if (colourInput && colourInput.value) {
             barsToggle.checked = true;
             barsPanel.style.display = '';
+            if (barColourPicker) barColourPicker.value = colourInput.value;
         } else {
             barsPanel.style.display = 'none';
         }
@@ -719,10 +752,9 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.title = (label ? label + ' ' : '') + hex;
         btn.setAttribute('aria-label', (label || 'Use colour') + ' ' + hex);
         btn.addEventListener('click', function() {
-            if (colourInput) {
-                colourInput.value = hex;
-                if (barsToggle && barsToggle.checked) { refreshCropper(false); }
-            }
+            if (colourInput) colourInput.value = hex;
+            if (barColourPicker) barColourPicker.value = hex;
+            if (rawImageUrl) refreshCropper(true);
         });
         return btn;
     }
@@ -897,33 +929,40 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
                 Drag the box to choose what appears in the programme grid card
                 ({{ thumbnail_crop_width|default:600 }}:{{ thumbnail_crop_height|default:900 }} ratio).
                 Your original image always shows in full on the event page.
-                If your image doesn't match this ratio, transparent bars are added automatically so the full image fits &mdash; the checkerboard in the preview shows where they'll appear.
-                You can optionally use <strong>Coloured bars</strong> below to pick a colour instead.
+                The box shows what will appear in the programme grid card. If content is cut off, use <strong>Letterbox bars</strong> below to include more of the image &mdash; transparent by default.
             </small>
         </div>
     </div>
 
-    {# Bars: transparent by default; optional colour override #}
+    {# Bars: off by default; enabling them expands the crop to the full padded canvas #}
     <div class="mb-3 row" id="bar_colour_group">
-        <label class="col-sm-2 col-form-label">Coloured bars</label>
+        <label class="col-sm-2 col-form-label">Letterbox bars</label>
         <div class="col-sm-10">
             <div class="form-check mb-2">
                 <input class="form-check-input" type="checkbox" id="bars-toggle"
                     {% if media_form.instance.bar_colour %}checked{% endif %}>
                 <label class="form-check-label" for="bars-toggle">
-                    Use a specific colour for the bars instead of transparent
+                    Add bars to include the full image within the card ratio
                 </label>
             </div>
             <div id="bars-panel" style="display:none">
-                <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
-                    {{ media_form.bar_colour }}
-                    {# Dominant colour swatches — populated by JS when an image is selected #}
-                    <div id="bar-colour-swatches" class="d-flex gap-1 flex-wrap" style="display:none !important;" aria-label="Suggested colours from your image">
-                        <span class="text-muted" style="font-size:0.8em;align-self:center;">From image:</span>
-                    </div>
+                <div class="d-flex align-items-center flex-wrap gap-2 mb-2">
+                    {# Transparent swatch (checkerboard) — the default #}
+                    <button type="button" id="bar-transparent-btn" title="Transparent bars (default)"
+                            aria-label="Use transparent bars"
+                            style="width:28px;height:28px;padding:0;border:2px solid rgba(0,0,0,0.2);border-radius:4px;cursor:pointer;background-color:#fff;background-image:linear-gradient(45deg,#ccc 25%,transparent 25%),linear-gradient(-45deg,#ccc 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ccc 75%),linear-gradient(-45deg,transparent 75%,#ccc 75%);background-size:8px 8px;background-position:0 0,0 4px,4px -4px,-4px 0;">
+                    </button>
+                    {# Brand / image colour swatches — populated by JS #}
+                    <div id="bar-colour-swatches" class="d-flex gap-1 flex-wrap" style="display:none !important;" aria-label="Suggested bar colours"></div>
+                    {# Custom colour picker (cosmetic — updates the hidden id_bar_colour input) #}
+                    <input type="color" id="bar-colour-picker" value="{{ media_form.instance.bar_colour|default:'#000000' }}"
+                           title="Custom bar colour"
+                           style="width:28px;height:28px;padding:1px;border:2px solid rgba(0,0,0,0.2);border-radius:4px;cursor:pointer;">
                 </div>
+                {# Hidden form field — managed by JS #}
+                {{ media_form.bar_colour }}
                 <small class="form-text text-muted">
-                    Bars only affect the programme grid card thumbnail. Your original image always shows in full on the event page.
+                    Bars only affect the programme grid thumbnail. Leave as transparent (checkerboard) or pick a colour.
                     {% if media_form.instance.bar_colour %}Current colour: <strong>{{ media_form.instance.bar_colour }}</strong>.{% endif %}
                 </small>
                 {% if media_form.bar_colour.errors %}
