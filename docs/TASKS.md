@@ -1972,7 +1972,7 @@ Currently, images in the toolkit have no structured alt text field. Some may hav
 
 **Alt text guidance link (from volunteer request):**
 
-Add a `ALT_TEXT_GUIDANCE_URL` setting (blank by default). If set, the alt text input field in the image upload form should show a small ⓘ tooltip or inline help link: *"Need help writing alt text? [Guide ↗]"* linking to the configured URL. For S&S this would point to the relevant page in our volunteer documentation. No hardcoded URL in the codebase — set in `settings_ss.py`.
+Add a `ALT_TEXT_GUIDANCE_URL` setting (blank by default). If set, the alt text input field in the image upload form should show a small ⓘ tooltip or inline help link: *"Need help writing alt text? [Guide ↗]"* linking to the configured URL. For S&S this would point to the relevant page in our volunteer documentation. No hardcoded URL in the codebase — set in `settings_starandshadow.py`.
 
 This feature intersects with section 9.17 (Inclusivity and accessibility). Once alt text fields are in place, all public-facing images will be accessible to screen reader users, a key accessibility requirement.
 
@@ -2376,7 +2376,7 @@ The Star and Shadow (and Cube) do not show adverts or trailers before screenings
 
 **Scope:**
 
-- Add a new setting `FILMS_START_ON_TIME` (default `False` for Cube, `True` for S+S) to `settings_common.py` / `settings_ss.py`
+- Add a new setting `FILMS_START_ON_TIME` (default `False` for Cube, `True` for S+S) to `settings_common.py` / `settings_starandshadow.py`
 - In the event detail template (`view_event.html`, and the S+S override), conditionally render a banner block when the setting is true
 - The banner copy should be configurable via a setting or a small Wagtail snippet (to avoid hardcoding venue-specific language)
 - No database migration required for the MVP (settings-only approach)
@@ -2457,7 +2457,7 @@ The context variable `show_archive_images` is passed to the `view_event.html` te
 **Files changed:**
 
 - `toolkit/settings_common.py` — defaults: `SHOW_ARCHIVE_IMAGES = True`, `IMAGES_START_DATE = None`
-- `toolkit/settings_ss.py` — S+S overrides: `SHOW_ARCHIVE_IMAGES = False`, `IMAGES_START_DATE = "1 May 2018"`
+- `toolkit/settings_starandshadow.py` — S+S overrides: `SHOW_ARCHIVE_IMAGES = False`, `IMAGES_START_DATE = "1 May 2018"`
 - `toolkit/diary/public_views.py` — `_show_archive_images()` helper; `view_event` passes `show_archive_images` in context
 - `star_and_shadow_templates/view_event.html` — gates image display on `show_archive_images`
 
@@ -6220,4 +6220,28 @@ Replace the uniform placeholder with a small pool of varied mock alt texts so sc
 Define a list of ~15--20 fake but varied alt texts in `seed_dev_data.py` (e.g. "Black and white film still of two figures in a doorway", "Hand-drawn poster with bold yellow type on red", "Photograph of a band on a small stage, crowd in foreground") and assign them round-robin or randomly to seed media items. Some should be intentionally long, some short, a few blank (to test the missing-alt-text case in audits).
 
 **Size estimate:** 🟢 XS (1--2h) — pure seed data change, no model or migration needed.
+
+---
+
+### 9.107 — Auto-compress images on upload 🟢 XS (2–4h)
+
+**Problem.**
+Volunteers upload high-resolution images (camera raws, unoptimised scans) that can be many megabytes. These inflate storage and slow down page loads, especially on the programme index where many images are loaded together.
+
+**Goal.**
+When a new `MediaItem` image is saved and the file exceeds the configured size limit, automatically recompress it server-side before storing. The limit should be readable from `SiteConfiguration` (new field `max_upload_image_kb`, default 5120 KB / 5 MB). If the file is already under the limit, leave it untouched.
+
+**Proposed approach.**
+Override `MediaItem.save()` (or use a `post_save` signal) to open the image with Pillow, re-save as JPEG at a quality that brings the file under the threshold, and replace the `ImageField` file in-place. A simple binary search on quality (start at 85, step down until under limit) works well enough for the MVP. Preserve the original format for PNG files used as logos (detect by extension or format); only compress JPEG/non-alpha uploads.
+
+**SiteConfiguration change.**
+Add `max_upload_image_kb = models.PositiveIntegerField(default=5120)` + migration. Expose in the Panopticon site settings form. Set to `0` to disable compression entirely.
+
+**Out of scope (MVP).**
+- Re-encoding existing images retroactively
+- WebP conversion
+- Preserving EXIF metadata (strip it — privacy benefit too)
+- Per-event or per-upload overrides
+
+**Size estimate:** 🟢 XS (2–4h) — Pillow is already a dependency; main work is the save hook, the SiteConfiguration field, and one or two tests.
 

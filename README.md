@@ -1,49 +1,45 @@
-Cube Toolkit
-============
+# Cinema Toolkit
 
-Django application powering [Cube Microplex](https://www.cubecinema.com/) (Bristol)
-and [Star and Shadow Cinema](https://www.starandshadow.org.uk/) (Newcastle).
-Handles event scheduling, volunteer rotas, member database, and a CMS.
+A Django application for managing events, volunteer rotas, member databases, and a CMS for volunteer-run cinemas. Currently deployed for [Star and Shadow Cinema](https://www.starandshadow.org.uk/) (Newcastle upon Tyne).
 
-Forked from [BenMotz/cubetoolkit](https://github.com/BenMotz/cubetoolkit/). (I broke the proper GitHub fork when developing in a private repo, I'll restore that if it looks like the S&S plan on doing anything with this experiment of mine).
+Forked from [BenMotz/cubetoolkit](https://github.com/BenMotz/cubetoolkit/).
 
-Quick start
------------
+## Quick start
 
 ```bash
 docker compose up --build
 ```
 
-See [docs/ONBOARDING.md](docs/ONBOARDING.md) for full setup instructions.
+See [docs/ONBOARDING.md](docs/ONBOARDING.md) for full setup instructions including demo accounts and seed data.
 
-Documentation
--------------
+## Apps
+
+| App | What it does |
+|---|---|
+| `diary` | Event scheduling, showings, volunteer rotas, the public programme, and the mailout system |
+| `members` | Volunteer and member database, training records, GDPR anonymisation |
+| `labs` | Collectives, bulletins, donations, community exchange, jobs board, shopping list |
+| `mailer` | Email job queue and delivery daemon |
+| `content` | Wagtail CMS for public-facing pages (About, Get Involved, etc.) |
+| `index` | Internal admin dashboard |
+| `toolkit_auth` | Login/logout, permission decorators |
+| `util` | Shared utilities, image processing, management commands |
+
+## Venue configuration
+
+Venue-specific settings (name, logo, email addresses, social media, feature flags) live in `toolkit/settings_<venue>.py`. The Star and Shadow config is in `toolkit/settings_starandshadow.py`. To adapt for another venue, copy that file and update the `VENUE` dict.
+
+## Documentation
 
 | File | What it covers |
-| --- | --- |
-| [CURRENT_WORK.md](CURRENT_WORK.md) | Single source of truth: current priorities, blockers, and completed work |
-| [docs/ONBOARDING.md](docs/ONBOARDING.md) | Developer setup: Docker, project structure, running tests |
-| [docs/SPEC.md](docs/SPEC.md) | System specification: what the built system does, data model, workflows |
-| [docs/TASKS.md](docs/TASKS.md) | Design rationale and specs for proposed (unbuilt) features |
-| [docs/BRANCH_NOTES.md](docs/BRANCH_NOTES.md) | Differences between the `master` and `s+s` branches |
-| [docs/SEED_DATA.md](docs/SEED_DATA.md) | Reference data for `manage.py seed_dev_data` |
+|---|---|
+| [docs/ONBOARDING.md](docs/ONBOARDING.md) | Developer setup, Docker, project structure, running tests |
+| [docs/SPEC.md](docs/SPEC.md) | System specification: data model, workflows, permission model |
+| [docs/TASKS.md](docs/TASKS.md) | Design rationale and specs for proposed features |
+| [CURRENT_WORK.md](CURRENT_WORK.md) | Current priorities, in-progress work, and completed items |
 
-License
--------
+## License
 
-Copyright Ben Motz and other contributors. Distributed under the GNU Affero license (see LICENSE).
+Copyright Ben Motz and other contributors. Distributed under the GNU Affero General Public License (see LICENSE).
 
-Excludes:
-
-- `/toolkit/members/static/members/cube_microplex_logo.gif`
-- `/toolkit/members/static/members/default_mugshot.gif`
-- `/toolkit/diary/static/diary/diary_edit_list_header.gif`
-- `toolkit/content/static/content/logo.gif`
-
-(These images are copyright Cube Cinema Ltd.)
-
-Third-party code under their own licenses:
-
-- `toolkit/static_common/js/lib/`
-- `toolkit/static_common/css/lib/`
-- `toolkit/diary/static/diary/js/lib/`
+Excludes some images which are copyright their respective organisations (see LICENSE for details). Third-party JS/CSS libraries in `toolkit/static_common/` and `toolkit/diary/static/` are under their own licences.

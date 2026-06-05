@@ -25,7 +25,7 @@ VENUE = {
     "nav_menu_img": "content/ss_logo_e3cae3_pink3.jpg",
     "internal_header_img": "content/star_and_shadow_100_82.png",
     "wagtale_admin_img": "/static/content/star_and_shadow_100_82.png",
-    "favicon": "/static/favicon/favicon_ss.ico",
+    "favicon": "/static/favicon/favicon_starandshadow.ico",
     "font_h2": "https://fonts.googleapis.com/css?family=Lato",
     # This is used as the hostname for unsubscribe links in emails
     # i.e. emails will have links added to
@@ -42,9 +42,9 @@ VENUE = {
     # (leave empty to disable these notifications)
     "vols_admin_address": [],
     "show_user_management": True,
+    "cms_name": "The Star and Shadow",
+    "cms_base_url": "https://starandshadow.org.uk/cms",
 }
-
-WAGTAIL_SITE_NAME = "The Star and Shadow"
 
 # Disable 'allow editing from magic IP range' for now
 CUBE_IP_ADDRESSES = ()

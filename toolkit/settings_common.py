@@ -47,6 +47,10 @@ VENUE = {
     # List of people to get notifications when new vols are added
     "vols_admin_address": ["volunteers-owner@cubecinema.com"],
     "show_user_management": False,
+    # Used by WAGTAIL_SITE_NAME and WAGTAILADMIN_BASE_URL below.
+    # Override both in your venue settings file.
+    "cms_name": "Cube Microplex",
+    "cms_base_url": "https://cubecinema.com/cms",
 }
 
 # The following list of IP addresses is used to restrict access to some pages
@@ -140,7 +144,7 @@ EVENTLINK_EXTRA_ALLOWED_DOMAINS = []
 #
 # Wagtail settings
 
-WAGTAIL_SITE_NAME = "The Cube Microplex"
+WAGTAIL_SITE_NAME = VENUE["cms_name"]
 
 # Don't show fields to change user passwords (for other users, in admin)
 WAGTAILUSERS_PASSWORD_ENABLED = False
@@ -168,7 +172,7 @@ WAGTAIL_USER_TIME_ZONES = ["Europe/London"]
 #
 # If this setting is not present, Wagtail will try to fall back to
 # request.site.root_url or to the request’s host name.
-WAGTAILADMIN_BASE_URL = "https://cubecinema.com/cms"
+WAGTAILADMIN_BASE_URL = VENUE["cms_base_url"]
 
 ###############################################################################
 #
@@ -207,9 +211,7 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 APPEND_SLASH = True
 
 # Django settings for cube project.
-ALLOWED_HOSTS = [
-    ".cubecinema.com",
-]
+ALLOWED_HOSTS = []  # must be set in environment-specific settings
 DEBUG = False
 
 ADMINS = (

@@ -556,10 +556,10 @@ The "Anonymise this volunteer" action (Panopticon only, `/volunteers/<id>/anonym
 
 | Setting | Location | Effect |
 |---|---|---|
-| `VENUE["show_user_management"]` | `settings_ss.py` | Enables the user account section on the volunteer edit page (send password reset, set password directly). Should be `True` for S+S, `False` for Cube (which manages users differently). |
+| `VENUE["show_user_management"]` | `settings_starandshadow.py` | Enables the user account section on the volunteer edit page (send password reset, set password directly). Should be `True` for S+S, `False` for Cube (which manages users differently). |
 | `PASSWORD_RESET_TIMEOUT` | Django default (not overridden) | Token validity in seconds. Default: 259200 (3 days). Increase if volunteers commonly miss the 3-day window. |
-| `VENUE["mailout_from_address"]` | `settings_ss.py` | From address on all volunteer emails. |
-| `VENUE["vols_admin_address"]` | `settings_ss.py` | List of addresses for admin notification emails. |
+| `VENUE["mailout_from_address"]` | `settings_starandshadow.py` | From address on all volunteer emails. |
+| `VENUE["vols_admin_address"]` | `settings_starandshadow.py` | List of addresses for admin notification emails. |
 
 ---
 

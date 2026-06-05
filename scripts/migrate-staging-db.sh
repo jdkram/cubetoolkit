@@ -147,11 +147,11 @@ fi
 
 # Step 6: Run Django migrations
 log_info "Step 6: Running Django migrations..."
-docker compose run --rm toolkit /venv/bin/python3 manage.py migrate --settings=toolkit.docker_settings_ss
+docker compose run --rm toolkit /venv/bin/python3 manage.py migrate --settings=toolkit.docker_settings_starandshadow
 
 # Step 7: Collect static files
 log_info "Step 7: Collecting static files..."
-docker compose run --rm toolkit /venv/bin/python3 manage.py collectstatic --noinput --settings=toolkit.docker_settings_ss
+docker compose run --rm toolkit /venv/bin/python3 manage.py collectstatic --noinput --settings=toolkit.docker_settings_starandshadow
 
 # Step 8: Restart toolkit
 log_info "Step 8: Restarting toolkit container..."
@@ -160,7 +160,7 @@ docker compose up -d toolkit
 # Step 9: Verify data
 log_info "Step 9: Verifying data..."
 sleep 3
-DATA_CHECK=$(docker compose exec toolkit /venv/bin/python3 manage.py shell --settings=toolkit.docker_settings_ss -c "
+DATA_CHECK=$(docker compose exec toolkit /venv/bin/python3 manage.py shell --settings=toolkit.docker_settings_starandshadow -c "
 from toolkit.diary.models import Event, Showing
 from toolkit.members.models import Member, Volunteer
 print(f'Events: {Event.objects.count()}')

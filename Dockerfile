@@ -44,8 +44,8 @@ RUN adduser --no-create-home --disabled-login --gecos x toolkit \
 COPY --chown=toolkit:toolkit . /site/
 
 RUN ln -s /site/containerconfig/tk_run.sh /usr/local/bin/tk_run \
-     && ln -s /site/toolkit/docker_settings_ss.py /site/toolkit/settings.py \
-     && SECRET_KEY="X" /venv/bin/python3 /site/manage.py collectstatic --noinput --clear --settings=toolkit.docker_settings_ss \
+     && ln -s /site/toolkit/docker_settings_starandshadow.py /site/toolkit/settings.py \
+     && SECRET_KEY="X" /venv/bin/python3 /site/manage.py collectstatic --noinput --clear --settings=toolkit.docker_settings_starandshadow \
      \
      # Media upload directories — MUST list every upload_to path used by any
      # ImageField or FileField in the codebase. The container runs as a non-root

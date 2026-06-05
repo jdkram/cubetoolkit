@@ -122,7 +122,7 @@ The `s+s` branch is available locally for reference (`git checkout s+s`, or insp
 - Non-root user (`toolkit:toolkit`)
 - Runs via gunicorn with `--reload` (hot-reload enabled via `GUNICORN_RELOAD=1` in docker-compose.yml)
 - Entrypoint: `containerconfig/tk_run.sh` — accepts `gunicorn` or `mailerd` as argument
-- Settings file: `DJANGO_SETTINGS_MODULE=toolkit.docker_settings_ss` (env var; no symlink needed)
+- Settings file: `DJANGO_SETTINGS_MODULE=toolkit.docker_settings_starandshadow` (env var; no symlink needed)
 - Static files: collected at container start by `tk_run.sh` (not baked into image)
 - Source code: bind-mounted from host at runtime — container always sees your local files
 - Requirements split into `requirements/base.txt`, `requirements/dev.txt`, `requirements/docker.txt`
@@ -184,14 +184,13 @@ docker compose exec toolkit /venv/bin/python3 manage.py test toolkit.diary.tests
 
 | Purpose | File |
 |---|---|
-| Cube docker settings | [toolkit/docker_settings.py](toolkit/docker_settings.py) |
-| S+S settings (venue config, feature flags) | [toolkit/settings_ss.py](toolkit/settings_ss.py) |
-| S+S docker settings | [toolkit/docker_settings_ss.py](toolkit/docker_settings_ss.py) |
+| S+S venue config (feature flags, VENUE dict) | [toolkit/settings_starandshadow.py](toolkit/settings_starandshadow.py) |
+| S+S Docker dev settings | [toolkit/docker_settings_starandshadow.py](toolkit/docker_settings_starandshadow.py) |
+| S+S Docker prod settings | [toolkit/docker_settings_prod_starandshadow.py](toolkit/docker_settings_prod_starandshadow.py) |
 | Shared base settings | [toolkit/settings_common.py](toolkit/settings_common.py) |
 | Container entrypoint | [containerconfig/tk_run.sh](containerconfig/tk_run.sh) |
 | Dev docker compose | [docker-compose.yml](docker-compose.yml) |
 | S+S-specific templates | [star_and_shadow_templates/](star_and_shadow_templates/) |
-| Branch comparison | [docs/BRANCH_NOTES.md](docs/BRANCH_NOTES.md) |
 | Current work / status / roadmap | [CURRENT_WORK.md](CURRENT_WORK.md) |
 | System specification | [docs/SPEC.md](docs/SPEC.md) |
 | Feature specs & design rationale | [docs/TASKS.md](docs/TASKS.md) |

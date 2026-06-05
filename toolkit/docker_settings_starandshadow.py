@@ -1,6 +1,6 @@
 import os
 
-from toolkit.settings_ss import *
+from toolkit.settings_starandshadow import *
 
 DEBUG = True
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
@@ -62,7 +62,7 @@ STORAGES = {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": "toolkit.docker_settings_ss._PermissiveManifestStorage",
+        "BACKEND": "toolkit.docker_settings_starandshadow._PermissiveManifestStorage",
     },
 }
 

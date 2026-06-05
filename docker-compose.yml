@@ -27,7 +27,7 @@ services:
       DB_HOST: "mariadb"
       DB_PORT: "3306"
       SECRET_KEY: "${DJANGO_SECRET_KEY:-really_bad_django_secret_key}"
-      DJANGO_SETTINGS_MODULE: "toolkit.docker_settings_ss"
+      DJANGO_SETTINGS_MODULE: "toolkit.docker_settings_starandshadow"
     ports:
       - target: "8000"
         published: "8000"

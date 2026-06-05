@@ -11,7 +11,7 @@ import sys
 import django
 
 # Setup Django
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "toolkit.docker_settings_ss")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "toolkit.docker_settings_starandshadow")
 sys.path.insert(0, "/site")
 django.setup()
 

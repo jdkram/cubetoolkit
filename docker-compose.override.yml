@@ -1,7 +1,7 @@
 # Development overrides — applied automatically by docker compose.
 # Bind-mounts source directories so Python and template changes take effect
 # without a full image rebuild. Gunicorn --reload watches for Python changes.
-# Templates reload per-request already (TEMPLATES debug=True in docker_settings_ss.py).
+# Templates reload per-request already (TEMPLATES debug=True in docker_settings_starandshadow.py).
 #
 # WARNING: DO NOT USE IN PRODUCTION. GUNICORN_RELOAD=1 will cause workers to
 # restart on any filesystem change, dropping in-flight requests. Deploy with

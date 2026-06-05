@@ -65,21 +65,9 @@ cd sns-toolkit
 
 ### Which venue are you developing for?
 
-This repo powers two venues. The default Docker setup runs **Star and Shadow Cinema** settings (`toolkit.docker_settings_ss`).
+The default Docker setup runs **Star and Shadow Cinema** settings (`toolkit.docker_settings_starandshadow`).
 
-If you are developing for **Cube Microplex** instead, edit `docker-compose.yml` and change:
-
-```yaml
-DJANGO_SETTINGS_MODULE: "toolkit.docker_settings_ss"
-```
-
-to:
-
-```yaml
-DJANGO_SETTINGS_MODULE: "toolkit.docker_settings"
-```
-
-Everything else in this guide applies to both venues.
+To configure the toolkit for a different venue, copy `toolkit/settings_starandshadow.py` to `toolkit/settings_<yourvenue>.py`, update the `VENUE` dict and feature flags, then point `DJANGO_SETTINGS_MODULE` at your new file.
 
 ### 2. Build and start the services
 
@@ -222,7 +210,7 @@ Browser → URL router (urls.py) → View function (views.py)
                                  Template (templates/) → HTML response
 ```
 
-**Settings** live in `toolkit/settings_*.py` files. Django reads whichever one is pointed to by the `DJANGO_SETTINGS_MODULE` environment variable. In Docker, this is set to `toolkit.docker_settings_ss`.
+**Settings** live in `toolkit/settings_*.py` files. Django reads whichever one is pointed to by the `DJANGO_SETTINGS_MODULE` environment variable. In Docker, this is set to `toolkit.docker_settings_starandshadow`.
 
 **Migrations:** whenever someone changes a model, they run `manage.py makemigrations` to generate a migration file, then `manage.py migrate` to apply it. The Docker entrypoint runs `migrate` automatically on startup, so you shouldn't need to think about this for day-to-day dev.
 
@@ -242,11 +230,11 @@ sns-toolkit/                  # Repo root
 │   ├── toolkit_auth/         # App: login/logout and auth decorators
 │   ├── util/                 # Shared utilities (image processing, context processors)
 │   │
-│   ├── settings_common.py    # Settings shared across all environments
-│   ├── settings_ss.py        # Star & Shadow venue config (imported by docker_settings_ss.py)
-│   ├── docker_settings_ss.py # Docker settings for Star & Shadow (default)
-│   ├── docker_settings.py    # Docker settings for Cube Microplex
-│   ├── devserver_settings.py # Settings for running locally without Docker
+│   ├── settings_common.py               # Settings shared across all environments
+│   ├── settings_starandshadow.py        # Star & Shadow venue config (VENUE dict, feature flags)
+│   ├── docker_settings_starandshadow.py # Docker dev settings for Star & Shadow (default)
+│   ├── docker_settings_prod_starandshadow.py # Docker production settings
+│   ├── devserver_settings.py            # Settings for running locally without Docker
 │   ├── test_settings.py      # Settings for the test suite (uses SQLite)
 │   │
 │   ├── urls.py               # Top-level URL router
@@ -393,11 +381,11 @@ Settings are layered. `settings_common.py` defines everything, and environment-s
 
 | File | Used when |
 |---|---|
-| `docker_settings_ss.py` | Running in Docker for **Star and Shadow** — the default for `docker compose up` |
-| `docker_settings.py` | Running in Docker for **Cube Microplex** |
+| `docker_settings_starandshadow.py` | Running in Docker for **Star and Shadow** — the default for `docker compose up` |
+| `docker_settings_prod_starandshadow.py` | Running in production (DEBUG=False, whitenoise, env-var secrets) |
 | `devserver_settings.py` | Running locally without Docker |
 | `test_settings.py` | Running the test suite (SQLite, fast password hashing) |
-| `settings_ss.py` | Base Star and Shadow config (imported by `docker_settings_ss.py`) |
+| `settings_starandshadow.py` | Star and Shadow venue config (imported by both docker settings files) |
 
 The Docker settings expect these environment variables (with defaults from `docker-compose.yml`):
 
@@ -623,7 +611,7 @@ Each job logs its start time, completion, and any failure with an exit code.
 
 **Multi-venue support:** The project powers both Cube Microplex and Star & Shadow by swapping settings files. Feature flags like `MULTIROOM_ENABLED` and `MEMBERSHIP_EXPIRY_ENABLED` toggle venue-specific behaviour. The `VENUE` dict in `settings_common.py` holds venue-specific strings (name, email addresses, social media links).
 
-**S+S template overrides:** Star & Shadow uses `star_and_shadow_templates/` to override specific base templates. Django's template loader checks this directory first when `docker_settings_ss.py` is active.
+**S+S template overrides:** Star & Shadow uses `star_and_shadow_templates/` to override specific base templates. Django's template loader checks this directory first when `docker_settings_starandshadow.py` is active.
 
 **Legacy copy:** Events imported from the old Perl system have a `legacy_copy` flag. The diary display code applies special regex-based processing to fix their HTML.
 
