@@ -417,6 +417,33 @@ class Event(models.Model):
         help_text="Optional link to the meeting minutes.",
     )
 
+    PROGRAMMING_STATUS_CHOICES = [
+        ("active", "Active"),
+        ("draft", "Draft"),
+        ("proposed", "Proposed for meeting"),
+        ("rejected", "Returned / needs work"),
+    ]
+    programming_status = models.CharField(
+        max_length=16,
+        blank=True,
+        choices=PROGRAMMING_STATUS_CHOICES,
+        default="active",
+        verbose_name="Programming status",
+        help_text=(
+            "Internal status for the programming queue. "
+            "'Draft' = not yet ready for a meeting; 'Proposed' = queued for discussion; "
+            "'Active' = normal/approved event; 'Returned' = sent back for changes."
+        ),
+    )
+    programming_notes = models.TextField(
+        blank=True,
+        verbose_name="Programming notes",
+        help_text=(
+            "Internal notes visible to all logged-in users — "
+            "use for meeting decisions, conditions, questions for the programmer."
+        ),
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

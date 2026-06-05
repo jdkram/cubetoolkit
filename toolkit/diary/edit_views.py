@@ -2314,3 +2314,61 @@ def edit_room_detail(request, room_id):
         form = diary_forms.RoomForm(instance=room)
 
     return render(request, "edit_room_detail.html", {"room": room, "form": form})
+
+
+@permission_required("toolkit.read")
+def programming_queue(request):
+    """Show all events in the programming queue (draft or proposed)."""
+    queue = (
+        Event.objects.filter(programming_status__in=["draft", "proposed"])
+        .prefetch_related("showings", "showings__room_bookings__room", "tags")
+        .select_related("template")
+        .order_by("created_at")
+    )
+    return render(request, "programming_queue.html", {"queue": queue})
+
+
+@permission_required("toolkit.write")
+@require_POST
+def update_event_programming_status(request, event_id):
+    """Update the programming_status (and optionally programming_notes) of an event.
+
+    POST params:
+      action     — one of: propose, make_active, return_for_changes, approve_at_meeting
+      notes      — optional text appended to programming_notes
+    """
+    event = get_object_or_404(Event, pk=event_id)
+    action = request.POST.get("action", "")
+    notes = request.POST.get("notes", "").strip()
+
+    if action == "propose":
+        event.programming_status = "proposed"
+        messages.success(request, f"'{event.name}' added to the programming queue.")
+    elif action == "make_active":
+        event.programming_status = "active"
+        messages.success(request, f"'{event.name}' marked as active.")
+    elif action == "return_for_changes":
+        event.programming_status = "rejected"
+        messages.warning(request, f"'{event.name}' returned to the proposer for changes.")
+    elif action == "approve_at_meeting":
+        event.programming_status = "active"
+        event.approval_type = "meeting"
+        event.approved_at_meeting_date = timezone.now().date()
+        messages.success(request, f"'{event.name}' approved at today's meeting.")
+    else:
+        messages.error(request, "Unknown action.")
+        return HttpResponseRedirect(
+            reverse("edit-event-details-view", kwargs={"event_id": event_id})
+        )
+
+    if notes:
+        sep = "\n\n" if event.programming_notes else ""
+        event.programming_notes = event.programming_notes + sep + notes
+
+    event.save()
+
+    # Return to the queue if coming from there, otherwise to Event Hub
+    next_url = request.POST.get("next") or reverse(
+        "edit-event-details-view", kwargs={"event_id": event_id}
+    )
+    return HttpResponseRedirect(next_url)

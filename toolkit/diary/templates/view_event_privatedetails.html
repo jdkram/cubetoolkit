@@ -96,6 +96,42 @@ function hideAddShowingForm() {
 {% endif %}
 {% endwith %}
 
+{# ── Programming status ────────────────────────────────────────────────────── #}
+{% if event.programming_status != "active" or event.programming_notes %}
+<div class="mb-3 p-2 border rounded" style="background:#f8f9fa;">
+  <div class="d-flex align-items-center gap-2 flex-wrap">
+    <strong>Programming:</strong>
+    {% if event.programming_status == "proposed" %}
+      <span class="badge text-bg-primary">Proposed for meeting</span>
+    {% elif event.programming_status == "draft" %}
+      <span class="badge text-bg-secondary">Draft</span>
+    {% elif event.programming_status == "rejected" %}
+      <span class="badge text-bg-warning text-dark">Returned for changes</span>
+    {% endif %}
+    {% if perms.toolkit.write %}
+      {% if event.programming_status != "proposed" %}
+      <form method="post" action="{% url "update-event-programming-status" event.pk %}" class="d-inline">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="propose">
+        <button type="submit" class="btn btn-sm btn-outline-primary">Propose for meeting →</button>
+      </form>
+      {% else %}
+      <form method="post" action="{% url "update-event-programming-status" event.pk %}" class="d-inline">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="make_active">
+        <button type="submit" class="btn btn-sm btn-outline-secondary btn-sm">Withdraw from queue</button>
+      </form>
+      {% endif %}
+    {% endif %}
+  </div>
+  {% if event.programming_notes %}
+  <div class="mt-1" style="font-size:0.9em;">
+    <strong>Notes:</strong> {{ event.programming_notes|linebreaksbr }}
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
 {# ── Event details ─────────────────────────────────────────────────────────── #}
 <div class="d-flex align-items-center mb-2">
   <h3 class="mb-0 me-3">Event details</h3>

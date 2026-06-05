@@ -37,6 +37,8 @@ from toolkit.diary.edit_views import (
     edit_rooms,
     edit_room_detail,
     import_event_template,
+    programming_queue,
+    update_event_programming_status,
 )
 from toolkit.diary.public_views import (
     ArchiveIndex,
@@ -269,6 +271,13 @@ diary_urls = [
         r"^edit/eventtemplates/import/$",
         import_event_template,
         name="import-event-template",
+    ),
+    # Programming queue
+    re_path(r"^edit/programming-queue/$", programming_queue, name="programming-queue"),
+    re_path(
+        r"^edit/event/id/(?P<event_id>\d+)/programming-status/$",
+        update_event_programming_status,
+        name="update-event-programming-status",
     ),
     re_path(r"^edit/eventtags/", edit_event_tags, name="edit_event_tags"),
     # Edit event roles

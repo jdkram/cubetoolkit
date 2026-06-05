@@ -1,0 +1,124 @@
+{% extends "base_admin.html" %}
+{% block title %}Programming Queue{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+.pq-card { border: 1px solid #dee2e6; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; background: #fff; }
+.pq-card.pq-proposed { border-left: 4px solid #0d6efd; }
+.pq-card.pq-draft    { border-left: 4px solid #6c757d; }
+.pq-meta { font-size: 0.85em; color: #6c757d; }
+.pq-copy  { font-size: 0.9em; color: #495057; margin-top: 0.4rem; max-height: 4em; overflow: hidden; }
+.pq-notes { background: #fff3cd; border-radius: 4px; padding: 0.4rem 0.6rem; font-size: 0.85em; margin-top: 0.4rem; }
+.pq-actions form { display: inline; }
+.pq-actions { margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+.pq-notes-input { width: 100%; margin-top: 0.5rem; }
+</style>
+{% endblock %}
+
+{% block body %}
+<h1>Programming Queue</h1>
+<p class="text-muted">
+  Events in <strong>Draft</strong> or <strong>Proposed</strong> status, oldest first.
+  Click an event title to open its Event Hub.
+  Use the action buttons to move events through the queue.
+</p>
+
+{% if not queue %}
+<div class="alert alert-success">The queue is empty — nothing waiting for a decision.</div>
+{% endif %}
+
+{% for event in queue %}
+{% with first_showing=event.showings.first %}
+<div class="pq-card pq-{{ event.programming_status }}">
+  <div class="d-flex align-items-start gap-3 flex-wrap">
+    <div class="flex-grow-1">
+      <h5 class="mb-1">
+        {% if event.programming_status == "proposed" %}
+        <span class="badge text-bg-primary me-1" title="Proposed for discussion at the next meeting">Proposed</span>
+        {% else %}
+        <span class="badge text-bg-secondary me-1" title="Draft — not yet ready for a meeting">Draft</span>
+        {% endif %}
+        <a href="{% url "edit-event-details-view" event.pk %}">{{ event.name }}</a>
+        {% if event.template %}<small class="text-muted">— {{ event.template.name }}</small>{% endif %}
+      </h5>
+
+      <div class="pq-meta">
+        Proposed by: {{ first_showing.booked_by|default:"—" }}
+        &nbsp;·&nbsp;
+        Created: {{ event.created_at|date:"j M Y" }}
+        {% if first_showing %}
+        &nbsp;·&nbsp;
+        Date(s):
+        {% for s in event.showings.all|slice:":3" %}
+          {{ s.start|date:"j M Y H:i" }}{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+        {% if event.showings.count > 3 %} (+ {{ event.showings.count|add:"-3" }} more){% endif %}
+        {% endif %}
+        &nbsp;·&nbsp;
+        {% with rooms=first_showing.room_bookings.all %}
+        Rooms: {% if rooms %}{% for rb in rooms %}{{ rb.room.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% else %}none booked{% endif %}
+        {% endwith %}
+      </div>
+
+      {% if event.copy_summary %}
+      <div class="pq-copy">{{ event.copy_summary }}</div>
+      {% endif %}
+
+      {% if event.programming_notes %}
+      <div class="pq-notes"><strong>Notes:</strong> {{ event.programming_notes|linebreaksbr }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if perms.toolkit.write %}
+  <div class="pq-actions">
+    {% if event.programming_status == "draft" %}
+    <form method="post" action="{% url "update-event-programming-status" event.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="propose">
+      <input type="hidden" name="next" value="{% url "programming-queue" %}">
+      <button type="submit" class="btn btn-sm btn-primary">Propose for meeting →</button>
+    </form>
+    {% endif %}
+
+    {% if event.programming_status == "proposed" %}
+    <form method="post" action="{% url "update-event-programming-status" event.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="approve_at_meeting">
+      <input type="hidden" name="next" value="{% url "programming-queue" %}">
+      <button type="submit" class="btn btn-sm btn-success">Approved at today's meeting ✓</button>
+    </form>
+    {% endif %}
+
+    <form method="post" action="{% url "update-event-programming-status" event.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="return_for_changes">
+      <input type="hidden" name="next" value="{% url "programming-queue" %}">
+      <button type="submit" class="btn btn-sm btn-warning">Return for changes</button>
+    </form>
+
+    <form method="post" action="{% url "update-event-programming-status" event.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="make_active">
+      <input type="hidden" name="next" value="{% url "programming-queue" %}">
+      <button type="submit" class="btn btn-sm btn-outline-secondary">Skip / make active</button>
+    </form>
+  </div>
+
+  <details class="mt-2">
+    <summary style="font-size:0.85em;color:#6c757d;cursor:pointer;">Add a note (optional)</summary>
+    <form method="post" action="{% url "update-event-programming-status" event.pk %}" class="mt-2">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="make_active">
+      <input type="hidden" name="next" value="{% url "programming-queue" %}">
+      <textarea name="notes" rows="2" class="form-control form-control-sm pq-notes-input"
+                placeholder="e.g. Approved subject to confirming the hire fee."></textarea>
+      <button type="submit" class="btn btn-sm btn-outline-primary mt-1">Save note only</button>
+    </form>
+  </details>
+  {% endif %}
+</div>
+{% endwith %}
+{% endfor %}
+{% endblock %}

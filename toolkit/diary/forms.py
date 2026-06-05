@@ -187,6 +187,8 @@ class EventForm(forms.ModelForm):
             "approved_at_meeting_date",
             "meeting_name",
             "meeting_minutes_url",
+            "programming_status",
+            "programming_notes",
             "duration",
             "outside_hire",
             "hire_name",
