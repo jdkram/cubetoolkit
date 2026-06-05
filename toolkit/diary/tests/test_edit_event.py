@@ -68,26 +68,18 @@ class AddEventView(DiaryTestsMixin, TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "form_new_event_and_showing.html")
-        # Default start should be set one day in the future:
-        self.assertContains(
-            response,
-            '<input type="datetime-local" name="start" value="2013-06-02T20:00"'
-            ' class="jquerydatetimepicker form-control" required id="id_start">',
-            html=True,
-        )
+        # Default dates should be set one day in the future (ISO format for flatpickr):
+        self.assertContains(response, 'value="2013-06-02"')
+        # Default start time should be 20:00:
+        self.assertContains(response, 'name="start_time"')
 
     def test_get_add_event_form_specify_start(self):
         url = reverse("add-event")
         response = self.client.get(url, data={"date": "01-01-1950"})
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "form_new_event_and_showing.html")
-        # Default start should be set one day in the future:
-        self.assertContains(
-            response,
-            '<input type="datetime-local" name="start" value="1950-01-01T20:00"'
-            ' class="jquerydatetimepicker form-control" required id="id_start">',
-            html=True,
-        )
+        # Specified date should appear as ISO format in the dates field:
+        self.assertContains(response, 'value="1950-01-01"')
 
     def test_get_add_event_form_specify_malformed_start(self):
         url = reverse("add-event")
@@ -111,9 +103,10 @@ class AddEventView(DiaryTestsMixin, TestCase):
         response = self.client.post(
             url,
             data={
-                "start": "02/06/2013 20:00",
+                # dates as comma-separated ISO strings (flatpickr format)
+                "dates": "2013-06-02,2013-06-03,2013-06-04",
+                "start_time": "20:00",
                 "duration": "01:30:00",
-                "number_of_bookings": "3",
                 "event_name": "Ev\u0119nt of choic\u0119",
                 "event_template": "1",
                 "booked_by": "\u015comeb\u014ddy",
@@ -182,15 +175,14 @@ class AddEventView(DiaryTestsMixin, TestCase):
         response = self.client.post(
             url,
             data={
-                "start": "30/05/2013 20:00",
+                "dates": "2013-05-30",
+                "start_time": "20:00",
                 "duration": "01:30:00",
-                "number_of_bookings": "3",
                 "event_name": "Ev\u0119nt of choic\u0119",
                 "event_template": "1",
                 "booked_by": "\u015comeb\u014ddy",
                 "private": "on",
                 "outside_hire": "",
-                "confirmed": "on",
                 "discounted": "on",
             },
         )
@@ -202,8 +194,8 @@ class AddEventView(DiaryTestsMixin, TestCase):
 
         self.assertTemplateUsed(response, "form_new_event_and_showing.html")
 
-        # Check error was as expected:
-        self.assertFormError(response.context["form"], "start", "Must be in the future")
+        # Check error was as expected \u2014 non-field error from clean():
+        self.assertFormError(response.context["form"], None, ["The following dates are in the past: 30 May 2013."])
 
     @patch("django.utils.timezone.now")
     def test_add_event_missing_fields(self, now_patch):
@@ -215,15 +207,14 @@ class AddEventView(DiaryTestsMixin, TestCase):
         response = self.client.post(
             url,
             data={
-                "start": "",
+                "dates": "",
+                "start_time": "",
                 "duration": "",
-                "number_of_bookings": "",
                 "event_name": "",
                 "event_template": "",
                 "booked_by": "",
                 "private": "",
                 "outside_hire": "",
-                "confirmed": "",
                 "discounted": "",
             },
         )
@@ -237,15 +228,13 @@ class AddEventView(DiaryTestsMixin, TestCase):
 
         # Check errors as expected:
         self.assertFormError(
-            response.context["form"], "start", "This field is required."
+            response.context["form"], "dates", "This field is required."
+        )
+        self.assertFormError(
+            response.context["form"], "start_time", "This field is required."
         )
         self.assertFormError(
             response.context["form"], "duration", "This field is required."
-        )
-        self.assertFormError(
-            response.context["form"],
-            "number_of_bookings",
-            "This field is required.",
         )
         self.assertFormError(
             response.context["form"], "event_name", "This field is required."

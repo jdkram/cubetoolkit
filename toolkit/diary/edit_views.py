@@ -839,32 +839,31 @@ def add_event(request):
                         url=tl.url,
                         order=tl.order,
                     )
-            # create number_of_bookings showings, each offset by one more from
-            # the date/time given in start parameter, and each with rota roles
-            # from the template
-            start = form.cleaned_data["start"]
-            for day_count in range(0, form.cleaned_data["number_of_bookings"]):
-                day_offset = datetime.timedelta(days=day_count)
+            # Create one Showing per selected date at the given start time.
+            start_time = form.cleaned_data["start_time"]
+            room = form.cleaned_data.get("room")
+            new_showing = None
+            for d in form.cleaned_data["dates"]:
+                aware_dt = timezone.make_aware(datetime.datetime.combine(d, start_time))
                 new_showing = Showing(
                     event=new_event,
-                    start=(start + day_offset),
+                    start=aware_dt,
                     discounted=form.cleaned_data["discounted"],
-                    # confirmed=form.cleaned_data['confirmed'],
                     booked_by=form.cleaned_data["booked_by"],
                 )
                 new_showing.save()
-                room = form.cleaned_data.get("room")
                 if room:
                     _create_room_booking(new_showing, room, new_event)
-                # Set showing roles to those from its template:
                 new_showing.reset_rota_to_default()
 
             messages.add_message(
                 request,
                 messages.SUCCESS,
-                "Added event '{}' with booking on {}".format(
+                "Added event '{}' with {} showing{} starting {}".format(
                     new_event.name,
-                    new_showing.start.strftime("%d/%m/%y at %H:%M"),
+                    len(form.cleaned_data["dates"]),
+                    "s" if len(form.cleaned_data["dates"]) > 1 else "",
+                    form.cleaned_data["dates"][0].strftime("%-d %b %Y"),
                 ),
             )
             return HttpResponseRedirect(
@@ -880,14 +879,12 @@ def add_event(request):
             return render(request, "form_new_event_and_showing.html", context)
 
     elif request.method == "GET":
-        # GET: Show form blank, with date filled in from GET date and start
-        # parameters:
-        # Marshal date and time out of the GET request:
+        # GET: Show form with date/time pre-filled from query params.
         default_date = django.utils.timezone.now().date() + datetime.timedelta(1)
         date = request.GET.get("date", default_date.strftime("%d-%m-%Y"))
         date = date.split("-")
 
-        # Default start time is 8pm (shouldn't this be a setting?)
+        # Default start time is 8pm.
         time = request.GET.get("time", "20:00")
         time = time.split(":")
         # Default duration is one hour:
@@ -905,14 +902,8 @@ def add_event(request):
             date = [int(n, 10) for n in date]
             time = [int(n, 10) for n in time]
             duration = datetime.timedelta(seconds=int(duration, 10))
-            event_start = datetime.datetime(
-                hour=time[0],
-                minute=time[1],
-                day=date[0],
-                month=date[1],
-                year=date[2],
-                tzinfo=timezone.get_current_timezone(),
-            )
+            initial_date = datetime.date(day=date[0], month=date[1], year=date[2])
+            initial_time = datetime.time(hour=time[0], minute=time[1])
             if settings.MULTIROOM_ENABLED and room:
                 room = Room.objects.get(id=room)
         except (ValueError, TypeError, Room.DoesNotExist):
@@ -934,7 +925,8 @@ def add_event(request):
         # Create form, render template:
         form = diary_forms.NewEventForm(
             initial={
-                "start": event_start,
+                "dates": initial_date.isoformat(),
+                "start_time": initial_time,
                 "duration": duration,
                 "room": room,
                 "booked_by": request.user.get_full_name() or request.user.username,

@@ -5,6 +5,7 @@ from django import forms
 from django.forms import inlineformset_factory
 import django.db.models
 from django.conf import settings
+from django.utils import timezone
 from crispy_forms.helper import FormHelper
 
 # Custom form widgets:
@@ -720,19 +721,18 @@ class NewEventForm(forms.Form):
         queryset=toolkit.diary.models.EventTemplate.objects.all(),
         required=True,
     )
-    start = forms.DateTimeField(
+    dates = forms.CharField(
+        widget=MultiDatePickerWidget(),
+        label="Date(s)",
+        help_text="Click to pick one or more dates. All showings will use the same start time.",
+    )
+    start_time = forms.TimeField(
+        widget=forms.TimeInput(attrs={"type": "time"}),
+        label="Start time",
         required=True,
-        validators=[validate_in_future],
-        widget=JQueryDateTimePicker(),
+        initial=datetime.time(20, 0),
     )
     duration = forms.TimeField(required=True, initial=datetime.time(hour=1))
-    number_of_bookings = forms.IntegerField(
-        min_value=1,
-        max_value=31,
-        required=True,
-        initial=1,
-        help_text="Bookings will be created with the same start time on consecutive days",
-    )
     booked_by = forms.CharField(min_length=1, max_length=64, required=True)
     room = forms.ModelChoiceField(
         queryset=toolkit.diary.models.Room.objects.all(),
@@ -743,6 +743,46 @@ class NewEventForm(forms.Form):
     outside_hire = forms.BooleanField(required=False)
     # confirmed = forms.BooleanField(required=False)
     discounted = forms.BooleanField(required=False)
+
+    def clean_dates(self):
+        raw = self.cleaned_data.get("dates", "").strip()
+        if not raw:
+            raise forms.ValidationError("Select at least one date.")
+        parsed = []
+        for part in raw.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            try:
+                parsed.append(datetime.date.fromisoformat(part))
+            except ValueError:
+                raise forms.ValidationError(
+                    "Unrecognised date: {!r}. Expected YYYY-MM-DD.".format(part)
+                )
+        if not parsed:
+            raise forms.ValidationError("Select at least one date.")
+        if len(parsed) > _MAX_BATCH_SHOWINGS:
+            raise forms.ValidationError(
+                "Maximum {} dates.".format(_MAX_BATCH_SHOWINGS)
+            )
+        return sorted(set(parsed))
+
+    def clean(self):
+        cleaned = super().clean()
+        dates = cleaned.get("dates")
+        start_time = cleaned.get("start_time")
+        if dates and start_time:
+            now = timezone.now()
+            past = [
+                d for d in dates
+                if timezone.make_aware(datetime.datetime.combine(d, start_time)) <= now
+            ]
+            if past:
+                date_strs = ", ".join(d.strftime("%-d %b %Y") for d in past)
+                raise forms.ValidationError(
+                    "The following dates are in the past: {}.".format(date_strs)
+                )
+        return cleaned
 
 
 class QuickCreateOpenSessionForm(forms.Form):

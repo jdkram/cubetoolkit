@@ -84,12 +84,12 @@ function hideAddShowingForm() {
 {% if not c.has_copy or not c.has_copy_summary or not c.has_image or not c.terms_ok %}
 <div class="completeness-bar mb-3">
     <strong>Checklist:</strong>
-    {% if not c.has_copy %}<span class="badge text-bg-warning">No description yet</span>{% endif %}
-    {% if not c.has_copy_summary %}<span class="badge text-bg-warning">No copy summary yet</span>{% endif %}
-    {% if not c.has_image %}<span class="badge text-bg-warning">No image yet</span>{% endif %}
+    {% if not c.has_copy %}<a href="{% url "edit-event-details" event.pk %}#div_id_copy" class="badge text-bg-warning text-decoration-none">No description yet →</a>{% endif %}
+    {% if not c.has_copy_summary %}<a href="{% url "edit-event-details" event.pk %}#div_id_copy_summary" class="badge text-bg-warning text-decoration-none">No copy summary yet →</a>{% endif %}
+    {% if not c.has_image %}<a href="{% url "edit-event-details" event.pk %}#media_file_group" class="badge text-bg-warning text-decoration-none">No image yet →</a>{% endif %}
     {% if not c.terms_ok %}
         {% if c.terms_required %}
-        <span class="badge text-bg-danger">Terms needed before confirming</span>
+        <a href="{% url "edit-event-details" event.pk %}#div_id_terms" class="badge text-bg-danger text-decoration-none">Terms needed before confirming →</a>
         {% endif %}
     {% endif %}
 </div>
