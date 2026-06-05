@@ -6341,3 +6341,31 @@ Allow the age-rating options to be defined per-venue via `SiteConfiguration`, so
 
 **Size estimate:** 🔵 S (6–12h) — `SiteConfiguration` field + form widget + data migration + Panopticon UI + tests.
 
+
+
+### 9.111 — Default rooms on event templates 🔵 S (8–14h)
+
+**Problem.** Room bookings are created manually every time a new event and showing are added. For the vast majority of events, the room is entirely predictable from the template: films go in the cinema, music gigs in Venue Space, café sessions in the café. Programmers must currently remember to add the right rooms by hand.
+
+**Proposed approach.**
+
+1. **New model `EventTemplateRoom`** — a through-table between `EventTemplate` and `Room`, with two optional integer fields: `start_delta_minutes` (default 0; negative = before showing start, e.g. -120 for a 2-hour load-in) and `end_delta_minutes` (null = derive from `Event.duration`). Unique together on `(template, room)`.
+
+2. **Auto-create room bookings on showing creation** — when a showing is saved for the first time, iterate over its event's template's `EventTemplateRoom` entries and call `_create_room_booking()` (adjusted to respect the delta fields).
+
+3. **Conflict behaviour** — warn in the success message if a created booking overlaps an existing one (using the existing conflict-detection path), but do not block creation. Templates are defaults, not hard requirements.
+
+4. **Admin UI** — add an inline on `EventTemplateAdmin` for `EventTemplateRoom` rows (room + start_delta_minutes + end_delta_minutes).
+
+5. **Long-tail bookings** — ad-hoc bookings (green room for band, meeting room for a rally during a film) are not templated. They continue to be added manually via the existing room-booking form on each showing. Template rooms cover the "always" case only.
+
+**Examples.**
+- Film template: Cinema, start_delta=0, end_delta=null (follows event duration)
+- Live Music template: Venue Space, start_delta=-120 (2h load-in), end_delta=null
+
+**Tradeoffs.**
+- Deltas are stored in minutes as plain integers — simple, queryable, no timezone complexity.
+- Null `end_delta_minutes` relies on `Event.duration` being set; if it isn't, the booking is created with no end time (same as current `_create_room_booking()` behaviour).
+- Programmers can delete or amend the auto-created bookings freely after creation.
+
+**Size estimate:** 🔵 S (8–14h) — new model + migration + showing save hook + admin inline + conflict warning + tests.
