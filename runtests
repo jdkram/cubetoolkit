@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-source ./activate
-./manage.py test --settings=toolkit.test_settings $*

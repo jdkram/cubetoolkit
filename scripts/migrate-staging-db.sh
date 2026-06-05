@@ -10,6 +10,26 @@
 # Example:
 #   ./migrate-staging-db.sh ~/code/sns-staging-toolkit/backups/sns_staging_2026-03-30.sql \
 #                           ~/code/sns-staging-toolkit/media
+#
+# WARNING: do not squash or flatten the Django migrations in this codebase.
+#
+# This script loads a production SQL dump from the old Django 2.2 s+s branch,
+# which has its own migration history recorded in the django_migrations table.
+# After loading, it runs `manage.py migrate` normally -- Django then runs every
+# migration in this codebase that isn't already recorded in that table.
+#
+# That means the data migrations (RunPython/RunSQL) DO run on live data and
+# are load-bearing: 0019_site_configuration creates the SiteConfiguration row
+# the new code depends on; 0012/0021 transform volunteer status fields; others
+# normalise data that the old schema stored differently.
+#
+# Squashing to a single 0001_initial per app would mean either: (a) Django
+# tries to CREATE TABLE on tables that already exist and crashes, or (b) you
+# use --fake-initial and silently skip all those data migrations, leaving the
+# DB in a broken half-migrated state.
+#
+# Step 5 below also detects old migration names by exact string match -- that
+# detection would silently break after a squash.
 
 set -e
 
