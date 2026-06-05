@@ -172,6 +172,21 @@ class MediaItem(models.Model):
         ),
     )
     caption = models.CharField(max_length=256, blank=True)
+    bar_colour = models.CharField(
+        max_length=7,
+        blank=True,
+        default="",
+        verbose_name="Letterbox bar colour",
+        help_text=(
+            "If set, the programme grid thumbnail is padded with bars of this colour "
+            "before being cropped. Your original image is never modified. "
+            "Leave empty to use the crop box alone."
+        ),
+    )
+    crop_x = models.FloatField(null=True, blank=True)
+    crop_y = models.FloatField(null=True, blank=True)
+    crop_w = models.FloatField(null=True, blank=True)
+    crop_h = models.FloatField(null=True, blank=True)
 
     class Meta:
         db_table = "MediaItems"
@@ -1293,6 +1308,30 @@ class SiteConfiguration(models.Model):
     programme_media_max_size_mb = models.PositiveSmallIntegerField(
         default=5,
         help_text="Maximum size in megabytes for an uploaded event image.",
+    )
+    thumbnail_crop_width = models.PositiveSmallIntegerField(
+        default=600,
+        help_text=(
+            "Width of the programme card image ratio (e.g. 2 for 2:3, or 600 for 600×900). "
+            "Used when padding uploaded images with letterbox bars and when generating typographic posters. "
+            "Default 600 (2:3 portrait)."
+        ),
+    )
+    thumbnail_crop_height = models.PositiveSmallIntegerField(
+        default=900,
+        help_text=(
+            "Height of the programme card image ratio (e.g. 3 for 2:3, or 900 for 600×900). "
+            "Default 900 (2:3 portrait)."
+        ),
+    )
+    programme_accent_colour = models.CharField(
+        max_length=7,
+        default="#e91e8c",
+        verbose_name="Programme accent colour",
+        help_text=(
+            "The primary brand colour used in the public programme (hex, e.g. #e91e8c). "
+            "Shown as a suggested bar colour when editing event images."
+        ),
     )
 
     # --- Mailout ---

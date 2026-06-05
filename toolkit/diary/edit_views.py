@@ -1148,6 +1148,9 @@ class EditEventView(PermissionRequiredMixin, View):
             "breakeven_guidance_note": cfg.breakeven_guidance_note,
             "breakeven_fc_standard_threshold": cfg.breakeven_fc_standard_threshold,
             "breakeven_fc_music_threshold": cfg.breakeven_fc_music_threshold,
+            "thumbnail_crop_width": cfg.thumbnail_crop_width,
+            "thumbnail_crop_height": cfg.thumbnail_crop_height,
+            "programme_accent_colour": cfg.programme_accent_colour,
         }
         return render(request, "form_event.html", context)
 
@@ -1183,6 +1186,9 @@ class EditEventView(PermissionRequiredMixin, View):
             "breakeven_fc_standard_threshold": cfg.breakeven_fc_standard_threshold,
             "breakeven_fc_music_threshold": cfg.breakeven_fc_music_threshold,
             "tag_descriptions_json": mark_safe(_safe_json(tag_descriptions)),
+            "thumbnail_crop_width": cfg.thumbnail_crop_width,
+            "thumbnail_crop_height": cfg.thumbnail_crop_height,
+            "programme_accent_colour": cfg.programme_accent_colour,
         }
 
         return render(request, "form_event.html", context)
@@ -2147,6 +2153,9 @@ def edit_site_configuration(request):
                 "programme_copy_summary_max_chars",
                 "programme_event_terms_min_words",
                 "programme_media_max_size_mb",
+                "thumbnail_crop_width",
+                "thumbnail_crop_height",
+                "programme_accent_colour",
             ],
         ),
         (

@@ -499,11 +499,6 @@ class EditEventView(DiaryTestsMixin, TestCase):
         self.assertEqual(event.duration, time(0, 10))
         self.assertEqual(event.copy, "")
         self.assertEqual(event.copy_summary, "")
-        # XXX: If there's a default set on the model field then (as of Django
-        # 1.10) the old value is used. This is probably a bug :(
-        # (cf. django commit 3507d4e773a for #27186, change in
-        # master/django/forms/models.py around line 32)
-        # self.assertEqual(event.terms, 'terms')
         self.assertEqual(event.notes, "")
         self.assertEqual(event.media.count(), 0)
         self.assertEqual(event.outside_hire, False)

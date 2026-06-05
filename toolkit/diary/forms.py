@@ -261,6 +261,13 @@ class MediaItemForm(forms.ModelForm):
             "alt_text": forms.Textarea(
                 attrs={"rows": 3, "style": "resize: vertical;", "class": "form-control"}
             ),
+            "bar_colour": forms.TextInput(
+                attrs={"type": "color", "class": "form-control form-control-sm", "style": "width:60px;height:32px;padding:2px;"}
+            ),
+            "crop_x": forms.HiddenInput(),
+            "crop_y": forms.HiddenInput(),
+            "crop_w": forms.HiddenInput(),
+            "crop_h": forms.HiddenInput(),
         }
         exclude = ("mimetype", "caption")
 
@@ -895,6 +902,9 @@ class SiteConfigurationForm(forms.ModelForm):
             "programme_copy_summary_max_chars",
             "programme_event_terms_min_words",
             "programme_media_max_size_mb",
+            "thumbnail_crop_width",
+            "thumbnail_crop_height",
+            "programme_accent_colour",
             "mailout_details_days_ahead",
             "mailout_listings_days_ahead",
             "calendar_slot_min_hour",
@@ -926,6 +936,9 @@ class SiteConfigurationForm(forms.ModelForm):
             "banner_dismissible",
         )
         widgets = {
+            "programme_accent_colour": forms.TextInput(
+                attrs={"type": "color", "class": "form-control form-control-sm", "style": "width:60px;height:32px;padding:2px;"}
+            ),
             "breakeven_guidance_note": forms.Textarea(
                 attrs={"rows": 3, "class": "form-control"}
             ),

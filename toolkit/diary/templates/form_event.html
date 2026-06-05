@@ -1,10 +1,12 @@
 {% extends "form_base.html" %}
 {% load crispy_forms_tags %}
+{% load static %}
 {% block title %}
 Event Details for {{ event.name }}
 {% endblock %}
 {% block css %}
 {{ block.super }}
+<link rel="stylesheet" href="{% static 'diary/css/cropper.min.css' %}">
 <style>
     #remaining_chars { font-weight: bold; }
     .field-tip {
@@ -34,11 +36,21 @@ Event Details for {{ event.name }}
     #be-inputs label { font-weight: normal; }
     #be-inputs .be-section-heading { font-weight: bold; margin-top: 0.75rem; margin-bottom: 0.25rem; color: #495057; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.03em; }
     #be-inputs input[type=number] { max-width: 120px; }
+
+    #crop-tool-row .crop-tool-container {
+        max-height: 65vh;
+        overflow: hidden;
+    }
+    #crop-tool-row .crop-tool-container img {
+        display: block;
+        max-width: 100%;
+    }
 </style>
 {% endblock %}
 
 {% block script %}
 {{ block.super }}
+<script src="{% static 'diary/js/cropper.min.js' %}"></script>
 <script>
 
 var COPY_LIMIT = {{ programme_copy_summary_max_chars }};
@@ -400,6 +412,341 @@ $(document).ready(function () {
         if (removeBtn) removeBtn.addEventListener('click', removePreview);
     }());
 });
+
+// Crop tool and letterbox bars (unified).
+document.addEventListener('DOMContentLoaded', function () {
+    var CROP_ASPECT  = {{ thumbnail_crop_width|default:600 }} / {{ thumbnail_crop_height|default:900 }};
+    var ACCENT_COLOUR = '{{ programme_accent_colour|default:"#e91e8c" }}';
+
+    var fileInput       = document.getElementById('id_media_file');
+    var cropRow         = document.getElementById('crop-tool-row');
+    var cropImg         = document.getElementById('crop-tool-img');
+    var inputCropX      = document.getElementById('id_crop_x');
+    var inputCropY      = document.getElementById('id_crop_y');
+    var inputCropW      = document.getElementById('id_crop_w');
+    var inputCropH      = document.getElementById('id_crop_h');
+    var barsToggle      = document.getElementById('bars-toggle');
+    var barsPanel       = document.getElementById('bars-panel');
+    var colourInput     = document.getElementById('id_bar_colour');
+    var swatchContainer = document.getElementById('bar-colour-swatches');
+    var cropper         = null;
+    // URL of the raw (un-padded) image.
+    var rawImageUrl = cropImg ? (cropImg.getAttribute('src') || '') : '';
+
+    // --- canvas padding ---
+
+    // Pad imgEl to CROP_ASPECT. If hexColour is set, fills bars with that colour;
+    // otherwise draws a checkerboard to indicate the bars will be transparent.
+    // Returns null if the image is already close enough to the target ratio.
+    function buildPaddedResult(imgEl, hexColour) {
+        var origW = imgEl.naturalWidth;
+        var origH = imgEl.naturalHeight;
+        if (!origW || !origH) return null;
+        var actualRatio = origW / origH;
+        if (Math.abs(actualRatio - CROP_ASPECT) < 0.02) return null;
+
+        var canvasW, canvasH, pasteX, pasteY;
+        if (actualRatio > CROP_ASPECT) {
+            canvasW = origW;
+            canvasH = Math.round(origW / CROP_ASPECT);
+            pasteX  = 0;
+            pasteY  = Math.round((canvasH - origH) / 2);
+        } else {
+            canvasH = origH;
+            canvasW = Math.round(origH * CROP_ASPECT);
+            pasteX  = Math.round((canvasW - origW) / 2);
+            pasteY  = 0;
+        }
+
+        var canvas = document.createElement('canvas');
+        canvas.width  = canvasW;
+        canvas.height = canvasH;
+        var ctx = canvas.getContext('2d');
+        if (hexColour) {
+            ctx.fillStyle = hexColour;
+            ctx.fillRect(0, 0, canvasW, canvasH);
+        } else {
+            // Checkerboard to indicate the bars will be transparent in the saved thumbnail.
+            var sz = Math.max(8, Math.round(Math.min(canvasW, canvasH) / 20));
+            for (var cy = 0; cy < canvasH; cy += sz) {
+                for (var cx = 0; cx < canvasW; cx += sz) {
+                    ctx.fillStyle = ((Math.floor(cx/sz) + Math.floor(cy/sz)) % 2 === 0) ? '#cccccc' : '#ffffff';
+                    ctx.fillRect(cx, cy, sz, sz);
+                }
+            }
+        }
+        ctx.drawImage(imgEl, pasteX, pasteY);
+
+        return {
+            dataUrl: canvas.toDataURL('image/jpeg', 0.9),
+            // Normalised position of the original image within the padded canvas.
+            imageBounds: {
+                cx: pasteX / canvasW,
+                cy: pasteY / canvasH,
+                cw: origW  / canvasW,
+                ch: origH  / canvasH
+            }
+        };
+    }
+
+    // --- crop helpers ---
+
+    function setCropData(nx, ny, nw, nh) {
+        if (!cropper) return;
+        var imgData = cropper.getImageData();
+        cropper.setData({
+            x:      nx * imgData.naturalWidth,
+            y:      ny * imgData.naturalHeight,
+            width:  nw * imgData.naturalWidth,
+            height: nh * imgData.naturalHeight
+        });
+    }
+
+    function restoreExistingCrop() {
+        if (!inputCropX) return;
+        var cx = parseFloat(inputCropX.value);
+        var cy = parseFloat(inputCropY.value);
+        var cw = parseFloat(inputCropW.value);
+        var ch = parseFloat(inputCropH.value);
+        if (!isNaN(cx) && cw > 0 && ch > 0) { setCropData(cx, cy, cw, ch); }
+    }
+
+    function saveCropToInputs() {
+        if (!cropper || !inputCropX) return;
+        var data    = cropper.getData(true);
+        var imgData = cropper.getImageData();
+        if (imgData.naturalWidth && imgData.naturalHeight) {
+            inputCropX.value = (data.x      / imgData.naturalWidth ).toFixed(6);
+            inputCropY.value = (data.y      / imgData.naturalHeight).toFixed(6);
+            inputCropW.value = (data.width  / imgData.naturalWidth ).toFixed(6);
+            inputCropH.value = (data.height / imgData.naturalHeight).toFixed(6);
+        }
+    }
+
+    // doRestoreCrop: restore saved coords; defaultCrop: normalised {cx,cy,cw,ch} to set instead.
+    function initCropper(doRestoreCrop, defaultCrop) {
+        if (!cropImg || !window.Cropper) return;
+        if (cropper) { cropper.destroy(); }
+        cropper = new Cropper(cropImg, {
+            aspectRatio: CROP_ASPECT,
+            viewMode: 1,
+            autoCropArea: 1,
+            zoomable: false,
+            scalable: false,
+            rotatable: false,
+            ready: function() {
+                if (doRestoreCrop) {
+                    restoreExistingCrop();
+                } else if (defaultCrop) {
+                    setCropData(defaultCrop.cx, defaultCrop.cy, defaultCrop.cw, defaultCrop.ch);
+                }
+            }
+        });
+    }
+
+    function showCropTool(url, doRestoreCrop, defaultCrop) {
+        if (!cropRow || !url) return;
+        cropRow.style.display = '';
+        cropImg.src = url;
+        initCropper(doRestoreCrop || false, defaultCrop || null);
+    }
+
+    // Rebuild the cropper preview. Always pads to the target ratio — using the
+    // chosen colour if one is set, or a checkerboard to represent transparent bars.
+    // restoreSavedCrop: true on page load (put back saved coords); false on any change
+    // (clear coords and default to image-content bounds when padded).
+    function refreshCropper(restoreSavedCrop) {
+        if (!rawImageUrl) return;
+        var colour = (colourInput && colourInput.value) ? colourInput.value : '';
+        if (!restoreSavedCrop && inputCropX) {
+            inputCropX.value = ''; inputCropY.value = ''; inputCropW.value = ''; inputCropH.value = '';
+        }
+        var img = new Image();
+        img.onload = function() {
+            var result = buildPaddedResult(img, colour);
+            if (result) {
+                // Default crop = original image bounds (not the bars).
+                showCropTool(result.dataUrl, restoreSavedCrop, restoreSavedCrop ? null : result.imageBounds);
+            } else {
+                showCropTool(rawImageUrl, restoreSavedCrop, null);
+            }
+        };
+        img.src = rawImageUrl;
+    }
+
+    // Save on form submit.
+    var form = cropRow ? cropRow.closest('form') : null;
+    if (form) { form.addEventListener('submit', saveCropToInputs); }
+
+    // --- file input ---
+
+    if (fileInput) {
+        fileInput.addEventListener('change', function() {
+            var file = fileInput.files && fileInput.files[0];
+            if (!file || !file.type.startsWith('image/')) return;
+            rawImageUrl = URL.createObjectURL(file);
+            var img = new Image();
+            img.onload = function() {
+                showSwatches(extractDominantColours(img, 5));
+            };
+            img.src = rawImageUrl;
+            refreshCropper(false);
+        });
+    }
+
+    // --- bars toggle ---
+
+    if (barsToggle && barsPanel) {
+        barsToggle.addEventListener('change', function() {
+            barsPanel.style.display = barsToggle.checked ? '' : 'none';
+            if (!barsToggle.checked && colourInput) { colourInput.value = ''; }
+            refreshCropper(false);
+        });
+        if (colourInput) {
+            // Regenerate padded preview when colour changes.
+            colourInput.addEventListener('change', function() {
+                refreshCropper(false);
+            });
+        }
+        // Initialise toggle and panel state from existing bar_colour value.
+        if (colourInput && colourInput.value) {
+            barsToggle.checked = true;
+            barsPanel.style.display = '';
+        } else {
+            barsPanel.style.display = 'none';
+        }
+    }
+
+    // --- page load ---
+
+    // Show brand colour swatches immediately (no image needed).
+    showSwatches([]);
+    if (rawImageUrl) {
+        // Enrich swatches with dominant colours from the existing image.
+        var preImg = new Image();
+        preImg.onload = function() { showSwatches(extractDominantColours(preImg, 5)); };
+        preImg.src = rawImageUrl;
+        // Show crop tool, restoring any previously saved crop.
+        refreshCropper(true);
+    }
+
+    // --- dominant colour helpers ---
+
+    // --- colour helpers ---
+
+    function rgbToHex(r, g, b) {
+        return '#' + [r, g, b].map(function(x) { return x.toString(16).padStart(2, '0'); }).join('');
+    }
+
+    function hexToRgb(hex) {
+        var h = hex.replace('#', '');
+        return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+    }
+
+    // Convert RGB to HSL (h: 0-360, s/l: 0-1).
+    function rgbToHsl(r, g, b) {
+        r /= 255; g /= 255; b /= 255;
+        var max = Math.max(r,g,b), min = Math.min(r,g,b), d = max - min;
+        var h = 0, s = 0, l = (max + min) / 2;
+        if (d) {
+            s = d / (1 - Math.abs(2 * l - 1));
+            h = max === r ? ((g - b) / d + (g < b ? 6 : 0)) / 6
+              : max === g ? ((b - r) / d + 2) / 6
+              :              ((r - g) / d + 4) / 6;
+        }
+        return [h * 360, s, l];
+    }
+
+    function hslToRgb(h, s, l) {
+        h /= 360;
+        var a = s * Math.min(l, 1 - l);
+        function f(n) {
+            var k = (n + h * 12) % 12;
+            return l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+        }
+        return [Math.round(f(0)*255), Math.round(f(8)*255), Math.round(f(4)*255)];
+    }
+
+    // Generate accent-related bar colour suggestions: the accent itself, its
+    // complementary (hue +180°), a darkened version, and near-black/near-white.
+    function accentSuggestions(hexColour) {
+        if (!hexColour || hexColour.length < 7) return [];
+        try {
+            var rgb  = hexToRgb(hexColour);
+            var hsl  = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+            var h = hsl[0], s = hsl[1], l = hsl[2];
+            // Accent itself (if not too light for a bar).
+            var accent = hexColour;
+            // Complementary: opposite hue, same saturation and lightness.
+            var compRgb = hslToRgb((h + 180) % 360, s, l);
+            var comp = rgbToHex(compRgb[0], compRgb[1], compRgb[2]);
+            // Darkened accent: same hue/sat, lightness 15%.
+            var darkRgb = hslToRgb(h, s, 0.15);
+            var dark = rgbToHex(darkRgb[0], darkRgb[1], darkRgb[2]);
+            // Near-black and near-white for neutral coverage.
+            return [accent, comp, dark, '#111111', '#f5f5f5'];
+        } catch (e) { return []; }
+    }
+
+    function extractDominantColours(imgEl, n) {
+        var maxDim = 60;
+        var scale = Math.min(maxDim / imgEl.naturalWidth, maxDim / imgEl.naturalHeight, 1);
+        var cw = Math.max(1, Math.round(imgEl.naturalWidth  * scale));
+        var ch = Math.max(1, Math.round(imgEl.naturalHeight * scale));
+        var canvas = document.createElement('canvas');
+        canvas.width = cw; canvas.height = ch;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(imgEl, 0, 0, cw, ch);
+        var data = ctx.getImageData(0, 0, cw, ch).data;
+        var buckets = {};
+        for (var i = 0; i < data.length; i += 4) {
+            var r = data[i] >> 3, g = data[i+1] >> 3, b = data[i+2] >> 3;
+            var key = (r << 10) | (g << 5) | b;
+            if (!buckets[key]) buckets[key] = {rs:0, gs:0, bs:0, n:0};
+            buckets[key].rs += data[i]; buckets[key].gs += data[i+1]; buckets[key].bs += data[i+2]; buckets[key].n++;
+        }
+        return Object.values(buckets)
+            .sort(function(a, b) { return b.n - a.n; })
+            .slice(0, n)
+            .map(function(bk) { return rgbToHex(Math.round(bk.rs/bk.n), Math.round(bk.gs/bk.n), Math.round(bk.bs/bk.n)); });
+    }
+
+    function makeSwatch(hex, label) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'bar-colour-swatch btn btn-sm';
+        btn.style.cssText = 'width:28px;height:28px;padding:0;background:' + hex + ';border:2px solid rgba(0,0,0,0.2);border-radius:4px;';
+        btn.title = (label ? label + ' ' : '') + hex;
+        btn.setAttribute('aria-label', (label || 'Use colour') + ' ' + hex);
+        btn.addEventListener('click', function() {
+            if (colourInput) {
+                colourInput.value = hex;
+                if (barsToggle && barsToggle.checked) { refreshCropper(false); }
+            }
+        });
+        return btn;
+    }
+
+    // imageColours: from dominant extraction; shown after a divider from brand colours.
+    function showSwatches(imageColours) {
+        if (!swatchContainer) return;
+        swatchContainer.querySelectorAll('.bar-colour-swatch, .swatch-divider').forEach(function(el) { el.remove(); });
+
+        var brandColours = accentSuggestions(ACCENT_COLOUR);
+        brandColours.forEach(function(hex) { swatchContainer.appendChild(makeSwatch(hex)); });
+
+        if (imageColours && imageColours.length) {
+            var div = document.createElement('span');
+            div.className = 'swatch-divider';
+            div.style.cssText = 'align-self:center;color:#999;font-size:0.75em;margin:0 2px;';
+            div.textContent = '|';
+            swatchContainer.appendChild(div);
+            imageColours.forEach(function(hex) { swatchContainer.appendChild(makeSwatch(hex, 'From image:')); });
+        }
+
+        swatchContainer.style.display = 'flex';
+    }
+});
 </script>
 {% endblock %}
 
@@ -537,6 +884,55 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
         </div>
     </div>
 
+    {# Image crop tool — JS shows this row when an image is present or previewed #}
+    <div class="mb-3 row" id="crop-tool-row" style="display:none">
+        <label class="col-sm-2 col-form-label">Crop</label>
+        <div class="col-sm-10">
+            <div class="crop-tool-container">
+                <img id="crop-tool-img"
+                     src="{% if media_form.instance.media_file %}{{ media_form.instance.media_file.url }}{% endif %}"
+                     alt="Image crop tool">
+            </div>
+            <small class="form-text text-muted mt-1">
+                Drag the box to choose what appears in the programme grid card
+                ({{ thumbnail_crop_width|default:600 }}:{{ thumbnail_crop_height|default:900 }} ratio).
+                Your original image always shows in full on the event page.
+                If your image doesn't match this ratio, transparent bars are added automatically so the full image fits &mdash; the checkerboard in the preview shows where they'll appear.
+                You can optionally use <strong>Coloured bars</strong> below to pick a colour instead.
+            </small>
+        </div>
+    </div>
+
+    {# Bars: transparent by default; optional colour override #}
+    <div class="mb-3 row" id="bar_colour_group">
+        <label class="col-sm-2 col-form-label">Coloured bars</label>
+        <div class="col-sm-10">
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="bars-toggle"
+                    {% if media_form.instance.bar_colour %}checked{% endif %}>
+                <label class="form-check-label" for="bars-toggle">
+                    Use a specific colour for the bars instead of transparent
+                </label>
+            </div>
+            <div id="bars-panel" style="display:none">
+                <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
+                    {{ media_form.bar_colour }}
+                    {# Dominant colour swatches — populated by JS when an image is selected #}
+                    <div id="bar-colour-swatches" class="d-flex gap-1 flex-wrap" style="display:none !important;" aria-label="Suggested colours from your image">
+                        <span class="text-muted" style="font-size:0.8em;align-self:center;">From image:</span>
+                    </div>
+                </div>
+                <small class="form-text text-muted">
+                    Bars only affect the programme grid card thumbnail. Your original image always shows in full on the event page.
+                    {% if media_form.instance.bar_colour %}Current colour: <strong>{{ media_form.instance.bar_colour }}</strong>.{% endif %}
+                </small>
+                {% if media_form.bar_colour.errors %}
+                    <div class="invalid-feedback d-block">{{ media_form.bar_colour.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
     {# Preview area for generated image #}
     <div class="mb-3 row" id="generated-preview" style="display: none;">
         <label class="col-sm-2 col-form-label">Generated image</label>
@@ -554,9 +950,9 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
         </div>
     </div>
 
-    {# Rest of media form fields (alt_text, credit) #}
+    {# Rest of media form fields (media_file, bar_colour, crop fields rendered separately) #}
     {% for field in media_form %}
-        {% if field.name != 'media_file' %}
+        {% if field.name != 'media_file' and field.name != 'bar_colour' and field.name != 'crop_x' and field.name != 'crop_y' and field.name != 'crop_w' and field.name != 'crop_h' %}
             <div class="mb-3 row{% if field.errors %} has-error{% endif %}">
                 <label for="{{ field.id_for_label }}" class="col-sm-2 col-form-label">{{ field.label }}</label>
                 <div class="col-sm-10">
@@ -571,6 +967,12 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
             </div>
         {% endif %}
     {% endfor %}
+
+    {# Hidden crop coordinates — set by Cropper.js on form submit #}
+    <input type="hidden" name="crop_x" id="id_crop_x" value="{{ media_form.instance.crop_x|default:'' }}">
+    <input type="hidden" name="crop_y" id="id_crop_y" value="{{ media_form.instance.crop_y|default:'' }}">
+    <input type="hidden" name="crop_w" id="id_crop_w" value="{{ media_form.instance.crop_w|default:'' }}">
+    <input type="hidden" name="crop_h" id="id_crop_h" value="{{ media_form.instance.crop_h|default:'' }}">
 
     <p>
         <button type="submit" class="btn btn-primary">Update</button> <a href="{% url "edit-event-details-view" event_id=event.pk %}">Cancel</a>
