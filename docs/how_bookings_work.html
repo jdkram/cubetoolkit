@@ -18,14 +18,17 @@
 </style>
 </head>
 <body>
-<svg viewBox="0 0 860 1050" xmlns="http://www.w3.org/2000/svg"
+<svg viewBox="0 0 860 1465" xmlns="http://www.w3.org/2000/svg"
      role="img" aria-labelledby="diag-title diag-desc">
   <title id="diag-title">How Bookings Work — S+S Toolkit</title>
   <desc id="diag-desc">
-    Two examples. Example 1: a live music gig booking Venue Space from 16:00 for load-in
+    Three examples. Example 1: a live music gig booking Venue Space from 16:00 for load-in
     and Meeting Room as artists' green room from 18:00, with doors at 19:30 — showing how
     room bookings can start before the showing. Example 2: Café Open Every Sunday — one
     event with many weekly showings, each booking only the Café from 12:00 to 16:00.
+    Example 3: Late Summer Film Programme — one event with three showings in different
+    statuses: confirmed (visible publicly, room booked), tentative (room booked but not yet
+    public), and cancelled (no room booking, retained in admin history only).
   </desc>
 
   <defs>
@@ -41,7 +44,7 @@
   </defs>
 
   <!-- ── Background ── -->
-  <rect width="860" height="1050" fill="#e8e4de"/>
+  <rect width="860" height="1465" fill="#e8e4de"/>
 
   <!-- ════════════════════ PAGE TITLE ════════════════════ -->
   <text x="430" y="33" text-anchor="middle" font-size="19" font-weight="700" fill="#1e293b">
@@ -86,7 +89,7 @@
   </text>
 
   <!-- Arrow Showing → Room Bookings -->
-  <line x1="340" y1="271" x2="215" y2="318" stroke="#b0bec5" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="430" y1="271" x2="430" y2="320" stroke="#b0bec5" stroke-width="1.5" marker-end="url(#arr)"/>
 
   <!-- ROOM BOOKINGS card: x=20 y=322 w=820 h=196 -->
   <rect x="20" y="322" width="820" height="196" rx="11" fill="#fffbeb" filter="url(#sh)"/>
@@ -184,9 +187,8 @@
 
   <!-- SHOWINGS + ROOM BOOKINGS card: x=20 y=664 w=820 h=300 -->
   <rect x="20" y="664" width="820" height="300" rx="11" fill="#fffbeb" filter="url(#sh)"/>
-  <text x="40" y="683" font-size="9" font-weight="700" letter-spacing="2" fill="#fcd34d">
-    SHOWINGS + ROOM BOOKINGS
-  </text>
+  <text x="40" y="683" font-size="9" font-weight="700" letter-spacing="2" fill="#6ee7b7">SHOWING</text>
+  <text x="330" y="683" font-size="9" font-weight="700" letter-spacing="2" fill="#fcd34d">ROOM BOOKING</text>
 
   <!-- Column divider and labels -->
   <line x1="40" y1="688" x2="820" y2="688" stroke="#fde68a" stroke-width="1"/>
@@ -202,24 +204,28 @@
   <!-- Row 1: Sun 18 May 2025 -->
   <circle cx="42" cy="720" r="5" fill="#FFD700" stroke="#d97706" stroke-width="0.5"/>
   <text x="56" y="724" font-size="12" font-weight="600" fill="#064e3b">Sun 18 May 2025 · 12:00</text>
+  <text x="308" y="724" font-size="11" fill="#94a3b8">→</text>
   <rect x="325" y="712" width="475" height="14" rx="4" fill="#FFD700" opacity="0.85"/>
   <text x="333" y="723" font-size="9" fill="#78350f">Café  12:00 – 16:00</text>
 
   <!-- Row 2: Sun 25 May 2025 -->
   <circle cx="42" cy="756" r="5" fill="#FFD700" stroke="#d97706" stroke-width="0.5"/>
   <text x="56" y="760" font-size="12" font-weight="600" fill="#064e3b">Sun 25 May 2025 · 12:00</text>
+  <text x="308" y="760" font-size="11" fill="#94a3b8">→</text>
   <rect x="325" y="748" width="475" height="14" rx="4" fill="#FFD700" opacity="0.85"/>
   <text x="333" y="759" font-size="9" fill="#78350f">Café  12:00 – 16:00</text>
 
   <!-- Row 3: Sun 1 Jun 2025 -->
   <circle cx="42" cy="792" r="5" fill="#FFD700" stroke="#d97706" stroke-width="0.5"/>
   <text x="56" y="796" font-size="12" font-weight="600" fill="#064e3b">Sun 1 Jun 2025 · 12:00</text>
+  <text x="308" y="796" font-size="11" fill="#94a3b8">→</text>
   <rect x="325" y="784" width="475" height="14" rx="4" fill="#FFD700" opacity="0.85"/>
   <text x="333" y="795" font-size="9" fill="#78350f">Café  12:00 – 16:00</text>
 
   <!-- Row 4: Sun 8 Jun 2025 -->
   <circle cx="42" cy="828" r="5" fill="#FFD700" stroke="#d97706" stroke-width="0.5"/>
   <text x="56" y="832" font-size="12" font-weight="600" fill="#064e3b">Sun 8 Jun 2025 · 12:00</text>
+  <text x="308" y="832" font-size="11" fill="#94a3b8">→</text>
   <rect x="325" y="820" width="475" height="14" rx="4" fill="#FFD700" opacity="0.85"/>
   <text x="333" y="831" font-size="9" fill="#78350f">Café  12:00 – 16:00</text>
 
@@ -238,8 +244,85 @@
     Contrast with Example 1: here room booking start = showing start, every time.
   </text>
 
+  <!-- ════════════════════════════════════════════════════════
+       EXAMPLE 3 — One event, multiple showings: status matters
+       ════════════════════════════════════════════════════════ -->
+
+  <line x1="30" y1="984" x2="830" y2="984" stroke="#cbd5e1" stroke-width="0.75"/>
+  <text x="30" y="996" font-size="10" font-weight="700" letter-spacing="1.5" fill="#94a3b8">
+    EXAMPLE 3 — ONE EVENT, MULTIPLE SHOWINGS: STATUS LIVES ON THE SHOWING
+  </text>
+
+  <!-- EVENT card -->
+  <rect x="222" y="1006" width="416" height="78" rx="11" fill="#eff6ff" filter="url(#sh)"/>
+  <text x="243" y="1025" font-size="9" font-weight="700" letter-spacing="2" fill="#93c5fd">EVENT</text>
+  <text x="430" y="1048" text-anchor="middle" font-size="17" font-weight="700" fill="#1e3a5f">
+    Late Summer Film Programme
+  </text>
+  <text x="430" y="1069" text-anchor="middle" font-size="12" fill="#3b82f6">
+    Film programme · three screenings · public
+  </text>
+
+  <!-- Arrow Event → Showings -->
+  <line x1="430" y1="1084" x2="430" y2="1112" stroke="#b0bec5" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Showings / Room Bookings table card -->
+  <rect x="20" y="1116" width="820" height="254" rx="11" fill="#fffbeb" filter="url(#sh)"/>
+
+  <!-- Column headers -->
+  <text x="40" y="1135" font-size="9" font-weight="700" letter-spacing="2" fill="#6ee7b7">SHOWING</text>
+  <text x="440" y="1135" font-size="9" font-weight="700" letter-spacing="2" fill="#fcd34d">ROOM BOOKING</text>
+
+  <!-- Header separator and column divider -->
+  <line x1="40" y1="1140" x2="820" y2="1140" stroke="#fde68a" stroke-width="1"/>
+  <line x1="420" y1="1140" x2="420" y2="1362" stroke="#fde68a" stroke-width="0.75" stroke-dasharray="3,3"/>
+
+  <!-- Row separators -->
+  <line x1="40" y1="1216" x2="820" y2="1216" stroke="#fde68a" stroke-width="0.5"/>
+  <line x1="40" y1="1292" x2="820" y2="1292" stroke="#fde68a" stroke-width="0.5"/>
+
+  <!-- ── Row 1: CONFIRMED ── -->
+  <circle cx="42" cy="1166" r="5.5" fill="#10b981"/>
+  <text x="57" y="1171" font-size="13" font-weight="600" fill="#064e3b">Fri 11 Jul 2025 · 19:30</text>
+  <rect x="57" y="1178" width="84" height="16" rx="8" fill="#10b981"/>
+  <text x="99" y="1190" text-anchor="middle" font-size="10" font-weight="600" fill="white">● confirmed</text>
+  <text x="418" y="1176" text-anchor="end" font-size="11" fill="#94a3b8">→</text>
+  <circle cx="440" cy="1166" r="5.5" fill="#0057B8"/>
+  <text x="456" y="1171" font-size="13" font-weight="600" fill="#1e293b">Venue Space</text>
+  <text x="456" y="1188" font-size="12" fill="#475569">18:30 – 23:00</text>
+
+  <!-- ── Row 2: TENTATIVE ── -->
+  <circle cx="42" cy="1242" r="5.5" fill="#f59e0b"/>
+  <text x="57" y="1247" font-size="13" font-weight="600" fill="#78350f">Sat 12 Jul 2025 · 19:30</text>
+  <rect x="57" y="1254" width="82" height="16" rx="8" fill="#f59e0b"/>
+  <text x="98" y="1266" text-anchor="middle" font-size="10" font-weight="600" fill="white">○ tentative</text>
+  <text x="418" y="1252" text-anchor="end" font-size="11" fill="#94a3b8">→</text>
+  <circle cx="440" cy="1242" r="5.5" fill="#0057B8" opacity="0.45"/>
+  <text x="456" y="1247" font-size="13" font-weight="600" fill="#1e293b" opacity="0.5">Venue Space</text>
+  <text x="456" y="1264" font-size="12" fill="#475569" opacity="0.5">18:30 – 23:00</text>
+  <text x="456" y="1279" font-size="10" font-style="italic" fill="#d97706">pencilled in — not yet public</text>
+
+  <!-- ── Row 3: CANCELLED ── -->
+  <circle cx="42" cy="1318" r="5.5" fill="#94a3b8"/>
+  <text x="57" y="1323" font-size="13" font-weight="600" fill="#94a3b8">Sun 13 Jul 2025 · 15:00</text>
+  <rect x="57" y="1330" width="80" height="16" rx="8" fill="#94a3b8"/>
+  <text x="97" y="1342" text-anchor="middle" font-size="10" font-weight="600" fill="white">✕ cancelled</text>
+  <text x="418" y="1328" text-anchor="end" font-size="11" fill="#cbd5e1">→</text>
+  <text x="440" y="1328" font-size="12" font-style="italic" fill="#94a3b8">— no room booking —</text>
+
+  <!-- Note -->
+  <text x="430" y="1394" text-anchor="middle" font-size="11" font-style="italic" fill="#92400e">
+    Status (confirmed / tentative / cancelled) lives on each Showing, not on the Event.
+  </text>
+  <text x="430" y="1410" text-anchor="middle" font-size="11" font-style="italic" fill="#92400e">
+    Tentative showings block the room but stay off public listings. Cancelled showings remain
+  </text>
+  <text x="430" y="1426" text-anchor="middle" font-size="11" font-style="italic" fill="#92400e">
+    in admin history and release their room bookings.
+  </text>
+
   <!-- ════════════════════ FOOTER ════════════════════ -->
-  <text x="430" y="1032" text-anchor="middle" font-size="10" fill="#a39d95">
+  <text x="430" y="1452" text-anchor="middle" font-size="10" fill="#a39d95">
     Star &amp; Shadow · Cube Toolkit · docs/how_bookings_work.html
   </text>
 

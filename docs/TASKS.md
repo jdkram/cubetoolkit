@@ -1265,6 +1265,10 @@ reminders) but can mislead when notes contain date-specific volunteer messages
 **Recommended next step:** Option 2 — the inline warning is ten lines of
 template code and closes the most likely surprise for current users.
 
+**User testing note (2026-06-05):** Live system testing confirmed that being
+able to edit rota text at the point of creation (from a template) would be
+genuinely useful. This supports prioritising option 3.
+
 #### 9.10.7 Clone event as new event 🔵 S (4–8h)
 
 **Context (revised 2026-03-02):** The original plan was to port the `s+s`
@@ -1679,6 +1683,11 @@ this tracker covers whether they've been honoured.
 | **Total (with TicketSource)** | **🟡 M** | **~33h** |
 
 ### 9.15 Film metadata, distributor records, and screening reports 🟡 M (20–35h)
+
+**User testing note (2026-06-05):** Pulling in film metadata during event
+creation was described as "kinda annoying" in live system testing. The UX for
+associating film licensing records with an event should be made more fluid —
+consider inline search/autocomplete rather than a separate form step.
 
 **Goal:** Give programmers a structured record of how each film was licensed,
 make that knowledge searchable for future programmers, support the public
@@ -6244,4 +6253,91 @@ Add `max_upload_image_kb = models.PositiveIntegerField(default=5120)` + migratio
 - Per-event or per-upload overrides
 
 **Size estimate:** 🟢 XS (2–4h) — Pillow is already a dependency; main work is the save hook, the SiteConfiguration field, and one or two tests.
+
+---
+
+### 9.108 — TicketSource setup guide in the event creation flow 🟢 XS (2–4h)
+
+**Source:** Live system user testing, 2026-06-05.
+
+**Problem.**
+Volunteers creating an event need to set up a TicketSource listing separately, and the toolkit gives no guidance on how to do this. The TicketSource setup process has specific requirements (pricing tiers, seating plan selection) documented in the *Film and Television Programming Guide* (section 3.5 of SPEC.md), but this is a separate document that volunteers must find and read on their own.
+
+**Goal.**
+Surface contextual TicketSource guidance at the point in the event creation flow where it is most useful — immediately after saving the event, or alongside the `ticket_link` field.
+
+**Proposed approach.**
+- Add a collapsible "How to set up TicketSource" section to the event edit form, visible when `ticket_link` is blank or near the `ticket_link` field.
+- Content: a short numbered checklist summarising the TicketSource setup steps from the programming guide (pricing tier, seating plan, event title conventions). Link to the full guide via `FILM_PROGRAMMING_GUIDE_URL` for detail.
+- The checklist is static template content — no new model fields required.
+- Optionally: show a one-time prompt when `ticket_link` is first saved (via a localStorage flag) to confirm the TicketSource listing has been set up.
+
+**Size estimate:** 🟢 XS (2–4h) — static template content, no backend changes. Effort is mainly writing the checklist clearly and placing it well in the UI.
+
+---
+
+### 9.109 — "Mark as confirmed" as a satisfying end-of-creation action 🟢 XS (1–3h)
+
+**Source:** Live system user testing, 2026-06-05.
+
+**Problem.**
+After a programmer has set up an event (copy, rota, TicketSource link, image), there is no clear signal that the event is "done". The `confirmed` flag exists on `Showing` but is buried in the form rather than presented as a meaningful end-state.
+
+**Goal.**
+Make marking a showing as "confirmed" feel like a natural, satisfying final step in the event creation process — a deliberate action that closes the loop rather than a checkbox buried in a form.
+
+**Proposed approach.**
+- On the showing detail view (`view_event_privatedetails.html`), add a prominent "Mark as confirmed" button for unconfirmed showings.
+- The button should visually convey completion when pressed (state change: green, tick, "Confirmed" label). A simple CSS transition on form submission is sufficient.
+- The button should only appear when the showing is not already confirmed.
+- This is largely a template/CSS change wrapping the existing `confirmed` field save path.
+
+**Out of scope.**
+- Changing what "confirmed" means in the data model
+- Any notification or email triggered by confirmation
+
+**Size estimate:** 🟢 XS (1–3h) — template and CSS only; no model or view logic changes.
+
+---
+
+### 9.110 — Configurable age-rating scheme 🔵 S (6–12h)
+
+**Source:** Live system user testing, 2026-06-05.
+
+**Problem.**
+The current `age_restriction` field on `Event` uses hardcoded choices (`all_ages`, `16_plus`, `18_plus`) that do not match any official rating scheme. For a cinema, the relevant ratings are BBFC classifications (U, PG, 12A, 12, 15, 18), not arbitrary numeric thresholds. For venues in other countries, the relevant scheme will be different again (FSK in Germany, CNC/CSA in France, etc.).
+
+Hardcoding choices in the model means changing them requires a code change and migration.
+
+**Goal.**
+Allow the age-rating options to be defined per-venue via `SiteConfiguration`, so that each deployment can use whatever classification scheme is legally and practically relevant.
+
+**Proposed approach.**
+
+1. **`SiteConfiguration` change** — add a `JSONField` (e.g. `age_rating_choices`) storing an ordered list of `{"value": "...", "label": "..."}` objects. The Panopticon site settings form exposes this as an editable JSON textarea (or a formset of value/label pairs). Default value for a fresh install: BBFC ratings.
+
+   Suggested default:
+   ```json
+   [
+     {"value": "U",   "label": "U — Universal"},
+     {"value": "PG",  "label": "PG — Parental Guidance"},
+     {"value": "12A", "label": "12A — Cinema only, under 12s with adult"},
+     {"value": "12",  "label": "12"},
+     {"value": "15",  "label": "15"},
+     {"value": "18",  "label": "18"}
+   ]
+   ```
+
+2. **`Event.age_restriction` field change** — change from a `CharField` with `choices=` to a plain `CharField` (no hardcoded choices). The form widget reads choices dynamically from `SiteConfiguration`.
+
+3. **Form widget** — `EventForm` reads `SiteConfiguration.age_rating_choices` at form instantiation and builds a `Select` widget from it. Falls back to an empty/unset option.
+
+4. **Migration** — migrate existing hardcoded values (`all_ages`, `16_plus`, `18_plus`) to a sensible equivalent or mark them as unset. A data migration will be needed.
+
+**Tradeoffs.**
+- JSON config is flexible but harder to validate than model choices. A simple schema check (list of dicts with `value`/`label` keys) in `clean()` is sufficient for MVP.
+- Existing `age_restriction` values stored in the DB will not match BBFC codes after migration — a data migration should convert or clear them.
+- If a deployment changes the scheme after events have been created, old values may no longer appear in the dropdown. These should still render correctly (show stored value) even if not in the current list.
+
+**Size estimate:** 🔵 S (6–12h) — `SiteConfiguration` field + form widget + data migration + Panopticon UI + tests.
 

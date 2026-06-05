@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-05-31
+**Last updated:** 2026-06-05
 
 **Current phase:** Phase 2 complete — entering Phase 3
 **See also:** [ROADMAP.md](docs/ROADMAP.md) (wave-by-wave sequencing) · [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -195,6 +195,9 @@
 | ~~**9.98**~~ | ~~**Split `test_edit_views.py` (2,807 lines)**~~ | ✅ 2026-05-25 | Split into `test_edit_views.py` (342 lines), `test_edit_event.py` (1,290 lines), `test_edit_showing.py` (682 lines), `test_edit_misc.py` (661 lines). All 664 tests pass. No production code changes. |
 | ~~9.100~~ | ~~Role qualification gates (MVP)~~ | ✅ 2026-05-31 | Panopticons define named **Qualifications** (e.g. "Bar") at Meta › Roles, then grant them per-volunteer on the profile page. Each role can require a qualification with a **gate**: Off / Advisory (warns but allows sign-up via a browser alert) / Blocking (refuses with HTTP 403). Panopticons always bypass. Gate reads from `VolunteerQualification`, deliberately separate from `TrainingRecord`. **Design decision (2026-05-31):** kept both models rather than consolidating — `TrainingRecord` is load-bearing for General Safety Training (the "Safety trained" date), which has no overlap with role clearances. Only the role-specific TrainingRecord subset overlapped; we simply stop creating those. Verb softened "award"→"grant/record"; fields `granted_on`/`granted_by`. No live-data conversion needed. Migrations: members 0022/0023, diary 0052. |
 | ~~9.102~~ | ~~Replace Masonry.js with CSS Grid on programme index~~ | ✅ 2026-06-03 | Masonry.js + imagesloaded removed from `base_public.html`; all Masonry init/layout code stripped from `site-common.js` and `programme.js`; `programme.css` rewritten to use `display:grid` + `grid-template-columns` at each breakpoint (1→2→3→4 cols); images use `width:100%` + `aspect-ratio:2/3` + `object-fit:cover` for uniform portrait cards; nth-child "featured wide card" rules removed. |
+| 9.108 | TicketSource setup guide in event creation flow | 🟢 XS — backlog | Contextual checklist/guide surfaced near `ticket_link` field. See TASKS.md 9.108. |
+| 9.109 | "Mark as confirmed" as satisfying end-of-creation action | 🟢 XS — backlog | Prominent button on showing detail; visual state change on press. See TASKS.md 9.109. |
+| 9.110 | Configurable age-rating scheme | 🔵 S — backlog | Replace hardcoded choices with site-configurable list via `SiteConfiguration` JSON field; default to BBFC ratings. See TASKS.md 9.110. |
 | ~~9.105~~ | ~~Configurable programme filter buttons~~ | ✅ 2026-06-03 | `EventTag.filter_group` nullable CharField + migration `diary/0058`; `PROGRAMME_FILTER_GROUPS` setting in `settings_common.py` (Film/Music/Cafe/Meeting by default). `edit_event_tags` formset gains `filter_group` dropdown (choices built from settings at render time). `_view_diary` passes `filter_groups` + `tag_filter_map_json` to template. S+S programme template renders button row + inline `window.PROG_TAG_FILTER_MAP`; `programme.js` extended with `cardMatchesGroup` + `updateFilterButtons`; AND-logic with text search; `?group=` URL param persistence. Seed data: film/music/cafe/meeting/performance/party/induction mapped. |
 | ~~13.5~~ | ~~Collectives directory (CMS-managed)~~ | ~~Obviated 2026-05-25~~ | Covered by `Collective.public_copy` + `listed_publicly` + `/collectives/` view (9.68.1). No CMS page needed. |
 | ~~**GDPR.1**~~ | ~~**Volunteer right to erasure (anonymisation)**~~ | ✅ 2026-05-05 | Panopticon-only "Anonymise this volunteer" action on volunteer edit page. Overwrites all PII on `Member`, `Volunteer`, and `User` records; blanks `RotaEntry.name` by case-insensitive text match; deletes `TrainingRecord` and `VolunteerEventMark`; creates `AnonymisationLog` entry (pk + performer, no PII). Confirmation step requires typing volunteer's name. `AnonymisationLog` model + migration `members/0011`. 12 tests. |
@@ -283,10 +286,12 @@ Priorities agreed 2026-05-25. Full specs in [TASKS.md](docs/TASKS.md).
 - **9.100 Role qualification gates** — training-gated rota sign-up (e.g. can't take Projectionist without the Projection induction) with shadow-2–3-times progression. First-draft spec in TASKS.md §9.100; needs design decisions (who logs a shadow; advisory vs blocking default; format-specificity) + collective buy-in. MVP (advisory only, no lock-out) is 🔵 S; full feature 🟡 M.
 - ~~**9.101 Lost & found log**~~ ✅ 2026-05-31 — `FoundItem` model, sequential IDs (L-001 format), log form (any volunteer), tabbed list + detail/claim/dispose/printable-label views (panopticon), overdue flagging from `SiteConfiguration.lost_and_found_retain_days`. Photo included. Nav links in desktop + mobile menus.
 - **9.104 Programme RSS/Atom feed** — verify Django syndication feed works end-to-end; see TASKS.md §9.104
-- **9.107 Image upload compression** — auto-compress uploads exceeding the SiteSettings limit (default 5 MB) on save; see TASKS.md §9.107
+- ~~**9.107 Letterbox bars on image upload**~~ — ✅ 2026-06-05. `bar_colour` field on `MediaItem`; on new upload with colour set, Pillow pads to `SiteConfiguration.thumbnail_crop_width/height` ratio (default 2:3). Colour picker + Canvas dominant-colour swatches in event edit form. Fixes latent `poster.py` bug (`thumbnail_crop_width/height` referenced but missing). Migration 0060.
 - **9.63 Room availability overlay on map** — helpful but not a priority
 - **9.49 Programmer permissions** — code implemented; approach being revisited (SiteSettings-based); Panopticons to decide before deploying
 - **9.29 Role management** — unresolved design; guide users to create new roles rather than rename; warn about rename consequences in historical data
+- **Test backlog: read-only role protection** — Missing unit test for `Role.save()` blocking unprotect of read-only roles. `diary/models.py:128`. 🟢 XS
+- **Test backlog: event booking logic** — Missing unit test: showing cannot be confirmed on creation when event terms are empty. `diary/tests/test_edit_event.py:105`. 🟢 XS
 
 ## Agent instructions
 
