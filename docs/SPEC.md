@@ -723,6 +723,8 @@ erDiagram
         bool outside_hire
         bool private
         bool legacy_copy
+        string programming_status
+        text programming_notes
         datetime created_at
         datetime updated_at
     }
@@ -778,6 +780,19 @@ erDiagram
         string mimetype
         string credit
         string caption
+    }
+    RoomBooking {
+        int id PK
+        time start_time
+        time end_time
+        int date_offset
+        text notes
+    }
+    EventTemplateRoom {
+        int id PK
+        int start_delta_minutes
+        int end_delta_minutes
+        int date_offset
     }
     DiaryIdea {
         int id PK
@@ -851,6 +866,8 @@ erDiagram
     Event }o--o{ MediaItem : "has images"
     Showing ||--o{ RoomBooking : "books rooms"
     RoomBooking }o--|| Room : "for this room"
+    EventTemplate ||--o{ EventTemplateRoom : "default rooms"
+    EventTemplateRoom }o--|| Room : "for this room"
     Showing ||--o{ RotaEntry : "has rota entries"
     RotaEntry }o--|| Role : "for this role"
     Volunteer }o--o{ Role : "qualified in"
@@ -909,6 +926,8 @@ are pre-processed to fix wrapping/links.
 - `pricing` — free text (e.g. "£5/£3 concs")
 - `ticket_link` — URL to external ticketing (TicketSource)
 - `template` — an optional `EventTemplate` that seeds default roles, tags, pricing, copy, terms, and more (see EventTemplate below)
+- `programming_status` — internal workflow state: `draft` (early idea), `proposed` (submitted for Monday meeting), `active` (default; confirmed or in progress), `rejected` (returned for changes). Defaults to `active` so existing events and standard new event creation are unaffected. Only draft/proposed events appear in the programming queue view.
+- `programming_notes` — free-text internal notes for the programming queue (rejection reason, conditional approval details, meeting discussion). Readable by all staff, writable by Programmer+.
 - Events **cannot be deleted** (enforced at model level). They can be cancelled
 at the `Showing` level.
 
@@ -933,9 +952,21 @@ Key fields:
 - `room` — FK to Room (PROTECT — room cannot be deleted if bookings exist)
 - `start` — when the room is needed from (may be earlier than `Showing.start`)
 - `end` — when the room is released (optional; open-ended if null)
+- `date_offset` — integer (default 0). Days relative to the showing's date: -1 = day before, 0 = same day, +1 = day after. Supports load-in and teardown bookings without creating dummy Showings on adjacent days.
 - `notes` — optional programmer note (e.g. "Tech setup only, not public")
 
 Clash detection runs on save: if a confirmed showing has an overlapping `RoomBooking` in the same room, an amber warning is shown on the showing edit page. The save is not blocked — intentional overlaps (shared foyer, handover windows) are permitted.
+
+#### EventTemplateRoom
+A through-model linking `EventTemplate` to `Room` with optional time and day offsets. When a Showing is first created, `Showing.create_room_bookings_from_template()` iterates over its event's template's `EventTemplateRoom` records and creates `RoomBooking` objects automatically, skipping any room already manually booked.
+
+Key fields:
+- `template` — FK to EventTemplate
+- `room` — FK to Room (PROTECT)
+- `start_delta_minutes` — minutes relative to Showing.start (default 0; negative = before start, e.g. -120 for 2h load-in)
+- `end_delta_minutes` — optional; if null, uses Event.duration
+- `date_offset` — days relative to showing date (default 0; see RoomBooking.date_offset)
+- Unique together on `(template, room, date_offset)` — supports e.g. two separate Venue Space bookings on different days for the same gig template.
 
 #### Room
 A physical space in the venue.
