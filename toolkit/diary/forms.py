@@ -198,6 +198,24 @@ class EventForm(forms.ModelForm):
             "terms",
         )
 
+    def clean_terms(self):
+        terms = self.cleaned_data.get("terms", "")
+        if "[" in terms and "]" in terms:
+            raise forms.ValidationError(
+                "The terms look like they still contain unfilled placeholders (e.g. [Distributor]). "
+                "Please fill in all the bracketed sections before saving."
+            )
+        return terms
+
+    def clean_film_information(self):
+        film_info = self.cleaned_data.get("film_information", "")
+        if "[" in film_info and "]" in film_info:
+            raise forms.ValidationError(
+                "The screening details look like they still contain unfilled placeholders (e.g. [Director]). "
+                "Please fill in all the bracketed sections before saving."
+            )
+        return film_info
+
     def clean_copy_summary(self):
         copy_summary = self.cleaned_data.get("copy_summary", "")
         max_chars = get_site_config().programme_copy_summary_max_chars

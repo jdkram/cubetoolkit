@@ -4,13 +4,17 @@
 
 [[templates]]
 name = "Film (DCP)"
-pricing = "£7/£5"
+pricing = "£7 full / £5 concession / £3 further concession / £0 free"
+film_information = "Dir: [Director], [Year], [Country], [Runtime] mins"
+terms = "Licensed from [Distributor], screening fee: £[amount]. Licensed for a single screening only."
 roles = ["Keyholder", "Programmer", "Projectionist - DCP", "Box Office - Admission Tickets", "Bar Staff - Shift 1", "Usher - Fire Trained"]
 tags = ["film"]
 
 [[templates]]
 name = "Film (MP4/DVD)"
-pricing = "£7/£5"
+pricing = "£7 full / £5 concession / £3 further concession / £0 free"
+film_information = "Dir: [Director], [Year], [Country], [Runtime] mins"
+terms = "Licensed from [Distributor], screening fee: £[amount]. Licensed for a single screening only."
 roles = ["Keyholder", "Programmer", "Projectionist - MP4", "Box Office - Admission Tickets", "Bar Staff - Shift 1", "Usher - Fire Trained"]
 tags = ["film"]
 
