@@ -518,7 +518,23 @@ The canonical version string is in the [`VERSION`](../VERSION) file at the repo 
    git push origin v2026.04.1
    ```
 
-5. **Create a GitHub Release** (optional but useful for a changelog):
+5. **(Optional) Generate release screenshots:**
+
+   Run the screenshot script against the newly tagged version and review the gallery for visual changes:
+
+   ```bash
+   uv run --with playwright --with Pillow \
+     scripts/capture_screenshots.py \
+     --version 2026.04.1 \
+     --output screenshots/current/ \
+     --baseline screenshots/baseline/2026.03.6
+
+   firefox screenshots/gallery/2026.04.1.html
+   ```
+
+   Promote any images that clearly show new features into `screenshots/featured/2026.04.1/` for use in the release notes. See [docs/SCREENSHOTS.md](SCREENSHOTS.md) for full details.
+
+6. **Create a GitHub Release** (optional but useful for a changelog):
 
    Go to the repo on GitHub → **Releases** → **Draft a new release** → choose the tag you just pushed → write a short summary of what changed → **Publish release**.
 

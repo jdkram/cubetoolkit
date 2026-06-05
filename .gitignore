@@ -57,3 +57,6 @@ Film*.txt
 # --- Local claude config ---
 .claude/
 .agents/
+
+# --- Screenshots (local only, not version-controlled) ---
+screenshots/
