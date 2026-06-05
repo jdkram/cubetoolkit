@@ -633,10 +633,18 @@ class RoomBookingForm(forms.ModelForm):
     """A single room booking slot for a Showing (room + time window + notes).
 
     start_time / end_time are time-only fields; the showing's local date is
-    combined with them on save.  The model's start/end DateTimeFields are
-    excluded from the form and set programmatically.
+    combined with them on save.  date_offset shifts the date relative to the
+    Showing's date (0 = same day, -1 = day before, +1 = day after).
     """
 
+    date_offset = forms.TypedChoiceField(
+        choices=[(0, "Same day"), (-1, "Day before"), (1, "Day after")],
+        coerce=int,
+        initial=0,
+        required=False,
+        widget=forms.Select(attrs={"class": "form-select form-select-sm"}),
+        label="Day",
+    )
     start_time = forms.TimeField(
         widget=forms.TimeInput(
             attrs={"type": "time", "class": "form-control form-control-sm"},
@@ -655,7 +663,7 @@ class RoomBookingForm(forms.ModelForm):
 
     class Meta:
         model = toolkit.diary.models.RoomBooking
-        fields = ("room", "notes")
+        fields = ("room", "date_offset", "notes")
         widgets = {
             "notes": forms.TextInput(
                 attrs={
@@ -669,25 +677,28 @@ class RoomBookingForm(forms.ModelForm):
     def __init__(self, *args, showing_date=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.showing_date = showing_date
-        # Pre-populate time fields from existing instance
+        # Pre-populate time and offset fields from existing instance
         if self.instance and self.instance.pk and self.instance.start:
             import django.utils.timezone as dj_tz
             self.initial["start_time"] = dj_tz.localtime(self.instance.start).strftime("%H:%M")
             if self.instance.end:
                 self.initial["end_time"] = dj_tz.localtime(self.instance.end).strftime("%H:%M")
+            self.initial["date_offset"] = self.instance.date_offset
 
     def save(self, commit=True):
         instance = super().save(commit=False)
         if self.showing_date and self.cleaned_data.get("start_time"):
             import django.utils.timezone as dj_tz
             tz = dj_tz.get_current_timezone()
+            offset = self.cleaned_data.get("date_offset") or 0
+            actual_date = self.showing_date + datetime.timedelta(days=offset)
             instance.start = dj_tz.make_aware(
-                datetime.datetime.combine(self.showing_date, self.cleaned_data["start_time"]),
+                datetime.datetime.combine(actual_date, self.cleaned_data["start_time"]),
                 tz,
             )
             end_t = self.cleaned_data.get("end_time")
             instance.end = (
-                dj_tz.make_aware(datetime.datetime.combine(self.showing_date, end_t), tz)
+                dj_tz.make_aware(datetime.datetime.combine(actual_date, end_t), tz)
                 if end_t
                 else None
             )

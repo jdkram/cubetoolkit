@@ -598,6 +598,10 @@ class RoomBooking(models.Model):
     A Showing can have multiple RoomBookings (e.g. setup in Venue Space from
     16:00, screening in Cinema from 19:30). start/end are independent of
     Showing.start so that pre/post-event room use can be recorded.
+
+    date_offset shifts the booking date relative to the Showing's date:
+    0 = same day (default), -1 = day before, +1 = day after.  This covers
+    multi-day load-in/teardown without creating dummy Showings.
     """
 
     showing = models.ForeignKey(
@@ -607,6 +611,10 @@ class RoomBooking(models.Model):
     start = models.DateTimeField()
     end = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True)
+    date_offset = models.IntegerField(
+        default=0,
+        help_text="Days relative to the showing date: 0 = same day, -1 = day before, +1 = day after.",
+    )
 
     class Meta:
         db_table = "RoomBookings"
