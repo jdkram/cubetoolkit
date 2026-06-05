@@ -36,8 +36,8 @@ from toolkit.members.member_views import (
     unsubscribe_member,
     unsubscribe_member_right_now,
     opt_in,
-    goodbye,
-)  # TODO rename goodbye
+    member_deleted,
+)
 
 # Volunteers:
 volunteer_urls = [
@@ -159,5 +159,5 @@ member_urls = [
         name="unsubscribe-member-right-now",
     ),
     re_path(r"^(?P<member_id>\d+)/opt-in/$", opt_in, name="opt_in"),
-    re_path(r"^goodbye/$", goodbye, name="goodbye"),
+    re_path(r"^member-deleted/$", member_deleted, name="member-deleted"),
 ]

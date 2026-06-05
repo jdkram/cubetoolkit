@@ -593,7 +593,7 @@ class TestDeleteMemberViewNotLoggedIn(MembersTestsMixin, TestCase):
 
         # Should have been deleted:
         self.assertEqual(Member.objects.filter(id=self.mem_1.id).count(), 0)
-        self.assertRedirects(response, reverse("goodbye"))
+        self.assertRedirects(response, reverse("member-deleted"))
 
     def test_delete_active_volunteer_fails(self):
         mem = self.vol_1.member
@@ -635,7 +635,7 @@ class TestDeleteMemberViewNotLoggedIn(MembersTestsMixin, TestCase):
 
         # Should have been deleted:
         self.assertEqual(Member.objects.filter(id=mem.id).count(), 0)
-        self.assertRedirects(response, reverse("goodbye"))
+        self.assertRedirects(response, reverse("member-deleted"))
 
 
 class TestEditMemberViewNotLoggedIn(MembersTestsMixin, TestCase):
@@ -1168,9 +1168,6 @@ class TestUnsubscribeMemberView(MembersTestsMixin, TestCase):
 
         # Still subscribed:
         self._assert_subscribed(2)
-
-    # TODO: Should add further tests for when the user is logged in. But
-    # it's not actually used, so don't bother...
 
 
 class TestMemberMiscViews(MembersTestsMixin, TestCase):

@@ -197,7 +197,7 @@ def delete_member(request, member_id):
                 f"Member {member.number} {member.name} <{member.email}> self-deleted"
             )
             member.delete()
-            return HttpResponseRedirect(reverse("goodbye"))
+            return HttpResponseRedirect(reverse("member-deleted"))
         else:
             return render(request, "confirm-deletion.html")
 
@@ -570,5 +570,5 @@ def member_homepages(request):
     return render(request, "homepages.html", {"members": members})
 
 
-def goodbye(request):
-    return render(request, "goodbye.html")
+def member_deleted(request):
+    return render(request, "member_deleted.html")

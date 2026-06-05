@@ -44,7 +44,7 @@ urlpatterns = [
             subject_template_name="password_reset_subject.txt",
             from_email=settings.VENUE["mailout_delivery_report_to"],
             extra_email_context=settings.VENUE,
-        ),  # TODO make this work
+        ),
         name="password_reset",
     ),
     re_path(

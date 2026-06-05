@@ -79,7 +79,6 @@ def view_volunteer_list(request):
 @panopticon_required
 @require_safe
 def export_volunteers_as_csv(request):
-    # TODO use settings.DAWN_OF_TOOLKIT with export
     logger.info(f"User {request.user} requested a volunteer CSV export")
     now = datetime.now().strftime("%d %b %Y %I-%M %p")
     file_name = f"{settings.VENUE['name']} Volunteers {now}.csv"
@@ -117,7 +116,13 @@ def export_volunteers_as_csv(request):
                 volunteer.member.altphone,
                 volunteer.member.notes,
                 volunteer.member.volunteer.notes,
-                volunteer.member.created_at.strftime("%I:%M %p %d %b %Y"),
+                (
+                    "Pre-toolkit"
+                    if volunteer.is_old()
+                    else volunteer.member.created_at.strftime(
+                        "%I:%M %p %d %b %Y"
+                    )
+                ),
                 volunteer.member.updated_at.strftime("%I:%M %p %d %b %Y"),
             ]
         )
