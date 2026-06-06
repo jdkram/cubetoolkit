@@ -27,7 +27,7 @@ $(document).ready(function() {
     <h3>{{ showing_list|length }} Result{{ showing_list|length|pluralize }}</h3>
 
     {% spaceless %}
-    {% regroup showing_list by start.day as showing_by_start %}
+    {% regroup showing_list by start.date as showing_by_start %}
     <ul>
     {% for date_showings in showing_by_start %}
         {% for showing in date_showings.list %}
