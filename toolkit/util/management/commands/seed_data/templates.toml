@@ -1,6 +1,8 @@
 # Event templates — pre-defined event types selectable when creating a new event.
 # roles and tags reference names defined in roles.toml and tags.toml.
 # outside_hire and private default to false if not specified.
+# default_rooms: list of {room, start_delta_minutes, end_delta_minutes} — auto-booked on showing creation.
+#   start_delta_minutes: offset from showing start (0 = same time). end_delta_minutes: blank = use event duration.
 
 [[templates]]
 name = "Film (DCP)"
@@ -9,6 +11,7 @@ film_information = "Dir: [Director], [Year], [Country], [Runtime] mins"
 terms = "Licensed from [Distributor], screening fee: £[amount]. Licensed for a single screening only."
 roles = ["Keyholder", "Programmer", "Projectionist - DCP", "Box Office - Admission Tickets", "Bar Staff - Shift 1", "Usher - Fire Trained"]
 tags = ["film"]
+default_rooms = [{room = "Cinema", start_delta_minutes = 0}]
 
 [[templates]]
 name = "Film (MP4/DVD)"
@@ -17,30 +20,35 @@ film_information = "Dir: [Director], [Year], [Country], [Runtime] mins"
 terms = "Licensed from [Distributor], screening fee: £[amount]. Licensed for a single screening only."
 roles = ["Keyholder", "Programmer", "Projectionist - MP4", "Box Office - Admission Tickets", "Bar Staff - Shift 1", "Usher - Fire Trained"]
 tags = ["film"]
+default_rooms = [{room = "Cinema", start_delta_minutes = 0}]
 
 [[templates]]
 name = "Family Film Club"
 pricing = "Free"
 roles = ["Keyholder", "Projectionist - MP4", "Box Office - Admission Tickets", "Bar Staff - Shift 1"]
 tags = ["film", "free"]
+default_rooms = [{room = "Cinema", start_delta_minutes = 0}]
 
 [[templates]]
 name = "Gig"
 pricing = ""
 roles = ["Keyholder", "Sound Technician level 1", "Sound Technician level 2", "Bar Staff - Shift 1", "Bar Staff - Shift 2", "Box Office - Admission Tickets", "Usher - Fire Trained"]
 tags = ["music", "performance"]
+default_rooms = [{room = "Venue Space", start_delta_minutes = 0}]
 
 [[templates]]
 name = "Volunteer Induction"
 pricing = "Free"
 roles = ["Inductor - 1 (trained)", "Inductor - 2 (shadowing)", "Trainee (inducted)"]
 tags = ["induction", "volunteer"]
+default_rooms = [{room = "Cinema", start_delta_minutes = 0}]
 
 [[templates]]
 name = "Meeting"
 pricing = "Free"
 roles = ["Facilitator", "Minute taker"]
 tags = ["meeting"]
+default_rooms = [{room = "Meeting", start_delta_minutes = 0}]
 
 [[templates]]
 name = "Workshop"
@@ -65,12 +73,32 @@ name = "Community Kitchen"
 pricing = "Free"
 roles = ["Keyholder", "Cafe (Level 1)", "Extra Hands (no training needed)"]
 tags = ["cafe", "workshop"]
+# Main public-facing showing starts 18:00, runs until ~22:00.
+default_rooms = [{room = "Venue Space", start_delta_minutes = 0, end_delta_minutes = 240}]
+
+[[templates]]
+name = "Community Kitchen Prep"
+pricing = "Free"
+private = true
+tags = ["cafe", "volunteer"]
+# Prep showing typically starts 14:00, kitchen and venue used until 22:00 (480 mins).
+default_rooms = [{room = "Kitchen", start_delta_minutes = 0, end_delta_minutes = 480}]
+# role_slots overrides the simple roles list — allows explicit counts per role.
+role_slots = [
+    {role = "Keyholder",                       count = 1},
+    {role = "Food Prep Lead",                  count = 1},
+    {role = "Food Prep Level 2 - Shift 1",     count = 6},
+    {role = "Food Prep Level 2 - Shift 2",     count = 4},
+    {role = "Washing Up",                      count = 1},
+    {role = "Extra Hands (no training needed)", count = 2},
+]
 
 [[templates]]
 name = "Party"
 pricing = ""
 roles = ["Keyholder", "Bar Staff - Shift 1", "Bar Shadow"]
 tags = ["volunteer", "party"]
+default_rooms = [{room = "Venue Space", start_delta_minutes = 0}]
 
 [[templates]]
 name = "Exhibition"
@@ -92,6 +120,7 @@ name = "Training"
 pricing = "Free"
 roles = ["Keyholder", "Trainee (inducted)"]
 tags = ["training-for-volunteers"]
+default_rooms = [{room = "Venue Space", start_delta_minutes = 0}]
 
 [[templates]]
 name = "Building Open"

@@ -211,7 +211,7 @@ class EditShowing(DiaryTestsMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "form_showing.html")
         self.assertFormError(
-            response.context["form"], None, "Cannot amend a historic booking"
+            response.context["form"], None, "Cannot amend a historic showing"
         )
 
     @patch("django.utils.timezone.now")

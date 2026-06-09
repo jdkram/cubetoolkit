@@ -8,7 +8,7 @@ Details for: {{ showing.event.name }}
 <script type="text/javascript">
 $(document).ready(function() {
         $('#delete_form').bind("submit", function() {
-            return confirm("Delete this booking: are you sure?\nThis cannot be undone!\nMaybe you want to mark it as cancelled?");
+            return confirm("Delete this {{ site_config.occurrence_noun|escapejs }}: are you sure?\nThis cannot be undone!\nMaybe you want to mark it as cancelled instead?");
         });
 });
 </script>
@@ -264,6 +264,17 @@ document.addEventListener("DOMContentLoaded", function () {
     .rb-add-btn { font-size: 0.85em; }
     .rb-clash-alert { margin-top: 1rem; }
     .rb-map-toggle { font-size: 0.85em; }
+    /* Action bar — Save + Add another together, Delete pushed to the far end. */
+    .showing-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 1.5rem 0 1rem;
+    }
+    .showing-actions__delete { margin-left: auto; }
+    /* Keep single-value inputs from stretching the full width on wide screens. */
+    #id_start, #id_booked_by { max-width: 22rem; }
 </style>
 {% endblock %}
 
@@ -289,12 +300,13 @@ document.addEventListener("DOMContentLoaded", function () {
 {% endif %}
 
 <h2>
-  <span class="sub">Booking @</span> {{ showing.start|date:"d/m/Y H:i" }} <span class="sub">for</span>
+  <span class="sub">{{ site_config.occurrence_noun|capfirst }} @</span> {{ showing.start|date:"d/m/Y H:i" }} <span class="sub">for</span>
   <a href="{% url "edit-event-details-view" event_id=showing.event.id %}">{{ showing.event.name }}</a>
 </h2>
 
-<form action="{% url "edit-showing" showing_id=showing.id %}" method="post">
+<form id="showing-edit-form" action="{% url "edit-showing" showing_id=showing.id %}" method="post">
   {% csrf_token %}
+  <h3>Details</h3>
   {% crispy form %}
 
   {# ---- Room bookings ---- #}
@@ -386,18 +398,16 @@ document.addEventListener("DOMContentLoaded", function () {
     <p class="text-danger small">{{ rota_notes_form.rota_notes.errors }}</p>
     {% endif %}
   </div>
-  <p>
-  <input class="btn btn-primary" type="submit" value="Update" />
-  </p>
 </form>
 
-<p>
-  <small><a href="{% url "edit-event-details-view" event_id=showing.event.id %}">Add another date for this event</a></small>
-  &nbsp;&nbsp;
-  <form id="delete_form" action="{% url "delete-showing" showing_id=showing.id %}" method="post" style="display:inline;">
+{# Action bar: Save + Add another grouped; Delete pushed to the far end, apart. #}
+<div class="showing-actions">
+  <input class="btn btn-primary" type="submit" value="Update" form="showing-edit-form" />
+  <a class="btn btn-outline-secondary" href="{% url "edit-event-details-view" event_id=showing.event.id %}">+ Add another {{ site_config.occurrence_noun }}</a>
+  <form id="delete_form" class="showing-actions__delete" action="{% url "delete-showing" showing_id=showing.id %}" method="post">
     {% csrf_token %}
-    <input class="btn btn-danger" type="submit" value="Delete Booking" />
+    <input class="btn btn-danger" type="submit" value="Delete this {{ site_config.occurrence_noun }}" />
   </form>
-</p>
+</div>
 {% endblock %}
 

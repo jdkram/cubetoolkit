@@ -16,6 +16,93 @@ Add a new event
         cursor: help;
         font-size: 0.9em;
     }
+    .new-event-zone {
+        border-left: 3px solid;
+        padding-left: 1rem;
+        margin-bottom: 1.75rem;
+    }
+    .new-event-zone--required { border-color: #0069d9; }
+    .new-event-zone--optional { border-color: #adb5bd; }
+    .new-event-zone--mode { border-color: transparent; padding-left: 0; margin-bottom: 1.75rem; }
+    .new-event-zone__title { font-size: 1rem; font-weight: 600; margin-bottom: 0.2rem; }
+    .new-event-zone__hint { font-size: 0.88em; margin-bottom: 0.75rem; }
+
+    /* Entry mode cards — hand-rolled, no crispy forms involvement */
+    .entry-mode-cards {
+        display: flex;
+        flex-direction: row;
+        gap: 0.75rem;
+    }
+    .entry-mode-card {
+        flex: 1 1 0;
+        min-width: 0;
+        border: 2px solid #dee2e6;
+        border-radius: 6px;
+        padding: 1rem 1.25rem;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.95em;
+        transition: border-color 0.15s, background 0.15s;
+        display: flex;
+        flex-direction: column;
+    }
+    .entry-mode-card small {
+        font-weight: 400;
+        color: #6c757d;
+        margin-top: 0.4rem;
+        font-size: 0.85em;
+        line-height: 1.4;
+    }
+    .entry-mode-card.selected { border-color: #0d6efd; background: #f0f5ff; }
+    .entry-mode-card[data-value="standing"].selected { border-color: #198754; background: #f0fff4; }
+    .entry-mode-card[data-value="tentative"].selected { border-color: #6c757d; background: #f8f9fa; }
+    @media (max-width: 480px) {
+        .entry-mode-cards { flex-direction: column; gap: 0.6rem; }
+    }
+
+    #template-preview {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 0.75rem 1rem;
+        margin-top: 0.25rem;
+        font-size: 0.9em;
+    }
+    #template-preview .preview-label {
+        font-weight: 600;
+        min-width: 5em;
+        display: inline-block;
+        color: #495057;
+    }
+    #template-preview .preview-row { margin-bottom: 0.25rem; }
+    #template-preview .preview-tag {
+        display: inline-block;
+        font-size: 0.8em;
+        background: #e9ecef;
+        color: #495057;
+        border: 1px solid #ced4da;
+        border-radius: 3px;
+        padding: 0.05em 0.4em;
+        margin-right: 0.25em;
+    }
+    #template-preview .preview-flag {
+        display: inline-block;
+        font-size: 0.8em;
+        border-radius: 3px;
+        padding: 0.05em 0.4em;
+        margin-right: 0.35em;
+    }
+    #template-preview .preview-flag--private { background: #343a40; color: #fff; }
+    #template-preview .preview-flag--hire { background: #fff3cd; color: #856404; border: 1px solid #ffc107; }
+    /* Room colour pip — matches the .room-colour-dot pattern used on the rota. */
+    #template-preview .room-colour-dot {
+        display: inline-block;
+        width: 0.6em;
+        height: 0.6em;
+        border-radius: 50%;
+        margin-right: 0.3em;
+        vertical-align: middle;
+    }
 </style>
 {% endblock %}
 
@@ -23,9 +110,30 @@ Add a new event
 <h1>New Event</h1>
 
 <form id="new-event-form" action="{% url "add-event" %}" method="post">
+    {# Entry mode card UI — the hidden input is rendered inside {% crispy form %} below #}
+    <div class="new-event-zone new-event-zone--mode">
+      <div class="entry-mode-cards">
+        <div class="entry-mode-card selected" data-value="queue"
+             title="Use this for films, external guests, or anything that needs the full programming process — discussed and voted on at a meeting.">
+          Needs meeting approval
+          <small>Goes into the programming queue for discussion at the next meeting.</small>
+        </div>
+        <div class="entry-mode-card" data-value="standing"
+             title="Use this for recurring or self-authorised events: the regular café shift, cleaning days, workshops that run without separate approval each time.">
+          Regular / standing event
+          <small>No approval needed — café, cleaning day, regular workshop, etc.</small>
+        </div>
+        <div class="entry-mode-card" data-value="tentative"
+             title="Use this to block out a date while details are still being worked out. The event won't show as confirmed until you come back to finalise it.">
+          Tentative placeholder
+          <small>Holds a space on the calendar. Details and approval TBC.</small>
+        </div>
+      </div>
+    </div>
+
     {% crispy form %}
     <p>
-        <button type="submit" class="btn btn-primary" value="Add">Add Event and Booking</button>
+        <button type="submit" class="btn btn-primary" value="Add">Create event</button>
         <a href="{% url "cancel-edit" %}">Cancel</a>
     </p>
 </form>
@@ -34,12 +142,120 @@ Add a new event
 
 {% block script %}
 {{ block.super }}
+{# Safely embed JSON so </script> in data cannot break out of the block #}
+{{ template_data|json_script:"template-data-json" }}
 <script>
-(function () {
+$(document).ready(function () {
+    document.querySelectorAll('.entry-mode-card').forEach(function (card) {
+        card.addEventListener('click', function () {
+            document.querySelectorAll('.entry-mode-card').forEach(function (c) {
+                c.classList.remove('selected');
+            });
+            card.classList.add('selected');
+            document.getElementById('id_entry_mode').value = card.dataset.value;
+        });
+    });
+
+    var TEMPLATE_DATA = JSON.parse(document.getElementById('template-data-json').textContent);
+
+    var $templateSelect = $('#id_event_template');
+    var $preview = $('#template-preview');
+    var $previewRow = $('#template-preview-row');
+
+    function esc(s) {
+        return $('<span>').text(String(s)).html();
+    }
+
+    function minsToHuman(mins) {
+        if (mins === null || mins === undefined) return '';
+        if (mins === 0) return 'from start';
+        var abs = Math.abs(mins);
+        var h = Math.floor(abs / 60);
+        var m = abs % 60;
+        return (mins < 0 ? '−' : '+') + (h ? h + 'h' : '') + (m ? m + 'm' : '');
+    }
+
+    function renderPreview(tmpl) {
+        var html = '';
+
+        if (tmpl.rooms && tmpl.rooms.length) {
+            var multiRoom = tmpl.rooms.length > 1;
+            var roomParts = tmpl.rooms.map(function (r) {
+                var dot = '<span class="room-colour-dot" style="background-color:' + esc(r.colour) + ';"></span>';
+                var s = dot + esc(r.room);
+                if (multiRoom) {
+                    var timing = minsToHuman(r.start);
+                    if (r.end !== null) timing += ' → ' + minsToHuman(r.end);
+                    if (timing) s += ' <span class="text-muted">(' + esc(timing) + ')</span>';
+                }
+                return s;
+            });
+            html += '<div class="preview-row"><span class="preview-label">Rooms</span> ' + roomParts.join(', ') + '</div>';
+        } else {
+            html += '<div class="preview-row"><span class="preview-label">Rooms</span> <span class="text-muted">none set — add after creating</span></div>';
+        }
+
+        if (tmpl.roles && tmpl.roles.length) {
+            var roleParts = tmpl.roles.map(function (r) {
+                return esc((r.count > 1 ? r.count + '× ' : '') + r.name);
+            });
+            html += '<div class="preview-row"><span class="preview-label">Rota</span> ' + roleParts.join(', ') + '</div>';
+        }
+
+        if (tmpl.tags && tmpl.tags.length) {
+            var tagBadges = tmpl.tags.map(function (t) {
+                return '<span class="preview-tag">' + esc(t) + '</span>';
+            }).join('');
+            html += '<div class="preview-row"><span class="preview-label">Tags</span> ' + tagBadges + '</div>';
+        }
+
+        var flags = [];
+        if (tmpl.private) flags.push('<span class="preview-flag preview-flag--private">Private</span>');
+        if (tmpl.outside_hire) flags.push('<span class="preview-flag preview-flag--hire">Outside hire</span>');
+        if (tmpl.pricing) flags.push('<span class="text-muted">Pricing: ' + esc(tmpl.pricing) + '</span>');
+        if (flags.length) {
+            html += '<div class="preview-row">' + flags.join(' ') + '</div>';
+        }
+
+        if (tmpl.rota_notes) {
+            var short = tmpl.rota_notes.length > 120 ? tmpl.rota_notes.slice(0, 120) + '…' : tmpl.rota_notes;
+            var notesHtml = '<div class="preview-row"><span class="preview-label">Rota notes</span> ';
+            if (tmpl.rota_notes.length > 120) {
+                notesHtml += '<details style="display:inline"><summary style="display:inline;cursor:pointer;">' + esc(short) + '</summary> ' + esc(tmpl.rota_notes.slice(120)) + '</details>';
+            } else {
+                notesHtml += esc(tmpl.rota_notes);
+            }
+            notesHtml += '</div>';
+            html += notesHtml;
+        }
+
+        $preview.html(html);
+        $previewRow.show();
+    }
+
+    $templateSelect.on('change', function () {
+        var templateId = $(this).val();
+        if (templateId && TEMPLATE_DATA[templateId]) {
+            var tmpl = TEMPLATE_DATA[templateId];
+            renderPreview(tmpl);
+            // Pre-fill checkboxes from template defaults, but don't override
+            // if the user has already interacted with them.
+            $('#id_private').prop('checked', !!tmpl.private);
+            $('#id_outside_hire').prop('checked', !!tmpl.outside_hire);
+        } else {
+            $previewRow.hide();
+        }
+    });
+
+    // Show preview on page load if a template is pre-selected (e.g. ?template= param).
+    if ($templateSelect.val()) {
+        $templateSelect.trigger('change');
+    }
+
     var FIELD_TIPS = {
-        'id_private':      'When ticked, this event is hidden from the public website entirely — it won’t appear in any listing or be accessible via URL, even if showings are confirmed.',
-        'id_outside_hire': 'Tick if this event is run by an external organisation hiring the venue, not programmed by us. Affects internal reporting.',
-        'id_discounted':   'Marks this event as discounted for reporting purposes. Does not automatically change ticket prices.',
+        'id_private':      "When ticked, this event is hidden from the public website entirely — it won't appear in any listing or be accessible via URL, even if its {{ site_config.occurrence_noun_plural|escapejs }} are confirmed.",
+        'id_outside_hire': "Tick if this event is run by an external organisation hiring the venue, not programmed by us. Affects internal reporting.",
+        'id_discounted':   "Marks this event as discounted for reporting purposes. Does not automatically change ticket prices.",
     };
 
     $.each(FIELD_TIPS, function (fieldId, tipText) {
@@ -56,6 +272,23 @@ Add a new event
     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
         new bootstrap.Tooltip(el);
     });
-}());
+
+    // Show target_month only when entry_mode=queue and no dates are chosen.
+    function updateTargetMonthVisibility() {
+        var mode = document.getElementById('id_entry_mode').value;
+        var datesVal = ($('#id_dates').val() || '').trim();
+        var show = (mode === 'queue' && datesVal === '');
+        $('#target-month-row').toggle(show);
+        if (!show) {
+            $('#id_target_month').val('');
+        }
+    }
+
+    document.querySelectorAll('.entry-mode-card').forEach(function (card) {
+        card.addEventListener('click', updateTargetMonthVisibility);
+    });
+    $('#id_dates').on('change input', updateTargetMonthVisibility);
+    updateTargetMonthVisibility();
+});
 </script>
 {% endblock %}

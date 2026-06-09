@@ -134,6 +134,26 @@ standard = false
 description = "Prepare and handle food directly. Requires food hygiene level 2 training and cafe induction."
 
 [[roles]]
+name = "Food Prep Lead"
+standard = false
+description = "Lead the Community Kitchen food prep session. Requires food hygiene level 2 and previous CK experience."
+
+[[roles]]
+name = "Food Prep Level 2 - Shift 1"
+standard = false
+description = "Afternoon food prep shift for Community Kitchen. Requires food hygiene level 2."
+
+[[roles]]
+name = "Food Prep Level 2 - Shift 2"
+standard = false
+description = "Evening food prep shift for Community Kitchen. Requires food hygiene level 2."
+
+[[roles]]
+name = "Washing Up"
+standard = false
+description = "Washing up and kitchen cleaning during Community Kitchen."
+
+[[roles]]
 name = "Cafe Shadowing"
 standard = false
 description = "Shadow in the cafe and learn the ropes. Requires a cafe induction."

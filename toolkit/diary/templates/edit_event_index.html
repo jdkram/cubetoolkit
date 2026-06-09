@@ -87,11 +87,100 @@ Editing {{ event_list_name }}
   col.col-time    { width: 3.5rem; }
   col.col-other   { width: 7rem; }
   col.col-bookedby { width: 9rem; }
-  /* col.col-room has no width: unspecified cols share remaining space equally */
+  /* col.col-room has no CSS width — JS fills remaining space equally.
+     9rem fallback below is overridden immediately on load; it prevents
+     a flash of zero-width columns if JS is slow. */
+  col.col-room    { width: 9rem; }
 
-  /* Allow event names to wrap rather than truncate */
+  /* ── Room column collapse ────────────────────────────────────── */
+  .room-hide-btn {
+      display: inline-block;
+      margin-left: 0.35em;
+      width: 1.1em;
+      height: 1.1em;
+      line-height: 1;
+      text-align: center;
+      font-size: 0.75em;
+      background: rgba(255,255,255,0.4);
+      border: none;
+      border-radius: 2px;
+      cursor: pointer;
+      color: inherit;
+      opacity: 0.6;
+      vertical-align: middle;
+      padding: 0;
+  }
+  .room-hide-btn:hover { opacity: 1; background: rgba(255,255,255,0.7); }
+  /* Collapsed column: col width is set to 0 by JS; cells overflow:hidden */
+  [data-col-hidden="1"] { overflow: hidden !important; padding: 0 !important; border-left: none !important; border-right: none !important; }
+
+  /* ── Fullscreen mode ──────────────────────────────────────────── */
+  .container.diary-fullscreen {
+      max-width: none !important;
+      padding-left: 0.75rem;
+      padding-right: 0.75rem;
+  }
+
+  /* ── Mobile list view ──────────────────────────────────────────── */
+  .diary-mobile-list { display: none; }
+  .diary-month-table-wrap { display: block; }
+
+  @media (max-width: 767px) {
+      .diary-month-table-wrap { display: none; }
+      .diary-mobile-list { display: block; }
+  }
+  .diary-ml-month-heading {
+      font-size: 1.05em;
+      font-weight: 700;
+      border-bottom: 2px solid #dee2e6;
+      padding: 0.5rem 0 0.3rem;
+      margin: 1.25rem 0 0.5rem;
+      color: #1a1a1a;
+  }
+  .diary-ml-month-heading:first-child { margin-top: 0; }
+  .diary-ml-day-heading {
+      font-size: 0.9em;
+      font-weight: 600;
+      color: #495057;
+      padding: 0.4rem 0 0.1rem;
+      margin-top: 0.6rem;
+      border-top: 1px solid #e9ecef;
+  }
+  .diary-ml-day-heading:first-of-type { margin-top: 0; border-top: none; }
+  .diary-ml-event {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0;
+      text-decoration: none;
+      color: #212529;
+      border-bottom: 1px solid #f1f3f5;
+  }
+  .diary-ml-event:active { background: #f8f9fa; }
+  .diary-ml-time {
+      font-size: 0.85em;
+      color: #6c757d;
+      min-width: 3rem;
+      flex-shrink: 0;
+  }
+  .diary-ml-dot {
+      width: 0.65rem;
+      height: 0.65rem;
+      border-radius: 50%;
+      flex-shrink: 0;
+  }
+  .diary-ml-name {
+      font-size: 0.95em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+  }
+  .diary-ml-name.unconfirmed { text-decoration: underline wavy #999; color: #495057; }
+  .diary-ml-name.confirmed   { font-weight: 500; text-transform: uppercase; }
+  .diary-ml-name.cancelled   { color: #dc3545; text-decoration: line-through; }
+
+  /* Allow event names to wrap. Long single words (no spaces) won't overflow. */
   td.room-col, td.col-event {
-      word-break: break-word;
       overflow-wrap: break-word;
   }
 
@@ -102,6 +191,49 @@ Editing {{ event_list_name }}
       vertical-align: bottom;
   }
 
+  /* Ideas + TBC proposals row — intentionally understated */
+  tr.diary-ideas-row td {
+      background: #f8f9fa;
+      border-top: none;
+      padding: 0.35rem 0.5rem;
+      font-size: 0.8em;
+      color: #6c757d;
+      vertical-align: top;
+      /* Override td:first-child right-alignment — this td spans all columns */
+      text-align: left;
+      overflow-wrap: break-word;
+  }
+  .diary-ideas-text {
+      font-style: italic;
+  }
+  .diary-ideas-edit {
+      color: #adb5bd;
+      text-decoration: none;
+      margin-left: 0.4em;
+      font-size: 0.9em;
+  }
+  .diary-ideas-edit:hover { color: #0056b3; }
+  .diary-tbc-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: inline;
+  }
+  .diary-tbc-list li {
+      display: inline;
+  }
+  .diary-tbc-list li::before {
+      content: " · ";
+      color: #ced4da;
+  }
+  .diary-tbc-list li:first-child::before {
+      content: "";
+  }
+  .diary-tbc-tag {
+      color: #adb5bd;
+      font-size: 0.85em;
+  }
+
   /* Month heading in thead */
   table.table thead th.month-heading {
       font-size: 1.05em;
@@ -110,60 +242,25 @@ Editing {{ event_list_name }}
       white-space: nowrap;
   }
 
-  /* Sticky thead: overflow-x:clip on the wrapper avoids creating a scroll
-     container (which overflow-x:auto does), so position:sticky can escape
-     to the viewport rather than being confined to the div. */
+  /* Horizontal scroll when many rooms overflow the container.
+     overflow-x:auto creates a scroll container, which breaks position:sticky
+     on thead — so sticky headers are intentionally removed here. */
   .diary-month-table-wrap {
-      overflow-x: clip;
-  }
-  table.table thead th {
-      position: sticky;
-      top: 3.6rem;
-      z-index: 20;
-      background: white;
+      overflow-x: auto;
   }
 
   /* ── Responsive tiers ────────────────────────────────────────── */
 
-  /* Tier 1 (≤1000px): tighten fixed columns; truncate room header text.
-     max-width:0 is the trick that makes text-overflow fire on fixed-layout
-     table cells — the col width still wins for actual sizing. */
-  @media (max-width: 1000px) {
+  /* Tier 1 (≤1100px): tighten fixed columns.
+     col.col-room is handled by JS (diaryRecalcRoomWidths). */
+  @media (max-width: 1100px) {
       col.col-bookedby { width: 7rem; }
       col.col-other    { width: 5.5rem; }
-      table.table thead th.room-col {
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          max-width: 0;
-      }
   }
 
-  /* Tier 2 (≤768px): re-enable horizontal scroll (sacrifices sticky headers,
-     which don't work usefully inside an overflow-x:auto container anyway);
-     hide Booked by column (less useful on a quick mobile glance). */
-  @media (max-width: 768px) {
-      .diary-month-table-wrap { overflow-x: auto; }
-      table.table thead th    { position: static; }
-      table.table             { min-width: 38rem; }
-      col.col-bookedby,
-      th.col-bookedby,
-      td.col-bookedby         { display: none; }
-  }
-
-  /* Tier 3 (≤480px): also hide Other column; table can be a bit narrower. */
-  @media (max-width: 480px) {
-      col.col-other,
-      th.other-col,
-      td.other-col            { display: none; }
-      table.table             { min-width: 28rem; }
-  }
-
-  /* "Other rooms" column — narrow, no colour stripe */
+  /* "Other rooms" column — no colour stripe, matches room col font */
   th.other-col, td.other-col {
       min-width: 5rem;
-      max-width: 10rem;
-      font-size: 0.8em;
       vertical-align: top;
   }
   /* Single quick-book link for the Other rooms column */
@@ -199,6 +296,55 @@ Editing {{ event_list_name }}
       background: #e9ecef;
       color: #000;
   }
+
+  /* ── Month navigation rail ───────────────────────────────────────── */
+  #diary-nav-rail {
+      position: fixed;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3.2em;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      pointer-events: none;
+  }
+  #diary-nav-rail .rail-inner {
+      position: relative;
+      background: rgba(248, 249, 250, 0.92);
+      border: 1px solid #dee2e6;
+      border-right: none;
+      border-radius: 4px 0 0 4px;
+      padding: 0.4em 0;
+      pointer-events: auto;
+  }
+  #diary-nav-rail .rail-month {
+      display: block;
+      text-align: center;
+      font-size: 0.68em;
+      color: #6c757d;
+      padding: 0.18em 0.3em;
+      cursor: pointer;
+      white-space: nowrap;
+      line-height: 1.2;
+      transition: color 0.1s, background 0.1s;
+      border-radius: 2px;
+      margin: 0 0.2em;
+  }
+  #diary-nav-rail .rail-month:hover { color: #212529; background: #e9ecef; }
+  #diary-nav-rail .rail-month.rail-active { color: #212529; font-weight: 600; }
+  #diary-nav-rail .rail-cursor {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: #6c757d;
+      border-radius: 1px;
+      pointer-events: none;
+      transition: top 0.1s linear;
+  }
+  @media (max-width: 768px) { #diary-nav-rail { display: none; } }
 
   /* ── Controls bar ─────────────────────────────────────────────── */
   .diary-controls {
@@ -293,10 +439,168 @@ function filter_events() {
         });
     }, DEBOUNCE_TIMEOUT);
 }
+
+// ── Dynamic room column width ────────────────────────────────────────────
+// Called on load, resize, and after any hide/show. Distributes remaining
+// table width equally among visible room cols (col.col-room), leaving
+// col-date, col-time, col-other and col-bookedby at their CSS widths.
+var _diaryResizeTimer;
+function diaryRecalcRoomWidths() {
+    var fontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    // Fixed col widths (rem) that JS doesn't touch.
+    var fixedDateTimePx = (4 + 3.5) * fontSize;
+    var fixedBbPx = parseFloat(getComputedStyle(document.querySelector('col.col-bookedby') || document.createElement('col')).width) || 9 * fontSize;
+
+    document.querySelectorAll('.diary-month-table-wrap').forEach(function(wrap) {
+        var tableW = wrap.clientWidth;
+        if (!tableW) return;
+
+        // Account for the Other col if visible.
+        var otherCol = wrap.querySelector('col.col-other');
+        var otherPx = (otherCol && otherCol.style.width !== '0')
+            ? (parseFloat(getComputedStyle(otherCol).width) || 7 * fontSize) : 0;
+
+        var visibleRoomCols = Array.prototype.slice.call(wrap.querySelectorAll('col.col-room')).filter(function(c) {
+            return c.style.width !== '0';
+        });
+        if (!visibleRoomCols.length) return;
+
+        var available = tableW - fixedDateTimePx - fixedBbPx - otherPx;
+        // Min ~6rem per col; below that, horizontal scroll is fine.
+        var perCol = Math.max(6 * fontSize, available / visibleRoomCols.length);
+        visibleRoomCols.forEach(function(col) { col.style.width = perCol + 'px'; });
+    });
+}
+window.addEventListener('resize', function() {
+    clearTimeout(_diaryResizeTimer);
+    _diaryResizeTimer = setTimeout(diaryRecalcRoomWidths, 120);
+});
+
+// ── Fullscreen toggle ────────────────────────────────────────────────────
+function diaryToggleFullscreen() {
+    const container = document.querySelector('.container');
+    if (!container) return;
+    const on = container.classList.toggle('diary-fullscreen');
+    const btn = document.getElementById('diary-fullscreen-btn');
+    if (btn) btn.textContent = on ? '⛶ Normal width' : '⛶ Full width';
+    try { localStorage.setItem('diary-fullscreen', on ? '1' : '0'); } catch(e) {}
+    // Container width changes after class toggle — recalc after reflow.
+    setTimeout(diaryRecalcRoomWidths, 50);
+}
+
+// ── Room column collapse ─────────────────────────────────────────────────
+var _hiddenRooms = (function() {
+    try { return new Set(JSON.parse(localStorage.getItem('diary-hidden-rooms') || '[]')); }
+    catch(e) { return new Set(); }
+})();
+
+function _diarySetRoom(roomPk, visible) {
+    // Set col width to 0 to collapse the column space in fixed-layout tables.
+    document.querySelectorAll('col[data-room="' + roomPk + '"]').forEach(function(el) {
+        el.style.width = visible ? '' : '0';
+    });
+    // Clip cell contents and hide padding.
+    document.querySelectorAll('th[data-room="' + roomPk + '"], td[data-room="' + roomPk + '"]').forEach(function(el) {
+        el.dataset.colHidden = visible ? '' : '1';
+    });
+    // Toggle hide button label.
+    document.querySelectorAll('.room-hide-btn[data-room="' + roomPk + '"]').forEach(function(btn) {
+        btn.textContent = visible ? '×' : '▶';
+        btn.title = visible ? 'Hide this column' : 'Restore this column';
+    });
+    if (visible) { _hiddenRooms.delete(roomPk); }
+    else         { _hiddenRooms.add(roomPk); }
+    try { localStorage.setItem('diary-hidden-rooms', JSON.stringify([..._hiddenRooms])); } catch(e) {}
+    document.getElementById('diary-show-all-rooms-btn').style.display = _hiddenRooms.size ? '' : 'none';
+    diaryRecalcRoomWidths();
+}
+
+function diaryToggleRoom(roomPk, btn) {
+    _diarySetRoom(roomPk, _hiddenRooms.has(roomPk));
+}
+
+function diaryShowAllRooms() {
+    [..._hiddenRooms].forEach(function(pk) { _diarySetRoom(pk, true); });
+}
+
+// ── Month navigation rail ────────────────────────────────────────────────
+var MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function buildDiaryNavRail() {
+    var wraps = document.querySelectorAll('.diary-month-table-wrap[id]');
+    if (wraps.length < 2) {
+        // Rail adds no value for a single month
+        var rail = document.getElementById('diary-nav-rail');
+        if (rail) rail.style.display = 'none';
+        return;
+    }
+    var inner  = document.querySelector('#diary-nav-rail .rail-inner');
+    var cursor = document.querySelector('#diary-nav-rail .rail-cursor');
+    if (!inner) return;
+
+    wraps.forEach(function(wrap) {
+        // id format: "diary-month-YYYY-MM"
+        var parts = wrap.id.split('-');  // ["diary","month","YYYY","MM"]
+        var year  = parts[2] || '';
+        var month = parseInt(parts[3], 10);
+        var label = (MONTH_NAMES[month - 1] || '?') + " '" + year.slice(2);
+        var span = document.createElement('span');
+        span.className = 'rail-month';
+        span.textContent = label;
+        span.addEventListener('click', function() {
+            wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        inner.insertBefore(span, cursor);
+    });
+
+    function updateRail() {
+        var scrollY    = window.scrollY;
+        var docH       = document.body.scrollHeight;
+        var winH       = window.innerHeight;
+        var scrollFrac = docH > winH ? scrollY / (docH - winH) : 0;
+        var railH      = inner.offsetHeight;
+        cursor.style.top = Math.round(scrollFrac * railH) + 'px';
+
+        var navbar = document.querySelector('.navbar.fixed-top');
+        var navH   = navbar ? navbar.offsetHeight : 56;
+        var current = null;
+        wraps.forEach(function(wrap) {
+            if (wrap.getBoundingClientRect().top <= navH + 20) current = wrap;
+        });
+        var items = inner.querySelectorAll('.rail-month');
+        items.forEach(function(el) { el.classList.remove('rail-active'); });
+        if (current) {
+            var idx = Array.prototype.indexOf.call(wraps, current);
+            if (items[idx]) items[idx].classList.add('rail-active');
+        }
+    }
+
+    window.addEventListener('scroll', updateRail, { passive: true });
+    updateRail();
+}
+
+// Apply persisted state on load.
+$(document).ready(function() {
+    // Fullscreen (diaryToggleFullscreen calls diaryRecalcRoomWidths internally)
+    try {
+        if (localStorage.getItem('diary-fullscreen') === '1') diaryToggleFullscreen();
+    } catch(e) {}
+    // Hidden rooms (_diarySetRoom calls diaryRecalcRoomWidths after each)
+    _hiddenRooms.forEach(function(pk) { _diarySetRoom(pk, false); });
+    if (_hiddenRooms.size) {
+        document.getElementById('diary-show-all-rooms-btn').style.display = '';
+    }
+    // Initial recalc (covers the no-hidden-rooms case)
+    diaryRecalcRoomWidths();
+    // Month navigation rail
+    buildDiaryNavRail();
+});
 </script>
 {% endblock %}
 
 {% block body %}
+
+{# Month navigation rail — built by buildDiaryNavRail() once DOM is ready #}
+<div id="diary-nav-rail" aria-hidden="true"><div class="rail-inner"><div class="rail-cursor"></div></div></div>
 
 <div class="diary-controls">
   <div class="diary-controls-row">
@@ -310,6 +614,8 @@ function filter_events() {
     <label>Filter: <input type="text" placeholder="event title or booker" id="id_input_filter" autofocus></label>
     <a href="{% url "add-event" %}">+ New event</a>
     <a href="{% url "quick-create-open-session" %}" title="Announce the building is open for volunteers">🔑 Building open</a>
+    <button id="diary-fullscreen-btn" onclick="diaryToggleFullscreen()" title="Expand to full viewport width" style="background:none;border:1px solid #dee2e6;border-radius:4px;padding:0.2rem 0.5rem;font-size:0.85em;cursor:pointer;color:#6c757d;">⛶ Full width</button>
+    <button id="diary-show-all-rooms-btn" onclick="diaryShowAllRooms()" title="Restore all hidden room columns" style="display:none;background:none;border:1px solid #dee2e6;border-radius:4px;padding:0.2rem 0.5rem;font-size:0.85em;cursor:pointer;color:#6c757d;">↔ Show all rooms</button>
   </div>
   <details class="diary-key">
     <summary>Key</summary>
@@ -329,13 +635,13 @@ function filter_events() {
 {% for day, time_groups in dates.items %}
   {% ifchanged day|date:"Y-m" %}
     {% if not forloop.first %}</tbody></table></div>{% endif %}
-    <div class="table-responsive diary-month-table-wrap"><table class="table">
+    <div class="table-responsive diary-month-table-wrap" id="diary-month-{{ day|date:"Y-m" }}"><table class="table">
     <colgroup>
       <col class="col-date">
       <col class="col-time">
       {% if multiroom_enabled %}
-        {% for room in rooms %}<col class="col-room">{% endfor %}
-        {% if has_other_rooms %}<col class="col-other">{% endif %}
+        {% for room in rooms %}<col class="col-room" data-room="{{ room.pk }}">{% endfor %}
+        {% if has_other_rooms %}<col class="col-other" data-room="other">{% endif %}
       {% else %}
         <col class="col-event">
       {% endif %}
@@ -345,15 +651,26 @@ function filter_events() {
       <th class="month-heading" colspan="2">{{ day|date:"F Y" }}</th>
       {% if multiroom_enabled %}
         {% for room in rooms %}
-          <th class="room-col" style="border-bottom-color:{{ room.colour|default:'transparent' }};">{{ room.name }}</th>
+          <th class="room-col" data-room="{{ room.pk }}" style="border-bottom-color:{{ room.colour|default:'transparent' }};">{{ room.name }}<button class="room-hide-btn" data-room="{{ room.pk }}" title="Hide this column" onclick="diaryToggleRoom('{{ room.pk }}', this)">×</button></th>
         {% endfor %}
-        {% if has_other_rooms %}<th class="room-col other-col" title="Rooms without their own column">Other</th>{% endif %}
+        {% if has_other_rooms %}<th class="room-col other-col" data-room="other" title="Rooms without their own column">Other<button class="room-hide-btn" data-room="other" title="Hide this column" onclick="diaryToggleRoom('other', this)">×</button></th>{% endif %}
       {% else %}
         <th>Event</th>
       {% endif %}
       <th class="room-col col-bookedby">Booked by</th>
     </tr></thead>
     <tbody>
+    {% with ideas|lookup:day as month_ideas %}{% with dateless_by_month|lookup:day as month_tbc %}
+    <tr class="diary-ideas-row">
+      <td colspan="99">
+        {% if month_ideas %}<span class="diary-ideas-text">{{ month_ideas }}</span> {% endif %}
+        <a class="diary-ideas-edit" href="{% url "edit-ideas" year=day.year month=day.month %}" title="{% if month_ideas %}Edit{% else %}Add{% endif %} monthly notes">✏{% if not month_ideas %} add notes for {{ day|date:"F" }}{% endif %}</a>
+        {% if month_tbc %}
+        <ul class="diary-tbc-list">{% for ev in month_tbc %}<li><a href="{% url "edit-event-details-view" event_id=ev.pk %}">{{ ev.name }}</a> <span class="diary-tbc-tag">[TBC]</span></li>{% endfor %}</ul>
+        {% endif %}
+      </td>
+    </tr>
+    {% endwith %}{% endwith %}
   {% endifchanged %}
 
   {% with forloop.counter|divisibleby:2 as day_even %}{% with day|date:"N" as day_dow %}
@@ -369,7 +686,7 @@ function filter_events() {
       {% for room in rooms %}
         {% showing_for_room_at slot_showings room time_slot as showing %}
         {% if showing %}
-        <td class="room-col">
+        <td class="room-col" data-room="{{ room.pk }}">
           <a href="{% url "edit-event-details-view" event_id=showing.event.pk %}"
              class="{{ showing.cancelled|yesno:"cancelled," }}
                     {{ showing.discounted|yesno:"discounted," }}
@@ -384,12 +701,12 @@ function filter_events() {
           {{ showing.sold_out|yesno:"(marked SOLD OUT)," }}
         </td>
         {% else %}
-          <td class="room-col empty-slot"><a href="{% url "add-event" %}?date={{ day|date:"j-m-Y" }}&time={{ slot_local|date:"G:i" }}&room={{ room.id }}">+</a></td>
+          <td class="room-col empty-slot" data-room="{{ room.pk }}"><a href="{% url "add-event" %}?date={{ day|date:"j-m-Y" }}&time={{ slot_local|date:"G:i" }}&room={{ room.id }}">+</a></td>
         {% endif %}
       {% endfor %}
       {% if has_other_rooms %}
         {% other_room_bookings_at slot_showings time_slot as other_bookings %}
-        <td class="room-col other-col">
+        <td class="room-col other-col" data-room="other">
           {% for rb, showing in other_bookings %}<a href="{% url "edit-event-details-view" event_id=showing.event.pk %}" class="other-room-badge" style="border-left-color:{{ rb.room.colour }};" title="{{ showing.event.name }} — {{ rb.room.name }}">{{ rb.room.name }}</a>{% endfor %}
           <a href="{% url "add-event" %}?date={{ day|date:"j-m-Y" }}&time={{ slot_local|date:"G:i" }}" class="other-room-add">+</a>
         </td>
@@ -433,7 +750,7 @@ function filter_events() {
       <td></td>
       {% if multiroom_enabled %}
         {% for room in rooms %}<td class="room-col empty-slot"><a href="{% url "add-event" %}?date={{ day|date:"j-m-Y" }}&room={{ room.id }}">+</a></td>{% endfor %}
-        {% if has_other_rooms %}<td class="room-col other-col"><a href="{% url "add-event" %}?date={{ day|date:"j-m-Y" }}" class="other-room-add">+</a></td>{% endif %}
+        {% if has_other_rooms %}<td class="room-col other-col" data-room="other"><a href="{% url "add-event" %}?date={{ day|date:"j-m-Y" }}" class="other-room-add">+</a></td>{% endif %}
       {% else %}
         <td></td>
       {% endif %}
@@ -443,5 +760,24 @@ function filter_events() {
   {% endwith %}{% endwith %}
 {% endfor %}
 {% if dates %}</tbody></table></div>{% endif %}
+
+{# ── Mobile list view ──────────────────────────────────────────────────── #}
+<div class="diary-mobile-list">
+{% for day, day_showings in mobile_dates.items %}
+  {% if day_showings %}
+  {% ifchanged day|date:"Y-m" %}
+  <div class="diary-ml-month-heading">{{ day|date:"F Y" }}</div>
+  {% endifchanged %}
+  <div class="diary-ml-day-heading">{{ day|date:"l j" }}</div>
+  {% for showing in day_showings %}
+  <a class="diary-ml-event" href="{% url "edit-event-details-view" event_id=showing.event.pk %}">
+    <span class="diary-ml-time">{{ showing.start|localtime|date:"H:i" }}</span>
+    {% with showing.primary_room as pr %}{% if pr %}<span class="diary-ml-dot" style="background-color:{{ pr.colour }};"></span>{% endif %}{% endwith %}
+    <span class="diary-ml-name {{ showing.confirmed|yesno:"confirmed,unconfirmed" }} {{ showing.cancelled|yesno:"cancelled," }}">{{ showing.event.name }}{% if showing.cancelled %} (cancelled){% endif %}</span>
+  </a>
+  {% endfor %}
+  {% endif %}
+{% endfor %}
+</div>
 
 {% endblock %}

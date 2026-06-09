@@ -6380,3 +6380,27 @@ Actions available:
 ### 9.115 — Film template placeholder text + validation guard ✅ shipped 2026-06-05
 
 **Delivered.** Film (DCP) and Film (MP4/DVD) templates in `templates.toml` now pre-fill `pricing`, `film_information`, and `terms` with placeholder text. `EventForm.clean_terms()` and `clean_film_information()` reject values containing `[bracket]` placeholders — catches accidentally submitted unfilled template text that would pass the existing word-count check.
+
+### 9.116 — Programming queue: embedded calendar and kanban view 🔴 XL
+
+Two future improvements to the meeting-facing queue view, deferred from the 9.113 / programmer UX work.
+
+**Embedded calendar panel (⛔ maybe):**
+A "queue mode" that embeds the edit calendar view below the queue cards, so the programmer can see what else is on in that week/month without switching tabs. Current workaround: each queue card already has a "Month Year ↗" link to open the calendar in a new tab. The embedded version would require either an iframe (simple but has cross-frame styling issues) or a purpose-built mini-calendar component (significant work). Not clear it's worth the complexity given the tab link already solves the need adequately.
+
+**Kanban view 🟡 M:**
+Replace the linear card list with a three-column kanban board (Draft / Proposed / Returned). Meeting participants could drag cards between columns to move them through the queue, with the drag triggering a PATCH to `update_event_programming_status`. Requires a drag-and-drop library (e.g. SortableJS) and a JSON endpoint. Most useful if the queue regularly has 10+ events at once.
+
+### 9.117 — Bootstrap 4 / Bootstrap 5 mismatch audit 🟡 M
+
+**Context:** `CRISPY_TEMPLATE_PACK = "bootstrap4"` in `settings_common.py` but the actual Bootstrap CSS/JS is v5.3.8. This means crispy-rendered form widgets use BS4 class names that BS5 doesn't style.
+
+**Already fixed (2026-06-08):**
+- `RadioSelect` widget on `entry_mode` — bypassed crispy forms entirely; card UI rendered as plain HTML in the template
+- `form-row` → `row` in `edit_event_links.html` and `edit_event_template_detail.html` (layout break: columns were unstyled blocks)
+- `font-weight-bold` → `fw-bold` in `edit_event_links.html`, `edit_event_template_detail.html`, `view_rota_vacancies.html`
+
+**Still needs a pass:**
+- Audit all templates for remaining BS4 utility classes: `ml-*`/`mr-*` → `ms-*`/`me-*`, `pl-*`/`pr-*` → `ps-*`/`pe-*`, `text-left`/`text-right` → `text-start`/`text-end`, `float-left`/`float-right` → `float-start`/`float-end`, `custom-select` → `form-select`
+- Consider upgrading to `crispy-bootstrap5` package + `CRISPY_TEMPLATE_PACK = "bootstrap5"` to fix the root cause (crispy would then generate BS5-compatible HTML for checkboxes, selects, etc.)
+- Any checkbox or select widgets rendered via crispy forms may be visually unstyled

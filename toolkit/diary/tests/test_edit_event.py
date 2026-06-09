@@ -90,7 +90,7 @@ class AddEventView(DiaryTestsMixin, TestCase):
         url = reverse("add-event")
         response = self.client.get(url, data={"date": "99-01-1950"})
         self.assertContains(
-            response, "Illegal time, date, duration or room", status_code=400
+            response, "Illegal time, date or duration", status_code=400
         )
 
     # Common code for the following two tests:
@@ -113,7 +113,7 @@ class AddEventView(DiaryTestsMixin, TestCase):
                 "private": "on",
                 "outside_hire": "",
                 "discounted": "on",
-                "room": "2",
+                "entry_mode": "standing",
             },
         )
         # Event added correctly?
@@ -150,10 +150,8 @@ class AddEventView(DiaryTestsMixin, TestCase):
                     role_1,
                 ],
             )
-            # Room is tracked via RoomBooking; room_id=2 submitted so a booking should exist
-            rb = s.room_bookings.first()
-            self.assertIsNotNone(rb)
-            self.assertEqual(rb.room_id, 2)
+            # tmpl1 has no EventTemplateRoom records, so no room bookings expected.
+            self.assertEqual(s.room_bookings.count(), 0)
 
     @override_settings(MULTIROOM_ENABLED=False)
     @patch("django.utils.timezone.now")
@@ -184,6 +182,7 @@ class AddEventView(DiaryTestsMixin, TestCase):
                 "private": "on",
                 "outside_hire": "",
                 "discounted": "on",
+                "entry_mode": "standing",
             },
         )
         # Request succeeded?
@@ -227,12 +226,7 @@ class AddEventView(DiaryTestsMixin, TestCase):
         self.assertTemplateUsed(response, "form_new_event_and_showing.html")
 
         # Check errors as expected:
-        self.assertFormError(
-            response.context["form"], "dates", "This field is required."
-        )
-        self.assertFormError(
-            response.context["form"], "start_time", "This field is required."
-        )
+        # dates and start_time are now optional (dateless events allowed)
         self.assertFormError(
             response.context["form"], "duration", "This field is required."
         )
@@ -461,7 +455,7 @@ class EditEventView(DiaryTestsMixin, TestCase):
         event.copy = "copy"
         event.copy_summary = "copy_summary"
         event.terms = "terms"
-        event.notes = "notes"
+        event.programming_notes = "notes"
         event.outside_hire = True
         event.private = True
         event.save()
@@ -488,7 +482,7 @@ class EditEventView(DiaryTestsMixin, TestCase):
         self.assertEqual(event.duration, time(0, 10))
         self.assertEqual(event.copy, "")
         self.assertEqual(event.copy_summary, "")
-        self.assertEqual(event.notes, "")
+        self.assertEqual(event.programming_notes, "")
         self.assertEqual(event.media.count(), 0)
         self.assertEqual(event.outside_hire, False)
         self.assertEqual(event.private, False)
@@ -511,7 +505,7 @@ class EditEventView(DiaryTestsMixin, TestCase):
                 "pricing": "Full \u00a35",
                 "film_information": "Blah blah films",
                 "terms": "Always term time",
-                "notes": "This is getting\n boring",
+                "programming_notes": "This is getting\n boring",
                 "outside_hire": "on",
                 "private": "on",
             },
@@ -527,7 +521,7 @@ class EditEventView(DiaryTestsMixin, TestCase):
         self.assertEqual(event.copy, "Some more copy")
         self.assertEqual(event.copy_summary, "Copy summary blah")
         self.assertEqual(event.terms, "Always term time")
-        self.assertEqual(event.notes, "This is getting\n boring")
+        self.assertEqual(event.programming_notes, "This is getting\n boring")
         self.assertEqual(event.media.count(), 0)
         self.assertEqual(event.outside_hire, True)
         self.assertEqual(event.private, True)
@@ -965,7 +959,7 @@ class CloneEventTests(DiaryTestsMixin, TestCase):
         self.assertEqual(new_event.copy_summary, self.e4.copy_summary)
         self.assertEqual(new_event.copy, self.e4.copy)
         self.assertEqual(new_event.terms, self.e4.terms)
-        self.assertEqual(new_event.notes, self.e4.notes)
+        self.assertEqual(new_event.programming_notes, self.e4.programming_notes)
         self.assertEqual(new_event.film_information, self.e4.film_information)
         self.assertEqual(new_event.pricing, self.e4.pricing)
         self.assertEqual(new_event.pre_title, self.e4.pre_title)
@@ -1298,5 +1292,129 @@ class EventLinkTests(DiaryTestsMixin, TestCase):
             reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk}),
         )
         self.assertFalse(EventLink.objects.filter(pk=link.pk).exists())
+
+
+# Far-future tz-aware date so showings are always "future" without patching now.
+_FUTURE = datetime(2099, 6, 1, 19, 0, tzinfo=zoneinfo.ZoneInfo("Europe/London"))
+
+
+class EventHubCollapseTests(DiaryTestsMixin, TestCase):
+    """Event Hub presents a single-occurrence event as one thing; the 'dates'
+    concept only surfaces once a second showing exists (UI collapse)."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="admin", password="T3stPassword!")
+
+    def _make_event(self, n_showings, confirmed=False):
+        event = Event(name="Hub collapse event", duration="2:00:00")
+        event.save()
+        for i in range(n_showings):
+            Showing(
+                event=event,
+                start=_FUTURE + timedelta(days=i),
+                booked_by="Tester",
+                confirmed=confirmed,
+            ).save()
+        return event
+
+    def _hub(self, event):
+        return self.client.get(
+            reverse("edit-event-details-view", kwargs={"event_id": event.pk})
+        )
+
+    def test_single_showing_shows_singular_heading(self):
+        # Default occurrence noun is the cinema-first "showing".
+        response = self._hub(self._make_event(1))
+        self.assertContains(response, "Showing &amp; booking")
+        self.assertNotContains(response, ">Showings</h3>")
+        # "Confirm all" is a series-only bulk control.
+        self.assertNotContains(response, "Confirm all")
+
+    def test_multi_showing_shows_plural_heading(self):
+        response = self._hub(self._make_event(2))
+        self.assertContains(response, ">Showings</h3>")
+        self.assertNotContains(response, "Showing &amp; booking")
+
+    def test_unpublished_future_shows_confirm_label(self):
+        # Default confirm label is "Confirm".
+        response = self._hub(self._make_event(1, confirmed=False))
+        self.assertContains(response, ">Confirm</button>")
+
+    def test_terminology_follows_site_config(self):
+        # Star and Shadow's seed sets these to date/dates + a verbose CTA.
+        cfg = get_site_config()
+        cfg.occurrence_noun = "date"
+        cfg.occurrence_noun_plural = "dates"
+        cfg.confirm_label = "Publish & open rota"
+        cfg.save()
+
+        single = self._hub(self._make_event(1, confirmed=False))
+        self.assertContains(single, "Date &amp; booking")
+        self.assertContains(single, "Publish &amp; open rota")
+        self.assertContains(single, "Cancel this date")
+
+        series = self._hub(self._make_event(2))
+        self.assertContains(series, ">Dates</h3>")
+
+
+class RoomReleaseOnCancelTests(DiaryTestsMixin, TestCase):
+    """Cancelled dates and rejected events free their rooms (visually) while
+    keeping the RoomBooking rows so the action is reversible."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="admin", password="T3stPassword!")
+        self.event = Event(name="Room release event", duration="2:00:00")
+        self.event.save()
+        self.showing = Showing(
+            event=self.event, start=_FUTURE, booked_by="Tester", confirmed=True
+        )
+        self.showing.save()
+        self.booking = RoomBooking.objects.create(
+            showing=self.showing, room=self.room_2, start=self.showing.start
+        )
+
+    def test_confirmed_showing_occupies_rooms(self):
+        self.assertTrue(self.showing.occupies_rooms())
+        self.assertEqual(len(self.showing.visible_room_bookings), 1)
+
+    def test_cancelled_date_frees_rooms_but_keeps_booking(self):
+        self.showing.cancelled = True
+        self.showing.save()
+        self.showing.refresh_from_db()
+        self.assertFalse(self.showing.occupies_rooms())
+        self.assertEqual(self.showing.visible_room_bookings, [])
+        # Row preserved for reversibility:
+        self.assertEqual(self.showing.room_bookings.count(), 1)
+
+    def test_uncancel_restores_room_occupancy(self):
+        self.showing.cancelled = True
+        self.showing.save()
+        self.showing.cancelled = False
+        self.showing.save()
+        self.showing.refresh_from_db()
+        self.assertEqual(len(self.showing.visible_room_bookings), 1)
+
+    def test_rejected_event_frees_rooms(self):
+        self.event.programming_status = "rejected"
+        self.event.save()
+        self.showing.refresh_from_db()
+        self.assertFalse(self.showing.occupies_rooms())
+
+    @override_settings(MULTIROOM_ENABLED=True)
+    def test_calendar_json_excludes_cancelled_booking(self):
+        url = reverse("edit-diary-data")
+        start = (_FUTURE - timedelta(days=2)).strftime("%Y-%m-%d")
+        end = (_FUTURE + timedelta(days=2)).strftime("%Y-%m-%d")
+        rb_id = f"rb-{self.booking.pk}"
+
+        data = self.client.get(url, {"start": start, "end": end}).json()
+        self.assertTrue(any(str(d.get("id")) == rb_id for d in data))
+
+        self.showing.cancelled = True
+        self.showing.save()
+        data = self.client.get(url, {"start": start, "end": end}).json()
+        self.assertFalse(any(str(d.get("id")) == rb_id for d in data))
 
 

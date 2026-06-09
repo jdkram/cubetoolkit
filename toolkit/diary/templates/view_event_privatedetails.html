@@ -118,8 +118,8 @@ function hideAddShowingForm() {
       {% else %}
       <form method="post" action="{% url "update-event-programming-status" event.pk %}" class="d-inline">
         {% csrf_token %}
-        <input type="hidden" name="action" value="make_active">
-        <button type="submit" class="btn btn-sm btn-outline-secondary btn-sm">Withdraw from queue</button>
+        <input type="hidden" name="action" value="withdraw">
+        <button type="submit" class="btn btn-sm btn-outline-secondary">Withdraw from queue</button>
       </form>
       {% endif %}
     {% endif %}
@@ -229,7 +229,7 @@ function hideAddShowingForm() {
 
   <dt class="col-sm-3">Private
     <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
-          title="When ticked, this event is hidden from the public website entirely — it won't appear in any listing or be accessible via URL, even if showings are confirmed. Use for internal events or placeholders.">ⓘ</span>
+          title="When ticked, this event is hidden from the public website entirely — it won't appear in any listing or be accessible via URL, even if its {{ site_config.occurrence_noun_plural }} are confirmed. Use for internal events or placeholders.">ⓘ</span>
   </dt>
   <dd class="col-sm-9">
     {% if event.private %}<span class="badge text-bg-warning">Yes — hidden from public</span>
@@ -238,10 +238,10 @@ function hideAddShowingForm() {
 
   <dt class="col-sm-3">Programmer's notes
     <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
-          title="Internal notes — never shown to the public. Use for booking contacts, reminders, or anything you need to track.">ⓘ</span>
+          title="Internal working notes — never shown to the public. Use for queue context, meeting decisions, and conditions attached to approval. Financial details and hire contacts belong in Terms.">ⓘ</span>
   </dt>
   <dd class="col-sm-9">
-    {% if event.notes %}{{ event.notes }}
+    {% if event.programming_notes %}{{ event.programming_notes|linebreaksbr }}
     {% else %}<span class="text-muted">—</span>{% endif %}
   </dd>
 
@@ -262,7 +262,7 @@ function hideAddShowingForm() {
 
   <dt class="col-sm-3">Public link
     <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
-          title="Where this event appears in the public online programme. Only active once at least one showing is confirmed and the event is not marked private.">ⓘ</span>
+          title="Where this event appears in the public online programme. Only active once at least one {{ site_config.occurrence_noun }} is confirmed and the event is not marked private.">ⓘ</span>
   </dt>
   <dd class="col-sm-9">
     {% if event.showings.public and not event.private %}
@@ -270,14 +270,14 @@ function hideAddShowingForm() {
     {% else %}
       <span class="text-muted">Not visible in online programme:
       {% if event.private %}It's marked private.{% endif %}
-      {% if not event.showings.public %}No confirmed, public showings.{% endif %}
+      {% if not event.showings.public %}No confirmed, public {{ site_config.occurrence_noun_plural }}.{% endif %}
       </span>
     {% endif %}
   </dd>
 
   <dt class="col-sm-3">Terms
     <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
-          title="Booking or screening terms for this event. Must be filled in (minimum word count) before any showing can be confirmed, unless the event type exempts it.">ⓘ</span>
+          title="Booking or screening terms for this event. Must be filled in (minimum word count) before any {{ site_config.occurrence_noun }} can be confirmed, unless the event type exempts it.">ⓘ</span>
   </dt>
   <dd class="col-sm-9">
     {% if event.terms %}
@@ -399,8 +399,13 @@ function hideAddShowingForm() {
 
 <hr class="mt-0 mb-4">
 
-{# ── Showings ──────────────────────────────────────────────────────────────── #}
-<h3 class="mb-3">Showings</h3>
+{# ── Dates / occurrences ─────────────────────────────────────────────────────── #}
+{# occurrence_noun (e.g. "showing"/"date") is venue-configurable via SiteConfiguration. #}
+{% if is_series %}
+<h3 class="mb-3">{{ site_config.occurrence_noun_plural|capfirst }}</h3>
+{% else %}
+<h3 class="mb-3">{{ site_config.occurrence_noun|capfirst }} &amp; booking</h3>
+{% endif %}
 
 {% for showing in future_showings %}
 <div class="card showing-card">
@@ -411,11 +416,11 @@ function hideAddShowingForm() {
 
     {% if showing.hide_in_programme %}
     <span class="badge text-bg-secondary ms-1" data-bs-toggle="tooltip"
-          title="Excluded from the public programme even when confirmed. Used for private or invitation-only showings.">Hidden</span>
+          title="Excluded from the public programme even when confirmed. Used for private or invitation-only {{ site_config.occurrence_noun_plural }}.">Hidden</span>
     {% endif %}
     {% if showing.discounted %}
     <span class="badge text-bg-info ms-1" data-bs-toggle="tooltip"
-          title="A &quot;Discounted&quot; label appears on the public listing for this showing.">Discounted</span>
+          title="A &quot;Discounted&quot; label appears on the public listing for this {{ site_config.occurrence_noun }}.">Discounted</span>
     {% endif %}
     {% if showing.sold_out %}
     <span class="badge text-bg-dark ms-1" data-bs-toggle="tooltip"
@@ -425,54 +430,54 @@ function hideAddShowingForm() {
     <div class="status-actions">
       {% if showing.cancelled %}
         <span class="badge text-bg-danger" data-bs-toggle="tooltip"
-              title="This showing is cancelled — it stays visible on the public programme and the rota, clearly labelled CANCELLED, so the public knows and volunteers aren't left guessing.">Cancelled</span>
+              title="This {{ site_config.occurrence_noun }} is cancelled — it stays visible on the public programme and the rota, clearly labelled CANCELLED, so the public knows and volunteers aren't left guessing.">Cancelled</span>
         <form method="post" action="{% url 'update-showing-status' showing.id %}">
           {% csrf_token %}<input type="hidden" name="action" value="uncancel">
           <button type="submit" class="btn btn-sm btn-outline-secondary">Uncancel</button>
         </form>
       {% elif showing.confirmed %}
         <span class="badge text-bg-success" data-bs-toggle="tooltip"
-              title="Confirmed — this showing is visible in the public online programme.">Confirmed</span>
+              title="Confirmed — this {{ site_config.occurrence_noun }} is public in the online programme and its rota is open for sign-ups.">Confirmed</span>
         <form method="post" action="{% url 'update-showing-status' showing.id %}">
           {% csrf_token %}<input type="hidden" name="action" value="unconfirm">
           <button type="submit" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip"
-                  title="Removes this showing from the public programme. The event page will no longer be publicly accessible if this is the only confirmed showing.">Unconfirm</button>
+                  title="Removes this {{ site_config.occurrence_noun }} from the public programme and closes its rota. The event page will no longer be publicly accessible if this is the only confirmed {{ site_config.occurrence_noun }}.">Unconfirm</button>
         </form>
         <form method="post" action="{% url 'update-showing-status' showing.id %}">
           {% csrf_token %}<input type="hidden" name="action" value="cancel">
           <button type="submit" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip"
-                  title="Marks this showing as cancelled.">Cancel showing</button>
+                  title="Marks this {{ site_config.occurrence_noun }} as cancelled and frees its room bookings.">Cancel this {{ site_config.occurrence_noun }}</button>
         </form>
       {% else %}
         <span class="badge text-bg-secondary" data-bs-toggle="tooltip"
-              title="Unconfirmed — this showing is not yet visible in the public online programme.">Unconfirmed</span>
+              title="Not yet confirmed — this {{ site_config.occurrence_noun }} is not public and its rota is not yet open.">Unconfirmed</span>
         <form method="post" action="{% url 'update-showing-status' showing.id %}">
           {% csrf_token %}<input type="hidden" name="action" value="confirm">
           <button type="submit" class="btn btn-sm btn-success" data-bs-toggle="tooltip"
-                  title="Makes this showing visible in the public online programme. Event terms must be filled in before confirming (unless the event type is exempt).">Confirm</button>
+                  title="Makes this {{ site_config.occurrence_noun }} public in the online programme AND opens the rota for volunteer sign-ups. Event terms must be filled in first (unless the event type is exempt).">{{ site_config.confirm_label }}</button>
         </form>
         <form method="post" action="{% url 'update-showing-status' showing.id %}">
           {% csrf_token %}<input type="hidden" name="action" value="cancel">
           <button type="submit" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip"
-                  title="Marks this showing as cancelled.">Cancel showing</button>
+                  title="Marks this {{ site_config.occurrence_noun }} as cancelled and frees its room bookings.">Cancel this {{ site_config.occurrence_noun }}</button>
         </form>
       {% endif %}
-      <a href="{% url 'edit-showing' showing.id %}" class="btn btn-sm btn-outline-primary ms-1">Edit showing / rota →</a>
+      <a href="{% url 'edit-showing' showing.id %}" class="btn btn-sm btn-outline-primary ms-1">Edit {{ site_config.occurrence_noun }} / rota →</a>
       <a href="{% url 'rota-edit-month' year=showing.start.year month=showing.start.month %}#showing-{{ showing.id }}" class="btn btn-sm btn-outline-secondary ms-1">Rota ↗</a>
     </div>
   </div>
 </div>
 {% empty %}
 {% if all_showings_in_past %}
-  <p class="text-muted">All showings are in the past.</p>
+  <p class="text-muted">All {{ site_config.occurrence_noun_plural }} are in the past.</p>
 {% else %}
-  <p class="text-muted">No upcoming showings yet.</p>
+  <p class="text-muted">No upcoming {{ site_config.occurrence_noun_plural }} yet.</p>
 {% endif %}
 {% endfor %}
 
 {% if past_showings %}
 <details class="mb-3">
-  <summary>Past showings ({{ past_showings|length }})</summary>
+  <summary>Past {{ site_config.occurrence_noun_plural }} ({{ past_showings|length }})</summary>
   <table class="table table-sm mt-2">
     <thead>
       <tr>
@@ -503,34 +508,45 @@ function hideAddShowingForm() {
 
 {% if not all_showings_in_past %}
 <div class="add-showing-section">
+  {% if is_series %}
   <button id="add-showing-toggle" type="button" class="btn btn-outline-info btn-sm"
-          onclick="showAddShowingForm()">+ Add a showing</button>
+          onclick="showAddShowingForm()">+ Add another {{ site_config.occurrence_noun }}</button>
   <a href="{% url 'batch-add-showings' event.pk %}"
      class="btn btn-outline-info btn-sm ms-2"
      data-bs-toggle="tooltip"
-     title="Add showings on multiple dates at once &mdash; useful for recurring events.">+ Add showings on multiple dates</a>
-  {% if unconfirmed_future_count and completeness.terms_ok %}
+     title="Add several {{ site_config.occurrence_noun_plural }} at once &mdash; useful for recurring events.">+ Add several {{ site_config.occurrence_noun_plural }}</a>
+  {% else %}
+  {# Single occurrence: the affordance that introduces the series concept. #}
+  <button id="add-showing-toggle" type="button" class="btn btn-outline-info btn-sm"
+          onclick="showAddShowingForm()" data-bs-toggle="tooltip"
+          title="Give this event another {{ site_config.occurrence_noun }}. It becomes a series — one description shared across all its {{ site_config.occurrence_noun_plural }}, each with its own rota and room bookings.">+ Add another {{ site_config.occurrence_noun }}</button>
+  <a href="{% url 'batch-add-showings' event.pk %}"
+     class="btn btn-outline-info btn-sm ms-2"
+     data-bs-toggle="tooltip"
+     title="Add several {{ site_config.occurrence_noun_plural }} at once &mdash; turns this into a recurring series.">+ Add several {{ site_config.occurrence_noun_plural }}</a>
+  {% endif %}
+  {% if is_series and unconfirmed_future_count and completeness.terms_ok %}
   <form method="post" action="{% url 'confirm-all-showings' event.pk %}" class="d-inline ms-2">
     {% csrf_token %}
     <button type="submit" class="btn btn-outline-success btn-sm"
             data-bs-toggle="tooltip"
-            title="Confirm all {{ unconfirmed_future_count }} unconfirmed future showing{{ unconfirmed_future_count|pluralize }} at once.">
+            title="Confirm all {{ unconfirmed_future_count }} unconfirmed future {{ site_config.occurrence_noun_plural }} at once.">
       ✓ Confirm all ({{ unconfirmed_future_count }})
     </button>
   </form>
   {% endif %}
 
   <div id="add-showing-form" class="{% if not add_showing_form.errors %}d-none{% endif %} mt-3">
-    <h5>Add a showing</h5>
+    <h5>Add another {{ site_config.occurrence_noun }}</h5>
     {% if clone_source_showing.rota_notes %}
     <div class="alert alert-warning alert-sm py-2 px-3 mb-2" role="alert">
-      <strong>Note:</strong> Rota notes from the most recent showing will be copied to this one — please review them afterwards.
+      <strong>Note:</strong> Rota notes from the most recent {{ site_config.occurrence_noun }} will be copied to this one — please review them afterwards.
     </div>
     {% endif %}
     <form method="post">
       {% csrf_token %}
       {% crispy add_showing_form %}
-      <button type="submit" class="btn btn-primary btn-sm">Add showing</button>
+      <button type="submit" class="btn btn-primary btn-sm">Add {{ site_config.occurrence_noun }}</button>
       <button type="button" class="btn btn-secondary btn-sm ms-1"
               onclick="hideAddShowingForm()">Cancel</button>
     </form>

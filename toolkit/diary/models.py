@@ -376,13 +376,6 @@ class Event(models.Model):
     )
 
     terms = models.TextField(max_length=4096, null=True, blank=True)
-    notes = models.TextField(
-        max_length=4096,
-        null=True,
-        blank=True,
-        verbose_name="Programmer's notes",
-    )
-
     APPROVAL_MEETING = "meeting"
     APPROVAL_STANDING = "standing"
     APPROVAL_CHOICES = [
@@ -437,10 +430,31 @@ class Event(models.Model):
     )
     programming_notes = models.TextField(
         blank=True,
-        verbose_name="Programming notes",
+        verbose_name="Programmer's notes",
         help_text=(
-            "Internal notes visible to all logged-in users — "
-            "use for meeting decisions, conditions, questions for the programmer."
+            "Internal working notes — not visible to the public. "
+            "Use for queue context (e.g. 'looking for a Friday in May — sample date'), "
+            "meeting decisions, and conditions attached to approval. "
+            "Financial details and hire contacts belong in Terms."
+        ),
+    )
+
+    programming_status_changed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        verbose_name="Status last changed",
+        help_text="Set automatically whenever programming_status is updated.",
+    )
+
+    target_month = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Target month",
+        help_text=(
+            "For undated proposals: the rough month being targeted. "
+            "Always stored as the 1st of the month. "
+            "Shown in the diary alongside monthly ideas notes."
         ),
     )
 
@@ -849,6 +863,32 @@ class Showing(models.Model):
         """First booked room by start time, or None."""
         rb = self.room_bookings.all().first()
         return rb.room if rb else None
+
+    def occupies_rooms(self):
+        """Whether this showing's room bookings should display as occupying a room.
+
+        A cancelled date — or a date on an event that's been rejected from the
+        programming queue — frees its rooms: the booking rows are kept (so
+        un-cancelling restores them) but they stop showing on the diary and
+        calendar. Consistent with clash detection, which only blocks on
+        confirmed bookings (see clash.py).
+        """
+        if self.cancelled:
+            return False
+        if self.event.programming_status == "rejected":
+            return False
+        return True
+
+    @property
+    def visible_room_bookings(self):
+        """Room bookings to render as occupying rooms — empty when freed.
+
+        See occupies_rooms(). Use this (not room_bookings.all()) anywhere room
+        occupancy is surfaced on the diary or calendar.
+        """
+        if not self.occupies_rooms():
+            return []
+        return list(self.room_bookings.all())
 
     def in_past(self):
         return self.start and (self.start < django.utils.timezone.now())
@@ -1364,6 +1404,37 @@ class SiteConfiguration(models.Model):
         help_text=(
             "Cutoff date for the 'Show archive images' setting above. Has no "
             "effect unless that setting is off. Leave blank to disable hiding."
+        ),
+    )
+
+    # --- Terminology ---
+    # What this venue calls a single dated occurrence of an event. Cinemas
+    # screen "showings"; a mixed-programme venue may prefer "dates" so the word
+    # also fits a workshop or club-night run. Defaults are cinema-first because
+    # this codebase is primarily used by cinemas (see SPEC: good neighbours).
+    occurrence_noun = models.CharField(
+        max_length=32,
+        default="showing",
+        verbose_name="Occurrence noun (singular)",
+        help_text=(
+            "Lowercase singular word for one dated occurrence of an event "
+            "(e.g. 'showing' for a cinema, 'date' or 'session' elsewhere). "
+            "Used throughout the event-editing UI."
+        ),
+    )
+    occurrence_noun_plural = models.CharField(
+        max_length=32,
+        default="showings",
+        verbose_name="Occurrence noun (plural)",
+        help_text="Plural of the occurrence noun (e.g. 'showings', 'dates').",
+    )
+    confirm_label = models.CharField(
+        max_length=48,
+        default="Confirm",
+        help_text=(
+            "Label on the button that makes an occurrence public and opens its rota. "
+            "Cinemas may prefer the short 'Confirm'; venues wanting to spell out the "
+            "dual effect can use e.g. 'Publish & open rota'."
         ),
     )
 

@@ -179,7 +179,7 @@ class DiaryTestsMixin(fixtures.TestWithFixtures):
             film_information="FILM_INFO_THREE",
             copy_summary="Copy three summary",
             duration="03:00:00",
-            notes="Notes",
+            programming_notes="Notes",
         )
         e3.save()
         e3.tags.set(
@@ -199,7 +199,7 @@ class DiaryTestsMixin(fixtures.TestWithFixtures):
             copy_summary="\u010copy four summary",
             terms="Terminal price: \u00a31 / \u20ac3",
             duration="01:00:00",
-            notes="\u0147otes on event fou\u0159",
+            programming_notes="\u0147otes on event fou\u0159 \u6620\u753b\u306e\u4e0a\u6620",
         )
         self.e4.save()
         self.e4.tags.set(
@@ -215,7 +215,7 @@ class DiaryTestsMixin(fixtures.TestWithFixtures):
             copy_summary="\u010copy five summary",
             terms="More terms; price: \u00a32 / \u20ac5",
             duration="10:00:00",
-            notes="\u0147otes on event five",
+            programming_notes="\u0147otes on event five",
             private=True,
         )
         self.e5.save()
@@ -226,7 +226,7 @@ class DiaryTestsMixin(fixtures.TestWithFixtures):
             copy_summary="OUTSIDE PRIVATE \u010copy six summary",
             terms="Ever More terms; price: \u00a32 / \u20ac5",
             duration="4:00:00",
-            notes="\u0147otes on private/outwide event six",
+            programming_notes="\u0147otes on private/outwide event six \u6771\u4eac\u30a4\u30d9\u30f3\u30c8",
             outside_hire=True,
             private=True,
             template=self.tmpl2,

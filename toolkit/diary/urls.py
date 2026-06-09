@@ -153,6 +153,7 @@ diary_urls = [
     re_path(
         r"^edit/calendar/(?P<year>\d{4})/(?P<month>\d{1,2})/?$",
         edit_diary_calendar,
+        name="diary-edit-calendar-month",
     ),
     re_path(
         r"^edit/calendar/(?P<year>\d{4})/(?P<month>\d{1,2})/"

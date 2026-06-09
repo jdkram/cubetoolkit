@@ -7,35 +7,242 @@
 .pq-card { border: 1px solid #dee2e6; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; background: #fff; }
 .pq-card.pq-proposed { border-left: 4px solid #0d6efd; }
 .pq-card.pq-draft    { border-left: 4px solid #6c757d; }
+.pq-card.pq-rejected { border-left: 4px solid #fd7e14; background: #fffbf5; }
 .pq-meta { font-size: 0.85em; color: #6c757d; }
+.pq-dates { font-size: 1em; font-weight: 600; color: #212529; margin-top: 0.2rem; }
+.pq-cal-link { font-size: 0.8em; font-weight: 400; margin-left: 0.6em; color: #6c757d; }
 .pq-copy  { font-size: 0.9em; color: #495057; margin-top: 0.4rem; max-height: 4em; overflow: hidden; }
-.pq-notes { background: #fff3cd; border-radius: 4px; padding: 0.4rem 0.6rem; font-size: 0.85em; margin-top: 0.4rem; }
+.pq-notes { border-left: 3px solid #ced4da; padding: 0.25rem 0.6rem; font-size: 0.85em; margin-top: 0.4rem; color: #495057; font-style: italic; }
 .pq-actions form { display: inline; }
 .pq-actions { margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
 .pq-notes-input { width: 100%; margin-top: 0.5rem; }
+.pq-hidden { display: none !important; }
+
+/* Filter + sort toolbar */
+.pq-toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; align-items: flex-start; margin-bottom: 1.25rem; }
+.pq-toolbar-group { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+.pq-toolbar-label { font-size: 0.85em; font-weight: 600; color: #495057; white-space: nowrap; }
+.pq-btn { border: 1px solid #dee2e6; background: #fff; color: #495057; border-radius: 4px; padding: 0.3rem 0.75rem; font-size: 0.85em; cursor: pointer; transition: background 0.1s, border-color 0.1s; }
+.pq-btn:hover { background: #f8f9fa; }
+.pq-btn.active { background: #495057; border-color: #495057; color: #fff; }
+.pq-btn.active-proposed { background: #0d6efd; border-color: #0d6efd; color: #fff; }
+.pq-btn.active-draft { background: #6c757d; border-color: #6c757d; color: #fff; }
+.pq-btn.active-rejected { background: #fd7e14; border-color: #fd7e14; color: #fff; }
+.pq-count { font-weight: 400; }
+.pq-arrow { display: inline-block; min-width: 1.1em; }
+
+/* Group headings (month / status / type) */
+.pq-group-heading {
+    font-size: 1.05em;
+    font-weight: 700;
+    color: #343a40;
+    border-bottom: 2px solid #dee2e6;
+    margin: 1.5rem 0 0.75rem;
+    padding-bottom: 0.3rem;
+}
+#pq-list > .pq-group-heading:first-child { margin-top: 0; }
+.pq-group-heading--proposed { border-color: #0d6efd; color: #0839aa; }
+.pq-group-heading--draft    { border-color: #6c757d; color: #495057; }
+.pq-group-heading--rejected { border-color: #fd7e14; color: #7c3a00; }
+
+/* ── Month navigation rail ───────────────────────────────────────── */
+#pq-nav-rail {
+    position: fixed;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3.2em;
+    z-index: 50;
+    display: none; /* shown by JS once headings exist */
+    flex-direction: column;
+    align-items: stretch;
+    pointer-events: none;
+}
+#pq-nav-rail .rail-inner {
+    position: relative;
+    background: rgba(248, 249, 250, 0.92);
+    border: 1px solid #dee2e6;
+    border-right: none;
+    border-radius: 4px 0 0 4px;
+    padding: 0.4em 0;
+    pointer-events: auto;
+}
+#pq-nav-rail .rail-month {
+    display: block;
+    text-align: center;
+    font-size: 0.68em;
+    color: #6c757d;
+    padding: 0.18em 0.3em;
+    cursor: pointer;
+    white-space: nowrap;
+    line-height: 1.2;
+    transition: color 0.1s, background 0.1s;
+    border-radius: 2px;
+    margin: 0 0.2em;
+}
+#pq-nav-rail .rail-month:hover { color: #212529; background: #e9ecef; }
+#pq-nav-rail .rail-month.rail-active { color: #212529; font-weight: 600; }
+#pq-nav-rail .rail-cursor {
+    position: absolute;
+    left: 0; right: 0;
+    height: 2px;
+    background: #6c757d;
+    border-radius: 1px;
+    pointer-events: none;
+    transition: top 0.1s linear;
+}
+@media (max-width: 768px) { #pq-nav-rail { display: none !important; } }
+
+/* ── How-it-works guide ─────────────────────────────────────────── */
+.pq-guide {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 0.65rem 1rem;
+    margin-bottom: 1.25rem;
+    font-size: 0.9em;
+}
+.pq-guide > summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: #495057;
+    user-select: none;
+    list-style: none;
+}
+.pq-guide > summary::-webkit-details-marker { display: none; }
+.pq-guide > summary::before { content: "▸ "; }
+details[open].pq-guide > summary::before { content: "▾ "; }
+.pq-guide-body { padding-top: 0.85rem; }
+
+.pq-flow-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.pq-fn {
+    flex: 0 0 auto;
+    border: 2px solid;
+    border-radius: 5px;
+    padding: 0.35rem 0.6rem;
+    text-align: center;
+    line-height: 1.3;
+}
+.pq-fn strong { display: block; font-size: 0.92em; }
+.pq-fn small  { display: block; font-size: 0.78em; opacity: 0.8; }
+.pq-fn--draft    { border-color: #6c757d; background: #f8f9fa;  color: #343a40; }
+.pq-fn--proposed { border-color: #0d6efd; background: #e8f0fe;  color: #0839aa; }
+.pq-fn--returned { border-color: #fd7e14; background: #fff3e0;  color: #7c3a00; }
+.pq-fn--active   { border-color: #198754; background: #d1e7dd;  color: #0a3622; }
+.pq-flow-conn {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #6c757d;
+    gap: 0.05rem;
+    line-height: 1.1;
+}
+.pq-flow-conn .pq-carr  { font-size: 1.1em; }
+.pq-flow-conn .pq-clab  { font-size: 0.7em; white-space: nowrap; }
+.pq-flow-return {
+    border-left: 3px solid #dee2e6;
+    padding: 0.35rem 0.6rem;
+    color: #6c757d;
+    font-size: 0.85em;
+    margin-top: 0.25rem;
+}
+.pq-flow-bypass {
+    margin-top: 0.6rem;
+    padding: 0.4rem 0.6rem;
+    background: #fff3cd;
+    border-left: 3px solid #ffc107;
+    border-radius: 0 4px 4px 0;
+    color: #664d03;
+    font-size: 0.82em;
+}
+@media (max-width: 575px) {
+    .pq-flow-row { flex-direction: column; align-items: flex-start; }
+    .pq-flow-conn { flex-direction: row; gap: 0.4rem; }
+    .pq-flow-conn .pq-carr { display: inline-block; transform: rotate(90deg); }
+}
 </style>
 {% endblock %}
 
 {% block body %}
-<h1>Programming Queue</h1>
+<div id="pq-nav-rail" aria-hidden="true"><div class="rail-inner"><div class="rail-cursor"></div></div></div>
+<div class="d-flex align-items-baseline gap-3 mb-1">
+  <h1 class="mb-0">Programming Queue</h1>
+  <a href="{% url "add-event" %}" class="btn btn-sm btn-outline-primary">+ New event</a>
+</div>
 <p class="text-muted">
-  Events in <strong>Draft</strong> or <strong>Proposed</strong> status, oldest first.
+  Events waiting for a decision.
   Click an event title to open its Event Hub.
-  Use the action buttons to move events through the queue.
 </p>
 
 {% if not queue %}
 <div class="alert alert-success">The queue is empty — nothing waiting for a decision.</div>
-{% endif %}
+{% else %}
 
-{% for event in queue %}
-{% with first_showing=event.showings.first %}
-<div class="pq-card pq-{{ event.programming_status }}">
+<details class="pq-guide">
+  <summary>How the programming queue works</summary>
+  <div class="pq-guide-body">
+    <div class="pq-flow-row">
+      <div class="pq-fn pq-fn--draft"><strong>Draft</strong><small>Being prepared</small></div>
+      <div class="pq-flow-conn"><span class="pq-carr">→</span><span class="pq-clab">Propose for meeting</span></div>
+      <div class="pq-fn pq-fn--proposed"><strong>Proposed</strong><small>In the queue</small></div>
+      <div class="pq-flow-conn"><span class="pq-carr">→</span><span class="pq-clab">Approved at meeting</span></div>
+      <div class="pq-fn pq-fn--active"><strong>Active ✓</strong><small>In the diary</small></div>
+    </div>
+    <div class="pq-flow-return">
+      If the meeting flags issues: <strong>Returned for changes</strong> — the proposer revises the event and re-proposes it, which puts it back in the queue as <strong>Proposed</strong>.
+    </div>
+    <div class="pq-flow-bypass">
+      <strong>Already approved</strong> is for events that never really needed the queue — things already informally agreed, like a regular cleaning club or weekly café shift. It moves the event straight to active with no meeting record.
+    </div>
+  </div>
+</details>
+
+<div class="pq-toolbar">
+  <div class="pq-toolbar-group">
+    <span class="pq-toolbar-label">Filter:</span>
+    <button class="pq-btn active" data-filter="all" onclick="pqSetFilter('all', this)">All <span class="pq-count" id="pq-count-all"></span></button>
+    <button class="pq-btn" data-filter="proposed" onclick="pqSetFilter('proposed', this)">Proposed <span class="pq-count" id="pq-count-proposed"></span></button>
+    <button class="pq-btn" data-filter="draft" onclick="pqSetFilter('draft', this)">Draft <span class="pq-count" id="pq-count-draft"></span></button>
+    <button class="pq-btn" data-filter="rejected" onclick="pqSetFilter('rejected', this)">Returned <span class="pq-count" id="pq-count-rejected"></span></button>
+  </div>
+  <div class="pq-toolbar-group">
+    <span class="pq-toolbar-label">Sort by:</span>
+    <button class="pq-btn active" data-sort="event-date" onclick="pqSetSort('event-date', this)" title="Click again to reverse">Event date <span class="pq-arrow">▲</span></button>
+    <button class="pq-btn" data-sort="submitted" onclick="pqSetSort('submitted', this)" title="Review in the order people put things in. Click again to reverse.">Submitted <span class="pq-arrow"></span></button>
+    <button class="pq-btn" data-sort="status-changed" onclick="pqSetSort('status-changed', this)" title="Click again to reverse">Status changed <span class="pq-arrow"></span></button>
+  </div>
+  <div class="pq-toolbar-group">
+    <span class="pq-toolbar-label">Group by:</span>
+    <button class="pq-btn active" data-group="month"  onclick="pqSetGroup('month',  this)">Month</button>
+    <button class="pq-btn"        data-group="status" onclick="pqSetGroup('status', this)">Status</button>
+    <button class="pq-btn"        data-group="type"   onclick="pqSetGroup('type',   this)">Type</button>
+  </div>
+</div>
+
+<div id="pq-list">
+{% for item in queue %}
+{% with event=item.event first_showing=item.event.showings.first %}
+<div class="pq-card pq-{{ event.programming_status }}"
+     data-status="{{ event.programming_status }}"
+     data-event-date="{{ item.sort_event_date }}"
+     data-submitted="{{ item.sort_submitted }}"
+     data-status-changed="{{ item.sort_status_changed }}"
+     data-month="{% if first_showing %}{{ first_showing.start|date:"Y-m" }}{% elif event.target_month %}{{ event.target_month|date:"Y-m" }}{% endif %}"
+     data-type-tags="{% if event.template %}{% for t in event.template.tags.all %}{{ t.slug }} {% endfor %}{% endif %}">
   <div class="d-flex align-items-start gap-3 flex-wrap">
     <div class="flex-grow-1">
       <h5 class="mb-1">
         {% if event.programming_status == "proposed" %}
         <span class="badge text-bg-primary me-1" title="Proposed for discussion at the next meeting">Proposed</span>
+        {% elif event.programming_status == "rejected" %}
+        <span class="badge text-bg-warning text-dark me-1" title="Returned for changes — needs amending before re-proposing">Returned for changes</span>
         {% else %}
         <span class="badge text-bg-secondary me-1" title="Draft — not yet ready for a meeting">Draft</span>
         {% endif %}
@@ -43,18 +250,17 @@
         {% if event.template %}<small class="text-muted">— {{ event.template.name }}</small>{% endif %}
       </h5>
 
+      {% if first_showing %}
+      <div class="pq-dates">
+        {% for s in event.showings.all|slice:":3" %}{{ s.start|date:"j M Y, H:i" }}{% if not forloop.last %} &nbsp;·&nbsp; {% endif %}{% endfor %}
+        {% if event.showings.count > 3 %}<span class="text-muted fw-normal"> (+ {{ event.showings.count|add:"-3" }} more)</span>{% endif %}
+        <a class="pq-cal-link" href="{% url "diary-edit-calendar-month" first_showing.start.year first_showing.start.month %}" target="_blank" rel="noopener" title="Open {{ first_showing.start|date:'N Y' }} in the edit calendar (new tab)">{{ first_showing.start|date:"N Y" }} ↗</a>
+      </div>
+      {% endif %}
       <div class="pq-meta">
         Proposed by: {{ first_showing.booked_by|default:"—" }}
         &nbsp;·&nbsp;
-        Created: {{ event.created_at|date:"j M Y" }}
-        {% if first_showing %}
-        &nbsp;·&nbsp;
-        Date(s):
-        {% for s in event.showings.all|slice:":3" %}
-          {{ s.start|date:"j M Y H:i" }}{% if not forloop.last %}, {% endif %}
-        {% endfor %}
-        {% if event.showings.count > 3 %} (+ {{ event.showings.count|add:"-3" }} more){% endif %}
-        {% endif %}
+        Submitted: {{ event.created_at|date:"j M Y" }}
         &nbsp;·&nbsp;
         {% with rooms=first_showing.room_bookings.all %}
         Rooms: {% if rooms %}{% for rb in rooms %}{{ rb.room.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% else %}none booked{% endif %}
@@ -87,38 +293,287 @@
       {% csrf_token %}
       <input type="hidden" name="action" value="approve_at_meeting">
       <input type="hidden" name="next" value="{% url "programming-queue" %}">
-      <button type="submit" class="btn btn-sm btn-success">Approved at today's meeting ✓</button>
+      <button type="submit" class="btn btn-sm btn-success"
+              onclick="return confirm('Approve \'{{ event.name|escapejs }}\' at today\'s meeting?')">Approved at today's meeting ✓</button>
+    </form>
+    {% endif %}
+
+    {% if event.programming_status == "rejected" %}
+    <form method="post" action="{% url "update-event-programming-status" event.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="propose">
+      <input type="hidden" name="next" value="{% url "programming-queue" %}">
+      <button type="submit" class="btn btn-sm btn-primary">Re-propose for meeting →</button>
+    </form>
+    {% else %}
+    <form method="post" action="{% url "update-event-programming-status" event.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="return_for_changes">
+      <input type="hidden" name="next" value="{% url "programming-queue" %}">
+      <button type="submit" class="btn btn-sm btn-warning">↩ Return for changes</button>
     </form>
     {% endif %}
 
     <form method="post" action="{% url "update-event-programming-status" event.pk %}">
       {% csrf_token %}
-      <input type="hidden" name="action" value="return_for_changes">
-      <input type="hidden" name="next" value="{% url "programming-queue" %}">
-      <button type="submit" class="btn btn-sm btn-warning">Return for changes</button>
-    </form>
-
-    <form method="post" action="{% url "update-event-programming-status" event.pk %}">
-      {% csrf_token %}
       <input type="hidden" name="action" value="make_active">
       <input type="hidden" name="next" value="{% url "programming-queue" %}">
-      <button type="submit" class="btn btn-sm btn-outline-secondary">Skip / make active</button>
+      <button type="submit" class="btn btn-sm btn-outline-secondary"
+              title="For events that were never really in the queue — things already informally agreed, like a regular cleaning club or weekly café shift."
+              onclick="return confirm('Mark \'{{ event.name|escapejs }}\' as active without a meeting vote?\n\nUse this for events that were never really in the queue — things already agreed, like a regular cleaning club or weekly café shift.')">→ Already approved</button>
     </form>
   </div>
 
-  <details class="mt-2">
-    <summary style="font-size:0.85em;color:#6c757d;cursor:pointer;">Add a note (optional)</summary>
-    <form method="post" action="{% url "update-event-programming-status" event.pk %}" class="mt-2">
+  <details class="mt-2"{% if event.programming_status == "draft" and not event.programming_notes %} open{% endif %}>
+    <summary style="font-size:0.85em;color:#6c757d;cursor:pointer;">
+      {% if event.programming_status == "draft" %}Notes for the meeting{% else %}{% if event.programming_notes %}Edit note{% else %}Add a note{% endif %}{% endif %}
+    </summary>
+    {% if event.programming_status == "draft" %}
+    <p style="font-size:0.8em;color:#6c757d;margin:0.5rem 0 0.4rem;">
+      Help the room make a quick, responsible decision. Useful things to include:
+    </p>
+    <ul style="font-size:0.8em;color:#6c757d;margin:0 0 0.5rem 1.1rem;padding:0;line-height:1.6;">
+      <li><strong>Costs and income</strong>: estimated hire / performer fee / tech costs, and expected ticket income. If total costs are likely to exceed £{{ fc_standard_threshold }} (£{{ fc_music_threshold }} for music), flag it. Finance Collective sign-off is needed.</li>
+      <li><strong>Technical or access requirements</strong>: anything the building or rota will need to accommodate.</li>
+      <li><strong>Anything that might affect collective capacity</strong> — unusual setup, late finish, external parties, licensing questions.</li>
+    </ul>
+    <p style="font-size:0.78em;color:#adb5bd;margin:0 0 0.4rem;">Keep it to a sentence or two. The meeting doesn't need a pitch, just enough to make a responsible decision.</p>
+    {% endif %}
+    <form method="post" action="{% url "update-event-programming-status" event.pk %}" class="mt-1">
       {% csrf_token %}
-      <input type="hidden" name="action" value="make_active">
+      <input type="hidden" name="action" value="save_notes">
       <input type="hidden" name="next" value="{% url "programming-queue" %}">
-      <textarea name="notes" rows="2" class="form-control form-control-sm pq-notes-input"
-                placeholder="e.g. Approved subject to confirming the hire fee."></textarea>
-      <button type="submit" class="btn btn-sm btn-outline-primary mt-1">Save note only</button>
+      <textarea name="notes" rows="3" class="form-control form-control-sm pq-notes-input"
+                placeholder="{% if event.programming_status == "draft" %}e.g. Hire fee ~£80, expect ~25 tickets at £6 = £150. No special tech. Late finish, need cleaning rota slot.{% else %}e.g. Approved subject to confirming the hire fee.{% endif %}">{{ event.programming_notes }}</textarea>
+      <button type="submit" class="btn btn-sm btn-outline-secondary mt-1">✓ Save note</button>
     </form>
   </details>
   {% endif %}
 </div>
 {% endwith %}
 {% endfor %}
+</div>
+
+{% endif %}
+{% endblock %}
+
+{% block script %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var list = document.getElementById('pq-list');
+    if (!list) return;
+
+    var cards = Array.from(list.querySelectorAll('.pq-card'));
+    var currentFilter = 'all';
+    var currentSort = 'event-date';
+    var sortAsc = true;
+    var groupMode = 'month'; // 'month' | 'status' | 'type' | 'none'
+    var allHeadings = [];
+
+    // Status counts
+    var counts = { all: 0, proposed: 0, draft: 0, rejected: 0 };
+    cards.forEach(function (c) {
+        counts.all++;
+        var s = c.dataset.status;
+        if (counts[s] !== undefined) counts[s]++;
+    });
+    Object.keys(counts).forEach(function (k) {
+        var el = document.getElementById('pq-count-' + k);
+        if (el) el.textContent = '(' + counts[k] + ')';
+    });
+
+    // ── Type-bucket mapping ──────────────────────────────────────────
+    var TYPE_BUCKETS = [
+        { label: 'Film',                 tags: ['film'] },
+        { label: 'Music & Performance',  tags: ['music', 'performance'] },
+        { label: 'Café & Food',          tags: ['cafe'] },
+        { label: 'Workshop',             tags: ['workshop'] },
+        { label: 'Exhibition',           tags: ['exhibition'] },
+        { label: 'Outside Hire',         tags: ['outside-hire'] },
+        { label: 'Volunteer / Internal', tags: ['volunteer', 'induction', 'training-for-volunteers', 'meeting'] },
+    ];
+    function getTypeBucket(tagsStr) {
+        var tags = (tagsStr || '').trim().split(/\s+/).filter(Boolean);
+        for (var i = 0; i < TYPE_BUCKETS.length; i++) {
+            var b = TYPE_BUCKETS[i];
+            for (var j = 0; j < b.tags.length; j++) {
+                if (tags.indexOf(b.tags[j]) !== -1) return b.label;
+            }
+        }
+        return 'Other';
+    }
+
+    // ── Group key helpers ────────────────────────────────────────────
+    function getGroupKey(card) {
+        if (groupMode === 'month')  return card.dataset.month || '';
+        if (groupMode === 'status') return card.dataset.status || '';
+        if (groupMode === 'type')   return getTypeBucket(card.dataset.typeTags);
+        return null;
+    }
+    function getGroupLabel(key) {
+        if (groupMode === 'month')  return key ? monthLabel(key) : 'No date set';
+        if (groupMode === 'status') return { proposed: 'Proposed', draft: 'Draft', rejected: 'Returned for changes' }[key] || key;
+        return key || 'Other';
+    }
+    function getGroupSortKey(key) {
+        if (groupMode === 'month')  return key || 'zzzz';
+        if (groupMode === 'status') return { proposed: '1', draft: '2', rejected: '3' }[key] || '9';
+        return key || 'zzz'; // type: alphabetical
+    }
+
+    function monthLabel(ym) {
+        if (!ym) return 'No date set';
+        var p = ym.split('-');
+        return new Date(parseInt(p[0]), parseInt(p[1]) - 1, 1)
+            .toLocaleString('default', { month: 'long', year: 'numeric' });
+    }
+
+    function railLabel(text) {
+        // Abbreviate "January 2026" → "Jan '26"; truncate others
+        var m = text.match(/^(\w+)\s+(\d{4})$/);
+        if (m) return m[1].slice(0, 3) + " '" + m[2].slice(2);
+        return text.length > 10 ? text.slice(0, 9) + '…' : text;
+    }
+
+    // ── Nav rail ─────────────────────────────────────────────────────
+    var _railScrollHandler = null;
+    function rebuildRail() {
+        var rail = document.getElementById('pq-nav-rail');
+        if (!rail) return;
+        var inner = rail.querySelector('.rail-inner');
+        var cursor = rail.querySelector('.rail-cursor');
+        if (!inner) return;
+
+        // Clear old labels
+        Array.from(inner.querySelectorAll('.rail-month')).forEach(function (el) { el.remove(); });
+        if (_railScrollHandler) window.removeEventListener('scroll', _railScrollHandler);
+        _railScrollHandler = null;
+
+        var headings = Array.from(list.querySelectorAll('.pq-group-heading'));
+        if (headings.length < 2) { rail.style.display = 'none'; return; }
+        rail.style.display = 'flex';
+
+        headings.forEach(function (h) {
+            var span = document.createElement('span');
+            span.className = 'rail-month';
+            span.textContent = railLabel(h.textContent.trim());
+            span.addEventListener('click', function () {
+                h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+            inner.insertBefore(span, cursor);
+        });
+
+        _railScrollHandler = function () {
+            var scrollY = window.scrollY;
+            var docH = document.body.scrollHeight;
+            var winH = window.innerHeight;
+            cursor.style.top = Math.round(
+                (docH > winH ? scrollY / (docH - winH) : 0) * inner.offsetHeight
+            ) + 'px';
+
+            var navbar = document.querySelector('.navbar.fixed-top');
+            var navH = navbar ? navbar.offsetHeight : 56;
+            var current = null;
+            headings.forEach(function (h) {
+                if (h.getBoundingClientRect().top <= navH + 20) current = h;
+            });
+            inner.querySelectorAll('.rail-month').forEach(function (el, i) {
+                el.classList.toggle('rail-active', headings[i] === current);
+            });
+        };
+        window.addEventListener('scroll', _railScrollHandler, { passive: true });
+        _railScrollHandler();
+    }
+
+    // ── Core sort/filter/group ───────────────────────────────────────
+    function updateArrows() {
+        document.querySelectorAll('[data-sort]').forEach(function (b) {
+            var arrow = b.querySelector('.pq-arrow');
+            if (arrow) arrow.textContent = b.dataset.sort === currentSort ? (sortAsc ? ' ▲' : ' ▼') : '';
+        });
+    }
+
+    function applyFilterAndSort() {
+        allHeadings.forEach(function (h) { h.remove(); });
+        allHeadings = [];
+
+        var attr = 'data-' + currentSort;
+        var dir = sortAsc ? 1 : -1;
+
+        if (groupMode !== 'none') {
+            cards.sort(function (a, b) {
+                var ga = getGroupSortKey(getGroupKey(a));
+                var gb = getGroupSortKey(getGroupKey(b));
+                if (ga !== gb) return ga < gb ? -1 : 1;
+                return dir * (parseInt(a.getAttribute(attr), 10) - parseInt(b.getAttribute(attr), 10));
+            });
+        } else {
+            cards.sort(function (a, b) {
+                return dir * (parseInt(a.getAttribute(attr), 10) - parseInt(b.getAttribute(attr), 10));
+            });
+        }
+
+        cards.forEach(function (c) { list.appendChild(c); });
+
+        cards.forEach(function (c) {
+            c.classList.toggle('pq-hidden', currentFilter !== 'all' && c.dataset.status !== currentFilter);
+        });
+
+        if (groupMode !== 'none') {
+            var lastKey = null;
+            cards.forEach(function (c) {
+                if (c.classList.contains('pq-hidden')) return;
+                var key = getGroupKey(c);
+                if (key !== lastKey) {
+                    lastKey = key;
+                    var h = document.createElement('div');
+                    h.className = 'pq-group-heading' + (groupMode === 'status' ? ' pq-group-heading--' + key : '');
+                    h.textContent = getGroupLabel(key);
+                    list.insertBefore(h, c);
+                    allHeadings.push(h);
+                }
+            });
+        }
+
+        updateArrows();
+        rebuildRail();
+    }
+
+    window.pqSetFilter = function (filter, btn) {
+        currentFilter = filter;
+        document.querySelectorAll('[data-filter]').forEach(function (b) {
+            b.classList.remove('active', 'active-proposed', 'active-draft', 'active-rejected');
+        });
+        btn.classList.add(filter === 'all' ? 'active' : 'active-' + filter);
+        applyFilterAndSort();
+    };
+
+    window.pqSetSort = function (sort, btn) {
+        if (sort === currentSort) { sortAsc = !sortAsc; }
+        else {
+            currentSort = sort; sortAsc = true;
+            document.querySelectorAll('[data-sort]').forEach(function (b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+        }
+        applyFilterAndSort();
+    };
+
+    window.pqSetGroup = function (mode, btn) {
+        if (groupMode === mode) {
+            // Toggle off
+            groupMode = 'none';
+            btn.classList.remove('active');
+        } else {
+            groupMode = mode;
+            document.querySelectorAll('[data-group]').forEach(function (b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+        }
+        applyFilterAndSort();
+    };
+
+    // Initialise with month grouping active (button already has .active in HTML)
+    applyFilterAndSort();
+});
+</script>
 {% endblock %}
