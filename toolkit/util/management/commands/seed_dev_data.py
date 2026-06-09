@@ -29,6 +29,7 @@ from toolkit.diary.models import (
     EventTag,
     EventTemplate,
     EventTemplateRole,
+    EventTemplateRoom,
     MediaItem,
     Role,
     RoomBooking,
@@ -225,6 +226,7 @@ class Command(BaseCommand):
             "qualifications": 0,
             "volunteers": 0,
             "events": 0,
+            "proposed_events": 0,
             "showings": 0,
             "rota_entries": 0,
             "images": 0,
@@ -303,12 +305,15 @@ class Command(BaseCommand):
             )
             if created:
                 counts["event_templates"] += 1
-                for role_name in tmpl_data.get("roles", []):
+                role_slots = tmpl_data.get("role_slots") or [
+                    {"role": name, "count": 1} for name in tmpl_data.get("roles", [])
+                ]
+                for slot in role_slots:
                     try:
                         EventTemplateRole.objects.create(
                             template=tmpl,
-                            role=Role.objects.get(name=role_name),
-                            count=1,
+                            role=Role.objects.get(name=slot["role"]),
+                            count=slot.get("count", 1),
                         )
                     except Role.DoesNotExist:
                         pass
@@ -316,6 +321,19 @@ class Command(BaseCommand):
                     try:
                         tmpl.tags.add(EventTag.objects.get(name=tag_name))
                     except EventTag.DoesNotExist:
+                        pass
+                for room_data in tmpl_data.get("default_rooms", []):
+                    try:
+                        EventTemplateRoom.objects.get_or_create(
+                            template=tmpl,
+                            room=Room.objects.get(name=room_data["room"]),
+                            date_offset=0,
+                            defaults={
+                                "start_delta_minutes": room_data.get("start_delta_minutes", 0),
+                                "end_delta_minutes": room_data.get("end_delta_minutes"),
+                            },
+                        )
+                    except Room.DoesNotExist:
                         pass
 
         # Collectives must be seeded before volunteers so that collective
@@ -719,6 +737,11 @@ class Command(BaseCommand):
             rooms_dict, list(volunteer_objects.values()), counts, anchor
         )
 
+        # Programming queue — proposed / draft events a few months out
+        self._seed_programming_queue(
+            rooms_dict, list(volunteer_objects.values()), counts
+        )
+
         # CMS pages
         if WAGTAIL_AVAILABLE:
             counts["cms_pages"] += self._seed_cms_pages()
@@ -880,6 +903,20 @@ class Command(BaseCommand):
         if not cfg.bulletin_guidance:
             cfg.bulletin_guidance = _BULLETIN_GUIDANCE
             cfg.save(update_fields=["bulletin_guidance"])
+
+        # Star and Shadow runs a mixed programme (films, gigs, workshops, club
+        # nights), so "date" reads better than the cinema-default "showing".
+        # The model default stays "showing"/"Confirm" (cinema-first).
+        cfg.occurrence_noun = "date"
+        cfg.occurrence_noun_plural = "dates"
+        cfg.confirm_label = "Publish & open rota"
+        cfg.save(
+            update_fields=[
+                "occurrence_noun",
+                "occurrence_noun_plural",
+                "confirm_label",
+            ]
+        )
 
         # Community exchange items (9.79)
         from toolkit.labs.models import ExchangeItem
@@ -1072,6 +1109,7 @@ class Command(BaseCommand):
                 f"  Qualifications:  {counts['qualifications']} new\n"
                 f"  Volunteers:      {counts['volunteers']} new\n"
                 f"  Events:          {counts['events']} new\n"
+                f"    of which queue: {counts['proposed_events']} proposed/draft\n"
                 f"  Showings:        {counts['showings']} new\n"
                 f"  Rota entries:    {counts['rota_entries']} new\n"
                 f"  Images:          {counts['images']} new\n"
@@ -1130,6 +1168,9 @@ class Command(BaseCommand):
                     pricing=evt_data.get("pricing", ""),
                     roles=evt_data.get("roles", []),
                     image_url=evt_data.get("image_url"),
+                    copy=evt_data.get("copy", ""),
+                    copy_summary=evt_data.get("copy_summary", ""),
+                    terms=evt_data.get("terms", ""),
                 )
 
         # Seed biweekly Sunday events
@@ -1149,6 +1190,9 @@ class Command(BaseCommand):
                     pricing=evt_data.get("pricing", ""),
                     roles=evt_data.get("roles", []),
                     image_url=evt_data.get("image_url"),
+                    copy=evt_data.get("copy", ""),
+                    copy_summary=evt_data.get("copy_summary", ""),
+                    terms=evt_data.get("terms", ""),
                 )
 
         # Varied start times for Sunday films — a realistic spread across evening
@@ -1244,6 +1288,9 @@ class Command(BaseCommand):
                         pricing=evt_data.get("pricing", ""),
                         roles=evt_data.get("roles", []),
                         image_url=evt_data.get("image_url"),
+                        copy=evt_data.get("copy", ""),
+                        copy_summary=evt_data.get("copy_summary", ""),
+                        terms=evt_data.get("terms", ""),
                     )
                 # Advance to next month
                 if current.month == 12:
@@ -1264,17 +1311,20 @@ class Command(BaseCommand):
         pricing="",
         roles=None,
         image_url=None,
+        copy="",
+        copy_summary="",
+        terms="",
     ):
         event, created = Event.objects.get_or_create(
             name=name,
             defaults={
-                "copy_summary": "",
-                "copy": "",
+                "copy_summary": copy_summary,
+                "copy": copy,
                 "film_information": "",
                 "pricing": pricing,
                 "private": False,
                 "outside_hire": False,
-                "terms": "",
+                "terms": terms or copy,
                 "duration": duration,
             },
         )
@@ -1404,7 +1454,7 @@ class Command(BaseCommand):
                 "pricing": pricing,
                 "private": False,
                 "outside_hire": False,
-                "terms": "",
+                "terms": copy or copy_summary,
                 "duration": datetime.time(2, 0),
                 "trailer_url": trailer_url,
             },
@@ -1493,6 +1543,288 @@ class Command(BaseCommand):
             )
             if re_created:
                 counts["rota_entries"] += 1
+
+    def _seed_programming_queue(self, rooms_dict, vol_list, counts):
+        """Seed proposed / draft events for the programming queue.
+
+        These illustrate the queue's real-world states: events pencilled in
+        2-3+ months ahead with varying amounts of detail, from a fully
+        fleshed-out proposal down to a bare name with one placeholder date.
+        Two of them carry several placeholder dates a programmer would later
+        cancel once the plan firms up (the dates hold the room in the meantime,
+        which is the whole point of putting them in early).
+
+        All showings here are left unconfirmed — that is what "in the queue,
+        not yet published" looks like. None are pre-cancelled: the intent is to
+        give a programmer real placeholders to practise cancelling.
+        """
+        now = timezone.now()
+        base = timezone.localtime(now)
+
+        # weeks: offset from now. days: extra days (for back-to-back weekends).
+        # A date with no "room" is deliberately left unbooked — a realistic gap.
+        PROPOSED_EVENTS = [
+            {
+                "name": "Pleasure Activism — monthly reading group",
+                "template": "Workshop",
+                "status": "proposed",
+                "booked_by": "Sasha Pryce",
+                "tags": ["workshop"],
+                "duration": 120,
+                "created_days_ago": 21,
+                "copy_summary": (
+                    "A relaxed monthly reading group working through adrienne "
+                    "maree brown's 'Pleasure Activism'. No prep needed — come "
+                    "for any session."
+                ),
+                "copy": (
+                    "We'll read a chapter a month and talk it through over tea. "
+                    "Newcomers always welcome; you don't need to have read the "
+                    "book. Step-free venue, gender-neutral toilets."
+                ),
+                "terms": "Free, donations welcome. Capacity 20.",
+                "programming_notes": (
+                    "Proposed at the last Monday meeting. Sasha to confirm it "
+                    "doesn't clash with the existing book club before we lock "
+                    "the dates."
+                ),
+                "dates": [{"weeks": 9, "hour": 18, "room": "Meeting"}],
+            },
+            {
+                "name": "Repair Café (monthly trial)",
+                "template": "Workshop",
+                "status": "draft",
+                "booked_by": "Cleo Marchetti",
+                "tags": ["workshop"],
+                "duration": 180,
+                "created_days_ago": 10,
+                "copy_summary": (
+                    "Bring something broken — a lamp, a jumper, a toaster — and "
+                    "fix it with help from volunteers, instead of binning it."
+                ),
+                "programming_notes": (
+                    "Block-booked four monthly trial dates to hold the Venue "
+                    "Space. We'll almost certainly drop the later ones once we "
+                    "know how many fixers we can get — likely keeping just the "
+                    "first one or two. Placeholders for now."
+                ),
+                "dates": [
+                    {"weeks": 8, "hour": 13, "room": "Venue Space"},
+                    {"weeks": 12, "hour": 13, "room": "Venue Space"},
+                    {"weeks": 16, "hour": 13, "room": "Venue Space"},
+                    {"weeks": 20, "hour": 13, "room": "Venue Space"},
+                ],
+            },
+            {
+                "name": "Noise night (working title)",
+                "template": None,
+                "status": "draft",
+                "booked_by": "Sparks",
+                "tags": ["music"],
+                "duration": 180,
+                "created_days_ago": 4,
+                "programming_notes": (
+                    "Pencilled in while I chase a headline act. Nothing "
+                    "confirmed — title, line-up and door price all TBC. Will "
+                    "firm up nearer the time."
+                ),
+                "dates": [{"weeks": 11, "hour": 20}],
+            },
+            {
+                "name": "Trans Day of Visibility — film + panel",
+                "template": "Film (DCP)",
+                "status": "proposed",
+                "booked_by": "Lila Estraven",
+                "tags": ["film"],
+                "duration": 150,
+                "created_days_ago": 14,
+                "copy_summary": (
+                    "A screening followed by a panel discussion with local "
+                    "trans and non-binary artists and organisers."
+                ),
+                "copy": "Film TBC — shortlisting now. Panel guests being confirmed.",
+                "programming_notes": (
+                    "Approved in principle at the meeting. Still needs a room "
+                    "booked and the panel guests confirmed — no date clash, just "
+                    "not booked yet."
+                ),
+                "dates": [{"weeks": 10, "hour": 19}],
+            },
+            {
+                "name": "Benefit gig for the building fund",
+                "template": "Gig",
+                "status": "proposed",
+                "booked_by": "Rex Hollis",
+                "tags": ["music"],
+                "duration": 240,
+                "created_days_ago": 7,
+                "copy_summary": (
+                    "Three local bands playing to raise money for the roof "
+                    "repairs. All proceeds to the building fund."
+                ),
+                "copy": "Line-up confirmed. Sound by the in-house PA. Bar open all night.",
+                "terms": "",  # deliberately missing — publishing will fail until added
+                "programming_notes": (
+                    "Ready to go except it has no terms/pricing yet — confirming "
+                    "it will fail until those are filled in. Flagged to Rex."
+                ),
+                "dates": [{"weeks": 13, "hour": 19, "room": "Venue Space"}],
+            },
+            {
+                "name": "Experimental film weekender (early planning)",
+                "template": None,
+                "status": "draft",
+                "booked_by": "Elia Silveira",
+                "tags": ["film"],
+                "duration": 180,
+                "created_days_ago": 2,
+                "programming_notes": (
+                    "Very early — just holding a weekend in the diary. "
+                    "Programme, guests and budget all TBC. Two placeholder dates "
+                    "we'll likely thin out."
+                ),
+                "dates": [
+                    {"weeks": 14, "days": 0, "hour": 18, "room": "Cinema"},
+                    {"weeks": 14, "days": 1, "hour": 15, "room": "Cinema"},
+                ],
+            },
+            # Dateless proposals — target_month set, no dates yet
+            {
+                "name": "Zine fair (date TBC)",
+                "template": "Workshop",
+                "status": "proposed",
+                "booked_by": "Priya Narayan",
+                "tags": ["workshop"],
+                "duration": 300,
+                "created_days_ago": 3,
+                "target_month_offset_months": 3,
+                "programming_notes": (
+                    "Proposed at Monday meeting — everyone excited. Priya "
+                    "checking maker availability before we lock a date. Probably "
+                    "a Saturday afternoon."
+                ),
+            },
+            {
+                "name": "Late-night horror double bill",
+                "template": "Film (DCP)",
+                "status": "draft",
+                "booked_by": "Kaz Tanaka",
+                "tags": ["film"],
+                "duration": 240,
+                "created_days_ago": 1,
+                "target_month_offset_months": 4,
+                "programming_notes": (
+                    "Halloween-adjacent. Kaz shortlisting titles. No room or "
+                    "date agreed yet — just flagging so it lands in the right "
+                    "month's planning."
+                ),
+            },
+            {
+                "name": "Community archive open day",
+                "template": None,
+                "status": "proposed",
+                "booked_by": "Jo Afolabi",
+                "tags": [],
+                "duration": 360,
+                "created_days_ago": 5,
+                "target_month_offset_months": 5,
+                "programming_notes": (
+                    "Collaboration with the local history group. Date to be "
+                    "agreed once they confirm their volunteer rota. Likely a "
+                    "Sunday."
+                ),
+            },
+        ]
+
+        for spec in PROPOSED_EVENTS:
+            template = None
+            if spec.get("template"):
+                template = EventTemplate.objects.filter(name=spec["template"]).first()
+
+            dur_mins = spec.get("duration", 120)
+            dur_time = datetime.time(dur_mins // 60, dur_mins % 60)
+
+            target_month = None
+            if spec.get("target_month_offset_months"):
+                # Compute 1st of month N months from now.
+                m = base.month - 1 + spec["target_month_offset_months"]
+                target_month = datetime.date(
+                    year=base.year + m // 12,
+                    month=m % 12 + 1,
+                    day=1,
+                )
+
+            defaults = {
+                "programming_status": spec["status"],
+                "programming_notes": spec.get("programming_notes", ""),
+                "copy_summary": spec.get("copy_summary", ""),
+                "copy": spec.get("copy", ""),
+                "terms": spec.get("terms", ""),
+                "pricing": spec.get("pricing", ""),
+                "private": spec.get("private", False),
+                "outside_hire": spec.get("outside_hire", False),
+                "duration": dur_time,
+                "target_month": target_month,
+            }
+            # Only pass template when set: Event.__init__ pre-fills from a
+            # template kwarg and chokes on an explicit None.
+            if template is not None:
+                defaults["template"] = template
+
+            event, created = Event.objects.get_or_create(
+                name=spec["name"], defaults=defaults
+            )
+            if not created:
+                continue
+            counts["events"] += 1
+            counts["proposed_events"] += 1
+
+            for tag_name in spec.get("tags", []):
+                tag = EventTag.objects.filter(name=tag_name).first()
+                if tag:
+                    event.tags.add(tag)
+
+            # Backdate created_at (auto_now_add) so the queue's oldest-first
+            # ordering is meaningful across the seeded proposals.
+            days_ago = spec.get("created_days_ago")
+            if days_ago:
+                Event.objects.filter(pk=event.pk).update(
+                    created_at=now - datetime.timedelta(days=days_ago)
+                )
+
+            for d in spec.get("dates", []):
+                start = (
+                    base + datetime.timedelta(weeks=d["weeks"], days=d.get("days", 0))
+                ).replace(hour=d.get("hour", 19), minute=0, second=0, microsecond=0)
+
+                room = rooms_dict.get(d["room"]) if d.get("room") else None
+                if room is not None:
+                    start = self._find_free_slot(room, start, dur_mins)
+
+                showing, s_created = Showing.objects.get_or_create(
+                    event=event,
+                    start=start,
+                    defaults={
+                        "booked_by": spec.get("booked_by", "seed_dev_data"),
+                        "confirmed": False,
+                        "cancelled": d.get("cancelled", False),
+                        "discounted": False,
+                        "hide_in_programme": False,
+                        "rota_notes": "",
+                    },
+                )
+                if s_created:
+                    counts["showings"] += 1
+                    if room is not None and not d.get("cancelled", False):
+                        RoomBooking.objects.get_or_create(
+                            showing=showing,
+                            room=room,
+                            defaults={
+                                "start": start,
+                                "end": start + datetime.timedelta(minutes=dur_mins),
+                            },
+                        )
+                        self._book_slot(room, start, dur_mins)
 
     def _init_room_schedule(self):
         """Pre-load existing future showings into an in-memory schedule.

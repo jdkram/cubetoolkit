@@ -21,7 +21,7 @@ from django.contrib import messages
 from django.views.generic import View
 import django.template
 import django.db
-from django.db.models import Q
+from django.db.models import Q, Min
 import django.utils.timezone as timezone
 from django.contrib.auth.decorators import permission_required, user_passes_test
 from django.contrib.auth.mixins import PermissionRequiredMixin
@@ -42,6 +42,7 @@ from toolkit.diary.models import (
     PrintedProgramme,
     Room,
     RoomBooking,
+    EventTemplateRoom,
     VolunteerEventMark,
     get_site_config,
 )
@@ -194,6 +195,31 @@ def edit_diary_list(request, year=None, day=None, month=None):
         ideas[startdate] = idea_list[0].ideas
 
     context["ideas"] = ideas
+
+    # Dateless proposals: events with target_month in range but no showings.
+    dateless_events = (
+        Event.objects.filter(
+            target_month__range=[idea_startdate, enddatetime],
+            showings__isnull=True,
+        )
+        .order_by("target_month", "name")
+    )
+    # Build lookup: (year, month) -> the key used in the ideas dict for that month.
+    # The ideas dict uses startdate as the key for the first month (which may not
+    # be the 1st), and the literal 1st-of-month date for all subsequent months.
+    month_to_ideas_key = {(k.year, k.month): k for k in ideas}
+    dateless_by_month = {}
+    for ev in dateless_events:
+        key = month_to_ideas_key.get((ev.target_month.year, ev.target_month.month))
+        if key is not None:
+            dateless_by_month.setdefault(key, []).append(ev)
+    context["dateless_by_month"] = dateless_by_month
+
+    # Mobile list view: showings per day, sorted by start, deduplicated.
+    # Passed separately because dates_by_time groups by room-booking start,
+    # which would show the same event multiple times in the mobile list.
+    context["mobile_dates"] = dates
+
     # Group each day's showings into time rows for the diary table.
     # In multiroom mode, key by each room booking's own start time so that a
     # booking at 19:00 on a 12:00 showing appears in its own 19:00 row.
@@ -202,8 +228,11 @@ def edit_diary_list(request, year=None, day=None, month=None):
     for day, day_showings in dates.items():
         time_groups: OrderedDict = OrderedDict()
         for showing in day_showings:
-            if settings.MULTIROOM_ENABLED and showing.room_bookings.exists():
-                for rb in showing.room_bookings.all():
+            visible_rbs = (
+                showing.visible_room_bookings if settings.MULTIROOM_ENABLED else []
+            )
+            if visible_rbs:
+                for rb in visible_rbs:
                     if rb.start not in time_groups:
                         time_groups[rb.start] = []
                     if showing not in time_groups[rb.start]:
@@ -328,7 +357,7 @@ def edit_diary_data(request):
         }
 
         if settings.MULTIROOM_ENABLED:
-            room_bookings = list(showing.room_bookings.all())
+            room_bookings = showing.visible_room_bookings
             if room_bookings:
                 # One calendar event per room booking, each at its own time.
                 # Omit top-level color so each resource's eventColor applies.
@@ -447,8 +476,9 @@ def event_detail_view(request, event_id):
             new_showing.clone_or_reset_rota(latest_showing)
             messages.success(
                 request,
-                "Added showing on {}".format(
-                    timezone.localtime(new_showing.start).strftime("%d %b %Y, %H:%M")
+                "Added {} on {}".format(
+                    get_site_config().occurrence_noun,
+                    timezone.localtime(new_showing.start).strftime("%d %b %Y, %H:%M"),
                 ),
             )
             return HttpResponseRedirect(
@@ -480,6 +510,9 @@ def event_detail_view(request, event_id):
             "all_showings_in_past": event.all_showings_in_past(),
             "clone_source_showing": latest_showing,
             "unconfirmed_future_count": unconfirmed_future_count,
+            # A single-occurrence event reads as one thing; the "dates" concept
+            # only surfaces once a second showing exists. See plan: UI collapse.
+            "is_series": len(all_showings) > 1,
         },
     )
 
@@ -488,8 +521,9 @@ def event_detail_view(request, event_id):
 @require_POST
 def update_showing_status(request, showing_id):
     showing = get_object_or_404(Showing, pk=showing_id)
+    noun = get_site_config().occurrence_noun.capitalize()
     if showing.in_past():
-        messages.error(request, "Can't change status of a past showing")
+        messages.error(request, f"Can't change status of a past {noun.lower()}")
     else:
         action = request.POST.get("action", "")
         if action == "confirm":
@@ -502,20 +536,20 @@ def update_showing_status(request, showing_id):
             else:
                 showing.confirmed = True
                 showing.save()
-                messages.success(request, "Showing confirmed.")
+                messages.success(request, f"{noun} confirmed — it's now public and on the rota.")
         elif action == "unconfirm":
             showing.confirmed = False
             showing.save()
-            messages.success(request, "Showing unconfirmed.")
+            messages.success(request, f"{noun} unconfirmed — removed from the programme and rota.")
         elif action == "cancel":
             showing.cancelled = True
             showing.confirmed = False
             showing.save()
-            messages.success(request, "Showing cancelled.")
+            messages.success(request, f"{noun} cancelled — its room bookings are freed.")
         elif action == "uncancel":
             showing.cancelled = False
             showing.save()
-            messages.success(request, "Showing reinstated.")
+            messages.success(request, f"{noun} reinstated.")
         else:
             messages.error(request, "Unknown action.")
     return HttpResponseRedirect(
@@ -582,7 +616,7 @@ def clone_event(request, event_id):
                 copy=source_event.copy,
                 copy_summary=source_event.copy_summary,
                 terms=source_event.terms,
-                notes=source_event.notes,
+                programming_notes=source_event.programming_notes,
                 # Ticket link is date-specific — leave blank so programmer
                 # notices it needs updating.
             )
@@ -682,6 +716,7 @@ def batch_add_showings(request, event_id):
                 if room:
                     _create_room_booking(showing, room, event)
                 showing.clone_or_reset_rota(latest_showing)
+                showing.create_room_bookings_from_template()
                 created.append(showing)
 
             return render(
@@ -804,6 +839,38 @@ def quick_create_open_session(request):
     return render(request, "quick_create_open_session.html", {"form": form})
 
 
+def _template_data():
+    """Dict of per-template preview data (roles, rooms, tags, flags) for the new-event form.
+
+    Passed to the template via json_script for safe embedding in JS.
+    """
+    result = {}
+    for t in EventTemplate.objects.prefetch_related(
+        "role_slots__role", "default_rooms__room", "tags"
+    ).all():
+        rooms = [
+            {
+                "room": rb.room.name,
+                "colour": rb.room.colour,
+                "start": rb.start_delta_minutes,
+                "end": rb.end_delta_minutes,
+            }
+            for rb in t.default_rooms.all()
+        ]
+        result[str(t.pk)] = {
+            "roles": [
+                {"name": r.role.name, "count": r.count} for r in t.role_slots.all()
+            ],
+            "rooms": rooms,
+            "tags": list(t.tags.values_list("name", flat=True)),
+            "private": t.private,
+            "outside_hire": t.outside_hire,
+            "pricing": t.pricing or "",
+            "rota_notes": t.rota_notes or "",
+        }
+    return result
+
+
 @permission_required("toolkit.write")
 @require_http_methods(["GET", "POST"])
 def add_event(request):
@@ -821,12 +888,20 @@ def add_event(request):
             # Event constructor will pull things from the template as
             # appropriate (excluding many/many relation which can only be set
             # after saving)
+            entry_mode = form.cleaned_data["entry_mode"]
             new_event = Event(
                 name=form.cleaned_data["event_name"],
                 template=form.cleaned_data["event_template"],
                 duration=form.cleaned_data["duration"],
                 outside_hire=form.cleaned_data["outside_hire"],
                 private=form.cleaned_data["private"],
+                programming_status=(
+                    "draft" if entry_mode == "queue" else "active"
+                ),
+                approval_type=(
+                    Event.APPROVAL_STANDING if entry_mode == "standing" else ""
+                ),
+                target_month=form.cleaned_data.get("target_month"),
             )
             # Set event tags and template links from its template:
             new_event.save()
@@ -839,34 +914,46 @@ def add_event(request):
                         url=tl.url,
                         order=tl.order,
                     )
-            # create number_of_bookings showings, each offset by one more from
-            # the date/time given in start parameter, and each with rota roles
-            # from the template
-            start = form.cleaned_data["start"]
-            for day_count in range(0, form.cleaned_data["number_of_bookings"]):
-                day_offset = datetime.timedelta(days=day_count)
+            # Create one Showing per selected date at the given start time.
+            start_time = form.cleaned_data["start_time"]
+            new_showing = None
+            for d in form.cleaned_data["dates"]:
+                aware_dt = timezone.make_aware(datetime.datetime.combine(d, start_time))
                 new_showing = Showing(
                     event=new_event,
-                    start=(start + day_offset),
+                    start=aware_dt,
                     discounted=form.cleaned_data["discounted"],
-                    # confirmed=form.cleaned_data['confirmed'],
                     booked_by=form.cleaned_data["booked_by"],
                 )
                 new_showing.save()
-                room = form.cleaned_data.get("room")
-                if room:
-                    _create_room_booking(new_showing, room, new_event)
-                # Set showing roles to those from its template:
                 new_showing.reset_rota_to_default()
+                new_showing.create_room_bookings_from_template()
 
-            messages.add_message(
-                request,
-                messages.SUCCESS,
-                "Added event '{}' with booking on {}".format(
-                    new_event.name,
-                    new_showing.start.strftime("%d/%m/%y at %H:%M"),
-                ),
-            )
+            cfg = get_site_config()
+            dates = form.cleaned_data["dates"]
+            if dates:
+                n_dates = len(dates)
+                noun = cfg.occurrence_noun if n_dates == 1 else cfg.occurrence_noun_plural
+                messages.add_message(
+                    request,
+                    messages.SUCCESS,
+                    "Added event '{}' with {} {} starting {}".format(
+                        new_event.name,
+                        n_dates,
+                        noun,
+                        dates[0].strftime("%-d %b %Y"),
+                    ),
+                )
+            else:
+                messages.add_message(
+                    request,
+                    messages.SUCCESS,
+                    "Added event '{}' — no date set yet. Add dates from the Event Hub when ready.".format(
+                        new_event.name,
+                    ),
+                )
+            if entry_mode == "queue":
+                return HttpResponseRedirect(reverse("programming-queue"))
             return HttpResponseRedirect(
                 reverse(
                     "edit-event-details-view",
@@ -876,24 +963,23 @@ def add_event(request):
         else:
             # If form was not valid, re-render the form (which will highlight
             # errors)
-            context = {"form": form}
+            context = {
+                "form": form,
+                "template_data": _template_data(),
+            }
             return render(request, "form_new_event_and_showing.html", context)
 
     elif request.method == "GET":
-        # GET: Show form blank, with date filled in from GET date and start
-        # parameters:
-        # Marshal date and time out of the GET request:
+        # GET: Show form with date/time pre-filled from query params.
         default_date = django.utils.timezone.now().date() + datetime.timedelta(1)
         date = request.GET.get("date", default_date.strftime("%d-%m-%Y"))
         date = date.split("-")
 
-        # Default start time is 8pm (shouldn't this be a setting?)
+        # Default start time is 8pm.
         time = request.GET.get("time", "20:00")
         time = time.split(":")
         # Default duration is one hour:
         duration = request.GET.get("duration", "3600")
-
-        room = request.GET.get("room", None)
 
         if len(time) != 2 or len(date) != 3:
             return HttpResponse(
@@ -905,19 +991,11 @@ def add_event(request):
             date = [int(n, 10) for n in date]
             time = [int(n, 10) for n in time]
             duration = datetime.timedelta(seconds=int(duration, 10))
-            event_start = datetime.datetime(
-                hour=time[0],
-                minute=time[1],
-                day=date[0],
-                month=date[1],
-                year=date[2],
-                tzinfo=timezone.get_current_timezone(),
-            )
-            if settings.MULTIROOM_ENABLED and room:
-                room = Room.objects.get(id=room)
-        except (ValueError, TypeError, Room.DoesNotExist):
+            initial_date = datetime.date(day=date[0], month=date[1], year=date[2])
+            initial_time = datetime.time(hour=time[0], minute=time[1])
+        except (ValueError, TypeError):
             return HttpResponse(
-                "Illegal time, date, duration or room",
+                "Illegal time, date or duration",
                 status=400,
                 content_type="text/plain",
             )
@@ -934,14 +1012,17 @@ def add_event(request):
         # Create form, render template:
         form = diary_forms.NewEventForm(
             initial={
-                "start": event_start,
+                "dates": initial_date.isoformat(),
+                "start_time": initial_time,
                 "duration": duration,
-                "room": room,
                 "booked_by": request.user.get_full_name() or request.user.username,
                 "event_template": initial_template,
             }
         )
-        context = {"form": form}
+        context = {
+            "form": form,
+            "template_data": _template_data(),
+        }
         return render(request, "form_new_event_and_showing.html", context)
 
 
@@ -1404,13 +1485,23 @@ def edit_event_template_detail(request, template_id=None):
         links_formset = diary_forms.EventTemplateLinkFormSet(
             request.POST, instance=event_template or EventTemplate()
         )
+        rooms_formset = diary_forms.EventTemplateRoomFormSet(
+            request.POST, instance=event_template or EventTemplate()
+        )
 
-        if form.is_valid() and roles_formset.is_valid() and links_formset.is_valid():
+        if (
+            form.is_valid()
+            and roles_formset.is_valid()
+            and links_formset.is_valid()
+            and rooms_formset.is_valid()
+        ):
             saved = form.save()
             roles_formset.instance = saved
             roles_formset.save()
             links_formset.instance = saved
             links_formset.save()
+            rooms_formset.instance = saved
+            rooms_formset.save()
             logger.info("Event template '%s' saved", saved.name)
             messages.add_message(
                 request, messages.SUCCESS, f"Saved template '{saved.name}'"
@@ -1420,6 +1511,7 @@ def edit_event_template_detail(request, template_id=None):
         form = diary_forms.EventTemplateForm(instance=event_template)
         roles_formset = diary_forms.EventTemplateRoleFormSet(instance=event_template)
         links_formset = diary_forms.EventTemplateLinkFormSet(instance=event_template)
+        rooms_formset = diary_forms.EventTemplateRoomFormSet(instance=event_template)
 
     export_json = None
     if event_template is not None:
@@ -1429,6 +1521,7 @@ def edit_event_template_detail(request, template_id=None):
         "form": form,
         "roles_formset": roles_formset,
         "links_formset": links_formset,
+        "rooms_formset": rooms_formset,
         "event_template": event_template,
         "export_json": export_json,
         "allowed_domains": diary_validators.get_eventlink_allowed_domains(),
@@ -2134,6 +2227,14 @@ def edit_site_configuration(request):
             ],
         ),
         (
+            "Terminology",
+            [
+                "occurrence_noun",
+                "occurrence_noun_plural",
+                "confirm_label",
+            ],
+        ),
+        (
             "Break-even calculator",
             [
                 "breakeven_guidance_note",
@@ -2320,3 +2421,99 @@ def edit_room_detail(request, room_id):
         form = diary_forms.RoomForm(instance=room)
 
     return render(request, "edit_room_detail.html", {"room": room, "form": form})
+
+
+@permission_required("toolkit.read")
+def programming_queue(request):
+    """Show all events in the programming queue (draft, proposed, or returned for changes)."""
+    queue = (
+        Event.objects.filter(programming_status__in=["draft", "proposed", "rejected"])
+        .prefetch_related("showings", "showings__room_bookings__room", "tags", "template__tags")
+        .select_related("template")
+        .annotate(first_showing_start=Min("showings__start"))
+        .order_by("first_showing_start")
+    )
+    # Attach epoch timestamps for client-side sorting.
+    # Django templates block attributes starting with underscores, so we use
+    # plain attribute names via a wrapper list of dicts.
+    queue_items = []
+    for event in queue:
+        queue_items.append({
+            "event": event,
+            "sort_event_date": (
+                int(event.first_showing_start.timestamp()) if event.first_showing_start else 9999999999
+            ),
+            "sort_submitted": int(event.created_at.timestamp()),
+            "sort_status_changed": (
+                int(event.programming_status_changed_at.timestamp())
+                if event.programming_status_changed_at
+                else int(event.created_at.timestamp())
+            ),
+        })
+    cfg = get_site_config()
+    return render(request, "programming_queue.html", {
+        "queue": queue_items,
+        "fc_standard_threshold": cfg.breakeven_fc_standard_threshold,
+        "fc_music_threshold": cfg.breakeven_fc_music_threshold,
+    })
+
+
+@permission_required("toolkit.write")
+@require_POST
+def update_event_programming_status(request, event_id):
+    """Update the programming_status (and optionally programming_notes) of an event.
+
+    POST params:
+      action     — one of: propose, withdraw, make_active, return_for_changes,
+                   approve_at_meeting, save_notes
+      notes      — optional text appended to programming_notes
+    """
+    event = get_object_or_404(Event, pk=event_id)
+    action = request.POST.get("action", "")
+    notes = request.POST.get("notes", "").strip()
+
+    status_changed = False
+    if action == "propose":
+        event.programming_status = "proposed"
+        status_changed = True
+        messages.success(request, f"'{event.name}' added to the programming queue.")
+    elif action == "withdraw":
+        event.programming_status = "draft"
+        status_changed = True
+        messages.info(request, f"'{event.name}' withdrawn from the queue — back to draft.")
+    elif action == "make_active":
+        event.programming_status = "active"
+        status_changed = True
+        messages.success(request, f"'{event.name}' marked as active.")
+    elif action == "return_for_changes":
+        event.programming_status = "rejected"
+        status_changed = True
+        messages.warning(request, f"'{event.name}' returned to the proposer for changes.")
+    elif action == "approve_at_meeting":
+        event.programming_status = "active"
+        event.approval_type = "meeting"
+        event.approved_at_meeting_date = timezone.now().date()
+        status_changed = True
+        messages.success(request, f"'{event.name}' approved at today's meeting.")
+    elif action == "save_notes":
+        pass  # just append notes below, no status change
+    else:
+        messages.error(request, "Unknown action.")
+        return HttpResponseRedirect(
+            reverse("edit-event-details-view", kwargs={"event_id": event_id})
+        )
+
+    if status_changed:
+        event.programming_status_changed_at = timezone.now()
+
+    if notes:
+        sep = "\n\n" if event.programming_notes else ""
+        event.programming_notes = event.programming_notes + sep + notes
+
+    event.save()
+
+    # Return to the queue if coming from there, otherwise to Event Hub
+    next_url = request.POST.get("next") or reverse(
+        "edit-event-details-view", kwargs={"event_id": event_id}
+    )
+    return HttpResponseRedirect(next_url)

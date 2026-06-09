@@ -275,9 +275,13 @@ The rota view shows all events in a date range with all their role slots and
 rota notes. There's no filtering, grouping, or visual hierarchy. Large rota
 notes dominate the view.
 
-### 8.7 No programming pipeline / approval process
-Events go straight from "created" to "confirmed" without any formal approval
-step. Proposed events are reviewed in Monday meetings (often added on to meetings that are primarily about other things), but there's no standard process for them hitting the system first. Sometimes people pencil in dates they want to reserve on the toolkit but generally this planning stuff happens privately. It might be beneficial to have a clear queue of things people want to do (the "ideas for March" etc. sections are a hint that this was once at least tried out), streamlining Monday meetings, where the meeting can take a look at the queue of proposals, clearly review the core info (e.g. terms, dates, rooms required), check it against core programming guide criteria, and then make a decision: accept / deny / suggest changes with conditional approval / suggest changes and bring back to another Monday meeting.
+### 8.7 No programming pipeline / approval process ✅ Partially addressed (2026-06-05)
+
+**MVP delivered:** `Event.programming_status` (draft/proposed/active/rejected) + `Event.programming_notes` + programming queue view at `/diary/edit/programming-queue/`. Programmers can propose events for Monday meetings; queue shows pending items; quick approve/return/skip actions for Programmer+. See task 9.113 for full spec.
+
+**Still open:** no Finance Collective threshold flag, no etiquette guide link, no TMDB integration. See §9.2 for the full pipeline roadmap.
+
+~~Events go straight from "created" to "confirmed" without any formal approval step. Proposed events are reviewed in Monday meetings (often added on to meetings that are primarily about other things), but there's no standard process for them hitting the system first.~~
 
 ### 8.8 Training records are too rigid to model real role requirements
 The current training record system tries to fit all role qualifications into a
@@ -6343,29 +6347,60 @@ Allow the age-rating options to be defined per-venue via `SiteConfiguration`, so
 
 
 
-### 9.111 — Default rooms on event templates 🔵 S (8–14h)
+### 9.111 — Default rooms on event templates ✅ shipped 2026-06-05
 
-**Problem.** Room bookings are created manually every time a new event and showing are added. For the vast majority of events, the room is entirely predictable from the template: films go in the cinema, music gigs in Venue Space, café sessions in the café. Programmers must currently remember to add the right rooms by hand.
+**Delivered.** `EventTemplateRoom` through-model added with `start_delta_minutes`, `end_delta_minutes`, `date_offset` fields. `Showing.create_room_bookings_from_template()` auto-creates bookings on showing creation; skips rooms already manually selected. Admin inline on `EventTemplateAdmin`. Migration `0064`. Seed data for Film/Gig template rooms still needs wiring via admin (no default rooms in `templates.toml` yet).
 
-**Proposed approach.**
+---
 
-1. **New model `EventTemplateRoom`** — a through-table between `EventTemplate` and `Room`, with two optional integer fields: `start_delta_minutes` (default 0; negative = before showing start, e.g. -120 for a 2-hour load-in) and `end_delta_minutes` (null = derive from `Event.duration`). Unique together on `(template, room)`.
+### 9.112 — Multi-day room bookings (date_offset) ✅ shipped 2026-06-05
 
-2. **Auto-create room bookings on showing creation** — when a showing is saved for the first time, iterate over its event's template's `EventTemplateRoom` entries and call `_create_room_booking()` (adjusted to respect the delta fields).
+**Delivered.** `RoomBooking.date_offset` integer field (default 0; -1 = day before, 0 = same day, +1 = day after). Room booking form shows a quiet "Day" column (`rb-day-col` CSS class, muted colour + smaller font). Booking save combines date_offset with start_time to produce the actual booking datetime. Covers load-in/teardown without dummy Showings on adjacent days. Migration `0063`.
 
-3. **Conflict behaviour** — warn in the success message if a created booking overlaps an existing one (using the existing conflict-detection path), but do not block creation. Templates are defaults, not hard requirements.
+---
 
-4. **Admin UI** — add an inline on `EventTemplateAdmin` for `EventTemplateRoom` rows (room + start_delta_minutes + end_delta_minutes).
+### 9.113 — Programming queue for Monday meetings ✅ shipped 2026-06-05
 
-5. **Long-tail bookings** — ad-hoc bookings (green room for band, meeting room for a rally during a film) are not templated. They continue to be added manually via the existing room-booking form on each showing. Template rooms cover the "always" case only.
+**Delivered.** `Event.programming_status` CharField (draft/proposed/active/rejected; default=active) and `Event.programming_notes` TextField. Queue view at `/diary/edit/programming-queue/` lists draft and proposed events, visible to all staff (`toolkit.read`), quick actions for Programmer+ (`toolkit.write`). "Propose for meeting" / "Withdraw" buttons on Event Hub. "Queue" nav link for all staff. Migration `0065`. Status field on Edit Event form with tooltips.
 
-**Examples.**
-- Film template: Cinema, start_delta=0, end_delta=null (follows event duration)
-- Live Music template: Venue Space, start_delta=-120 (2h load-in), end_delta=null
+Actions available:
+- `propose` — moves to `proposed` (any logged-in user)
+- `make_active` — bypasses meeting, sets `active` (Programmer+; for events with collective blessing to continue without formal approval)
+- `return_for_changes` — sets `rejected` with a notes prompt (Programmer+; consensus language: "returned for discussion")
+- `approve_at_meeting` — sets `active`, `approval_type=M`, `approved_at_meeting_date=today` (Programmer+)
 
-**Tradeoffs.**
-- Deltas are stored in minutes as plain integers — simple, queryable, no timezone complexity.
-- Null `end_delta_minutes` relies on `Event.duration` being set; if it isn't, the booking is created with no end time (same as current `_create_room_booking()` behaviour).
-- Programmers can delete or amend the auto-created bookings freely after creation.
+---
 
-**Size estimate:** 🔵 S (8–14h) — new model + migration + showing save hook + admin inline + conflict warning + tests.
+### 9.114 — Programmer UX Tier 1: completeness links + multi-date picker ✅ shipped 2026-06-05
+
+**Delivered.** Completeness checklist badges on Event Hub are now anchor links to the relevant field in Edit Event. `number_of_bookings` (consecutive-days-only IntegerField) replaced on the New Event form with a flatpickr multi-date picker (`dates` CharField + `start_time` TimeField), matching the batch_add_showings UX. Past-date validation moved to `clean()` as a non-field error (supports multiple dates). Tests updated.
+
+---
+
+### 9.115 — Film template placeholder text + validation guard ✅ shipped 2026-06-05
+
+**Delivered.** Film (DCP) and Film (MP4/DVD) templates in `templates.toml` now pre-fill `pricing`, `film_information`, and `terms` with placeholder text. `EventForm.clean_terms()` and `clean_film_information()` reject values containing `[bracket]` placeholders — catches accidentally submitted unfilled template text that would pass the existing word-count check.
+
+### 9.116 — Programming queue: embedded calendar and kanban view 🔴 XL
+
+Two future improvements to the meeting-facing queue view, deferred from the 9.113 / programmer UX work.
+
+**Embedded calendar panel (⛔ maybe):**
+A "queue mode" that embeds the edit calendar view below the queue cards, so the programmer can see what else is on in that week/month without switching tabs. Current workaround: each queue card already has a "Month Year ↗" link to open the calendar in a new tab. The embedded version would require either an iframe (simple but has cross-frame styling issues) or a purpose-built mini-calendar component (significant work). Not clear it's worth the complexity given the tab link already solves the need adequately.
+
+**Kanban view 🟡 M:**
+Replace the linear card list with a three-column kanban board (Draft / Proposed / Returned). Meeting participants could drag cards between columns to move them through the queue, with the drag triggering a PATCH to `update_event_programming_status`. Requires a drag-and-drop library (e.g. SortableJS) and a JSON endpoint. Most useful if the queue regularly has 10+ events at once.
+
+### 9.117 — Bootstrap 4 / Bootstrap 5 mismatch audit 🟡 M
+
+**Context:** `CRISPY_TEMPLATE_PACK = "bootstrap4"` in `settings_common.py` but the actual Bootstrap CSS/JS is v5.3.8. This means crispy-rendered form widgets use BS4 class names that BS5 doesn't style.
+
+**Already fixed (2026-06-08):**
+- `RadioSelect` widget on `entry_mode` — bypassed crispy forms entirely; card UI rendered as plain HTML in the template
+- `form-row` → `row` in `edit_event_links.html` and `edit_event_template_detail.html` (layout break: columns were unstyled blocks)
+- `font-weight-bold` → `fw-bold` in `edit_event_links.html`, `edit_event_template_detail.html`, `view_rota_vacancies.html`
+
+**Still needs a pass:**
+- Audit all templates for remaining BS4 utility classes: `ml-*`/`mr-*` → `ms-*`/`me-*`, `pl-*`/`pr-*` → `ps-*`/`pe-*`, `text-left`/`text-right` → `text-start`/`text-end`, `float-left`/`float-right` → `float-start`/`float-end`, `custom-select` → `form-select`
+- Consider upgrading to `crispy-bootstrap5` package + `CRISPY_TEMPLATE_PACK = "bootstrap5"` to fix the root cause (crispy would then generate BS5-compatible HTML for checkboxes, selects, etc.)
+- Any checkbox or select widgets rendered via crispy forms may be visually unstyled

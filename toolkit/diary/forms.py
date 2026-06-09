@@ -5,7 +5,9 @@ from django import forms
 from django.forms import inlineformset_factory
 import django.db.models
 from django.conf import settings
+from django.utils import timezone
 from crispy_forms.helper import FormHelper
+from crispy_forms.layout import HTML, Div, Field, Fieldset, Layout
 
 # Custom form widgets:
 from toolkit.diary.form_widgets import (
@@ -95,6 +97,25 @@ EventTemplateRoleFormSet = inlineformset_factory(
 )
 
 
+class EventTemplateRoomForm(forms.ModelForm):
+    class Meta:
+        model = toolkit.diary.models.EventTemplateRoom
+        fields = ("room", "start_delta_minutes", "end_delta_minutes")
+        widgets = {
+            "start_delta_minutes": forms.NumberInput(attrs={"style": "width:5em"}),
+            "end_delta_minutes": forms.NumberInput(attrs={"style": "width:5em"}),
+        }
+
+
+EventTemplateRoomFormSet = inlineformset_factory(
+    toolkit.diary.models.EventTemplate,
+    toolkit.diary.models.EventTemplateRoom,
+    form=EventTemplateRoomForm,
+    extra=1,
+    can_delete=True,
+)
+
+
 class DiaryIdeaForm(forms.ModelForm):
     class Meta:
         model = toolkit.diary.models.DiaryIdea
@@ -123,11 +144,11 @@ class EventForm(forms.ModelForm):
                     "placeholder": f"e.g {settings.DEFAULT_TERMS_TEXT}",
                 }
             ),
-            "notes": forms.Textarea(
+            "programming_notes": forms.Textarea(
                 attrs={
                     "wrap": "soft",
-                    "rows": 5,  # Arbitrary
-                    "placeholder": "Programmer's notes - not visible to public",
+                    "rows": 5,
+                    "placeholder": "e.g. Looking for a Friday in May — this is a sample date",
                 }
             ),
             "approved_at_meeting_date": forms.DateInput(attrs={"type": "date"}),
@@ -181,11 +202,12 @@ class EventForm(forms.ModelForm):
             "age_restriction",
             "pre_title",
             "post_title",
-            "notes",
             "approval_type",
             "approved_at_meeting_date",
             "meeting_name",
             "meeting_minutes_url",
+            "programming_status",
+            "programming_notes",
             "duration",
             "outside_hire",
             "hire_name",
@@ -194,6 +216,24 @@ class EventForm(forms.ModelForm):
             "copy_summary",
             "terms",
         )
+
+    def clean_terms(self):
+        terms = self.cleaned_data.get("terms", "")
+        if "[" in terms and "]" in terms:
+            raise forms.ValidationError(
+                "The terms look like they still contain unfilled placeholders (e.g. [Distributor]). "
+                "Please fill in all the bracketed sections before saving."
+            )
+        return terms
+
+    def clean_film_information(self):
+        film_info = self.cleaned_data.get("film_information", "")
+        if "[" in film_info and "]" in film_info:
+            raise forms.ValidationError(
+                "The screening details look like they still contain unfilled placeholders (e.g. [Director]). "
+                "Please fill in all the bracketed sections before saving."
+            )
+        return film_info
 
     def clean_copy_summary(self):
         copy_summary = self.cleaned_data.get("copy_summary", "")
@@ -287,9 +327,35 @@ class ShowingForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_tag = False
-        self.helper.form_class = "form-horizontal"
-        self.helper.label_class = "col-sm-2"
-        self.helper.field_class = "col-sm-10"
+        # Vertical (stacked) layout — labels sit above their fields. The old
+        # form-horizontal layout crammed labels into a narrow 2-column strip,
+        # which wrapped awkwardly (and pushed the ⓘ tooltip onto its own line)
+        # and indented the status checkboxes oddly on narrow viewports.
+        # Spell out what "confirmed" actually does — it's the publish + open-rota
+        # switch, not just a tick (see also the per-occurrence buttons on the hub).
+        self.fields["confirmed"].label = "Confirmed (public + rota open)"
+        # Status/visibility toggles live in their own group below the booking
+        # details rather than high up amongst date/time — they're a final step,
+        # and the hub's buttons are the main way to set them.
+        self.helper.layout = Layout(
+            Field("start"),
+            Field("booked_by"),
+            # Call times grouped on one row — they collapse to stacked below sm.
+            Div(
+                Div(Field("setup_time"), css_class="col-sm-4"),
+                Div(Field("doors_time"), css_class="col-sm-4"),
+                Div(Field("final_volunteer_time"), css_class="col-sm-4"),
+                css_class="row",
+            ),
+            Fieldset(
+                "Status & visibility",
+                "confirmed",
+                "cancelled",
+                "hide_in_programme",
+                "sold_out",
+                "discounted",
+            ),
+        )
 
     class Meta:
         model = toolkit.diary.models.Showing
@@ -332,7 +398,8 @@ class ShowingForm(forms.ModelForm):
     def clean(self):
         if self.instance.original_start_in_past():
             self.cleaned_data["start"] = self.instance.start
-            raise forms.ValidationError("Cannot amend a historic booking")
+            noun = get_site_config().occurrence_noun
+            raise forms.ValidationError(f"Cannot amend a historic {noun}")
         return super().clean()
 
 
@@ -632,10 +699,18 @@ class RoomBookingForm(forms.ModelForm):
     """A single room booking slot for a Showing (room + time window + notes).
 
     start_time / end_time are time-only fields; the showing's local date is
-    combined with them on save.  The model's start/end DateTimeFields are
-    excluded from the form and set programmatically.
+    combined with them on save.  date_offset shifts the date relative to the
+    Showing's date (0 = same day, -1 = day before, +1 = day after).
     """
 
+    date_offset = forms.TypedChoiceField(
+        choices=[(0, "Same day"), (-1, "Day before"), (1, "Day after")],
+        coerce=int,
+        initial=0,
+        required=False,
+        widget=forms.Select(attrs={"class": "form-select form-select-sm"}),
+        label="Day",
+    )
     start_time = forms.TimeField(
         widget=forms.TimeInput(
             attrs={"type": "time", "class": "form-control form-control-sm"},
@@ -654,7 +729,7 @@ class RoomBookingForm(forms.ModelForm):
 
     class Meta:
         model = toolkit.diary.models.RoomBooking
-        fields = ("room", "notes")
+        fields = ("room", "date_offset", "notes")
         widgets = {
             "notes": forms.TextInput(
                 attrs={
@@ -668,25 +743,28 @@ class RoomBookingForm(forms.ModelForm):
     def __init__(self, *args, showing_date=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.showing_date = showing_date
-        # Pre-populate time fields from existing instance
+        # Pre-populate time and offset fields from existing instance
         if self.instance and self.instance.pk and self.instance.start:
             import django.utils.timezone as dj_tz
             self.initial["start_time"] = dj_tz.localtime(self.instance.start).strftime("%H:%M")
             if self.instance.end:
                 self.initial["end_time"] = dj_tz.localtime(self.instance.end).strftime("%H:%M")
+            self.initial["date_offset"] = self.instance.date_offset
 
     def save(self, commit=True):
         instance = super().save(commit=False)
         if self.showing_date and self.cleaned_data.get("start_time"):
             import django.utils.timezone as dj_tz
             tz = dj_tz.get_current_timezone()
+            offset = self.cleaned_data.get("date_offset") or 0
+            actual_date = self.showing_date + datetime.timedelta(days=offset)
             instance.start = dj_tz.make_aware(
-                datetime.datetime.combine(self.showing_date, self.cleaned_data["start_time"]),
+                datetime.datetime.combine(actual_date, self.cleaned_data["start_time"]),
                 tz,
             )
             end_t = self.cleaned_data.get("end_time")
             instance.end = (
-                dj_tz.make_aware(datetime.datetime.combine(self.showing_date, end_t), tz)
+                dj_tz.make_aware(datetime.datetime.combine(actual_date, end_t), tz)
                 if end_t
                 else None
             )
@@ -706,6 +784,19 @@ RoomBookingInlineFormSet = inlineformset_factory(
 )
 
 
+def _target_month_choices():
+    """Generate (YYYY-MM, "Month YYYY") choices for the next 18 months."""
+    today = datetime.date.today()
+    choices = [("", "— no target month —")]
+    for i in range(18):
+        month = today.month - 1 + i
+        year = today.year + month // 12
+        month = month % 12 + 1
+        d = datetime.date(year, month, 1)
+        choices.append((d.strftime("%Y-%m"), d.strftime("%B %Y")))
+    return choices
+
+
 class NewEventForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -714,35 +805,140 @@ class NewEventForm(forms.Form):
         self.helper.form_class = "form-horizontal"
         self.helper.label_class = "col-sm-2"
         self.helper.field_class = "col-sm-10"
+        self.helper.layout = Layout(
+            Field("entry_mode"),  # renders as hidden input; card UI is in the template
+            HTML(
+                '<div class="new-event-zone new-event-zone--required">'
+                '<h3 class="new-event-zone__title">Book it now</h3>'
+                '<p class="new-event-zone__hint text-muted">'
+                "A placeholder with these four fields is enough to hold a space on the calendar. "
+                "Everything else can be filled in from the Event Hub after creating."
+                "</p>"
+            ),
+            Field("event_name"),
+            Field("event_template"),
+            HTML(
+                '<div class="form-group row" id="template-preview-row" style="display:none">'
+                '<div class="col-sm-2"></div>'
+                '<div class="col-sm-10"><div id="template-preview"></div></div>'
+                "</div>"
+            ),
+            Field("dates"),
+            HTML('<div id="target-month-row">'),
+            Field("target_month"),
+            HTML("</div>"),
+            Field("start_time"),
+            HTML("</div>"),
+            HTML(
+                '<div class="new-event-zone new-event-zone--optional">'
+                '<h3 class="new-event-zone__title">'
+                'Details <small class="text-muted fw-normal">&mdash; amend any time from the Event Hub</small>'
+                "</h3>"
+            ),
+            Field("duration"),
+            Field("booked_by"),
+            Field("private"),
+            Field("outside_hire"),
+            Field("discounted"),
+            HTML("</div>"),
+        )
+
+    ENTRY_MODE_QUEUE = "queue"
+    ENTRY_MODE_STANDING = "standing"
+    ENTRY_MODE_TENTATIVE = "tentative"
+    ENTRY_MODE_CHOICES = [
+        ("queue", "Needs meeting approval"),
+        ("standing", "Regular / standing event"),
+        ("tentative", "Tentative placeholder"),
+    ]
+    entry_mode = forms.ChoiceField(
+        choices=ENTRY_MODE_CHOICES,
+        initial="queue",
+        widget=forms.HiddenInput,
+        label="",
+    )
 
     event_name = forms.CharField(min_length=1, max_length=256, required=True)
     event_template = forms.ModelChoiceField(
         queryset=toolkit.diary.models.EventTemplate.objects.all(),
         required=True,
     )
-    start = forms.DateTimeField(
-        required=True,
-        validators=[validate_in_future],
-        widget=JQueryDateTimePicker(),
+    dates = forms.CharField(
+        widget=MultiDatePickerWidget(),
+        label="Date(s)",
+        required=False,
+        help_text="Optional — leave blank if the date is still TBC. Dates can be added later from the Event Hub.",
+    )
+    start_time = forms.TimeField(
+        widget=forms.TimeInput(attrs={"type": "time"}),
+        label="Start time",
+        required=False,
+        initial=datetime.time(20, 0),
     )
     duration = forms.TimeField(required=True, initial=datetime.time(hour=1))
-    number_of_bookings = forms.IntegerField(
-        min_value=1,
-        max_value=31,
-        required=True,
-        initial=1,
-        help_text="Bookings will be created with the same start time on consecutive days",
-    )
     booked_by = forms.CharField(min_length=1, max_length=64, required=True)
-    room = forms.ModelChoiceField(
-        queryset=toolkit.diary.models.Room.objects.all(),
+    target_month = forms.ChoiceField(
+        choices=_target_month_choices,
+        label="Target month",
         required=False,
-        empty_label="— no room —",
+        help_text="Which month are you roughly targeting? Shown in the diary to help plan the programme.",
     )
     private = forms.BooleanField(required=False)
     outside_hire = forms.BooleanField(required=False)
     # confirmed = forms.BooleanField(required=False)
     discounted = forms.BooleanField(required=False)
+
+    def clean_target_month(self):
+        # ChoiceField gives us YYYY-MM; normalise to the 1st of that month.
+        raw = (self.cleaned_data.get("target_month") or "").strip()
+        if not raw:
+            return None
+        if len(raw) == 7:
+            raw = raw + "-01"
+        try:
+            return datetime.date.fromisoformat(raw)
+        except ValueError:
+            raise forms.ValidationError("Select a valid month.")
+
+    def clean_dates(self):
+        raw = self.cleaned_data.get("dates", "").strip()
+        if not raw:
+            return []
+        parsed = []
+        for part in raw.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            try:
+                parsed.append(datetime.date.fromisoformat(part))
+            except ValueError:
+                raise forms.ValidationError(
+                    "Unrecognised date: {!r}. Expected YYYY-MM-DD.".format(part)
+                )
+        if len(parsed) > _MAX_BATCH_SHOWINGS:
+            raise forms.ValidationError(
+                "Maximum {} dates.".format(_MAX_BATCH_SHOWINGS)
+            )
+        return sorted(set(parsed))
+
+    def clean(self):
+        cleaned = super().clean()
+        dates = cleaned.get("dates")
+        start_time = cleaned.get("start_time")
+        if dates and not start_time:
+            self.add_error("start_time", "Select a start time for the date(s) you chose.")
+        if dates and start_time:
+            now = timezone.now()
+            past = [
+                d for d in dates
+                if timezone.make_aware(datetime.datetime.combine(d, start_time)) <= now
+            ]
+            if past:
+                date_strs = ", ".join(d.strftime("%-d %b %Y") for d in past)
+                raise forms.ValidationError(
+                    "The following dates are in the past: {}.".format(date_strs)
+                )
+        return cleaned
 
 
 class QuickCreateOpenSessionForm(forms.Form):
@@ -892,6 +1088,9 @@ class SiteConfigurationForm(forms.ModelForm):
             "vols_email",
             "show_archive_images",
             "images_start_date",
+            "occurrence_noun",
+            "occurrence_noun_plural",
+            "confirm_label",
             "breakeven_guidance_note",
             "breakeven_fc_standard_threshold",
             "breakeven_fc_music_threshold",

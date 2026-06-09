@@ -76,6 +76,9 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
             "vols_email": "",
             "show_archive_images": "on",
             "images_start_date": "",
+            "occurrence_noun": config.occurrence_noun,
+            "occurrence_noun_plural": config.occurrence_noun_plural,
+            "confirm_label": config.confirm_label,
             "breakeven_guidance_note": "",
             "breakeven_fc_standard_threshold": str(
                 config.breakeven_fc_standard_threshold

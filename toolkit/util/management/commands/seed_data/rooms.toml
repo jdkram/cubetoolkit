@@ -24,6 +24,7 @@ map_slug = "room-cafe"
 name = "External"
 colour = "#E0F5CC"  # faint lime green
 is_primary = false
+show_column = false
 map_slug = ""
 
 [[rooms]]

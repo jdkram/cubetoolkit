@@ -376,13 +376,6 @@ class Event(models.Model):
     )
 
     terms = models.TextField(max_length=4096, null=True, blank=True)
-    notes = models.TextField(
-        max_length=4096,
-        null=True,
-        blank=True,
-        verbose_name="Programmer's notes",
-    )
-
     APPROVAL_MEETING = "meeting"
     APPROVAL_STANDING = "standing"
     APPROVAL_CHOICES = [
@@ -415,6 +408,54 @@ class Event(models.Model):
         max_length=500,
         verbose_name="Minutes link",
         help_text="Optional link to the meeting minutes.",
+    )
+
+    PROGRAMMING_STATUS_CHOICES = [
+        ("active", "Active"),
+        ("draft", "Draft"),
+        ("proposed", "Proposed for meeting"),
+        ("rejected", "Returned / needs work"),
+    ]
+    programming_status = models.CharField(
+        max_length=16,
+        blank=True,
+        choices=PROGRAMMING_STATUS_CHOICES,
+        default="active",
+        verbose_name="Programming status",
+        help_text=(
+            "Internal status for the programming queue. "
+            "'Draft' = not yet ready for a meeting; 'Proposed' = queued for discussion; "
+            "'Active' = normal/approved event; 'Returned' = sent back for changes."
+        ),
+    )
+    programming_notes = models.TextField(
+        blank=True,
+        verbose_name="Programmer's notes",
+        help_text=(
+            "Internal working notes — not visible to the public. "
+            "Use for queue context (e.g. 'looking for a Friday in May — sample date'), "
+            "meeting decisions, and conditions attached to approval. "
+            "Financial details and hire contacts belong in Terms."
+        ),
+    )
+
+    programming_status_changed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        verbose_name="Status last changed",
+        help_text="Set automatically whenever programming_status is updated.",
+    )
+
+    target_month = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Target month",
+        help_text=(
+            "For undated proposals: the rough month being targeted. "
+            "Always stored as the 1st of the month. "
+            "Shown in the diary alongside monthly ideas notes."
+        ),
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -598,6 +639,10 @@ class RoomBooking(models.Model):
     A Showing can have multiple RoomBookings (e.g. setup in Venue Space from
     16:00, screening in Cinema from 19:30). start/end are independent of
     Showing.start so that pre/post-event room use can be recorded.
+
+    date_offset shifts the booking date relative to the Showing's date:
+    0 = same day (default), -1 = day before, +1 = day after.  This covers
+    multi-day load-in/teardown without creating dummy Showings.
     """
 
     showing = models.ForeignKey(
@@ -607,6 +652,10 @@ class RoomBooking(models.Model):
     start = models.DateTimeField()
     end = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True)
+    date_offset = models.IntegerField(
+        default=0,
+        help_text="Days relative to the showing date: 0 = same day, -1 = day before, +1 = day after.",
+    )
 
     class Meta:
         db_table = "RoomBookings"
@@ -815,6 +864,32 @@ class Showing(models.Model):
         rb = self.room_bookings.all().first()
         return rb.room if rb else None
 
+    def occupies_rooms(self):
+        """Whether this showing's room bookings should display as occupying a room.
+
+        A cancelled date — or a date on an event that's been rejected from the
+        programming queue — frees its rooms: the booking rows are kept (so
+        un-cancelling restores them) but they stop showing on the diary and
+        calendar. Consistent with clash detection, which only blocks on
+        confirmed bookings (see clash.py).
+        """
+        if self.cancelled:
+            return False
+        if self.event.programming_status == "rejected":
+            return False
+        return True
+
+    @property
+    def visible_room_bookings(self):
+        """Room bookings to render as occupying rooms — empty when freed.
+
+        See occupies_rooms(). Use this (not room_bookings.all()) anywhere room
+        occupancy is surfaced on the diary or calendar.
+        """
+        if not self.occupies_rooms():
+            return []
+        return list(self.room_bookings.all())
+
     def in_past(self):
         return self.start and (self.start < django.utils.timezone.now())
 
@@ -842,6 +917,44 @@ class Showing(models.Model):
             if not self.rota_notes and tmpl.rota_notes:
                 self.rota_notes = tmpl.rota_notes
                 self.save(update_fields=["rota_notes"])
+
+    def create_room_bookings_from_template(self):
+        """Auto-create RoomBookings for this Showing from the event template's default rooms.
+
+        Skips rooms that already have a booking on this Showing to avoid
+        duplicating manually-selected rooms. Does not check for clashes with
+        other events — the clash warning on the edit-showing form covers that.
+        """
+        tmpl = self.event.template
+        if tmpl is None:
+            return
+        already_booked_room_ids = set(
+            self.room_bookings.values_list("room_id", flat=True)
+        )
+        for default in tmpl.default_rooms.select_related("room").all():
+            if default.room_id in already_booked_room_ids:
+                continue
+            start_offset = datetime.timedelta(minutes=default.start_delta_minutes)
+            booking_start = self.start + datetime.timedelta(days=default.date_offset) + start_offset
+            if default.end_delta_minutes is not None:
+                booking_end = self.start + datetime.timedelta(
+                    days=default.date_offset,
+                    minutes=default.end_delta_minutes,
+                )
+            elif self.event.duration:
+                booking_end = booking_start + datetime.timedelta(
+                    hours=self.event.duration.hour,
+                    minutes=self.event.duration.minute,
+                )
+            else:
+                booking_end = None
+            RoomBooking.objects.create(
+                showing=self,
+                room=default.room,
+                start=booking_start,
+                end=booking_end,
+                date_offset=default.date_offset,
+            )
 
     def clone_rota_from_showing(self, source_showing):
         assert self.pk is not None
@@ -974,6 +1087,55 @@ class EventTemplateRole(models.Model):
 
     def __str__(self):
         return f"{self.template.name} — {self.role.name} ×{self.count}"
+
+
+class EventTemplateRoom(models.Model):
+    """Default room booking for an EventTemplate.
+
+    When a new Showing is created from a template, one RoomBooking is
+    auto-created per EventTemplateRoom.
+
+    start_delta_minutes: offset (in minutes) from Showing.start when the
+      room booking begins. 0 = same time as the showing, -120 = 2 hours
+      before. Combined with date_offset so a "day before, from noon" booking
+      is start_delta_minutes=-480 (if showing is 20:00) with date_offset=-1.
+    end_delta_minutes: end offset in minutes from Showing.start. Null means
+      derive the end from the event duration (same as _create_room_booking).
+    date_offset: -1 = day before the showing, 0 = same day, +1 = day after.
+    """
+
+    template = models.ForeignKey(
+        EventTemplate, on_delete=models.CASCADE, related_name="default_rooms"
+    )
+    room = models.ForeignKey(Room, on_delete=models.PROTECT, related_name="template_defaults")
+    start_delta_minutes = models.IntegerField(
+        default=0,
+        help_text=(
+            "Start offset from Showing start (minutes). 0 = same time, -120 = 2 hours before."
+        ),
+    )
+    end_delta_minutes = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="End offset from Showing start (minutes). Leave blank to use event duration.",
+    )
+    date_offset = models.IntegerField(
+        default=0,
+        help_text="Days relative to the Showing: 0 = same day, -1 = day before, +1 = day after.",
+    )
+
+    class Meta:
+        db_table = "EventTemplateRooms"
+        ordering = ["date_offset", "start_delta_minutes"]
+        unique_together = [("template", "room", "date_offset")]
+
+    def __str__(self):
+        label = f"{self.template.name} — {self.room.name}"
+        if self.date_offset != 0:
+            label += f" (day {'before' if self.date_offset < 0 else 'after'})"
+        if self.start_delta_minutes != 0:
+            label += f" {self.start_delta_minutes:+}min"
+        return label
 
 
 class RotaEntry(models.Model):
@@ -1242,6 +1404,37 @@ class SiteConfiguration(models.Model):
         help_text=(
             "Cutoff date for the 'Show archive images' setting above. Has no "
             "effect unless that setting is off. Leave blank to disable hiding."
+        ),
+    )
+
+    # --- Terminology ---
+    # What this venue calls a single dated occurrence of an event. Cinemas
+    # screen "showings"; a mixed-programme venue may prefer "dates" so the word
+    # also fits a workshop or club-night run. Defaults are cinema-first because
+    # this codebase is primarily used by cinemas (see SPEC: good neighbours).
+    occurrence_noun = models.CharField(
+        max_length=32,
+        default="showing",
+        verbose_name="Occurrence noun (singular)",
+        help_text=(
+            "Lowercase singular word for one dated occurrence of an event "
+            "(e.g. 'showing' for a cinema, 'date' or 'session' elsewhere). "
+            "Used throughout the event-editing UI."
+        ),
+    )
+    occurrence_noun_plural = models.CharField(
+        max_length=32,
+        default="showings",
+        verbose_name="Occurrence noun (plural)",
+        help_text="Plural of the occurrence noun (e.g. 'showings', 'dates').",
+    )
+    confirm_label = models.CharField(
+        max_length=48,
+        default="Confirm",
+        help_text=(
+            "Label on the button that makes an occurrence public and opens its rota. "
+            "Cinemas may prefer the short 'Confirm'; venues wanting to spell out the "
+            "dual effect can use e.g. 'Publish & open rota'."
         ),
     )
 

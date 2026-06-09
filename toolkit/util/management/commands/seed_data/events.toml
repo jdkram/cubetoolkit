@@ -12,7 +12,7 @@
 [[events]]
 name = "Community Kitchen Special: Shared Recipes"
 copy_summary = "Come share recipes, whatever you've been enjoying lately that would make a great addition to our roster of vegan dishes."
-copy = """Building will be open for other vols - workshop, print room, cinema - come along and have a go at whatever takes your fancy. We'll be in cafe cooking up a storm, and we'd love you to join us. Bring along any recipes you've been enjoying lately that would make a great addition to our roster of vegan dishes. Whether it's a family favourite, a recent discovery, or something you've whipped up in your kitchen experiments, we want to hear about it! This is a fantastic opportunity to share culinary inspiration and contribute to our community kitchen. Plus, you'll get to enjoy some delicious food and connect with fellow volunteers. See you there!"""
+copy = """The whole building will be open - workshop, print room, cinema - come and have a go at whatever takes your fancy. We'll be in the kitchen cooking things up and we'd love you to join us. Bring a recipe you've been into lately, vegan preferred. A family thing, a recent find, something from the depths of your memories - doesn't matter. We cook, we eat, we steal each other's ideas."""
 tags = ["cafe", "workshop"]
 private = false
 rota_notes = """bring your lovely selves and recipes and let's eat stuff from the freezer that's been in there too long

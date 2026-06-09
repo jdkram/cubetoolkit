@@ -27,6 +27,22 @@
       });
     }
 
+    var addRoomBtn = document.getElementById("add-room-row");
+    if (addRoomBtn) {
+      addRoomBtn.addEventListener("click", function () {
+        var tbody = document.getElementById("room-rows");
+        var totalInput = document.getElementById("id_default_rooms-TOTAL_FORMS");
+        var total = parseInt(totalInput.value, 10);
+        var emptyRow = document.getElementById("empty-room-row");
+        var newRow = emptyRow.cloneNode(true);
+        newRow.id = "";
+        newRow.style.display = "";
+        newRow.innerHTML = newRow.innerHTML.replace(/__prefix__/g, total);
+        tbody.appendChild(newRow);
+        totalInput.value = total + 1;
+      });
+    }
+
     /* Progressive reveal for link rows (same pattern as edit_event_links.html) */
     function linkRowIsEmpty(row) {
       var inputs = row.querySelectorAll('input[type="text"], input[type="url"]');
@@ -214,6 +230,59 @@
       </div>
     </div>
 
+    {# ---- Default room bookings ---- #}
+    <div class="field-section">
+      <h3>Default room bookings</h3>
+      <p class="text-muted" style="font-size:0.88em; margin-bottom:0.5rem;">
+        Rooms booked automatically when a new showing is created from this template.
+        Start/end offsets are minutes relative to the showing start time (0 = same time, 180 = 3 hours later).
+        Leave end offset blank to use the event duration.
+      </p>
+
+      {{ rooms_formset.management_form }}
+      {% if rooms_formset.non_form_errors %}
+        <div class="text-danger mb-2">{{ rooms_formset.non_form_errors }}</div>
+      {% endif %}
+
+      <table class="role-table mb-2">
+        <thead>
+          <tr>
+            <th>Room</th>
+            <th>Start offset (mins)</th>
+            <th>End offset (mins)</th>
+            <th>Remove</th>
+          </tr>
+        </thead>
+        <tbody id="room-rows">
+          {% for room_form in rooms_formset %}
+          <tr>
+            <td>
+              {{ room_form.id }}
+              {{ room_form.room }}
+              {% if room_form.room.errors %}<div class="text-danger small">{{ room_form.room.errors }}</div>{% endif %}
+            </td>
+            <td>{{ room_form.start_delta_minutes }}{% if room_form.start_delta_minutes.errors %}<div class="text-danger small">{{ room_form.start_delta_minutes.errors }}</div>{% endif %}</td>
+            <td>{{ room_form.end_delta_minutes }}{% if room_form.end_delta_minutes.errors %}<div class="text-danger small">{{ room_form.end_delta_minutes.errors }}</div>{% endif %}</td>
+            <td>{{ room_form.DELETE }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <button type="button" id="add-room-row" class="btn btn-secondary btn-sm">+ Add room</button>
+      {# Hidden empty form for JS cloning #}
+      <table style="display:none">
+        <tbody>
+          <tr id="empty-room-row" style="display:none">
+            <td>{{ rooms_formset.empty_form.id }}{{ rooms_formset.empty_form.room }}</td>
+            <td>{{ rooms_formset.empty_form.start_delta_minutes }}</td>
+            <td>{{ rooms_formset.empty_form.end_delta_minutes }}</td>
+            <td>{{ rooms_formset.empty_form.DELETE }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
     {# ---- Resource links ---- #}
     <div class="field-section">
       <h3>Resource links</h3>
@@ -233,14 +302,14 @@
       {% for lform in links_formset %}
       <div class="link-row">
         {% if lform.non_field_errors %}<div class="text-danger small mb-1">{{ lform.non_field_errors }}</div>{% endif %}
-        <div class="form-row align-items-start">
+        <div class="row align-items-start">
           <div class="mb-3 col-md-4 mb-1">
-            <label class="small font-weight-bold" for="{{ lform.label.id_for_label }}">Link name</label>
+            <label class="small fw-bold" for="{{ lform.label.id_for_label }}">Link name</label>
             {{ lform.label }}
             {% if lform.label.errors %}<div class="text-danger small">{{ lform.label.errors }}</div>{% endif %}
           </div>
           <div class="mb-3 col-md-7 mb-1">
-            <label class="small font-weight-bold" for="{{ lform.url.id_for_label }}">URL</label>
+            <label class="small fw-bold" for="{{ lform.url.id_for_label }}">URL</label>
             {{ lform.url }}
             {% if lform.url.errors %}<div class="text-danger small">{{ lform.url.errors }}</div>{% endif %}
           </div>
