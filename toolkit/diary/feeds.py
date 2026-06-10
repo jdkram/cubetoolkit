@@ -9,41 +9,36 @@ from toolkit.diary.models import Showing
 
 
 class BasicWhatsOnFeed(Feed):
-    # Generate a, err, basic "What's on" feed. Defines various methods that
-    # hook into the django magic...
-    DAYS_AHEAD = 7
-    title = f"{settings.VENUE['name']} cinema forthcoming events"
-    description = "Events at the %s cinema over the next %d days. E&OE." % (
-        settings.VENUE["cinemaname"],
-        DAYS_AHEAD,
-    )
+    DAYS_AHEAD = 60
+    title = f"{settings.VENUE['name']} — forthcoming events"
+    description = f"Upcoming public events at {settings.VENUE['name']}."
     link = "/programme"
 
     def items(self):
         startdate = timezone.now()
         enddate = startdate + datetime.timedelta(days=self.DAYS_AHEAD)
-        showings = (
+        return (
             Showing.objects.public()
             .start_in_range(startdate, enddate)
             .order_by("start")
-            .select_related()
-            .select_related()
+            .select_related("event")
         )
-        return showings.all()
 
     def item_title(self, showing):
-        return showing.event.name
+        return f"{showing.event.name} — {showing.start.strftime('%-d %B %Y, %H:%M')}"
 
     def item_description(self, showing):
-        description = (
-            showing.start.strftime("%d/%m/%Y %H:%M<br><br>")
-            + showing.event.copy_html
-        )
-        return description
+        summary = showing.event.copy_summary.strip()
+        if summary:
+            return summary
+        return showing.event.copy_html
 
     def item_link(self, showing):
-        # Add the showing ID at the end to ensure that this link is unique (cf.
-        # RSS spec)
-        return reverse(
-            "single-event-view", kwargs={"event_id": showing.event_id}
-        )
+        return reverse("single-event-view", kwargs={"event_id": showing.event_id})
+
+    def item_pubdate(self, showing):
+        # Feed readers use pubdate to decide what's "new".
+        ts = showing.created_at or showing.event.created_at
+        if ts and not timezone.is_aware(ts):
+            ts = timezone.make_aware(ts)
+        return ts

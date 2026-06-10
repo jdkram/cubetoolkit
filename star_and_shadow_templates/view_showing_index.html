@@ -54,6 +54,10 @@ setup_page(true);
         {% endfor %}
     {% endif %}
 </div><!-- end .print-media -->
+<div class="print-media">
+    <p>RSS:</p>
+    <a href="{% url 'view-diary-rss' %}" title="Subscribe to RSS feed"><i class="fa fa-rss"></i></a>
+</div>
 {% endblock navmenu-footer %}
 
 {% block mobile_nav_right %}
