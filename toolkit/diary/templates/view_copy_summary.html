@@ -73,11 +73,11 @@ $(document).ready(function() {
 <h3>{{ VENUE.name }} programme of events - copy summary report</h3>
 <p>[<a href="#" id="hide_index">Hide index</a>]</p>
 <div class="index">
-{% for showing in showings %}
+{% for showing in showings %}{% if not showing.event.private and not showing.hide_in_programme %}
     {% ifchanged %}<h2>{{ showing.start|date:"F Y" }}</h2>{% endifchanged %}
     {% ifchanged %}<p>{{ showing.start|date:"D"}} {{ showing.start|date:"d" }}{% else %}
-    <p>      {% endifchanged %} {{showing.start|date:"H:i"}} .... {% if showing.hide_in_programme or showing.event.private %}Closed for private event.{% else %}{% if showing.event.pre_title %}{{ showing.event.pre_title.strip }} {% endif %}{{ showing.event.name.strip }}{% if showing.event.post_title.strip %} {{ showing.event.post_title }}{% endif %}{% if showing.cancelled %} (CANCELLED){% endif %}{% if showing.discounted %} *{% endif %}{% endif %}</p>
-{% endfor %}
+    <p>      {% endifchanged %} {{showing.start|date:"H:i"}} .... {% if showing.event.pre_title %}{{ showing.event.pre_title.strip }} {% endif %}{{ showing.event.name.strip }}{% if showing.event.post_title.strip %} {{ showing.event.post_title }}{% endif %}{% if showing.cancelled %} (CANCELLED){% endif %}{% if showing.discounted %} *{% endif %}</p>
+{% endif %}{% endfor %}
 <p>&nbsp;</p>
 <p>* cheap night</p>
 </div>
