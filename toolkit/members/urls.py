@@ -8,6 +8,7 @@ from toolkit.members.volunteer_views import (
     view_volunteer_role_report,
     edit_volunteer,
     export_volunteers_as_csv,
+    export_audit_log,
     add_volunteer_training_record,
     add_volunteer_training_group_record,
     view_volunteer_training_records,
@@ -21,6 +22,10 @@ from toolkit.members.volunteer_views import (
     add_volunteer_qualification,
     remove_volunteer_qualification,
     bulk_award_qualification,
+    view_qualification_report,
+    bulk_record,
+    toggle_volunteer_suspension,
+    save_volunteer_permissions,
 )
 
 from toolkit.members.member_views import (
@@ -95,6 +100,11 @@ volunteer_urls = [
         name="view-volunteer-export",
     ),
     re_path(
+        r"^view/export/audit/$",
+        export_audit_log,
+        name="view-volunteer-export-audit",
+    ),
+    re_path(
         r"^(?P<volunteer_id>\d+)/edit$", edit_volunteer, name="edit-volunteer"
     ),
     re_path(
@@ -127,6 +137,26 @@ volunteer_urls = [
         r"^qualification/(?P<vq_id>\d+)/remove$",
         remove_volunteer_qualification,
         name="remove-volunteer-qualification",
+    ),
+    re_path(
+        r"^view/qualification-report/$",
+        view_qualification_report,
+        name="view-qualification-report",
+    ),
+    re_path(
+        r"^bulk-record/$",
+        bulk_record,
+        name="bulk-record",
+    ),
+    re_path(
+        r"^(?P<volunteer_id>\d+)/toggle-suspension$",
+        toggle_volunteer_suspension,
+        name="toggle-volunteer-suspension",
+    ),
+    re_path(
+        r"^(?P<volunteer_id>\d+)/save-permissions$",
+        save_volunteer_permissions,
+        name="save-volunteer-permissions",
     ),
     re_path(r"^directory/$", view_volunteer_directory, name="volunteer-directory"),
     re_path(r"^digest/unsubscribe/$", volunteer_digest_unsubscribe, name="volunteer-digest-unsubscribe"),

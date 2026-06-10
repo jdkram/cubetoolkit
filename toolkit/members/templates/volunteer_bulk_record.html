@@ -1,0 +1,237 @@
+{% extends 'base_admin.html' %}
+{% block title %}Bulk record — {{ mode|title }}{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/messages.css">
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}diary/css/edit_form.css">
+<style>
+  select, textarea, input[type="text"] { width: 100%; }
+  td { padding: 2px 10px; }
+  .vol-row.already-holds { color: #6c757d; }
+  .vol-row.already-holds td { background: #f8f9fa; }
+  .vol-row.hidden-holder { display: none; }
+  .select-controls { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+</style>
+{% endblock %}
+
+{% block script %}
+{{ block.super }}
+{% if mode == "training" %}{{ form.media }}{% endif %}
+<script>
+"use strict";
+document.addEventListener("DOMContentLoaded", function () {
+  {% if mode == "training" %}
+  function setupForTrainingType() {
+    var selected = document.getElementById("id_type").value;
+    var roleField = document.getElementById("id_role");
+    if (!roleField) return;
+    if (selected === "G") {
+      roleField.removeAttribute("required");
+      roleField.setAttribute("disabled", true);
+    } else {
+      roleField.setAttribute("required", "");
+      roleField.removeAttribute("disabled");
+    }
+  }
+  var typeField = document.getElementById("id_type");
+  if (typeField) {
+    typeField.addEventListener("change", setupForTrainingType);
+    setupForTrainingType();
+  }
+  {% endif %}
+
+  {% if mode == "qualification" %}
+  var checks = document.querySelectorAll(".vol-check:not([disabled])");
+  var countEl = document.getElementById("checked-count");
+  var submitBtn = document.getElementById("submit-btn");
+
+  function updateCount() {
+    var n = document.querySelectorAll(".vol-check:not([disabled]):checked").length;
+    if (countEl) countEl.textContent = n;
+    if (submitBtn) submitBtn.disabled = n === 0;
+  }
+
+  checks.forEach(function (c) { c.addEventListener("change", updateCount); });
+
+  var selectAll = document.getElementById("select-all");
+  var selectNone = document.getElementById("select-none");
+  var selectUnqualified = document.getElementById("select-unqualified");
+
+  if (selectAll) selectAll.addEventListener("click", function () {
+    checks.forEach(function (c) { c.checked = true; });
+    updateCount();
+  });
+  if (selectNone) selectNone.addEventListener("click", function () {
+    checks.forEach(function (c) { c.checked = false; });
+    updateCount();
+  });
+  if (selectUnqualified) selectUnqualified.addEventListener("click", function () {
+    checks.forEach(function (c) {
+      var row = c.closest("tr");
+      c.checked = row && row.dataset.holds === "false";
+    });
+    updateCount();
+  });
+  updateCount();
+  {% endif %}
+});
+</script>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-3">
+
+<h2>Bulk record</h2>
+
+{# ── Type selector ─────────────────────────────────────────────────────── #}
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <div class="d-flex align-items-start gap-4 flex-wrap">
+      <div>
+        <div class="fw-semibold mb-1">Record type</div>
+        <div class="d-flex gap-3">
+          <a href="{% url "bulk-record" %}?mode=training"
+             class="btn btn-sm {% if mode == "training" %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+            Training record
+          </a>
+          <a href="{% url "bulk-record" %}?mode=qualification"
+             class="btn btn-sm {% if mode == "qualification" %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+            Qualification grant
+          </a>
+        </div>
+      </div>
+      <div class="text-muted small" style="max-width:480px">
+        {% if mode == "training" %}
+        <strong>Training records</strong> are event-based log entries (e.g. "attended General Safety Training on 12 May"). They expire and are used for audit, not access control.
+        {% else %}
+        <strong>Qualifications</strong> are durable clearances that gate rota sign-ups (e.g. "cleared for Projection"). They don't expire unless a certificate type is set.
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Training section ──────────────────────────────────────────────────── #}
+{% if mode == "training" %}
+<form action="" method="POST">
+  {% csrf_token %}
+  <input type="hidden" name="mode" value="training">
+  <table>
+    {{ form.as_table }}
+    <tr><td colspan="2"><input type="submit" value="Add training records"></td></tr>
+  </table>
+</form>
+{% endif %}
+
+{# ── Qualification section ─────────────────────────────────────────────── #}
+{% if mode == "qualification" %}
+
+{# Qualification picker #}
+<div class="card mb-3">
+  <div class="card-body">
+    <form method="get" class="d-flex align-items-center flex-wrap" style="gap:0.75rem">
+      <input type="hidden" name="mode" value="qualification">
+      <label for="qualification_id" class="mb-0 fw-semibold">Qualification:</label>
+      <select name="qualification_id" id="qualification_id" class="form-select form-select-sm" style="max-width:280px">
+        <option value="">-- choose --</option>
+        {% for qual in all_qualifications %}
+          <option value="{{ qual.pk }}"{% if selected_qual.pk == qual.pk %} selected{% endif %}>{{ qual.name }}</option>
+        {% endfor %}
+      </select>
+      {% if selected_qual %}
+        <div class="form-check mb-0">
+          <input class="form-check-input" type="checkbox" name="hide-holders" id="hide-holders"
+                 {% if hide_holders %}checked{% endif %}
+                 onchange="this.form.submit()">
+          <label class="form-check-label" for="hide-holders">Hide already-qualified</label>
+        </div>
+      {% endif %}
+      <button type="submit" class="btn btn-sm btn-outline-secondary">Filter</button>
+    </form>
+  </div>
+</div>
+
+{% if not all_qualifications %}
+<div class="alert alert-warning">No qualifications defined yet. <a href="{% url "edit-roles" %}">Add one in Meta → Roles.</a></div>
+{% elif not selected_qual %}
+<div class="alert alert-info">Choose a qualification above to load the volunteer list.</div>
+{% else %}
+
+<form method="post" id="award-form">
+  {% csrf_token %}
+  <input type="hidden" name="mode" value="qualification">
+  <input type="hidden" name="qualification_id" value="{{ selected_qual.pk }}">
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:0.5rem">
+      <span>Awarding: <strong>{{ selected_qual.name }}</strong>
+        {% if selected_qual.notes %}<span class="text-muted ms-2" style="font-size:0.9em">{{ selected_qual.notes }}</span>{% endif %}
+      </span>
+      <div class="select-controls">
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="select-none">Select none</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="select-unqualified">Select unqualified</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="select-all">Select all</button>
+      </div>
+    </div>
+
+    <div class="card-body p-0" style="overflow-x:auto">
+      <table class="table table-sm table-bordered mb-0">
+        <thead class="thead-light">
+          <tr>
+            <th style="width:36px"></th>
+            <th>Name</th>
+            <th>Current qualifications</th>
+            <th style="width:120px">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for vol in volunteers %}
+          <tr class="vol-row{% if vol.already_holds %} already-holds{% endif %}{% if hide_holders and vol.already_holds %} hidden-holder{% endif %}"
+              data-holds="{{ vol.already_holds|yesno:'true,false' }}">
+            <td class="text-center">
+              <input type="checkbox" name="volunteer_ids" value="{{ vol.pk }}"
+                     class="vol-check"
+                     {% if vol.already_holds %}disabled title="Already holds {{ selected_qual.name }}"{% endif %}>
+            </td>
+            <td><a href="{% url "edit-volunteer" volunteer_id=vol.pk %}">{{ vol.member.name }}</a></td>
+            <td>
+              <small class="text-muted">
+                {% for vq in vol.qualifications.all %}
+                  {{ vq.qualification.name }}{% if not forloop.last %}, {% endif %}
+                {% empty %}
+                  <em>none</em>
+                {% endfor %}
+              </small>
+            </td>
+            <td>
+              {% if vol.already_holds %}
+                <span class="badge text-bg-secondary">Already qualified</span>
+              {% else %}
+                <span class="badge text-bg-light text-dark border">Not yet awarded</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="text-muted p-3">No active volunteers found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card-footer d-flex justify-content-between align-items-center flex-wrap" style="gap:0.5rem">
+      <small class="text-muted">
+        <span id="checked-count">0</span> selected &nbsp;·&nbsp; {{ volunteers|length }} active volunteer(s) total
+      </small>
+      <button type="submit" class="btn btn-primary" id="submit-btn" disabled>
+        Award <strong>{{ selected_qual.name }}</strong> to selected
+      </button>
+    </div>
+  </div>
+</form>
+
+{% endif %}
+{% endif %}
+
+</div>
+{% endblock %}

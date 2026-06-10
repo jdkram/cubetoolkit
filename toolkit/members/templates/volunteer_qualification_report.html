@@ -1,0 +1,77 @@
+{% extends 'base_admin.html' %}
+{% block title %}Qualification report{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/messages.css">
+{% endblock %}
+
+{% block body %}
+<h1>Qualification report</h1>
+<p class="text-muted">All qualifications — how many volunteers hold each, which roles they gate, and who holds them.</p>
+
+{% if not qual_data %}
+<div class="alert alert-info">No qualifications defined yet. <a href="{% url "edit-roles" %}">Add one in Meta → Roles.</a></div>
+{% else %}
+
+<div class="accordion" id="qual-accordion">
+{% for item in qual_data %}
+<div class="accordion-item">
+  <h2 class="accordion-header" id="heading-{{ item.qualification.pk }}">
+    <button class="accordion-button collapsed" type="button"
+            data-bs-toggle="collapse" data-bs-target="#collapse-{{ item.qualification.pk }}"
+            aria-expanded="false" aria-controls="collapse-{{ item.qualification.pk }}">
+      <span class="me-2">{{ item.qualification.name }}</span>
+      <span class="badge bg-secondary me-2">{{ item.holders|length }} holder{{ item.holders|length|pluralize }}</span>
+      {% for role in item.gating_roles %}
+        {% if role.qualification_gate == "blocking" %}
+          <span class="badge bg-danger me-1" title="Blocking gate: volunteers without this qual cannot sign up for {{ role.name }}">blocks {{ role.name }}</span>
+        {% else %}
+          <span class="badge bg-warning text-dark me-1" title="Advisory gate: volunteers without this qual see a warning for {{ role.name }}">warns {{ role.name }}</span>
+        {% endif %}
+      {% endfor %}
+    </button>
+  </h2>
+  <div id="collapse-{{ item.qualification.pk }}" class="accordion-collapse collapse"
+       aria-labelledby="heading-{{ item.qualification.pk }}" data-bs-parent="#qual-accordion">
+    <div class="accordion-body p-0">
+      {% if item.qualification.notes %}
+      <p class="px-3 pt-3 text-muted small mb-0">{{ item.qualification.notes }}</p>
+      {% endif %}
+      {% if item.holders %}
+      <table class="table table-sm table-striped mb-0">
+        <thead>
+          <tr>
+            <th>Volunteer</th>
+            <th>Granted on</th>
+            <th>Granted by</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for vq in item.holders %}
+          <tr>
+            <td><a href="{% url "edit-volunteer" volunteer_id=vq.volunteer.pk %}">{{ vq.volunteer.member.name }}</a></td>
+            <td>{{ vq.granted_on|date:"d M Y" }}</td>
+            <td>{{ vq.granted_by|default:"—" }}</td>
+            <td class="text-muted small">{{ vq.notes }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="px-3 py-2 text-muted mb-0"><em>No volunteers hold this qualification yet.</em></p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endfor %}
+</div>
+
+{% endif %}
+
+<div class="mt-3">
+  <a href="{% url "bulk-record" %}?mode=qualification" class="btn btn-outline-primary btn-sm">Bulk award qualifications</a>
+  <a href="{% url "view-volunteer-summary" %}" class="btn btn-outline-secondary btn-sm ms-2">Volunteer summary</a>
+</div>
+{% endblock %}

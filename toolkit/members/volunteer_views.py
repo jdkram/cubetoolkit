@@ -29,7 +29,7 @@ from toolkit.members.forms import (
     TrainingRecordForm,
     GroupTrainingForm,
 )
-from toolkit.members.models import Member, Volunteer, TrainingRecord
+from toolkit.members.models import Member, Volunteer, TrainingRecord, ExportAuditLog
 from toolkit.diary.models import Role, RotaEntry, get_site_config
 
 logger = logging.getLogger(__name__)
@@ -76,57 +76,130 @@ def view_volunteer_list(request):
     return render(request, "volunteer_list.html", context)
 
 
+# Field-group definitions for the volunteer CSV export.
+# Each group: (group_id, label, is_sensitive, fields)
+# fields: list of (column_header, lambda volunteer -> value)
+_EXPORT_FIELD_GROUPS = [
+    (
+        "basic",
+        "Basic (name, email, status)",
+        False,
+        [
+            ("Name", lambda v: v.member.name),
+            ("Email", lambda v: v.member.email),
+            ("Status", lambda v: v.status),
+            ("Collectives", lambda v: ", ".join(c.name for c in v.collectives.all())),
+        ],
+    ),
+    (
+        "contact",
+        "Contact details (phone numbers)",
+        True,
+        [
+            ("Phone", lambda v: v.member.phone),
+            ("Alternate phone", lambda v: v.member.altphone),
+        ],
+    ),
+    (
+        "address",
+        "Home address",
+        True,
+        [
+            ("Address", lambda v: v.member.address.replace("\r\n", ", ")),
+            ("City", lambda v: v.member.posttown),
+            ("Postcode", lambda v: v.member.postcode),
+        ],
+    ),
+    (
+        "notes",
+        "Internal notes",
+        False,
+        [
+            ("Member notes", lambda v: v.member.notes),
+            ("Volunteer notes", lambda v: v.notes),
+        ],
+    ),
+    (
+        "dates",
+        "Dates (inducted, last update)",
+        False,
+        [
+            (
+                "Inducted",
+                lambda v: (
+                    "Pre-toolkit"
+                    if v.is_old()
+                    else v.member.created_at.strftime("%d %b %Y")
+                ),
+            ),
+            ("Last update", lambda v: v.member.updated_at.strftime("%d %b %Y")),
+        ],
+    ),
+]
+_EXPORT_GROUP_IDS = {g[0] for g in _EXPORT_FIELD_GROUPS}
+_SENSITIVE_GROUP_IDS = {g[0] for g in _EXPORT_FIELD_GROUPS if g[2]}
+
+
+@panopticon_required
+def export_volunteers_as_csv(request):
+    """Full export page: field-group selector + PII warning + audit log."""
+    if request.method == "POST":
+        selected_ids = [
+            gid for gid in _EXPORT_GROUP_IDS
+            if request.POST.get(f"group_{gid}")
+        ]
+        if not selected_ids:
+            selected_ids = ["basic"]
+
+        # Build flat list of (header, accessor) for selected groups.
+        columns = []
+        for gid, _label, _sensitive, fields in _EXPORT_FIELD_GROUPS:
+            if gid in selected_ids:
+                columns.extend(fields)
+
+        volunteers = (
+            Volunteer.objects.active()
+            .select_related("member")
+            .prefetch_related("collectives")
+            .order_by("member__name")
+        )
+        rows = list(volunteers)
+
+        # Log the export.
+        is_sensitive = bool(set(selected_ids) & _SENSITIVE_GROUP_IDS)
+        logger.info(
+            f"User {request.user} exported {len(rows)} volunteers "
+            f"(fields: {selected_ids}, sensitive={is_sensitive})"
+        )
+        ExportAuditLog.objects.create(
+            exported_by=request.user,
+            fields_included=selected_ids,
+            recipient_count=len(rows),
+        )
+
+        now = datetime.now().strftime("%d %b %Y %I-%M %p")
+        file_name = f"{settings.VENUE['name']} Volunteers {now}.csv"
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = f'attachment; filename="{file_name}"'
+        writer = csv.writer(response)
+        writer.writerow([col[0] for col in columns])
+        for volunteer in rows:
+            writer.writerow([col[1](volunteer) for col in columns])
+        return response
+
+    # GET: render the field selection page.
+    return render(request, "volunteer_export.html", {
+        "field_groups": _EXPORT_FIELD_GROUPS,
+        "sensitive_ids": _SENSITIVE_GROUP_IDS,
+    })
+
+
 @panopticon_required
 @require_safe
-def export_volunteers_as_csv(request):
-    logger.info(f"User {request.user} requested a volunteer CSV export")
-    now = datetime.now().strftime("%d %b %Y %I-%M %p")
-    file_name = f"{settings.VENUE['name']} Volunteers {now}.csv"
-    logger.info(f'Exported CSV filename: "{file_name}"')
-
-    response = HttpResponse(content_type="text/csv")
-    response["Content-Disposition"] = f'attachment; filename="{file_name}"'
-    writer = csv.writer(response)
-    writer.writerow(
-        [
-            "Name",
-            "Email",
-            "Address",
-            "City",
-            "Postcode",
-            "Phone",
-            "Alternate phone",
-            "Member notes",
-            "Volunteer notes",
-            "Inducted",
-            "Last update",
-        ]
-    )
-
-    volunteers = Volunteer.objects.active().order_by("member__name")
-    for volunteer in volunteers:
-        writer.writerow(
-            [
-                volunteer.member.name,
-                volunteer.member.email,
-                volunteer.member.address.replace("\r\n", ", "),
-                volunteer.member.posttown,
-                volunteer.member.postcode,
-                volunteer.member.phone,
-                volunteer.member.altphone,
-                volunteer.member.notes,
-                volunteer.member.volunteer.notes,
-                (
-                    "Pre-toolkit"
-                    if volunteer.is_old()
-                    else volunteer.member.created_at.strftime(
-                        "%I:%M %p %d %b %Y"
-                    )
-                ),
-                volunteer.member.updated_at.strftime("%I:%M %p %d %b %Y"),
-            ]
-        )
-    return response
+def export_audit_log(request):
+    """Audit log of all volunteer CSV exports."""
+    logs = ExportAuditLog.objects.select_related("exported_by").all()[:200]
+    return render(request, "volunteer_export_audit.html", {"logs": logs})
 
 
 @panopticon_required
@@ -347,9 +420,8 @@ def bulk_anonymise_volunteers(request):
 @panopticon_required
 @require_safe
 def view_volunteer_role_report(request):
-    # Volunteer role assignment has been removed; this view is now a stub.
-    context = {"role_vol_map": []}
-    return render(request, "volunteer_role_report.html", context)
+    # Role assignment was removed; redirect to the qualification report which replaced it.
+    return HttpResponseRedirect(reverse("view-qualification-report"))
 
 
 def _notify_vols_admin_status_change(request, vol, now_active):
@@ -433,11 +505,7 @@ def edit_volunteer(request, volunteer_id, create_new=False):
             is_superuser=request.user.is_superuser,
         )
         mem_form = MemberFormWithoutNotes(request.POST, instance=member)
-        show_user_mgmt = settings.VENUE.get("show_user_management") and user is not None and request.user.is_superuser
-        user_form = UserForm(request.POST, instance=user) if show_user_mgmt else None
         forms_valid = vol_form.is_valid() and mem_form.is_valid()
-        if user_form is not None:
-            forms_valid = forms_valid and user_form.is_valid()
         if forms_valid:
             member = mem_form.save(commit=False)
             member.gdpr_opt_in = timezone.now()
@@ -491,9 +559,6 @@ def edit_volunteer(request, volunteer_id, create_new=False):
                     f"removed from were not added back automatically.",
                 )
 
-            if user_form is not None:
-                user_form.save(granted_by=request.user)
-
             logger.info(
                 f"Saving changes to volunteer '{volunteer.member.name}' (id: {str(volunteer.pk)})"
             )
@@ -540,8 +605,9 @@ def edit_volunteer(request, volunteer_id, create_new=False):
     else:
         vol_form = VolunteerForm(instance=volunteer, is_superuser=request.user.is_superuser)
         mem_form = MemberFormWithoutNotes(instance=volunteer.member)
-        show_user_mgmt = settings.VENUE.get("show_user_management") and user is not None and request.user.is_superuser
-        user_form = UserForm(instance=user) if show_user_mgmt else None
+
+    show_user_mgmt = settings.VENUE.get("show_user_management") and user is not None and request.user.is_superuser
+    user_form = UserForm(instance=user) if show_user_mgmt else None
 
     if new_training_record:
         training_record_form = TrainingRecordForm(
@@ -564,6 +630,7 @@ def edit_volunteer(request, volunteer_id, create_new=False):
         "site_config": site_config,
         "general_training_enabled": site_config.general_training_enabled,
         "all_qualifications": Qualification.objects.all(),
+        "is_panopticon": is_panopticon,
     }
     return render(request, "form_volunteer.html", context)
 
@@ -1094,3 +1161,222 @@ def remove_volunteer_qualification(request, vq_id):
     vq.delete()
     messages.success(request, f"'{qual_name}' qualification removed from {vol_name}.")
     return HttpResponseRedirect(reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id}) + "#vol-qualifications")
+
+
+@panopticon_required
+@require_safe
+def view_qualification_report(request):
+    from toolkit.members.models import Qualification, VolunteerQualification
+
+    qualifications = Qualification.objects.order_by("name")
+    qual_data = []
+    for qual in qualifications:
+        holders = (
+            VolunteerQualification.objects
+            .filter(qualification=qual)
+            .select_related("volunteer__member")
+            .order_by("volunteer__member__name")
+        )
+        gating_roles = Role.objects.filter(
+            required_qualification=qual,
+            qualification_gate__in=[Role.GATE_ADVISORY, Role.GATE_BLOCKING],
+        ).order_by("name")
+        qual_data.append({
+            "qualification": qual,
+            "holders": list(holders),
+            "gating_roles": list(gating_roles),
+        })
+
+    return render(request, "volunteer_qualification_report.html", {"qual_data": qual_data})
+
+
+@panopticon_required
+def bulk_record(request):
+    """Unified bulk-record page: training records and qualification grants, with a type selector."""
+    from toolkit.members.models import Qualification, VolunteerQualification
+
+    mode = request.POST.get("mode") or request.GET.get("mode", "training")
+    if mode not in ("training", "qualification"):
+        mode = "training"
+
+    if mode == "training":
+        return _bulk_record_training(request)
+    else:
+        return _bulk_record_qualification(request)
+
+
+def _bulk_record_training(request):
+    if request.method == "POST":
+        form = GroupTrainingForm(request.POST)
+        if form.is_valid():
+            training_type = form.cleaned_data["type"]
+            role = form.cleaned_data["role"]
+            trainer = form.cleaned_data["trainer"]
+            members = form.cleaned_data["volunteers"]
+            logger.info(
+                f"Bulk add training records, type {training_type}, role '{role}', trainer '{trainer}', "
+                f"members '{members}'"
+            )
+            for member in members:
+                volunteer = member.volunteer
+                TrainingRecord(
+                    training_type=training_type,
+                    role=role,
+                    trainer=trainer,
+                    training_date=form.cleaned_data["training_date"],
+                    notes=form.cleaned_data["notes"],
+                    volunteer=volunteer,
+                ).save()
+            messages.success(
+                request,
+                f"Added {len(members)} training record(s) for "
+                f"{'role ' + str(role) if role else 'general training'}.",
+            )
+            return HttpResponseRedirect(reverse("bulk-record") + "?mode=training")
+    else:
+        form = GroupTrainingForm()
+
+    return render(request, "volunteer_bulk_record.html", {"mode": "training", "form": form})
+
+
+def _bulk_record_qualification(request):
+    from toolkit.members.models import Qualification, VolunteerQualification
+
+    all_qualifications = Qualification.objects.order_by("name")
+    qual_id = request.POST.get("qualification_id") or request.GET.get("qualification_id")
+    selected_qual = None
+    if qual_id:
+        try:
+            selected_qual = Qualification.objects.get(pk=qual_id)
+        except Qualification.DoesNotExist:
+            messages.error(request, "Qualification not found.")
+
+    if request.method == "POST" and selected_qual:
+        raw_ids = request.POST.getlist("volunteer_ids")
+        try:
+            selected_ids = [int(i) for i in raw_ids if i]
+        except ValueError:
+            messages.error(request, "Invalid volunteer selection.")
+            return HttpResponseRedirect(reverse("bulk-record") + "?mode=qualification")
+
+        if not selected_ids:
+            messages.warning(request, "No volunteers selected.")
+        else:
+            existing = set(
+                VolunteerQualification.objects.filter(
+                    volunteer_id__in=selected_ids,
+                    qualification=selected_qual,
+                ).values_list("volunteer_id", flat=True)
+            )
+            to_create = [vid for vid in selected_ids if vid not in existing]
+            granted_by = request.user.get_full_name() or request.user.username
+            VolunteerQualification.objects.bulk_create([
+                VolunteerQualification(
+                    volunteer_id=vid,
+                    qualification=selected_qual,
+                    granted_by=granted_by,
+                )
+                for vid in to_create
+            ])
+            skipped = len(selected_ids) - len(to_create)
+            msg = f"'{selected_qual.name}' awarded to {len(to_create)} volunteer(s)."
+            if skipped:
+                msg += f" {skipped} already held it and were skipped."
+            messages.success(request, msg)
+            logger.info(
+                "Bulk award: '%s' granted to %d volunteers by %s (%d skipped)",
+                selected_qual.name, len(to_create), request.user.username, skipped,
+            )
+        return HttpResponseRedirect(
+            reverse("bulk-record") + f"?mode=qualification&qualification_id={selected_qual.pk}"
+        )
+
+    # Build volunteer list with already-holds annotation.
+    volunteers = (
+        Volunteer.objects.filter(status=Volunteer.STATUS_ACTIVE)
+        .select_related("member")
+        .prefetch_related("qualifications__qualification")
+        .order_by("member__name")
+    )
+    hide_holders = bool(request.GET.get("hide-holders"))
+    if selected_qual:
+        holders = set(
+            VolunteerQualification.objects.filter(
+                qualification=selected_qual
+            ).values_list("volunteer_id", flat=True)
+        )
+        for vol in volunteers:
+            vol.already_holds = vol.pk in holders
+    else:
+        for vol in volunteers:
+            vol.already_holds = False
+
+    return render(request, "volunteer_bulk_record.html", {
+        "mode": "qualification",
+        "all_qualifications": all_qualifications,
+        "selected_qual": selected_qual,
+        "volunteers": volunteers,
+        "hide_holders": hide_holders,
+    })
+
+
+@panopticon_required
+@require_POST
+def save_volunteer_permissions(request, volunteer_id):
+    """Update Django user permissions (programmer, panopticon) for a volunteer."""
+    volunteer = get_object_or_404(Volunteer, id=volunteer_id)
+    user = volunteer.user
+    if not settings.VENUE.get("show_user_management") or user is None:
+        raise PermissionDenied
+    user_form = UserForm(request.POST, instance=user)
+    if user_form.is_valid():
+        user_form.save(granted_by=request.user)
+        logger.info(
+            "Permissions updated for volunteer pk=%s by %s",
+            volunteer.pk, request.user.username,
+        )
+        messages.success(request, f"Permissions updated for {volunteer.member.name}.")
+    else:
+        for field, errors in user_form.errors.items():
+            for error in errors:
+                messages.error(request, f"Permissions: {error}")
+    return HttpResponseRedirect(
+        reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id})
+    )
+
+
+@panopticon_required
+@require_POST
+def toggle_volunteer_suspension(request, volunteer_id):
+    """Suspend or reinstate a volunteer via the dedicated suspension card."""
+    volunteer = get_object_or_404(Volunteer, pk=volunteer_id)
+    action = request.POST.get("action")
+
+    if action == "suspend" and volunteer.status != Volunteer.STATUS_SUSPENDED:
+        volunteer.status = Volunteer.STATUS_SUSPENDED
+        volunteer.save()
+        messages.warning(
+            request,
+            f"{volunteer.member.name} has been suspended: their login is now "
+            f"disabled and they have been removed from all upcoming shifts.",
+        )
+        logger.info(
+            "Volunteer pk=%s suspended by %s", volunteer.pk, request.user.username
+        )
+    elif action == "reinstate" and volunteer.status == Volunteer.STATUS_SUSPENDED:
+        volunteer.status = Volunteer.STATUS_ACTIVE
+        volunteer.save()
+        messages.info(
+            request,
+            f"{volunteer.member.name}'s suspension has been lifted — their login is "
+            f"restored. Any shifts they were removed from were not re-added automatically.",
+        )
+        logger.info(
+            "Volunteer pk=%s reinstated by %s", volunteer.pk, request.user.username
+        )
+    else:
+        messages.error(request, "Invalid suspension action.")
+
+    return HttpResponseRedirect(
+        reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id})
+    )

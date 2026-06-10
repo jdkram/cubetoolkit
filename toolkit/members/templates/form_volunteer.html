@@ -100,15 +100,15 @@
   margin: 0;
 }
 
-/* ── Danger zone pair below form ───────────────────────────────── */
+/* ── Danger zone row below form (Permissions, Suspension, GDPR, Password) */
 #vol-danger {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
-  margin-top: 0;
+  margin-top: 1rem;
 }
 #vol-danger .vol-section {
-  flex: 1 1 260px;
+  flex: 1 1 240px;
   min-width: 0;
   margin-bottom: 0;
 }
@@ -151,15 +151,13 @@ input[type="text"], input[type="tel"], input[type="email"], textarea {
   max-width: 46rem;
   line-height: 1.4;
 }
-/* Suspension is a rare, high-consequence safeguarding action — set it apart
-   visually, but carry the meaning in the wording too (not colour alone). */
-.status-option.suspended {
-  border-left: 3px solid #c0392b;
-  background: #fdf3f2;
-  padding: 0.5rem 0.65rem;
-  border-radius: 4px;
+.suspension-consequences {
+  font-size: 0.85em;
+  color: #555;
+  margin: 0 0 0.8rem;
+  line-height: 1.45;
 }
-.status-option.suspended .status-desc {
+.suspension-card.active-suspension .suspension-consequences {
   color: #7a1f17;
 }
 .field-tip {
@@ -268,7 +266,7 @@ $(document).ready(function() {
     <!-- Volunteer status -->
     <div class="vol-section" id="vol-status">
       <h4>Volunteer status</h4>
-      <p class="status-intro">This controls what a volunteer can do. Each option below says exactly what changes. Only <strong>Suspended</strong> stops someone logging in — the others just take them off the rota and mailing list.</p>
+      <p class="status-intro">Controls whether they're on the active roster, receiving the digest, and visible in pool health.</p>
       <div class="status-list">
         {% for radio in vol_form.status %}
         <div class="status-option {{ radio.choice_value }}">
@@ -276,17 +274,16 @@ $(document).ready(function() {
             {{ radio.tag }} <span class="status-name">{{ radio.choice_label }}</span>
           </label>
           {% if radio.choice_value == "active" %}
-            <span class="status-desc"><strong>Can log in.</strong> Shown on the rota and receives mailouts. This is the normal state for a current volunteer.</span>
+            <span class="status-desc"><strong>Can log in.</strong> On the rota, receives the digest email, appears in pool health. Normal state for a current volunteer.</span>
           {% elif radio.choice_value == "dormant" %}
-            <span class="status-desc"><strong>Can still log in.</strong> Taken off the rota and the mailing list while they're on a break. Set them back to Active when they return.</span>
+            <span class="status-desc"><strong>Can still log in.</strong> Removed from active rota and digest while on a break. Retained for re-induction tracking. Set back to Active when they return.</span>
           {% elif radio.choice_value == "retired" %}
-            <span class="status-desc"><strong>Can still log in</strong> to see their own record. Taken off the rota and the mailing list. Use this when someone has left the volunteer team for good.</span>
-          {% elif radio.choice_value == "suspended" %}
-            <span class="status-desc"><strong>Locks them out straight away</strong> — they are logged out and cannot log back in. They are also removed from every upcoming shift and taken off the rota and mailing list. Use this to restrict someone's access while a concern is being looked into. Setting them back to Active restores their login and puts them back on the rota and mailing list — but the shifts they were removed from are <strong>not</strong> added back, so they would need to sign up for those again.</span>
+            <span class="status-desc"><strong>Can still log in</strong> to see their own record. Off the rota, off the digest, not surfaced in pool health. Use for someone who has permanently left the volunteer team.</span>
           {% endif %}
         </div>
         {% endfor %}
       </div>
+
     </div>
 
     <!-- Access rider -->
@@ -506,53 +503,6 @@ $(document).ready(function() {
     </div>
     {% endif %}
 
-    <!-- Permissions (superuser only) -->
-    {% if VENUE.show_user_management and user_form %}
-    <div class="vol-section danger-zone" id="vol-permissions">
-      <h4>Permissions</h4>
-      <div class="danger-row">
-        {{ user_form.programmer }}
-        <label for="{{ user_form.programmer.id_for_label }}">Programmer</label>
-        <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
-          title="Can create and edit events, showings, roles, and tags. Cannot access volunteer or member personal data.">ⓘ</span>
-      </div>
-      <div class="danger-row">
-        {{ user_form.is_superuser }}
-        <label for="{{ user_form.is_superuser.id_for_label }}">Panopticon access</label>
-        <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
-          title="Full access: CMS editing, all volunteer and member personal data (names, emails, addresses, notes), mailout sending. Assign with care.">ⓘ</span>
-      </div>
-      <div id="panopticon-reason-row" style="display:{% if user_form.instance.is_superuser %}block{% else %}none{% endif %}; margin-top:0.4rem;">
-        <label for="{{ user_form.panopticon_reason.id_for_label }}" style="font-size:0.88em; color:#555;">Reason for Panopticon access</label>
-        {{ user_form.panopticon_reason }}
-        {% if user_form.panopticon_reason.errors %}
-        <div class="text-danger small">{{ user_form.panopticon_reason.errors }}</div>
-        {% endif %}
-        <small class="form-text text-muted">Shown on the <a href="{% url 'toolkit-access' %}">access transparency page</a>.</small>
-      </div>
-      <script>
-      (function() {
-        var cb = document.getElementById("{{ user_form.is_superuser.id_for_label }}");
-        var row = document.getElementById("panopticon-reason-row");
-        if (cb && row) {
-          cb.addEventListener("change", function() {
-            row.style.display = cb.checked ? "block" : "none";
-          });
-          row.style.display = cb.checked ? "block" : "none";
-        }
-      })();
-      </script>
-      <hr style="margin:0.6rem 0 0.4rem;">
-      <div style="font-size:0.85em; color:#666;">
-        Username: <strong>{{ user_form.instance.username|default:"—" }}</strong>
-        &nbsp;<a href="#" onclick="this.closest('.danger-zone').querySelector('.username-row').style.display='block'; this.style.display='none'; return false;">change</a>
-        <div class="username-row" style="display:none; margin-top:0.3rem;">
-          {{ user_form.username.errors }}{{ user_form.username }}
-        </div>
-      </div>
-    </div>
-    {% endif %}
-
   </div><!-- #vol-right -->
 
 </div><!-- #vol-page-grid -->
@@ -679,10 +629,83 @@ $(document).ready(function() {
 </div>
 {% endif %}
 
-<!-- ── GDPR + password (panopticon, outside main form) ─────────── -->
-{# Grouped here — visually adjacent to Permissions at the foot of the main form. #}
+<!-- ── Permissions, Suspension, GDPR, Password (panopticon, outside main form) -->
 {% if request.user.is_superuser and volunteer.id %}
-<div id="vol-danger" style="margin-top:1rem;">
+<div id="vol-danger">
+
+  {% if VENUE.show_user_management and user_form %}
+  <div class="vol-section danger-zone" id="vol-permissions">
+    <h4>Permissions</h4>
+    <form method="post" action="{% url 'save-volunteer-permissions' volunteer.pk %}">
+      {% csrf_token %}
+      <div class="danger-row">
+        {{ user_form.programmer }}
+        <label for="{{ user_form.programmer.id_for_label }}">Programmer</label>
+        <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
+          title="Can create and edit events, showings, roles, and tags. Cannot access volunteer or member personal data.">ⓘ</span>
+      </div>
+      <div class="danger-row">
+        {{ user_form.is_superuser }}
+        <label for="{{ user_form.is_superuser.id_for_label }}">Panopticon access</label>
+        <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
+          title="Full access: CMS editing, all volunteer and member personal data (names, emails, addresses, notes), mailout sending. Assign with care.">ⓘ</span>
+      </div>
+      <div id="panopticon-reason-row" style="display:{% if user_form.instance.is_superuser %}block{% else %}none{% endif %}; margin-top:0.4rem;">
+        <label for="{{ user_form.panopticon_reason.id_for_label }}" style="font-size:0.88em; color:#555;">Reason for Panopticon access</label>
+        {{ user_form.panopticon_reason }}
+        {% if user_form.panopticon_reason.errors %}
+        <div class="text-danger small">{{ user_form.panopticon_reason.errors }}</div>
+        {% endif %}
+        <small class="form-text text-muted">Shown on the <a href="{% url 'toolkit-access' %}">access transparency page</a>.</small>
+      </div>
+      <hr style="margin:0.6rem 0 0.4rem;">
+      <div style="font-size:0.85em; color:#666;">
+        Username: <strong>{{ user_form.instance.username|default:"—" }}</strong>
+        &nbsp;<a href="#" onclick="this.closest('.danger-zone').querySelector('.username-row').style.display='block'; this.style.display='none'; return false;">change</a>
+        <div class="username-row" style="display:none; margin-top:0.3rem;">
+          {{ user_form.username.errors }}{{ user_form.username }}
+        </div>
+      </div>
+      <div style="margin-top:0.6rem;">
+        <button type="submit" class="btn btn-sm btn-outline-danger">Save permissions</button>
+      </div>
+    </form>
+    <script>
+    (function() {
+      var cb = document.getElementById("{{ user_form.is_superuser.id_for_label }}");
+      var row = document.getElementById("panopticon-reason-row");
+      if (cb && row) {
+        cb.addEventListener("change", function() {
+          row.style.display = cb.checked ? "block" : "none";
+        });
+      }
+    })();
+    </script>
+  </div>
+  {% endif %}
+
+  {% if volunteer.status == "suspended" %}
+  <div class="suspension-card active-suspension vol-section danger-zone" id="vol-suspension">
+    <h4>Suspension</h4>
+    <p class="suspension-consequences">This volunteer is currently suspended. Their login is disabled, they have been removed from all upcoming shifts, and the digest is paused.</p>
+    <form method="post" action="{% url "toggle-volunteer-suspension" volunteer.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="reinstate">
+      <button type="submit" class="btn btn-sm btn-outline-secondary">Lift suspension — restore to Active</button>
+    </form>
+    <p class="suspension-consequences" style="margin-top:0.6rem; margin-bottom:0;">Note: shifts they were removed from are <strong>not</strong> automatically re-added.</p>
+  </div>
+  {% else %}
+  <div class="suspension-card inactive vol-section danger-zone" id="vol-suspension">
+    <h4>Suspension</h4>
+    <p class="suspension-consequences">Suspending a volunteer immediately disables their login, removes them from all upcoming shifts, and pauses the digest. Use this for safeguarding or access-control situations — not for ordinary status changes like dormancy or retirement.</p>
+    <form method="post" action="{% url "toggle-volunteer-suspension" volunteer.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="suspend">
+      <button type="submit" class="btn btn-sm btn-danger">Suspend this volunteer</button>
+    </form>
+  </div>
+  {% endif %}
 
   <div class="vol-section danger-zone">
     <h4>GDPR right to erasure</h4>

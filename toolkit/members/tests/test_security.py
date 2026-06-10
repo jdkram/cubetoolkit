@@ -34,6 +34,8 @@ class SecurityTests(MembersTestsMixin, TestCase):
         "view-volunteer-list": {},
         "view-volunteer-role-report": {},
         "view-volunteer-training-report": {},
+        "view-qualification-report": {},
+        "view-volunteer-export-audit": {},
         # Member urls:
         "search-members": {},
         "view-member": {"member_id": 1},

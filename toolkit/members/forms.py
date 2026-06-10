@@ -171,11 +171,13 @@ class VolunteerForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self._is_superuser = is_superuser
 
-        # Suspension is a Panopticon-only safeguarding action; anonymised is
-        # set only by the anonymise flow. Filter accordingly.
-        excluded = {toolkit.members.models.Volunteer.STATUS_ANONYMISED}
-        if not is_superuser:
-            excluded.add(toolkit.members.models.Volunteer.STATUS_SUSPENDED)
+        # Suspension and anonymised are handled outside this form — suspension
+        # via a dedicated toggle action, anonymised via the anonymise flow.
+        # Neither should appear as a selectable status option here.
+        excluded = {
+            toolkit.members.models.Volunteer.STATUS_ANONYMISED,
+            toolkit.members.models.Volunteer.STATUS_SUSPENDED,
+        }
         self.fields["status"].choices = [
             (value, label)
             for value, label in self.fields["status"].choices

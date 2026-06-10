@@ -52,12 +52,11 @@ class TestVolunteerListViews(MembersTestsMixin, TestCase):
         url = reverse("view-volunteer-list", query={"show-retired": "true"})
         self._test_list_page_common(url, include_retired=True)
 
-    def test_role_report_loads(self):
-        # Role assignment on volunteers has been removed; the role report is now a stub.
+    def test_role_report_redirects_to_qualification_report(self):
+        # The role report is retired; old URL redirects to the qualification report.
         url = reverse("view-volunteer-role-report")
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "volunteer_role_report.html")
+        self.assertRedirects(response, reverse("view-qualification-report"), fetch_redirect_response=False)
 
 
 class TestVolunteerEditViews(MembersTestsMixin, TestCase):
@@ -216,11 +215,13 @@ class TestVolunteerSuspension(MembersTestsMixin, TestCase):
         values = [v for v, _ in form.fields["status"].choices]
         self.assertNotIn(Volunteer.STATUS_SUSPENDED, values)
 
-    def test_suspended_offered_to_superuser(self):
+    def test_suspended_not_offered_in_form_even_to_superuser(self):
+        # Suspension is handled via the dedicated toggle action, not via the
+        # status field on the form — so it should never appear as a choice.
         from toolkit.members.forms import VolunteerForm
         form = VolunteerForm(instance=self.vol_1, is_superuser=True)
         values = [v for v, _ in form.fields["status"].choices]
-        self.assertIn(Volunteer.STATUS_SUSPENDED, values)
+        self.assertNotIn(Volunteer.STATUS_SUSPENDED, values)
 
 
 class TestVolunteerEdit(MembersTestsMixin, TestCase):

@@ -675,6 +675,20 @@ class AnonymisationLog(models.Model):
         return f"Anonymisation of volunteer pk={self.volunteer_pk} at {self.created_at}"
 
 
+class ExportAuditLog(models.Model):
+    """Audit trail for volunteer CSV exports, especially those including PII."""
+    exported_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
+    exported_at = models.DateTimeField(auto_now_add=True)
+    fields_included = models.JSONField(default=list)
+    recipient_count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["-exported_at"]
+
+    def __str__(self):
+        return f"Export by {self.exported_by} at {self.exported_at} ({self.recipient_count} rows)"
+
+
 class PanopticonGrant(models.Model):
     """Audit record created when a user is granted Panopticon (is_superuser) access.
 
