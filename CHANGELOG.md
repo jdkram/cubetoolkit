@@ -6,6 +6,92 @@ Each release below is tagged (`v2026.03.0` through `v2026.05.7`) and represents 
 
 ---
 
+## v2026.06.2 — Programmer UX Overhaul & Volunteer Data Tools
+
+**Tagged at:** `2026.06.2` (2026-06-11)
+
+A large batch in two parts. The first is a ground-up overhaul of the event creation and programming workflow: a redesigned new-event form, live template preview, configurable occurrence terminology, a programming queue for Monday meetings, and a set of contextual guidance tools (TicketSource guide, age ratings, confirm banner). The second improves how panopticons managing volunteer records work: a safer suspension UI, a proper data export with a GDPR audit trail, a qualification report, and a consolidated bulk-record page. The nav is reorganised around how people actually use the tool.
+
+### What's new
+
+**Event creation and programming workflow**
+
+- **Programming queue** — `Event.programming_status` (draft / proposed / active / rejected) with a `/diary/edit/programming-queue/` view for Monday-meeting triage. Quick approve / return / skip actions. "Propose for meeting" button on the Event Hub. Queue nav link in Meta
+- **New Event form redesign** — two-zone crispy layout: "Book it now" (name, template, dates, start time) vs "Details — amend any time". Selecting a template renders a live preview (rooms with colour pips, rota with counts, tags, pricing, flags). Auto-ticks private/outside-hire from the template. Uses multi-date flatpickr from the batch-add flow; `room` field dropped (rooms now come from the template automatically)
+- **Default room bookings from event templates** — `EventTemplateRoom` through-model; auto-creates room bookings when a showing is added, skipping any rooms the programmer has manually selected
+- **Multi-day room bookings** — `RoomBooking.date_offset` (-1/0/+1) for load-in and teardown slots; compact "Day" column on the Edit Showing room booking table
+- **Venue-configurable occurrence terminology** — `occurrence_noun`, `occurrence_noun_plural`, `confirm_label` in `SiteConfiguration`. Defaults keep Cube language ("showing"/"showings"/"Confirm"); S+S seed data uses "date"/"dates"/"Publish & open rota". All hub headings, buttons, tooltips, and flash messages read from config
+- **Event/showing UI simplification** — single-occurrence events presented as one thing (heading + one card) on the Event Hub; the plural showing list and "Confirm all" only appear once a second showing exists
+- **Film template validation** — Film (DCP/MP4) templates pre-fill pricing, film_information, and terms with `[bracket]` placeholder text. Form rejects submission if any bracket placeholders remain unfilled
+- **Edit Showing form layout** — switched to vertical layout (labels above fields); call-times grouped into one responsive row; status checkboxes in a named fieldset; bottom buttons in a flex action bar
+- **Completeness checklist links** — checklist badges are now links to the relevant edit-form anchor, not just indicators
+- **TicketSource setup guide** — collapsible 5-step guide injected after the `ticket_link` field in event edit. Guide text configurable in site settings (`ticket_link_guidance_html`); optional link to a full programming guide document (`film_programming_guide_url` in venue config)
+- **"Ready to go live" confirm banner** — when all completeness checks pass but the showing is still unconfirmed, a green banner replaces the completeness bar. Single-occurrence events get an inline Confirm button; series events are pointed to "Confirm all"
+- **Configurable age-rating scheme** — panopticons define their own age-rating vocabulary in site settings. BBFC defaults seeded (U/PG/12A/12/15/18). Old stored values (`all_ages`, `16_plus`, `18_plus`) fall back to their legacy display labels
+
+**Programme and public site**
+
+- **CSS Grid on programme index** — Masonry.js replaced with `display:grid`; uniform portrait cards (`aspect-ratio:2/3`); 1→2→3→4 column breakpoints
+- **Configurable programme filter buttons** — `EventTag.filter_group` field; `PROGRAMME_FILTER_GROUPS` setting; AND-logic with text search; `?group=` URL persistence
+- **Letterbox bars on image upload** — `bar_colour` field on `MediaItem`; Pillow pads uploaded images to the configured crop ratio using the chosen colour. Colour picker and Canvas dominant-colour swatches in the event edit form
+- **RSS/Atom feed improvements** — 60-day lookahead (was 7); titles include date and time; descriptions prefer `copy_summary`; `item_pubdate` from `showing.created_at`
+- **Open Graph tags** — `og:type`, `og:site_name`, `og:url`, `og:title`, `og:image` added to `base_public.html` as site defaults; event pages override with event-specific values
+- **RSS autodiscovery** — `<link rel="alternate">` moved from the programme index to `base_public.html`, so it appears in `<head>` on all public pages
+
+**Volunteer records**
+
+- **Volunteer CSV export with GDPR audit trail** — full export page replaces the one-click download. Five field-group checkboxes; contact and address groups badged as "personal data" with a GDPR reminder. Every export logged to `ExportAuditLog` (user, timestamp, groups selected); audit log viewable at `/volunteers/view/export/audit/`
+- **Qualification report** — `/volunteers/qualification-report/` lists all qualifications, holder counts, granted-on/by dates, and which roles gate on each (blocking / advisory badges). Replaces the old role report; old URL redirects
+- **Bulk-record page consolidation** — group-training and bulk-qualification-award forms merged into `/volunteers/bulk-record/` behind a type selector, with inline explanation of the difference
+- **Suspension UX overhaul** — "Suspended" removed from the volunteer status radio entirely. A dedicated Suspension card (red/amber border, consequence text, Suspend / Lift button) handles the action separately. Prevents a suspended volunteer being accidentally reinstated via a routine profile edit
+
+**Site management**
+
+- **Nav overhaul** — Labs dropdown renamed Community, expanded with all community-facing tools. Website slimmed to public-facing items only. Members and Volunteers merged into People (superuser). Admin absorbed into Meta. Roles and donation management opened to Programmer tier
+- **Roles table improvements** — rota sign-up count shown per role; inline JS rename warning shows how many rota entries will be retroactively updated when a role name is changed. Roles page opened to Programmer+
+- **Access levels table in site settings** — read-only table in the Panopticon site settings page listing every toolkit feature and its current access tier (colour-coded by tier). Groundwork for runtime configurability (9.124 Phase 2)
+
+**Bug fixes**
+
+- Copy summary index: private and hidden showings suppressed; "Closed for private event." text removed
+- Nav dropdown hover highlight constrained to text width
+- Archive search regrouped by `start.date` (was `start.day`, which bucketed events from different months together)
+- wsgi.py restored after accidental deletion; dangling vendor symlinks removed from static tree
+
+### How to demo
+
+1. `git checkout v2026.06.2`
+2. `docker compose up --build -d`
+3. `docker compose exec toolkit /venv/bin/python3 manage.py configure_toolkit_users --password password`
+4. `docker compose exec toolkit /venv/bin/python3 manage.py seed_dev_data`
+5. Log in as `admin` / `password`
+
+| Page to show | URL | What to point out |
+|---|---|---|
+| Programming queue | `/diary/edit/programming-queue/` | Draft/proposed events; quick triage actions |
+| New event | `/diary/edit/event/add/` | Zoned form; template live preview; multi-date flatpickr |
+| Edit event | `/diary/edit/event/<id>/` | TicketSource guide; age-rating dropdown; confirm banner |
+| Site settings | `/diary/edit/siteconfiguration/` | Terminology; age ratings; ticket link guidance; access levels |
+| Programme index | `/programme/` | CSS Grid layout; filter buttons |
+| Volunteer export | `/volunteers/view/export/` | Field-group checkboxes; GDPR badges |
+| Export audit log | `/volunteers/view/export/audit/` | Per-export log |
+| Qualification report | `/volunteers/qualification-report/` | Qual holders; role gates |
+| Bulk record | `/volunteers/bulk-record/` | Type selector: training vs qual award |
+| Volunteer profile | `/volunteers/<pk>/edit/` | Suspension card; no Suspended in status radio |
+| Roles | `/diary/edit/roles/` | Entries count; rename warning |
+
+### State of the code
+
+- 57 migrations in `diary`, 24 in `members`
+
+### Known rough edges
+
+- `film_programming_guide_url` in venue config is empty by default — the TicketSource guide link is hidden until set
+- Access levels table is read-only; runtime configurability deferred to 9.124 Phase 2
+- Exchange photos still not resized on upload
+
+---
+
 ## v2026.06.1 — Community Tools & Safety Improvements
 
 **Tagged at:** `2026.06.1` (2026-06-01)

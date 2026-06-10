@@ -5828,6 +5828,16 @@ A volunteer is **solo-eligible** for a role when, for every blocking requirement
 - **Phase 2 (~8–12h):** `blocking` mode + `ShadowLog` + shadow-progression gate + rota slot eligibility display.
 - **Phase 3 (~6–10h):** format-specific difficulty; expiry dashboard tie-in (§8.9); fold legacy `TrainingRecord` into the new model per §8.8.
 
+**Open edge case: qualification revocation when a volunteer holds a gated rota slot.**
+
+If a Panopticon revokes a qualification from a volunteer who is currently signed up to a role gated on that qualification, the system needs a defined behaviour. Three options:
+
+1. **Silent pass** — revocation only blocks future sign-ups; existing rota entries are left in place. The volunteer can remain in a role they're no longer qualified for until a coordinator notices.
+2. **Warn on revoke** — when revoking, check for future rota entries in blocking-gated roles and show a warning panel (with links to the affected showings) but do not auto-clear them. The Panopticon decides whether to remove them manually.
+3. **Auto-clear** — revocation triggers automatic removal from affected future rota slots, following the suspension pattern.
+
+**Recommendation: option 2** (warn but don't auto-clear). Auto-clear is appropriate for suspension (an emergency safety action) but too aggressive for a routine qualification update — the Panopticon should decide. The warning ensures nothing is silently left in an inconsistent state.
+
 ---
 
 ### 9.101 — Lost & found log 🔵 S (8–14h)
@@ -6404,3 +6414,346 @@ Replace the linear card list with a three-column kanban board (Draft / Proposed 
 - Audit all templates for remaining BS4 utility classes: `ml-*`/`mr-*` → `ms-*`/`me-*`, `pl-*`/`pr-*` → `ps-*`/`pe-*`, `text-left`/`text-right` → `text-start`/`text-end`, `float-left`/`float-right` → `float-start`/`float-end`, `custom-select` → `form-select`
 - Consider upgrading to `crispy-bootstrap5` package + `CRISPY_TEMPLATE_PACK = "bootstrap5"` to fix the root cause (crispy would then generate BS5-compatible HTML for checkboxes, selects, etc.)
 - Any checkbox or select widgets rendered via crispy forms may be visually unstyled
+
+---
+
+### 9.118 — Event/Showing UI collapse (no model change) ✅ shipped 2026-06-07
+
+See CURRENT_WORK.md entry for details.
+
+### 9.119 — Edit Showing form layout polish + programming-queue seed data ✅ shipped 2026-06-07
+
+See CURRENT_WORK.md entry for details.
+
+---
+
+### 9.120 — Volunteer CSV export: full page with field selector + PII notification 🔵 S (6–10h)
+
+**Problem.** The current volunteer export is a one-click download that exports everything or nothing — it makes it trivially easy to export phone numbers and home addresses that are almost never needed and should not be routinely downloaded.
+
+**Proposed design.**
+
+Replace the one-click link with a full `/volunteers/export/` page (Panopticon only) containing:
+
+- **Field-group checkboxes:** Basic (name, email, status, collectives — pre-ticked) / Contact details (phone — opt-in) / Home address (opt-in). Possibly finer-grained.
+- **Prominent discouragement notice** above the sensitive field options: "Phone numbers and addresses should only be exported if you have a specific, immediate need. The export will be logged."
+- **Audit notification** when address or phone fields are selected: record an `ExportAuditLog` entry (who exported, which fields, timestamp); optionally also email the Panopticon list so other keyholders are aware.
+- **Download button** generates the CSV on the fly from selected fields.
+
+The basic field set (name, email, status) should be the default and require no acknowledgement. The sensitive fields require an explicit opt-in tick per export.
+
+**Audit log model:**
+
+```
+ExportAuditLog:
+  exported_by     FK → User
+  exported_at     datetime
+  fields_included JSON   # list of field names selected
+  recipient_count int    # number of rows in the export
+```
+
+Panopticons can view the audit log at `/volunteers/export/audit/`.
+
+**Notification approach** — options to decide:
+1. Email to Panopticon mailing list (requires `PANOPTICON_EMAIL` setting)
+2. Dashboard notification in the toolkit index (visible to all Panopticons on next login)
+3. Both
+
+---
+
+### 9.121 — Qualification report + training/qualification page consolidation 🔵 S (8–14h)
+
+**Context.** After landing 9.100 (role qualification gates), we now have two overlapping data structures (qualifications and training records) and a growing set of volunteer-management tools in the Volunteers dropdown that are in different states of relevance.
+
+**Part 1: Add a qualification report.**
+
+By analogy with `/volunteers/training-report/`, add a qualification report at `/volunteers/qualification-report/` showing:
+- Each qualification: how many volunteers hold it, who holds it, when each was granted
+- Highlight any with blocking role gates so the reader can see which qualifications are load-bearing
+- Link through to each volunteer's profile
+
+**Part 2: Audit the existing training/role reports.**
+
+The training report and role report in the Volunteers dropdown are described internally as "defunct". Review them:
+- Training report: does it still show useful data now that qualifications are the gating mechanism? Consider whether it should be updated or retired.
+- Role report: what does it currently show? Is it useful?
+
+**Part 3: Consolidate the bulk-record interfaces.**
+
+We have two separate bulk-add UIs that serve similar purposes:
+- `/volunteers/add-training-group/` — bulk-add a training record to a group of volunteers
+- The new bulk qualification-grant tool (added with 9.100)
+
+Compare the UX of both. Take the best of each. Consider merging them into a single "Bulk record" page with a **type selector** at the top:
+
+> ○ Training record  ○ Qualification grant
+
+With an inline explanation of the difference:
+> **Training records** are event-based log entries (e.g. "attended General Safety Training on 12 May"). They expire and are used for audit, not access control.
+> **Qualifications** are durable clearances that gate rota sign-ups (e.g. "cleared for Projection"). They don't expire unless a certificate type is set.
+
+This removes a source of confusion for coordinators who are unsure which tool to use.
+
+---
+
+### 9.122 — Nav bar layout revision 🔵 S (8–16h, mostly design)
+
+**Problem.** The admin navbar has grown significantly as new features landed. It is now crowded on desktop and the dropdown groupings no longer reflect the natural mental model of the people using it.
+
+**Current structure (approximate):**
+- Diary / Calendar / Rota / Website / Meta-programming / Members / Volunteers / Labs (+ custom links)
+
+Issues to address:
+- Some dropdowns have many items with uneven visual weight
+- The hover highlight on dropdown items stretches to the column max-width (see Bug AN)
+- The grouping of items within each dropdown may not match actual usage patterns
+- Mobile behaviour needs review (does the navbar collapse gracefully at all breakpoints?)
+
+**Process.** This is primarily a UX/information-architecture task. Before touching code, agree the new structure via a short design session. Questions to answer:
+1. Which items are accessed most frequently and should be top-level or first in a dropdown?
+2. Are there items that could be removed, merged, or moved to a secondary location (e.g. footer)?
+3. Should Labs be a top-level item or buried?
+4. What should the mobile nav show — same items, or a curated subset?
+
+Once agreed, implement the structural changes in `base_admin.html` and `fragment_navmenu.html` (mobile). Update any breadcrumbs or back-links that reference nav labels by name.
+
+---
+
+### 9.123 — Suspended volunteer: status UX overhaul 🔵 S (4–8h after design decision)
+
+**Problem.** The Suspended status is currently one radio button option alongside Active / Dormant / Retired in the volunteer edit profile. It is not visually distinct, yet it is qualitatively different: it immediately blocks login and clears future rota entries. This severity is not communicated in the UI.
+
+Additionally, the help text above the status section currently reads:
+
+> "This controls what a volunteer can do. Each option below says exactly what changes. Only Suspended stops someone logging in — the others just take them off the rota and mailing list."
+
+This is inaccurate — the options do not in fact say exactly what each one does, and the summary is incomplete (e.g. Dormant and Retired have different implications for things like the digest email and pool-health dashboard).
+
+**Proposed design options — needs decision before implementation:**
+
+**Option A — Red/bold in existing widget:**  
+Keep the four-option radio group. Style the Suspended option with a red text label, a ⚠ prefix, and a one-line consequence note ("Immediately blocks login and removes from future rota"). Cheapest; least disruptive to the existing form layout.
+
+**Option B — Split status box + separate suspend section:**  
+Split the status widget into two sections on the form:
+- Top: "Volunteer status" — Active / Dormant / Retired (normal lifecycle states with plain-English descriptions of each)
+- Bottom: "Suspension" — a separate card or callout with a red/amber border, containing a single "Suspend this volunteer" toggle with a clear warning and confirmation step. Reinstatement via the same card.
+
+This makes Suspended a qualitatively separate category rather than one of four peer options.
+
+**Option C — Status-only radios + dedicated suspend button (like anonymise):**  
+Active / Dormant / Retired remain as a radio group. Suspend is a standalone action button in the danger zone (like "Anonymise this volunteer"), requiring a confirmation dialog that lists the consequences and asks the Panopticon to type something to confirm. Makes the exceptional nature of suspension fully explicit.
+
+**Also fix the help text** regardless of which option is chosen: replace the misleading promise ("each option below says exactly what changes") with accurate per-option descriptions:
+
+| Status | What it means |
+|---|---|
+| Active | On the rota, receives the digest email, appears in the directory |
+| Dormant | Removed from active rota and digest; retained for re-induction tracking |
+| Retired | Permanently left; no rota, no digest, not surfaced in pool health |
+| Suspended | Login blocked immediately; future rota entries cleared; digest paused |
+
+**Recommendation:** Option B. It keeps the form cohesive while making the severity clear. Option C (dedicated button) is the cleanest architecturally but adds another confirmation flow; reserve for a future pass if Option B still feels unclear in practice.
+
+---
+
+### 9.124 — Configurable permission levels in SiteSettings 🟠 L
+
+**Context:** Several features have access levels that are reasonable defaults but may need to vary by venue (e.g. The Cube may want Templates Panopticon-only; S+S may want all volunteers to post bulletins). Currently these are hardcoded as Django view decorators — changing them requires a code deploy. The `bulletin_post_permission` field on `SiteConfiguration` is the existing proof-of-concept that this pattern works.
+
+**Goal:** Let Panopticons configure who can access which toolkit features at runtime via a table in Site Settings. No code deploy needed to change an access level.
+
+---
+
+#### Access tiers
+
+Three levels, matching the existing system:
+
+| ID | Label | Who |
+|----|-------|-----|
+| `volunteer` | All volunteers | Any authenticated user |
+| `programmer` | Programmer+ | `user.has_perm("toolkit.write")` |
+| `panopticon` | Panopticon only | `user.is_superuser` |
+
+---
+
+#### Features to make configurable
+
+| Feature | Default | Notes |
+|---------|---------|-------|
+| Diary (view/add events) | Programmer+ | Lowering to All volunteers would expose event details before confirmation |
+| Calendar | Programmer+ | Usually fine to open to All volunteers |
+| Programming queue | Programmer+ | |
+| Event templates | Programmer+ | Panopticon-only is a safe conservative choice for some venues |
+| Event tags | Programmer+ | Affects public programme categorisation |
+| Roles | Programmer+ | Safe because `Role.delete()` archives, not hard-deletes |
+| Rooms | Programmer+ | |
+| Copy / terms reports | Programmer+ | No personal data |
+| Printed programmes upload | Programmer+ | |
+| Rota vacancies page | Programmer+ | |
+| Manage donations | Programmer+ | |
+| Post bulletins | Programmer+ | Already configurable via `bulletin_post_permission` |
+
+Volunteer management (profiles, export, pool health) stays Panopticon-only with no configurable override — it handles personal data and the risk of misconfiguration is too high.
+
+---
+
+#### Implementation plan
+
+**Phase 1 — Read-only table (display only, no wiring):**
+
+Add a "Current access levels" section to the Site Settings page. Hardcode the current levels in the view and render as a table. Panopticons can see what is gated where without any model changes. **This is the current state as of 9.124 MVP (2026-06-10).**
+
+**Phase 2 — Wired fields (per-feature CharField on SiteConfiguration):**
+
+1. Add a `CharField` to `SiteConfiguration` for each configurable feature (choices: volunteer/programmer/panopticon). Follow `bulletin_post_permission` as the pattern.
+2. A `TIER_CHOICES` + `TIER_*` constants block at the top of `SiteConfiguration`.
+3. Migration to add the fields with their current defaults.
+4. Add a "Permissions" group to `edit_site_configuration` view and form.
+5. A helper `_check_access(request, feature_key)` (analogous to `_user_can_post_bulletin`) that reads from site config and returns `True/False`.
+6. Replace `@permission_required("toolkit.write")` / `@panopticon_required` on the relevant views with an inline `if not _check_access(...): raise PermissionDenied` check.
+7. Update nav-link conditionals in `base_admin.html` and `fragment_navmenu.html` to respect the same config values.
+
+**Phase 3 — UI polish:**
+
+Show the permission table with inline dropdowns in the settings page rather than a separate section. Group into "Diary & programming", "People & volunteers", "Community features".
+
+---
+
+#### Tradeoffs and risks
+
+- **Bootstrap problem:** The first time the DB row doesn't exist yet (fresh install), `get_site_config()` creates it with defaults. The defaults must match the hardcoded current behaviour so there is no accidental access change on upgrade.
+- **Nav sync:** The permission table in `base_admin.html` uses template conditionals (`{% if perms.toolkit.write %}`). These must also be updated to read from site config, or the nav will show/hide items inconsistently with what the view actually allows.
+- **Test surface:** View-level security tests currently assert against fixed permission levels. Wiring to site config means tests need to either use `@override_settings`-style fixture or mock `get_site_config()`.
+
+---
+
+### 9.125 — Annual profile review reminder 🟡 M (10–18h)
+
+**Context:** Volunteer profiles contain safety-critical data (emergency contact name, phone, relationship) that goes stale. There is currently no mechanism to prompt volunteers to review or update this information. A volunteer who joined years ago may have outdated emergency contact details without anyone noticing.
+
+**Goal:** Send each active volunteer an annual email asking them to confirm their profile details are current. The email should contain no sensitive data itself (it is a prompt, not a data dump). Clicking a link either confirms everything is up to date in one click, or takes them to their profile to make changes.
+
+---
+
+#### Email content: masked values, not raw data
+
+Including full personal data in the email creates a data-minimisation problem (emails get forwarded, archived, or read on shared devices). But sending a completely content-free nudge is low-friction in the wrong direction: the volunteer can't tell whether the details are actually wrong without clicking through.
+
+The right approach — used by banks, PayPal, and similar services — is **partial masking**: show enough to jog memory, not enough to expose the full value.
+
+| Field | Masked form | Example |
+|-------|------------|---------|
+| Emergency contact phone | First 2 + asterisks + last 2 digits | `07*****91` |
+| Emergency contact name | First name + `****` | `Maria ****` |
+| Volunteer's own email | First 2 chars + `****` + last char before `@` + full domain | `ab****z@gmail.com` |
+
+The masking logic lives in a template filter or utility function so it can be tested independently.
+
+**Stale emergency contact data is more dangerous than no data at all.** A panopticon who calls the wrong person in a crisis may lose critical minutes, and the called person may not know the volunteer. The email copy should convey urgency: "Out-of-date emergency contact details can cause real harm in an emergency. Please take 30 seconds to check these are still correct."
+
+Two calls to action:
+1. **"These look right — confirm"** — a one-click confirmation link (signed token, no login required). Records the date confirmed. Label should reflect that they've seen masked values and are confirming them.
+2. **"Update my details"** — takes them to their profile page (login required). Once they save, that implicitly acts as a confirmation.
+
+If the volunteer has **no emergency contact on file**, the email should say so explicitly and ask them to add one — not mask empty fields.
+
+---
+
+#### Data model changes
+
+Add to `Volunteer`:
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `profile_review_sent_at` | `DateTimeField(null=True, blank=True)` | When the most recent review prompt was sent |
+| `profile_reviewed_at` | `DateTimeField(null=True, blank=True)` | When the volunteer last confirmed/updated their profile |
+
+"Confirmed" means: either clicked the one-click confirm link, or saved their profile after a review prompt was sent.
+
+The review is considered overdue if `profile_reviewed_at` is null or more than 365 days ago.
+
+---
+
+#### Token-based one-click confirm
+
+The "Everything looks good" link must not require login (volunteers who rarely visit the toolkit should be able to confirm with one click from their inbox).
+
+Use Django's `signing.dumps` / `signing.loads` (same pattern as password reset tokens):
+- Sign `{"volunteer_id": pk, "action": "profile_confirm"}` with a salt and expiry (e.g. 30 days).
+- A `confirm-profile-review/<token>` URL validates the token, sets `profile_reviewed_at = now()`, and shows a simple "Thanks, your details are confirmed" page.
+- Expired or invalid tokens show an error and prompt login to confirm manually.
+
+No new token model needed — Django's signing module handles expiry.
+
+---
+
+#### Sending the reminders
+
+A management command `send_profile_review_reminders` selects volunteers who are due a reminder and sends the email.
+
+Due criteria:
+- `status = active`
+- `profile_reviewed_at` is null OR more than 365 days ago
+- `profile_review_sent_at` is null OR more than 90 days ago (avoid re-sending too soon if they ignored the first one)
+- Has a valid email address on their member record
+
+The command should be safe to run repeatedly (idempotent given the above criteria). No volunteers are emailed twice within the 90-day guard window.
+
+Intended to be run by a cron job or management task once a month (checking monthly, sending annually per volunteer).
+
+---
+
+#### Volunteer profile: "last reviewed" indicator
+
+On the volunteer's profile edit page (panopticon view), show when they last confirmed their details. A brief line in the Key Dates section, or near the emergency contact fields, is enough:
+
+> Profile last confirmed: 14 March 2024 (or "Never confirmed")
+
+Panopticons should also be able to mark a profile as reviewed manually (e.g. after a phone call to verify). A small "Mark as reviewed now" button sets `profile_reviewed_at = now()`.
+
+---
+
+#### Pool health integration
+
+Add a "Profile overdue" indicator to the volunteer pool health page (alongside dormancy and retention stats). Show a count of active volunteers whose profile review is overdue (null or >365 days old).
+
+---
+
+#### Implementation phases
+
+**Phase 1 — Data model + admin UI (minimal, no emails yet):**
+1. Migration adding `profile_review_sent_at` and `profile_reviewed_at` to `Volunteer`.
+2. Display "last confirmed" date on the volunteer edit page.
+3. Manual "Mark as reviewed" button on the edit page.
+4. Count of overdue profiles on the pool health page.
+
+**Phase 2 — Sending:**
+5. Management command `send_profile_review_reminders`.
+6. Email template (plain text + minimal HTML). No PII in body.
+7. Token confirm URL (`confirm-profile-review/<token>`).
+8. On profile save: if `profile_review_sent_at` is set and `profile_reviewed_at` is null or older than `profile_review_sent_at`, bump `profile_reviewed_at = now()`.
+
+**Phase 3 — Ops wiring:**
+9. Cron/scheduled task to run the command monthly.
+10. Site Settings option for the reminder interval (default 365 days) and resend guard (default 90 days).
+
+---
+
+#### Design notes and tradeoffs
+
+- **Masked values, not full PII.** Show enough to jog memory (`07*****91`, `ab****z@gmail.com`), not enough to expose data if the email is forwarded. The masking logic should be a tested utility, not ad-hoc template string slicing.
+- **Stale is more dangerous than absent.** An incorrect emergency contact wastes time in a crisis and may cause harm. The email copy must convey this. Volunteers who see no data on file should be prompted to add it.
+- **One-click confirm without login** reduces friction enough that volunteers are likely to actually use it. A login-required confirm would result in most reminder emails being ignored.
+- **Token expiry at 30 days** means a volunteer who ignores the email for a month will need to log in to confirm. That is acceptable.
+- **365-day interval** is a convention, not a legal requirement. The Site Settings field lets venues adjust it.
+- **Saving profile counts as confirmation** — this avoids a separate "confirm" step for volunteers who visit their profile and do update something. But it means that any profile save resets the clock, even if they only changed their photo. This is an acceptable simplification.
+- **Emergency contact is the primary motivation**, but the reminder covers the whole profile (access needs, pronouns, contact details) since stale data anywhere is a problem and a single reminder is less noisy than field-specific ones.
+
+---
+
+**Related:** 9.113 (volunteer directory), 9.120 (CSV export), emergency contact fields added in 9.X overhaul
+
+---
+
+**Related:** 9.49 (collective ratification of current permission levels), 9.90 (access transparency page)
