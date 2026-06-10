@@ -346,24 +346,19 @@ class Event(models.Model):
     # Free text film information:
     film_information = models.CharField(max_length=256, null=False, blank=True)
 
+    age_restriction = models.CharField(
+        max_length=32,
+        blank=True,
+        default="",
+        verbose_name="Age restriction",
+        help_text="Age rating or restriction for this event. Options are configured in the site settings.",
+    )
+
+    # Legacy constants — kept so any migrations that reference them still work.
     AGE_UNSET = ""
     AGE_ALL = "all_ages"
     AGE_16_PLUS = "16_plus"
     AGE_18_PLUS = "18_plus"
-    AGE_RESTRICTION_CHOICES = [
-        ("", "Not stated"),
-        ("all_ages", "All ages welcome"),
-        ("16_plus", "16+ only"),
-        ("18_plus", "18+ only"),
-    ]
-    age_restriction = models.CharField(
-        max_length=16,
-        blank=True,
-        choices=AGE_RESTRICTION_CHOICES,
-        default="",
-        verbose_name="Age restriction",
-        help_text="Under 18s must be accompanied by an adult at all events. Use this field to flag family-friendly events ('All ages welcome') or events with a minimum admission age.",
-    )
 
     copy = models.TextField(max_length=8192, null=True, blank=True)
     copy_summary = models.TextField(max_length=4096, null=True, blank=True)
@@ -530,6 +525,23 @@ class Event(models.Model):
     _link_re_2 = re.compile(
         r"(\s)(www\.[\w.]+\.(com|org|net|uk|de|ly|us|tk)[^\t\n\r\f\v\. ]*)"
     )
+
+    def get_age_restriction_display(self):
+        """Return the human-readable label for the stored age restriction value.
+
+        Looks up the site-configured age_rating_choices first, then falls back
+        to legacy hardcoded labels so old stored values (all_ages / 16_plus /
+        18_plus) still render correctly on events created before the BBFC
+        migration.
+        """
+        if not self.age_restriction:
+            return ""
+        cfg = get_site_config()
+        for entry in cfg.age_rating_choices:
+            if entry.get("value") == self.age_restriction:
+                return entry.get("label", self.age_restriction)
+        _legacy = {"all_ages": "All ages welcome", "16_plus": "16+ only", "18_plus": "18+ only"}
+        return _legacy.get(self.age_restriction, self.age_restriction)
 
     def all_showings_in_past(self):
         return all(s.in_past() for s in self.showings.all())
@@ -1407,6 +1419,17 @@ class SiteConfiguration(models.Model):
         ),
     )
 
+    # --- Age ratings ---
+    age_rating_choices = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=(
+            "Age-rating options shown in the event edit form. "
+            "e.g. BBFC: U / PG / 12A / 12 / 15 / 18. "
+            "Leave the list empty to hide the age restriction field entirely."
+        ),
+    )
+
     # --- Terminology ---
     # What this venue calls a single dated occurrence of an event. Cinemas
     # screen "showings"; a mixed-programme venue may prefer "dates" so the word
@@ -1666,6 +1689,16 @@ class SiteConfiguration(models.Model):
         default="https://weareunlimited.org.uk/resource/creating-your-own-access-rider/",
         max_length=500,
         help_text="Link shown in the Access Rider section of the volunteer profile — guidance on writing an access rider. Leave blank to hide the link.",
+    )
+    ticket_link_guidance_html = models.TextField(
+        blank=True,
+        default="",
+        verbose_name="Ticket link setup guidance",
+        help_text=(
+            "HTML shown in a collapsible panel directly below the ticket link field on the "
+            "event edit form. Use this to guide programmers through setting up tickets on "
+            "your chosen platform. Leave blank to hide the panel entirely."
+        ),
     )
 
     # --- Collectives public page ---

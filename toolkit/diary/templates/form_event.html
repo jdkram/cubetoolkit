@@ -320,6 +320,29 @@ $(document).ready(function () {
 
     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) { new bootstrap.Tooltip(el); });
 
+    {% if ticket_link_guidance_html %}
+    // Ticket link setup guide — injected after the ticket_link field.
+    (function () {
+        var ticketDiv = document.getElementById('div_id_ticket_link');
+        if (!ticketDiv) { return; }
+        var guideUrl = "{{ VENUE.film_programming_guide_url|escapejs }}";
+        var guideLink = guideUrl ? ' <a href="' + guideUrl + '" target="_blank" rel="noopener noreferrer">Full programming guide →</a>' : '';
+        var guidanceBody = "{{ ticket_link_guidance_html|escapejs }}";
+        var html = '<div class="mb-3 border rounded" id="ticket-link-guide">'
+            + '<div class="d-flex align-items-center px-3 py-2" style="cursor:pointer;" id="ticket-link-guide-toggle" onclick="var b=document.getElementById(\'ticket-link-guide-body\');var arr=this.querySelector(\'.ts-arrow\');b.style.display=b.style.display===\'none\'?\'\':\'none\';arr.textContent=b.style.display===\'none\'?\'▶\':\'▼\';">'
+            + '<span class="ts-arrow me-2">▶</span>'
+            + '<strong>Ticket link setup guide</strong>'
+            + '<span class="text-muted small ms-2">— expand for a quick checklist</span>'
+            + '</div>'
+            + '<div id="ticket-link-guide-body" style="display:none;" class="px-3 pb-3 small">'
+            + guidanceBody
+            + guideLink
+            + '</div>'
+            + '</div>';
+        ticketDiv.insertAdjacentHTML('afterend', html);
+    }());
+    {% endif %}
+
     {% if tag_descriptions_json %}
     {# Tag pill tooltips — show "when to use" guidance on each tag label #}
     (function() {

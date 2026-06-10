@@ -13,6 +13,8 @@ from toolkit.diary.models import (
     Role,
     Room,
     RoomBooking,
+    SiteConfiguration,
+    get_site_config,
 )
 
 from .common import DiaryTestsMixin, NowPatchMixin
@@ -612,6 +614,18 @@ class RoleTests(TestCase):
         role = Role.objects.get(id=pk)
         self.assertEqual(role.name, "Role One")
 
+    def test_cant_unprotect_readonly_role(self):
+        role = Role(name="Role One", read_only=True)
+        role.save()
+        pk = role.pk
+
+        role = Role.objects.get(id=pk)
+        role.read_only = False
+        role.save()
+
+        role = Role.objects.get(id=pk)
+        self.assertTrue(role.read_only)
+
     def test_reject_blank(self):
         role = Role(name="")
         self.assertRaises(ValidationError, role.full_clean)
@@ -740,3 +754,47 @@ class ClashDetectionTests(TestCase):
         rb_b = self._book(self.showing_b, self.room, 20, 22)
         clashes = find_clashes(rb_b)
         self.assertIn(rb_a, clashes)
+
+
+class AgeRestrictionDisplayTests(TestCase):
+    def setUp(self):
+        cfg = SiteConfiguration.load()
+        cfg.age_rating_choices = [
+            {"value": "U", "label": "U — Universal"},
+            {"value": "15", "label": "15"},
+            {"value": "18", "label": "18"},
+        ]
+        cfg.save()
+
+    def tearDown(self):
+        # Reset so other test classes pick up a clean config.
+        SiteConfiguration.objects.all().delete()
+
+    def _event(self, value):
+        e = Event(name="Test", age_restriction=value)
+        e.save()
+        return e
+
+    def test_blank_returns_empty_string(self):
+        e = self._event("")
+        self.assertEqual(e.get_age_restriction_display(), "")
+
+    def test_site_config_label_returned(self):
+        e = self._event("15")
+        self.assertEqual(e.get_age_restriction_display(), "15")
+
+    def test_site_config_full_label_returned(self):
+        e = self._event("U")
+        self.assertEqual(e.get_age_restriction_display(), "U — Universal")
+
+    def test_legacy_all_ages_falls_back(self):
+        e = self._event("all_ages")
+        self.assertEqual(e.get_age_restriction_display(), "All ages welcome")
+
+    def test_legacy_18_plus_falls_back(self):
+        e = self._event("18_plus")
+        self.assertEqual(e.get_age_restriction_display(), "18+ only")
+
+    def test_unknown_value_returns_raw(self):
+        e = self._event("FSK 16")
+        self.assertEqual(e.get_age_restriction_display(), "FSK 16")

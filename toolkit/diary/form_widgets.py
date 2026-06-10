@@ -1,4 +1,8 @@
+import json
+
 from django import forms
+from django.utils.html import format_html, escape
+from django.utils.safestring import mark_safe
 
 
 class TagPillSelect(forms.CheckboxSelectMultiple):
@@ -125,3 +129,108 @@ class JQueryDateTimePicker(forms.DateTimeInput):
         if isinstance(value, str):
             value = value.replace("T", " ", 1)
         return value
+
+
+class AgeRatingChoicesWidget(forms.Widget):
+    """
+    Renders the age_rating_choices JSONField as a friendly table of rows
+    (one row per rating, each with a short code and a display label), rather
+    than a raw JSON textarea.
+
+    Serialises back to JSON on submit via value_from_datadict.
+    """
+
+    def render(self, name, value, attrs=None, renderer=None):
+        if isinstance(value, str):
+            try:
+                entries = json.loads(value) if value else []
+            except (json.JSONDecodeError, TypeError):
+                entries = []
+        elif isinstance(value, list):
+            entries = value
+        else:
+            entries = []
+
+        widget_id = (attrs or {}).get("id", f"id_{name}")
+        rows_html = ""
+        for i, entry in enumerate(entries):
+            v = escape(entry.get("value", ""))
+            l = escape(entry.get("label", ""))
+            rows_html += (
+                f'<tr class="arc-row">'
+                f'<td><input type="text" name="{name}_value_{i}" value="{v}" '
+                f'class="form-control form-control-sm" placeholder="U" '
+                f'aria-label="Rating code"></td>'
+                f'<td><input type="text" name="{name}_label_{i}" value="{l}" '
+                f'class="form-control form-control-sm" placeholder="U — Universal" '
+                f'aria-label="Display label"></td>'
+                f'<td><button type="button" class="btn btn-sm btn-outline-danger arc-remove" '
+                f'aria-label="Remove row">&times;</button></td>'
+                f'</tr>'
+            )
+
+        html = f"""
+<table class="table table-sm table-bordered arc-table" id="{widget_id}" style="max-width:38rem;">
+  <thead class="table-light">
+    <tr>
+      <th style="width:8rem;">Code</th>
+      <th>Display label</th>
+      <th style="width:3rem;"></th>
+    </tr>
+  </thead>
+  <tbody id="{widget_id}_tbody">
+    {rows_html}
+  </tbody>
+</table>
+<button type="button" class="btn btn-sm btn-outline-secondary arc-add" data-target="{widget_id}_tbody" data-name="{name}">
+  + Add rating
+</button>
+<script>
+(function () {{
+  var tbody = document.getElementById("{widget_id}_tbody");
+
+  function reindex() {{
+    tbody.querySelectorAll("tr.arc-row").forEach(function(row, i) {{
+      row.querySelectorAll("input")[0].name = "{name}_value_" + i;
+      row.querySelectorAll("input")[1].name = "{name}_label_" + i;
+    }});
+  }}
+
+  tbody.addEventListener("click", function(e) {{
+    if (e.target.classList.contains("arc-remove")) {{
+      e.target.closest("tr").remove();
+      reindex();
+    }}
+  }});
+
+  document.querySelector(".arc-add[data-target='{widget_id}_tbody']").addEventListener("click", function() {{
+    var count = tbody.querySelectorAll("tr.arc-row").length;
+    var row = document.createElement("tr");
+    row.className = "arc-row";
+    row.innerHTML =
+      "<td><input type=\\"text\\" name=\\"{name}_value_" + count + "\\" " +
+      "class=\\"form-control form-control-sm\\" placeholder=\\"U\\" aria-label=\\"Rating code\\"></td>" +
+      "<td><input type=\\"text\\" name=\\"{name}_label_" + count + "\\" " +
+      "class=\\"form-control form-control-sm\\" placeholder=\\"U — Universal\\" aria-label=\\"Display label\\"></td>" +
+      "<td><button type=\\"button\\" class=\\"btn btn-sm btn-outline-danger arc-remove\\" " +
+      "aria-label=\\"Remove row\\">&times;</button></td>";
+    tbody.appendChild(row);
+  }});
+}})();
+</script>
+"""
+        return mark_safe(html)
+
+    def value_from_datadict(self, data, files, name):
+        entries = []
+        i = 0
+        while True:
+            val_key = f"{name}_value_{i}"
+            if val_key not in data:
+                break
+            code = data[val_key].strip()
+            label = data.get(f"{name}_label_{i}", "").strip()
+            if code:
+                entries.append({"value": code, "label": label or code})
+            i += 1
+        return json.dumps(entries)

@@ -51,6 +51,9 @@ VENUE = {
     # Override both in your venue settings file.
     "cms_name": "Cube Microplex",
     "cms_base_url": "https://cubecinema.com/cms",
+    # URL of the film/event programming guide document (shown near ticket_link
+    # field in the event edit form). Set in venue settings; empty = link hidden.
+    "film_programming_guide_url": "",
 }
 
 # The following list of IP addresses is used to restrict access to some pages

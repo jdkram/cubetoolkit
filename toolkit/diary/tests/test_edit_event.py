@@ -140,7 +140,7 @@ class AddEventView(DiaryTestsMixin, TestCase):
         role_1 = Role.objects.get(id=1)
         for s in showings:
             self.assertEqual(s.booked_by, "\u015comeb\u014ddy")
-            # self.assertEqual(s.confirmed, True)
+            self.assertEqual(s.confirmed, False)
             self.assertEqual(s.hide_in_programme, False)
             self.assertEqual(s.cancelled, False)
             self.assertEqual(s.discounted, True)

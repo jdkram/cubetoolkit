@@ -39,9 +39,9 @@
       <li><strong>Archiving a role</strong> hides it from rota dropdowns and volunteer profiles. Past rota entries are preserved.
         Roles used in past rota entries are automatically archived rather than deleted.</li>
       <li>Roles marked <em>read-only</em> are protected and cannot be archived or deleted here.</li>
-      <li><strong>Renaming a role is safe.</strong>
-        The name is stored once and referenced everywhere relationally,
-        so a rename takes effect immediately across all showings, templates, and volunteer profiles.</li>
+      <li><strong>Renaming a role changes its name retroactively everywhere</strong> — all past rota entries, templates, and
+        qualification gates will display the new name immediately. This is usually what you want when correcting a typo or
+        tidying terminology. If you want a genuinely new role with its own history, create a new one instead.</li>
     </ul>
   </div>
 
@@ -72,6 +72,7 @@
                       data-bs-toggle="tooltip" data-bs-placement="left"
                       title="Off — no check. Advisory — volunteer is warned but can still sign up. Blocking — sign-up is refused without the qualification (Panopticons bypass).">?</span>
               </th>
+              <th class="text-center" style="width:70px" title="Number of rota sign-ups using this role (all time)">Entries</th>
               <th class="text-center" style="width:70px">Archive</th>
             </tr>
           </thead>
@@ -79,7 +80,7 @@
           {% for form in formset %}
             {% if form.errors %}
             <tr class="table-danger">
-              <td colspan="9">
+              <td colspan="10">
                 <strong>Error:</strong>
                 {{ form.name.errors.as_text }}
                 {{ form.standard.errors.as_text }}
@@ -98,9 +99,21 @@
                 <td class="text-center">{{ form.keyholder_only }}</td>
                 <td>{{ form.required_qualification }}</td>
                 <td>{{ form.qualification_gate }}</td>
+                <td class="text-center text-muted small">{{ form.instance.rota_count|default:"—" }}</td>
                 <td>{{ form.id }}</td>
               {% else %}
-                <td>{{ form.name }}{{ form.id }}</td>
+                <td>
+                  {{ form.id }}
+                  {{ form.name }}
+                  {% if form.instance.rota_count %}
+                  <small class="rename-warning text-warning d-none"
+                         data-original-name="{{ form.instance.name }}"
+                         data-entry-count="{{ form.instance.rota_count }}"
+                         aria-live="polite">
+                    ⚠ Renaming affects {{ form.instance.rota_count }} existing rota entr{{ form.instance.rota_count|pluralize:"y,ies" }}.
+                  </small>
+                  {% endif %}
+                </td>
                 <td class="text-center">{{ form.standard }}</td>
                 <td>{{ form.description }}</td>
                 <td class="text-center">{{ form.beginner_friendly }}</td>
@@ -108,6 +121,7 @@
                 <td class="text-center">{{ form.keyholder_only }}</td>
                 <td>{{ form.required_qualification }}</td>
                 <td>{{ form.qualification_gate }}</td>
+                <td class="text-center text-muted small">{{ form.instance.rota_count|default:"—" }}</td>
                 <td class="text-center">
                   {% if form.id.value %}
                     <button type="button" class="btn btn-sm btn-outline-warning archive-btn"
@@ -253,6 +267,18 @@
 <script type="text/javascript">
 "use strict";
 document.addEventListener("DOMContentLoaded", function() {
+    // Show rename warning when a role name input changes from its original value
+    // and the role has existing rota entries.
+    document.querySelectorAll(".rename-warning").forEach(function(warning) {
+        var input = warning.closest("td").querySelector("input[type='text']");
+        if (!input) return;
+        var originalName = warning.dataset.originalName;
+        input.addEventListener("input", function() {
+            var changed = input.value.trim() !== originalName;
+            warning.classList.toggle("d-none", !changed);
+        });
+    });
+
     document.querySelectorAll(".archive-btn").forEach(function(btn) {
         btn.addEventListener("click", function() {
             var name = btn.dataset.roleName;

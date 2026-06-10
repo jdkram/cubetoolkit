@@ -21,7 +21,7 @@ from django.contrib import messages
 from django.views.generic import View
 import django.template
 import django.db
-from django.db.models import Q, Min
+from django.db.models import Count, Q, Min
 import django.utils.timezone as timezone
 from django.contrib.auth.decorators import permission_required, user_passes_test
 from django.contrib.auth.mixins import PermissionRequiredMixin
@@ -1232,6 +1232,7 @@ class EditEventView(PermissionRequiredMixin, View):
             "thumbnail_crop_width": cfg.thumbnail_crop_width,
             "thumbnail_crop_height": cfg.thumbnail_crop_height,
             "programme_accent_colour": cfg.programme_accent_colour,
+            "ticket_link_guidance_html": cfg.ticket_link_guidance_html,
         }
         return render(request, "form_event.html", context)
 
@@ -1270,6 +1271,7 @@ class EditEventView(PermissionRequiredMixin, View):
             "thumbnail_crop_width": cfg.thumbnail_crop_width,
             "thumbnail_crop_height": cfg.thumbnail_crop_height,
             "programme_accent_colour": cfg.programme_accent_colour,
+            "ticket_link_guidance_html": cfg.ticket_link_guidance_html,
         }
 
         return render(request, "form_event.html", context)
@@ -1720,10 +1722,14 @@ def edit_event_tags(request):
     return render(request, "edit_event_tags.html", context)
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@permission_required("toolkit.write")
 def edit_roles(request):
     # This is pretty slow, but it's not a commonly used bit of the UI.
-    active_qs = Role.objects.filter(archived=False).select_related("required_qualification")
+    active_qs = (
+        Role.objects.filter(archived=False)
+        .select_related("required_qualification")
+        .annotate(rota_count=Count("rotaentry"))
+    )
     archived_qs = Role.objects.filter(archived=True)
 
     RoleFormset = modelformset_factory(
@@ -2235,6 +2241,10 @@ def edit_site_configuration(request):
             ],
         ),
         (
+            "Age ratings",
+            ["age_rating_choices"],
+        ),
+        (
             "Break-even calculator",
             [
                 "breakeven_guidance_note",
@@ -2281,7 +2291,12 @@ def edit_site_configuration(request):
         ),
         (
             "Guidance URLs",
-            ["image_copyright_guidance_url", "alt_text_guidance_url", "access_rider_guidance_url"],
+            [
+                "image_copyright_guidance_url",
+                "alt_text_guidance_url",
+                "access_rider_guidance_url",
+                "ticket_link_guidance_html",
+            ],
         ),
         (
             "Community exchange",
@@ -2333,10 +2348,46 @@ def edit_site_configuration(request):
         (label, [form[name] for name in names]) for label, names in field_groups
     ]
 
+    # Read-only permission table (Phase 1 of 9.124).
+    # Reflects actual view decorators; update here whenever a decorator changes.
+    VOLUNTEER = "All volunteers"
+    PROGRAMMER = "Programmer+"
+    PANOPTICON = "Panopticon only"
+    CONFIGURABLE = "Configurable"
+    permission_rows = [
+        ("Diary — view/edit diary list", PROGRAMMER),
+        ("Diary — calendar", PROGRAMMER),
+        ("Diary — programming queue", PROGRAMMER),
+        ("Diary — event templates", PROGRAMMER),
+        ("Diary — event tags", PROGRAMMER),
+        ("Diary — roles", PROGRAMMER),
+        ("Diary — rooms", PROGRAMMER),
+        ("Diary — copy / terms / text reports", PROGRAMMER),
+        ("Diary — upload printed programmes", PROGRAMMER),
+        ("Rota — view and sign up", VOLUNTEER),
+        ("Rota — vacancies page", PROGRAMMER),
+        ("Community — post bulletins", f"{CONFIGURABLE} (see Bulletins section)"),
+        ("Community — other features", VOLUNTEER),
+        ("Website — donations manage", PROGRAMMER),
+        ("Website — Wagtail CMS", PANOPTICON),
+        ("People — volunteer profiles / training", PANOPTICON),
+        ("People — export CSV / audit log", PANOPTICON),
+        ("People — qualification report", PANOPTICON),
+        ("People — bulk training / qual record", PANOPTICON),
+        ("People — pool health", PANOPTICON),
+        ("People — member management", PANOPTICON),
+        ("Meta — access levels", PANOPTICON),
+        ("Meta — site settings", PANOPTICON),
+    ]
+
     return render(
         request,
         "edit_site_configuration.html",
-        {"form": form, "grouped_fields": grouped_fields},
+        {
+            "form": form,
+            "grouped_fields": grouped_fields,
+            "permission_rows": permission_rows,
+        },
     )
 
 

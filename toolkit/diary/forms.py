@@ -11,6 +11,7 @@ from crispy_forms.layout import HTML, Div, Field, Fieldset, Layout
 
 # Custom form widgets:
 from toolkit.diary.form_widgets import (
+    AgeRatingChoicesWidget,
     HtmlTextarea,
     JQueryDateTimePicker,
     MultiDatePickerWidget,
@@ -130,6 +131,16 @@ class EventForm(forms.ModelForm):
         self.helper.form_class = "form-horizontal"
         self.helper.label_class = "col-sm-2"
         self.helper.field_class = "col-sm-10"
+        # Build age restriction choices from site config so venues can use
+        # their own rating scheme (BBFC, FSK, etc.) without a code change.
+        cfg = get_site_config()
+        choices = [("", "Not stated")] + [
+            (e["value"], e["label"])
+            for e in cfg.age_rating_choices
+            if e.get("value")
+        ]
+        self.fields["age_restriction"].widget = forms.Select(choices=choices)
+        self.fields["age_restriction"].widget.attrs.setdefault("class", "form-select")
 
     class Meta:
         model = toolkit.diary.models.Event
@@ -1117,12 +1128,14 @@ class SiteConfigurationForm(forms.ModelForm):
             "image_copyright_guidance_url",
             "alt_text_guidance_url",
             "access_rider_guidance_url",
+            "ticket_link_guidance_html",
             "community_exchange_enabled",
             "lost_and_found_retain_days",
             "bulletin_default_expiry_days",
             "bulletin_guidance",
             "bulletin_post_permission",
             "eventlink_extra_allowed_domains",
+            "age_rating_choices",
             "collectives_intro",
             "collectives_mailing_list_signup_url",
             "donations_intro",
@@ -1153,12 +1166,14 @@ class SiteConfigurationForm(forms.ModelForm):
             ),
             "collectives_intro": HtmlTextarea(),
             "donations_intro": HtmlTextarea(),
+            "ticket_link_guidance_html": HtmlTextarea(),
             "bulletin_guidance": forms.Textarea(
                 attrs={"rows": 6, "class": "form-control"}
             ),
             "eventlink_extra_allowed_domains": forms.Textarea(
                 attrs={"rows": 4, "class": "form-control font-monospace"}
             ),
+            "age_rating_choices": AgeRatingChoicesWidget(),
         }
 
     def __init__(self, *args, **kwargs):
@@ -1167,6 +1182,8 @@ class SiteConfigurationForm(forms.ModelForm):
             widget = field.widget
             if isinstance(widget, forms.CheckboxInput):
                 widget.attrs.setdefault("class", "form-check-input")
+            elif isinstance(widget, AgeRatingChoicesWidget):
+                pass  # widget manages its own markup; don't inject form-control
             else:
                 existing = widget.attrs.get("class", "")
                 if "form-control" not in existing:

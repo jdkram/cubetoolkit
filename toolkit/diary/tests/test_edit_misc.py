@@ -811,6 +811,24 @@ class BatchAddShowingsTests(DiaryTestsMixin, TestCase):
         # Success page should include edit links (resolved URL contains /showing/id/)
         self.assertContains(response, "/diary/edit/showing/id/")
 
+    def test_create_as_confirmed_rejected_when_no_terms(self):
+        event = Event(name="No terms event")
+        event.save()
+        url = reverse("batch-add-showings", kwargs={"event_id": event.pk})
+        initial_count = Showing.objects.filter(event=event).count()
+        response = self.client.post(
+            url,
+            {
+                "dates": "2099-10-01",
+                "start_time": "19:00",
+                "booked_by": "Tester",
+                "confirmed": "on",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Add terms to the event before creating confirmed showings.")
+        self.assertEqual(Showing.objects.filter(event=event).count(), initial_count)
+
 
 
 

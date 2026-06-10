@@ -108,6 +108,36 @@
     .config-layout { flex-direction: column; }
     .config-nav { position: static; max-height: none; flex: none; width: 100%; }
   }
+
+  /* Sticky save bar */
+  #save-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1040;
+    background: #212529;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.65rem 1.25rem;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.25);
+    transform: translateY(100%);
+    transition: transform 0.2s ease;
+  }
+  #save-bar.visible {
+    transform: translateY(0);
+  }
+  #save-bar .save-bar-label {
+    font-size: 0.88rem;
+    opacity: 0.8;
+    flex: 1;
+  }
+  /* Nudge the page content up so the bar doesn't overlap the bottom button */
+  body.save-bar-visible {
+    padding-bottom: 3.5rem;
+  }
 </style>
 {% endblock %}
 
@@ -118,7 +148,7 @@
   <strong>Panopticon only.</strong> These settings affect everyone using the toolkit. Changes apply immediately.
 </div>
 
-<form method="post" novalidate>
+<form method="post" novalidate id="site-config-form">
   {% csrf_token %}
 
   {% if form.non_field_errors %}
@@ -133,6 +163,7 @@
         {% for label, fields in grouped_fields %}
         <li><a href="#section-{{ forloop.counter }}">{{ label }}</a></li>
         {% endfor %}
+        <li><a href="#section-permissions">Access levels</a></li>
       </ul>
     </nav>
 
@@ -172,4 +203,76 @@
 
   </div>
 </form>
+
+<div class="config-section mt-4" id="section-permissions">
+  <div class="config-section-header">Current access levels</div>
+  <div class="config-section-body pb-3">
+    <p class="text-muted small mb-3">These access levels are currently set in the application code. A future update (9.124) will make some of them configurable here.</p>
+    <table class="table table-sm table-bordered small">
+      <thead class="table-light">
+        <tr>
+          <th>Feature</th>
+          <th>Who can access</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for feature, level in permission_rows %}
+        <tr>
+          <td>{{ feature }}</td>
+          <td>
+            {% if level == "Panopticon only" %}
+              <span class="badge bg-dark">{{ level }}</span>
+            {% elif level == "Programmer+" %}
+              <span class="badge bg-primary">{{ level }}</span>
+            {% elif level == "All volunteers" %}
+              <span class="badge bg-success">{{ level }}</span>
+            {% else %}
+              <span class="badge bg-secondary">{{ level }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="save-bar" role="status" aria-live="polite" aria-label="Unsaved changes">
+  <span class="save-bar-label">You have unsaved changes</span>
+  <button type="submit" form="site-config-form" class="btn btn-warning btn-sm">Save changes</button>
+</div>
+
+<script>
+(function () {
+  var form = document.getElementById("site-config-form");
+  var bar = document.getElementById("save-bar");
+  var dirty = false;
+
+  function markDirty() {
+    if (dirty) return;
+    dirty = true;
+    bar.classList.add("visible");
+    document.body.classList.add("save-bar-visible");
+  }
+
+  function markClean() {
+    dirty = false;
+    bar.classList.remove("visible");
+    document.body.classList.remove("save-bar-visible");
+  }
+
+  form.addEventListener("input", markDirty);
+  form.addEventListener("change", markDirty);
+
+  form.addEventListener("submit", function () {
+    markClean();
+  });
+
+  window.addEventListener("beforeunload", function (e) {
+    if (!dirty) return;
+    e.preventDefault();
+    e.returnValue = "";
+  });
+})();
+</script>
 {% endblock %}

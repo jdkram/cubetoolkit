@@ -44,6 +44,8 @@ VENUE = {
     "show_user_management": True,
     "cms_name": "The Star and Shadow",
     "cms_base_url": "https://starandshadow.org.uk/cms",
+    # Set to the shared programming guide URL once available.
+    "film_programming_guide_url": "",
 }
 
 # Disable 'allow editing from magic IP range' for now
