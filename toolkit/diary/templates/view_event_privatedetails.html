@@ -93,6 +93,20 @@ function hideAddShowingForm() {
         {% endif %}
     {% endif %}
 </div>
+{% elif unconfirmed_future_count and c.has_future_showing %}
+<div class="alert alert-success d-flex align-items-center gap-3 mb-3 py-2 flex-wrap">
+    <span><strong>✓ Everything looks good</strong> — ready to go live?</span>
+    {% if not is_series %}{% with showing=future_showings.0 %}{% if showing and not showing.confirmed %}
+    <form method="post" action="{% url 'update-showing-status' showing.id %}" class="mb-0">
+        {% csrf_token %}<input type="hidden" name="action" value="confirm">
+        <button type="submit" class="btn btn-success" data-bs-toggle="tooltip"
+                title="Makes this {{ site_config.occurrence_noun }} public in the online programme AND opens the rota for volunteer sign-ups. Event terms must be filled in first (unless the event type is exempt).">{{ site_config.confirm_label }} →</button>
+    </form>
+    {% endif %}{% endwith %}
+    {% else %}
+    <span class="text-muted small">Use the "Confirm all" button below.</span>
+    {% endif %}
+</div>
 {% endif %}
 {% endwith %}
 
