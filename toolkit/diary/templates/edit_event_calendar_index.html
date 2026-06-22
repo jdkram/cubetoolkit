@@ -580,7 +580,7 @@ var urls = {
 {% endblock %}
 
 {% block body %}
-<p><a href="{% url "add-event" %}">+ New booking</a></p>
+<p><a href="{% url "add-event" %}" aria-keyshortcuts="n">+ New booking</a></p>
 
 {# ── Filter bar ─────────────────────────────────────────────────────── #}
 <div class="calendar-filters" id="calendar-filters">
@@ -598,7 +598,7 @@ var urls = {
     {# Name search #}
     <div class="filter-group name-search-group">
       <label for="filter-name">Search:</label>
-      <input type="text" id="filter-name" class="name-search-input" placeholder="Event name...">
+      <input type="text" id="filter-name" class="name-search-input" placeholder="Event name..." aria-keyshortcuts="/">
     </div>
 
     <div class="filter-divider"></div>

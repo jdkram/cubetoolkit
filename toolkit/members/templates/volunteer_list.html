@@ -5,6 +5,11 @@
 {{ block.super }}
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/messages.css">
 <style>
+    .volunteer.kb-current {
+        outline: 2px solid #0056b3;
+        outline-offset: 4px;
+        border-radius: 3px;
+    }
     .volunteer em {
         font-style: normal;
         color: red;
@@ -43,6 +48,79 @@
 {% block script %}
 {{ block.super }}
 <script>
+(function ($) {
+    "use strict";
+    var currentIdx = -1;
+
+    function getCards() { return $('.volunteer:visible').toArray(); }
+
+    function setCard(idx) {
+        var cards = getCards();
+        if (!cards.length) { return; }
+        idx = Math.max(0, Math.min(idx, cards.length - 1));
+        $(cards).removeClass('kb-current');
+        $(cards[idx]).addClass('kb-current');
+        cards[idx].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        currentIdx = idx;
+    }
+
+    function openCard() {
+        var cards = getCards();
+        if (currentIdx < 0 || currentIdx >= cards.length) { return; }
+        var link = $(cards[currentIdx]).find('a[href*="volunteer"]').last();
+        if (link.length) { window.location.href = link.attr('href'); }
+    }
+
+    $(document).on('keydown', function (e) {
+        if (e.ctrlKey || e.altKey || e.metaKey) { return; }
+        if (window.AdminKeyboardNav && window.AdminKeyboardNav.isNavMode()) { return; }
+        var tag = (document.activeElement || {}).tagName || "";
+        var inInput = /^(INPUT|TEXTAREA|SELECT)$/i.test(tag);
+
+        if (e.key === 'Escape') {
+            if (inInput) {
+                var f = document.getElementById('id_input_filter');
+                if (f) { $(f).val('').trigger('keyup'); f.blur(); }
+            }
+            return;
+        }
+
+        if (inInput) { return; }
+
+        switch (e.key) {
+            case '/':
+                e.preventDefault();
+                var fi = document.getElementById('id_input_filter');
+                if (fi) { fi.focus(); fi.select(); }
+                break;
+            case 'j':
+                e.preventDefault();
+                setCard(currentIdx < 0 ? 0 : currentIdx + 1);
+                break;
+            case 'k':
+                e.preventDefault();
+                setCard(currentIdx < 0 ? 0 : currentIdx - 1);
+                break;
+            case 'Enter':
+            case 'o':
+                if (currentIdx >= 0) { e.preventDefault(); openCard(); }
+                break;
+            case 'n':
+                e.preventDefault();
+                window.location.href = '{% url "add-volunteer" %}';
+                break;
+        }
+    });
+
+    if (window.AdminKeyboardNav) {
+        window.AdminKeyboardNav.registerHelp([{ heading: "Volunteer list", rows: [
+            ["/",          "Focus filter"],
+            ["j / k",      "Navigate volunteers"],
+            ["o / Enter",  "Open selected volunteer"],
+            ["n",          "Add volunteer"]
+        ]}]);
+    }
+}(jQuery));
 $(document).ready(function() {
     function filter_volunteers() {
         var filter_text = $('#id_input_filter')[0].value;
@@ -68,22 +146,24 @@ $(document).ready(function() {
     }
     filter_volunteers();
     show_retired_changed();
-    $('#id_input_filter').keyup(filter_volunteers);
+    $('#id_input_filter').keyup(function() {
+        filter_volunteers();
+    });
     $('#id_show_retired').change(show_retired_changed);
 });
 </script>
 {% endblock %}
 
-{% block title %}{{ VENUE.name }} Volunteers{% endblock %}
+{% block title %}Volunteer profiles{% endblock %}
 
 {% block body %}
-<h2>{{ VENUE.name }} Volunteers</h2>
+<h2>Volunteer profiles</h2>
 <p>
 <a href="{% url "view-volunteer-summary" %}" title="volunteers summary">volunteers summary</a> &#xb7;
-<a href="{% url "add-volunteer" %}" title="add new volunteer">add volunteer</a> &#xb7;
+<a href="{% url "add-volunteer" %}" title="add new volunteer" aria-keyshortcuts="n">add volunteer</a> &#xb7;
 <a href="{% url "view-volunteer-export" %}" title="export volunteers">export volunteers</a><br>
 Active {{ VENUE.name }} volunteers: {{ active_count }}</p>
-<p><input type="text" placeholder="Filter by name..." id="id_input_filter">
+<p><input type="text" placeholder="Filter by name..." id="id_input_filter" aria-keyshortcuts="/">
 {% if retired_data_included %}
 <label>Show retired <input id="id_show_retired" type="checkbox" checked></label>
 {% else %}
@@ -146,6 +226,4 @@ Active {{ VENUE.name }} volunteers: {{ active_count }}</p>
         {% endwith %}
     {% endfor %}
 </div><!-- container -->
-<h2>The volunteer role report can now be found <a href="{% url "view-volunteer-role-report" %}">here</a>.</h2>
-<h2>The volunteer training report can now be found <a href="{% url "view-volunteer-training-report" %}">here</a>.</h2>
 {% endblock %}

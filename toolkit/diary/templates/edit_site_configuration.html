@@ -109,6 +109,17 @@
     .config-nav { position: static; max-height: none; flex: none; width: 100%; }
   }
 
+  /* CheckboxSelectMultiple lists (e.g. training tag picker) */
+  .config-section ul.list-unstyled li {
+    padding: 0.1rem 0;
+  }
+  .config-section ul.list-unstyled li label {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+  }
+
   /* Sticky save bar */
   #save-bar {
     position: fixed;
@@ -174,17 +185,26 @@
         <div class="config-section-body">
           {% for field in fields %}
           <div class="mb-3">
-            {% if field.field.widget.input_type == "checkbox" %}
+            {% if field.field.widget.allow_multiple_selected %}
+              <label>{{ field.label }}</label>
+              {% if field.help_text %}
+                <small class="form-text d-block mb-2">{{ field.help_text|safe }}</small>
+              {% endif %}
+              {{ field }}
+            {% elif field.field.widget.input_type == "checkbox" %}
               <div class="form-check">
                 {{ field }}
                 <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
               </div>
+              {% if field.help_text %}
+                <small class="form-text">{{ field.help_text|safe }}</small>
+              {% endif %}
             {% else %}
               <label for="{{ field.id_for_label }}">{{ field.label }}</label>
               {{ field }}
-            {% endif %}
-            {% if field.help_text %}
-              <small class="form-text">{{ field.help_text|safe }}</small>
+              {% if field.help_text %}
+                <small class="form-text">{{ field.help_text|safe }}</small>
+              {% endif %}
             {% endif %}
             {% if field.errors %}
               <div class="text-danger small mt-1">{{ field.errors }}</div>
@@ -199,15 +219,21 @@
         <button type="submit" class="btn btn-primary">Save changes</button>
         <a href="{% url 'toolkit-index' %}" class="btn btn-link">Cancel</a>
       </div>
+
+      {% if inductions_settings %}
+      <div class="alert alert-info py-2 px-3 mb-0 d-flex align-items-center justify-content-between gap-3">
+        <span><strong>Inductions:</strong> email templates, organiser notification address, and purge settings are configured separately.</span>
+        <a href="{% url 'inductions:manage_settings' %}" class="btn btn-sm btn-outline-primary flex-shrink-0">Induction settings →</a>
+      </div>
+      {% endif %}
     </div>
 
   </div>
-</form>
 
-<div class="config-section mt-4" id="section-permissions">
-  <div class="config-section-header">Current access levels</div>
+  <div class="config-section mt-4" id="section-permissions">
+  <div class="config-section-header">Access levels</div>
   <div class="config-section-body pb-3">
-    <p class="text-muted small mb-3">These access levels are currently set in the application code. A future update (9.124) will make some of them configurable here.</p>
+    <p class="text-muted small mb-3">Configurable rows can be changed here and take effect immediately. Fixed rows (marked with a lock) are pinned for security or bootstrapping reasons.</p>
     <table class="table table-sm table-bordered small">
       <thead class="table-light">
         <tr>
@@ -220,14 +246,18 @@
         <tr>
           <td>{{ feature }}</td>
           <td>
-            {% if level == "Panopticon only" %}
-              <span class="badge bg-dark">{{ level }}</span>
-            {% elif level == "Programmer+" %}
-              <span class="badge bg-primary">{{ level }}</span>
-            {% elif level == "All volunteers" %}
-              <span class="badge bg-success">{{ level }}</span>
+            {% if level.field %}
+              {{ level.field }}
             {% else %}
-              <span class="badge bg-secondary">{{ level }}</span>
+              {% if level.display == "Panopticon only" %}
+                <span class="badge bg-dark">{{ level.display }}</span> <span class="text-muted" title="Fixed">🔒</span>
+              {% elif level.display == "Programmer+" %}
+                <span class="badge bg-primary">{{ level.display }}</span> <span class="text-muted" title="Fixed">🔒</span>
+              {% elif level.display == "All volunteers" %}
+                <span class="badge bg-success">{{ level.display }}</span> <span class="text-muted" title="Fixed">🔒</span>
+              {% else %}
+                <span class="badge bg-secondary">{{ level.display }}</span> <span class="text-muted" title="Fixed">🔒</span>
+              {% endif %}
             {% endif %}
           </td>
         </tr>
@@ -236,6 +266,8 @@
     </table>
   </div>
 </div>
+
+</form>
 
 <div id="save-bar" role="status" aria-live="polite" aria-label="Unsaved changes">
   <span class="save-bar-label">You have unsaved changes</span>

@@ -1,0 +1,613 @@
+{% extends "base_admin.html" %}
+
+{% block title %}{% if is_own %}Your history{% else %}{{ volunteer.member.name }}'s history{% endif %}{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+  .stats-page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 3rem;
+  }
+
+  .stats-section {
+    margin-top: 2.5rem;
+  }
+  .stats-section-header {
+    font-family: monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #888;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 0.3rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+  .stats-section-header a {
+    font-size: 0.72rem;
+    letter-spacing: 0;
+    text-transform: none;
+    color: #aaa;
+    text-decoration: none;
+  }
+  .stats-section-header a:hover { color: #c9357e; }
+
+  .stats-headline {
+    font-family: monospace;
+    font-size: 0.95rem;
+    line-height: 1.8;
+    background: #fafafa;
+    border: 1px solid #e0e0e0;
+    border-left: 4px solid #c9357e;
+    padding: 1rem 1.25rem;
+    border-radius: 2px;
+  }
+  .stats-headline .stat-key {
+    display: inline-block;
+    min-width: 11rem;
+    color: #888;
+  }
+  .stats-headline .stat-val {
+    font-weight: bold;
+    color: #1a1a1a;
+  }
+  .stats-pronouns {
+    font-family: monospace;
+    font-size: 0.85rem;
+    color: #888;
+    margin-bottom: 1rem;
+  }
+
+  .stats-privacy-note {
+    font-family: monospace;
+    font-size: 0.78rem;
+    color: #888;
+    margin-top: 0.5rem;
+  }
+
+  .heatmap-wrap {
+    overflow-x: auto;
+  }
+  .heatmap {
+    font-family: monospace;
+    font-size: 0.9rem;
+    border-collapse: separate;
+    border-spacing: 3px;
+  }
+  .heatmap th {
+    font-weight: normal;
+    color: #888;
+    font-size: 0.75rem;
+    padding: 0 3px;
+    text-align: center;
+  }
+  .heatmap th.year-label {
+    text-align: right;
+    padding-right: 6px;
+    white-space: nowrap;
+  }
+  .heatmap td {
+    text-align: center;
+    padding: 1px 3px;
+    border-radius: 2px;
+    cursor: default;
+  }
+  .heat-0 { color: #ccc; }
+  .heat-1 { background: #fce8f3; color: #a0336e; }
+  .heat-2 { background: #f4aed5; color: #7a1f54; }
+  .heat-3 { background: #e070b0; color: #fff; }
+  .heat-4 { background: #c9357e; color: #fff; }
+
+  .year-bars {
+    font-family: monospace;
+    font-size: 0.85rem;
+    margin-top: 1.25rem;
+  }
+  .year-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+  }
+  .year-bar-label {
+    width: 3rem;
+    text-align: right;
+    color: #888;
+    flex-shrink: 0;
+  }
+  .year-bar-track {
+    flex: 1;
+    background: #f0f0f0;
+    height: 1rem;
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .year-bar-fill {
+    height: 100%;
+    background: #c9357e;
+    border-radius: 1px;
+  }
+  .year-bar-count {
+    width: 2.5rem;
+    color: #555;
+    font-size: 0.8rem;
+  }
+
+  .role-bars {
+    font-family: monospace;
+    font-size: 0.85rem;
+  }
+  .role-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+  }
+  .role-bar-label {
+    width: 14rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+    font-size: 0.82rem;
+  }
+  .role-bar-track {
+    flex: 1;
+    background: #f0f0f0;
+    height: 0.85rem;
+    border-radius: 1px;
+    overflow: hidden;
+    min-width: 4rem;
+  }
+  .role-bar-fill {
+    height: 100%;
+    background: #c9357e;
+    border-radius: 1px;
+  }
+  .role-bar-meta {
+    font-size: 0.78rem;
+    color: #888;
+    white-space: nowrap;
+  }
+
+  .role-evolution {
+    font-family: monospace;
+    font-size: 0.85rem;
+    line-height: 1.9;
+    padding-left: 0;
+  }
+  .role-evolution li {
+    list-style: none;
+  }
+  .evo-date {
+    color: #888;
+    margin-right: 0.5rem;
+  }
+  .evo-event {
+    color: #888;
+    font-size: 0.78rem;
+  }
+
+  .moments-list {
+    font-family: monospace;
+    font-size: 0.85rem;
+  }
+  .moments-list dt {
+    float: left;
+    clear: left;
+    width: 5rem;
+    color: #888;
+  }
+  .moments-list dd {
+    margin-left: 5.5rem;
+    margin-bottom: 0.35rem;
+  }
+  .moments-list::after { content: ""; display: table; clear: both; }
+
+  .stats-table { font-size: 0.83rem; width: 100%; }
+
+  .programming-note {
+    font-family: monospace;
+    font-size: 0.85rem;
+    color: #555;
+    background: #fafafa;
+    border: 1px solid #e0e0e0;
+    padding: 0.75rem 1rem;
+    border-radius: 2px;
+  }
+  .gate-met { color: #2d6a4f; }
+
+  .stats-viewing-as {
+    font-family: monospace;
+    font-size: 0.82rem;
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    padding: 0.4rem 0.8rem;
+    border-radius: 2px;
+    margin-bottom: 1.5rem;
+  }
+  .stats-empty {
+    font-family: monospace;
+    font-size: 0.9rem;
+    color: #888;
+    padding: 1.5rem 0;
+  }
+
+  .shift-log {
+    font-family: monospace;
+    font-size: 0.8rem;
+  }
+  .shift-log th {
+    font-size: 0.75rem;
+    color: #888;
+    font-weight: normal;
+    padding: 0.2rem 0.5rem 0.4rem 0;
+    border-bottom: 1px solid #eee;
+  }
+  .shift-log td {
+    padding: 0.2rem 0.5rem 0.2rem 0;
+    vertical-align: top;
+    border-bottom: 1px solid #f4f4f4;
+    color: #333;
+  }
+  .shift-log td.shift-date { white-space: nowrap; color: #888; }
+  .shift-log td.shift-role { color: #555; }
+  .shift-log-note {
+    font-family: monospace;
+    font-size: 0.78rem;
+    color: #aaa;
+    margin-top: 0.75rem;
+  }
+
+  .upcoming-log {
+    font-family: monospace;
+    font-size: 0.8rem;
+  }
+  .upcoming-log th {
+    font-size: 0.75rem;
+    color: #888;
+    font-weight: normal;
+    padding: 0.2rem 0.5rem 0.4rem 0;
+    border-bottom: 1px solid #eee;
+  }
+  .upcoming-log td {
+    padding: 0.2rem 0.5rem 0.2rem 0;
+    vertical-align: top;
+    border-bottom: 1px solid #f0f4f4;
+    color: #333;
+  }
+  .upcoming-log td.shift-date { white-space: nowrap; color: #3a7d7d; font-weight: bold; }
+  .upcoming-log td.shift-role { color: #555; }
+  .upcoming-log tr.upcoming-soon td { background: #f0fafa; }
+
+  .upcoming-month-bars {
+    font-family: monospace;
+    font-size: 0.85rem;
+    margin-top: 1.25rem;
+  }
+  .upcoming-month-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+  }
+  .upcoming-month-bar-label {
+    width: 5rem;
+    text-align: right;
+    color: #888;
+    flex-shrink: 0;
+    font-size: 0.78rem;
+  }
+  .upcoming-month-bar-track {
+    flex: 1;
+    background: #e8f4f4;
+    height: 1rem;
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .upcoming-month-bar-fill {
+    height: 100%;
+    background: #3a9090;
+    border-radius: 1px;
+  }
+  .upcoming-month-bar-count {
+    width: 2.5rem;
+    color: #555;
+    font-size: 0.8rem;
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="stats-page">
+
+  {% if not is_own %}
+  <div class="stats-viewing-as">
+    Panopticon view &mdash; you are viewing {{ volunteer.member.name }}'s history.
+    &nbsp;&middot;&nbsp;
+    <a href="{% url "edit-volunteer" volunteer.pk %}">edit profile</a>
+  </div>
+  {% endif %}
+
+  <h2 style="font-family: monospace; font-size: 1.3rem; font-weight: bold; margin-bottom: 0.25rem;">
+    {% if is_own %}Your history at Star and Shadow{% else %}{{ volunteer.member.name }}'s history{% endif %}
+  </h2>
+  {% if volunteer.member.personal_pronouns %}
+  <div class="stats-pronouns">{{ volunteer.member.personal_pronouns }}</div>
+  {% endif %}
+  {% if is_own %}
+  <p class="stats-privacy-note">This page is only visible to you. Nobody else can see your history here (though people may be able to infer some of it from the public rota).</p>
+  {% endif %}
+
+  {# ── Section 1: Headline ── #}
+  {% if total_shifts > 0 %}
+  <div class="stats-headline">
+    <div><span class="stat-key">part of</span> <span class="stat-val">{{ total_shifts }} event{% if total_shifts != 1 %}s{% endif %}</span></div>
+    <div><span class="stat-key">first shift</span> <span class="stat-val">{{ first_shift.showing.start|date:"j F Y" }}</span></div>
+    <div><span class="stat-key">most recent</span> <span class="stat-val">{{ last_shift.showing.start|date:"j F Y" }}</span></div>
+    {% if years_active > 1 %}
+    <div><span class="stat-key">years active</span> <span class="stat-val">{{ years_active }}</span></div>
+    {% endif %}
+    {% if all_shifts_count != total_shifts %}
+    <div><span class="stat-key">incl. training</span> <span class="stat-val">{{ all_shifts_count }} total</span></div>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="stats-empty">No confirmed shifts on record yet.</div>
+  {% endif %}
+
+  {# ── Section 2: Upcoming ── #}
+  {% if upcoming_shifts %}
+  <div class="stats-section">
+    <div class="stats-section-header">Upcoming</div>
+
+    {% if upcoming_by_month|length > 1 %}
+    <div class="upcoming-month-bars">
+      {% for row in upcoming_by_month %}
+      <div class="upcoming-month-bar-row">
+        <span class="upcoming-month-bar-label">{{ row.label }}</span>
+        <div class="upcoming-month-bar-track" role="presentation">
+          <div class="upcoming-month-bar-fill" style="width:{{ row.pct }}%"></div>
+        </div>
+        <span class="upcoming-month-bar-count">{{ row.count }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <table class="upcoming-log" style="margin-top: 1rem;">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Event</th>
+          <th>Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in upcoming_shifts %}
+        <tr{% if entry.showing.start.date <= two_weeks_ahead %} class="upcoming-soon"{% endif %}>
+          <td class="shift-date">{{ entry.showing.start|date:"j M Y" }}</td>
+          <td><a href="{% url "single-event-view" entry.showing.event.pk %}">{{ entry.showing.event.name }}</a></td>
+          <td class="shift-role">{{ entry.role.name }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {# ── Section 3: History (heatmap) ── #}
+  {% if heatmap_rows %}
+  <div class="stats-section">
+    <div class="stats-section-header">History</div>
+
+    <div class="heatmap-wrap">
+      <table class="heatmap">
+        <caption class="visually-hidden">
+          Monthly activity, {{ heatmap_years.0 }}{% if heatmap_years|length > 1 %}&ndash;{{ heatmap_years|last }}{% endif %}
+        </caption>
+        <thead>
+          <tr>
+            <th class="year-label" scope="col"></th>
+            <th scope="col">Jan</th><th scope="col">Feb</th><th scope="col">Mar</th>
+            <th scope="col">Apr</th><th scope="col">May</th><th scope="col">Jun</th>
+            <th scope="col">Jul</th><th scope="col">Aug</th><th scope="col">Sep</th>
+            <th scope="col">Oct</th><th scope="col">Nov</th><th scope="col">Dec</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in heatmap_rows %}
+          <tr>
+            <th class="year-label" scope="row">{{ row.year }}</th>
+            {% for cell in row.months %}
+            {% if cell.count == 0 %}
+            <td class="heat-0"
+                title="{{ cell.name }} {{ row.year }}: no shifts"
+                aria-label="{{ cell.name }} {{ row.year }}: no shifts">&middot;</td>
+            {% elif cell.level == 1 %}
+            <td class="heat-1"
+                title="{{ cell.name }} {{ row.year }}: {{ cell.count }} shift"
+                aria-label="{{ cell.name }} {{ row.year }}: {{ cell.count }} shift">&#9617;</td>
+            {% elif cell.level == 2 %}
+            <td class="heat-2"
+                title="{{ cell.name }} {{ row.year }}: {{ cell.count }} shifts"
+                aria-label="{{ cell.name }} {{ row.year }}: {{ cell.count }} shifts">&#9618;</td>
+            {% elif cell.level == 3 %}
+            <td class="heat-3"
+                title="{{ cell.name }} {{ row.year }}: {{ cell.count }} shifts"
+                aria-label="{{ cell.name }} {{ row.year }}: {{ cell.count }} shifts">&#9619;</td>
+            {% else %}
+            <td class="heat-4"
+                title="{{ cell.name }} {{ row.year }}: {{ cell.count }} shifts"
+                aria-label="{{ cell.name }} {{ row.year }}: {{ cell.count }} shifts">&#9608;</td>
+            {% endif %}
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if shifts_by_year %}
+    <div class="year-bars">
+      {% for r in shifts_by_year %}
+      <div class="year-bar-row">
+        <span class="year-bar-label">{{ r.showing__start__year }}</span>
+        <div class="year-bar-track" role="presentation">
+          <div class="year-bar-fill" style="width:{{ r.pct }}%"></div>
+        </div>
+        <span class="year-bar-count">{{ r.count }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# ── Section 3: Shift types ── #}
+  {% if role_breakdown %}
+  <div class="stats-section">
+    <div class="stats-section-header">Shift types</div>
+
+    <div class="role-bars">
+      {% for row in role_breakdown %}
+      <div class="role-bar-row">
+        <span class="role-bar-label" title="{{ row.label }}">{{ row.label }}</span>
+        <div class="role-bar-track" role="presentation">
+          <div class="role-bar-fill" style="width:{{ row.pct }}%"></div>
+        </div>
+        <span class="role-bar-meta">{{ row.count }}&thinsp;({{ row.pct }}%)</span>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if role_first_dates %}
+    <p style="font-family:monospace; font-size:0.78rem; color:#888; margin: 1.25rem 0 0.5rem;">First shifts</p>
+    <ol class="role-evolution">
+      {% for r in role_first_dates %}
+      <li>
+        <span class="evo-date">{{ r.first_date|date:"M Y" }}</span>
+        <strong>{{ r.role_name }}</strong>
+        <span class="evo-event">&mdash; {{ r.event_name }}</span>
+      </li>
+      {% endfor %}
+    </ol>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# ── Section 4: Moments in your history ── #}
+  {% if milestones and total_shifts >= 5 %}
+  <div class="stats-section">
+    <div class="stats-section-header">Moments in your history</div>
+    <dl class="moments-list">
+      {% for m in milestones %}
+      <dt>{{ m.n }}{% if m.n == 1 %}st{% elif m.n == 2 %}nd{% elif m.n == 3 %}rd{% else %}th{% endif %}</dt>
+      <dd>
+        <strong>{{ m.event_name }}</strong>
+        <span style="color:#888; font-size:0.8rem; margin-left:0.4rem;">{{ m.date|date:"j F Y" }}</span>
+      </dd>
+      {% endfor %}
+    </dl>
+  </div>
+  {% endif %}
+
+  {# ── Section 5: Training & qualifications ── #}
+  {% if training_records or qualifications %}
+  <div class="stats-section">
+    <div class="stats-section-header">Training &amp; qualifications</div>
+
+    {% if training_records %}
+    <table class="table table-sm stats-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Role / context</th>
+          <th>Trainer</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tr in training_records %}
+        <tr>
+          <td style="white-space:nowrap">{{ tr.training_date|date:"j M Y"|default:"—" }}</td>
+          <td>{{ tr.get_training_type_display }}</td>
+          <td>{{ tr.role.name|default:"General" }}</td>
+          <td>{{ tr.trainer|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    {% if qualifications %}
+    <ul style="font-family:monospace; font-size:0.85rem; margin-top:0.75rem;">
+      {% for vq in qualifications %}
+      <li>
+        <strong>{{ vq.qualification.name }}</strong>
+        {% if vq.granted_on %}<span class="text-muted"> &mdash; granted {{ vq.granted_on|date:"j M Y" }}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# ── Section 6: Programming ── #}
+  {% if programming_min %}
+  <div class="stats-section">
+    <div class="stats-section-header">
+      Programming
+      {% if request.user.is_superuser %}
+      <a href="{% url "edit-site-configuration" %}#id_stats_programming_note">edit</a>
+      {% endif %}
+    </div>
+    <div class="programming-note">
+      {% if programming_gate_met %}
+      <span class="gate-met">
+        You've done {{ total_shifts }} non-training shift{% if total_shifts != 1 %}s{% endif %}.
+        By informal convention, that makes you eligible to programme your own events.
+      </span>
+      {% else %}
+      The informal threshold for programming your own events is {{ programming_min }} non-training shifts.
+      You've done {{ total_shifts }} so far.
+      {% endif %}
+      {% if programming_note %}
+      <div style="margin-top:0.5rem; color:#888; font-size:0.8rem;">{{ programming_note }}</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Section 7: Full shift log ── #}
+  {% if all_past_shifts %}
+  <div class="stats-section">
+    <div class="stats-section-header">All shifts</div>
+    <table class="shift-log">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Event</th>
+          <th>Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in all_past_shifts %}
+        <tr>
+          <td class="shift-date">{{ entry.showing.start|date:"j M Y" }}</td>
+          <td><a href="{% url "single-event-view" entry.showing.event.pk %}">{{ entry.showing.event.name }}</a></td>
+          <td class="shift-role">{{ entry.role.name }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="shift-log-note">Only shifts recorded against your account are listed. Older shifts assigned by name (before volunteer accounts were linked to the rota) don't appear here.</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

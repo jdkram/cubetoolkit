@@ -41,16 +41,19 @@ description = "Shadow an experienced projectionist and learn the system. Arrive 
 [[roles]]
 name = "Bar Staff - Shift 1"
 standard = true
+stats_label = "Bar"
 description = "Serve drinks and snacks at the bar. Requires bar induction."
 
 [[roles]]
 name = "Bar Staff - Shift 2"
 standard = false
+stats_label = "Bar"
 description = "Second bar shift, timings hopefully specified below. Requires bar induction."
 
 [[roles]]
 name = "Bar Shadow"
 standard = false
+stats_label = "Bar"
 beginner_friendly = true
 description = "Shadow an experienced bar person and get a feel for how the bar works. Requires bar induction."
 

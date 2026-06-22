@@ -1,0 +1,39 @@
+{% extends "base_public.html" %}
+{% block title %}{{ session.title }} — Sign up{% endblock %}
+
+{% block body %}
+<div style="max-width: 600px; margin: 2rem auto;">
+  <h2>{{ session.title }}</h2>
+  <p>
+    <strong>{{ session.date|date:"l j F Y" }}</strong> at {{ session.date|time:"H:i" }}
+    {% if session.location %} &mdash; {{ session.location }}{% endif %}
+  </p>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="error-list">
+      {% for error in form.non_field_errors %}
+      <p>{{ error }}</p>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% for field in form %}
+    <div class="form-field{% if field.errors %} field-error{% endif %}">
+      <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-hidden="true">*</span>{% endif %}</label>
+      {{ field }}
+      {% if field.help_text %}<p class="help-text">{{ field.help_text }}</p>{% endif %}
+      {% for error in field.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+    </div>
+    {% endfor %}
+
+    <p><button type="submit">Sign up</button></p>
+  </form>
+
+  <p><small>
+    Need a 1:1 induction instead?
+    <a href="{% url "inductions:access_needs_signup" %}">Let us know your access requirements here.</a>
+  </small></p>
+</div>
+{% endblock %}

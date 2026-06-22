@@ -60,3 +60,8 @@ Film*.txt
 
 # --- Screenshots (local only, not version-controlled) ---
 screenshots/
+# --- Local review notes (not yet for publication) ---
+docs/REVIEW_2026_OVERHAUL.md
+
+# --- Local testing checklists (not committed) ---
+TESTING_CHECKLIST.md

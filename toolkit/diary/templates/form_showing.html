@@ -189,6 +189,33 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 </script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    "use strict";
+    var nextIdx = document.querySelectorAll("[data-oneshot-row]").length;
+
+    document.getElementById("add-oneshot").addEventListener("click", function () {
+        var row = document.createElement("div");
+        row.className = "d-flex gap-2 mb-2 align-items-center flex-wrap";
+        row.dataset.oneshotRow = nextIdx;
+        row.innerHTML =
+            '<input type="text" name="oneshot_name_' + nextIdx + '" class="form-control form-control-sm" placeholder="Role name" style="max-width:16rem">' +
+            '<input type="text" name="oneshot_desc_' + nextIdx + '" class="form-control form-control-sm" placeholder="Optional description" style="max-width:24rem">' +
+            '<input type="number" name="oneshot_count_' + nextIdx + '" value="1" class="form-control form-control-sm rota_count" min="0" max="30" style="width:5rem">' +
+            '<button type="button" class="btn btn-sm btn-outline-danger oneshot-remove">Remove</button>';
+        document.getElementById("oneshot-rows").appendChild(row);
+        nextIdx++;
+    });
+
+    document.getElementById("oneshot-rows").addEventListener("click", function (e) {
+        if (e.target.classList.contains("oneshot-remove")) {
+            var row = e.target.closest("[data-oneshot-row]");
+            row.querySelector("[name^='oneshot_count_']").value = 0;
+            row.style.display = "none";
+        }
+    });
+});
+</script>
 {% endblock %}
 {% block css %}
 {{ block.super }}
@@ -279,14 +306,6 @@ document.addEventListener("DOMContentLoaded", function () {
 {% endblock %}
 
 {% block body %}
-{% if messages %}
-<ul class="messages">
-    {% for message in messages %}
-    <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-    {% endfor %}
-</ul>
-{% endif %}
-
 {% if clashes %}
 <div class="alert alert-warning rb-clash-alert" role="alert">
   <strong>⚠ Room booking clash</strong>
@@ -390,6 +409,20 @@ document.addEventListener("DOMContentLoaded", function () {
       {% endif %}
     {% endfor %}
   </ul>
+
+  <h4>One-shot roles <small class="text-muted fw-normal" style="font-size:0.8em">Bespoke roles for this event only — not added to the permanent list</small></h4>
+  <div id="oneshot-rows">
+    {% for r in oneshot_roles %}
+    <div class="d-flex gap-2 mb-2 align-items-center flex-wrap" data-oneshot-row="{{ forloop.counter0 }}">
+      <input type="hidden" name="oneshot_id_{{ forloop.counter0 }}" value="{{ r.pk }}">
+      <input type="text" name="oneshot_name_{{ forloop.counter0 }}" value="{{ r.name }}" class="form-control form-control-sm" placeholder="Role name" style="max-width:16rem">
+      <input type="text" name="oneshot_desc_{{ forloop.counter0 }}" value="{{ r.description }}" class="form-control form-control-sm" placeholder="Optional description" style="max-width:24rem">
+      <input type="number" name="oneshot_count_{{ forloop.counter0 }}" value="{{ r.current_count }}" class="form-control form-control-sm rota_count" min="0" max="30" style="width:5rem">
+      <button type="button" class="btn btn-sm btn-outline-danger oneshot-remove">Remove</button>
+    </div>
+    {% endfor %}
+  </div>
+  <button type="button" id="add-oneshot" class="btn btn-sm btn-outline-secondary mb-3">+ Add one-shot role</button>
 
   <h3>Rota notes</h3>
   <div class="mb-3">

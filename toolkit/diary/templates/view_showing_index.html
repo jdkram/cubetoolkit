@@ -8,11 +8,69 @@
 {% block css %}
     {{ block.super }}
     <link rel="stylesheet" href="{{ STATIC_URL }}diary/css/programme.css" type="text/css">
+    <style>
+    .programme .showing.kb-current {
+        outline: 2px solid #0056b3;
+        outline-offset: 4px;
+        border-radius: 3px;
+    }
+    </style>
 {% endblock %}
 
 {% block script-page-setup %}
 <script>
 setup_page(true);
+</script>
+<script>
+(function ($) {
+    "use strict";
+
+    // ── Keyboard shortcuts for public programme ───────────────────────────
+    var currentIdx = -1;
+
+    function getShowings() { return $('.programme .showing:visible').toArray(); }
+
+    function setCurrentShowing(idx) {
+        var showings = getShowings();
+        if (!showings.length) { return; }
+        idx = Math.max(0, Math.min(idx, showings.length - 1));
+        $(showings).removeClass('kb-current');
+        $(showings[idx]).addClass('kb-current');
+        showings[idx].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        currentIdx = idx;
+    }
+
+    function openCurrentShowing() {
+        var showings = getShowings();
+        if (currentIdx < 0 || currentIdx >= showings.length) { return; }
+        var link = $(showings[currentIdx]).find('a[href]').first();
+        if (link.length) { window.location.href = link.attr('href'); }
+    }
+
+    $(document).on('keydown', function (e) {
+        if (e.ctrlKey || e.altKey || e.metaKey) { return; }
+        // Yield to public sidebar nav when it owns g-key badges
+        if ($('.pub-nav-key-badge').length) { return; }
+        var tag    = (document.activeElement || {}).tagName || "";
+        var inInput = /^(INPUT|TEXTAREA|SELECT)$/i.test(tag);
+        if (inInput) { return; }
+
+        switch (e.key) {
+            case 'j':
+                e.preventDefault();
+                setCurrentShowing(currentIdx < 0 ? 0 : currentIdx + 1);
+                break;
+            case 'k':
+                e.preventDefault();
+                setCurrentShowing(currentIdx < 0 ? 0 : currentIdx - 1);
+                break;
+            case 'Enter':
+            case 'o':
+                if (currentIdx >= 0) { e.preventDefault(); openCurrentShowing(); }
+                break;
+        }
+    });
+}(jQuery));
 </script>
 {% endblock script-page-setup %}
 
@@ -95,7 +153,7 @@ setup_page(true);
             {% if event.tags.all %}
                 <span class="tags">
                     {% for tag in event.tags.all %}
-                       <a href="{% url "type-view" tag.slug %}" class="tag_{{tag.name}}">{{tag.name}}</a>
+                       <a href="{% url "type-view" tag.slug %}" class="tag_{{tag.name}}"{% if tag.description %} title="{{ tag.description }}"{% endif %}>{{tag.name}}</a>
                     {% endfor %}
                 </span>
             {% endif %}

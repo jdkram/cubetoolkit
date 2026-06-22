@@ -25,7 +25,14 @@ from toolkit.members.volunteer_views import (
     view_qualification_report,
     bulk_record,
     toggle_volunteer_suspension,
+    send_suspension_email,
+    skip_suspension_email,
     save_volunteer_permissions,
+    volunteer_stats,
+    admin_restore_volunteer,
+    auto_dormancy_preview,
+    auto_dormancy_apply,
+    last_gasp_email,
 )
 
 from toolkit.members.member_views import (
@@ -83,6 +90,26 @@ volunteer_urls = [
         r"^bulk-anonymise/$",
         bulk_anonymise_volunteers,
         name="bulk-anonymise-volunteers",
+    ),
+    re_path(
+        r"^view/pool-health/restore/(?P<volunteer_id>[0-9]+)/$",
+        admin_restore_volunteer,
+        name="admin-restore-volunteer",
+    ),
+    re_path(
+        r"^view/pool-health/auto-dormancy/$",
+        auto_dormancy_preview,
+        name="auto-dormancy-preview",
+    ),
+    re_path(
+        r"^view/pool-health/auto-dormancy/apply/$",
+        auto_dormancy_apply,
+        name="auto-dormancy-apply",
+    ),
+    re_path(
+        r"^view/pool-health/last-gasp/(?P<volunteer_id>[0-9]+)/$",
+        last_gasp_email,
+        name="last-gasp-email",
     ),
     re_path(
         r"^view/rolereport/$",
@@ -154,12 +181,24 @@ volunteer_urls = [
         name="toggle-volunteer-suspension",
     ),
     re_path(
+        r"^(?P<volunteer_id>\d+)/send-suspension-email$",
+        send_suspension_email,
+        name="send-suspension-email",
+    ),
+    re_path(
+        r"^(?P<volunteer_id>\d+)/skip-suspension-email$",
+        skip_suspension_email,
+        name="skip-suspension-email",
+    ),
+    re_path(
         r"^(?P<volunteer_id>\d+)/save-permissions$",
         save_volunteer_permissions,
         name="save-volunteer-permissions",
     ),
     re_path(r"^directory/$", view_volunteer_directory, name="volunteer-directory"),
     re_path(r"^digest/unsubscribe/$", volunteer_digest_unsubscribe, name="volunteer-digest-unsubscribe"),
+    re_path(r"^stats/$", volunteer_stats, name="volunteer-stats"),
+    re_path(r"^(?P<volunteer_id>\d+)/stats/$", volunteer_stats, name="volunteer-stats-as"),
 ]
 
 # Members:

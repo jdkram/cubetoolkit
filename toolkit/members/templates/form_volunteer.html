@@ -242,6 +242,16 @@ $(document).ready(function() {
 <h3>{{ pagetitle }} {{ volunteer.member.name }}</h3>
 {% if message %}<h3>{{ message }}</h3>{% endif %}
 
+{% if volunteer.status == "suspended" %}
+<div class="alert alert-danger" role="alert" style="border-left:5px solid #c00; margin-bottom:1rem;">
+  <strong>This volunteer is currently suspended.</strong>
+  Their login is disabled and they have been removed from upcoming shifts.
+  {% if volunteer.suspension_reason %}
+  <br><span style="font-size:0.9em; margin-top:0.3rem; display:inline-block;"><strong>Reason:</strong> {{ volunteer.suspension_reason }}</span>
+  {% endif %}
+</div>
+{% endif %}
+
 <form id="main_form" action="" method="POST" enctype="multipart/form-data">
 {% csrf_token %}
 <p><input type="submit" value="Save changes"> <a href="{% url "view-volunteer-list" %}">Cancel</a></p>
@@ -266,12 +276,21 @@ $(document).ready(function() {
     <!-- Volunteer status -->
     <div class="vol-section" id="vol-status">
       <h4>Volunteer status</h4>
+      {% if volunteer.status == "suspended" %}
+      <p class="status-intro"><strong class="text-danger">Suspended</strong> — login disabled, removed from upcoming shifts, digest paused. Use the Suspension card below to lift the suspension before changing this status.</p>
+      {% else %}
       <p class="status-intro">Controls whether they're on the active roster, receiving the digest, and visible in pool health.</p>
+      {% endif %}
+      {% if volunteer.status == "suspended" %}
+      {# Hidden input preserves current status value since disabled radios are not submitted. #}
+      <input type="hidden" name="status" value="suspended">
+      {% endif %}
       <div class="status-list">
         {% for radio in vol_form.status %}
         <div class="status-option {{ radio.choice_value }}">
-          <label style="cursor:pointer;">
-            {{ radio.tag }} <span class="status-name">{{ radio.choice_label }}</span>
+          <label style="cursor:{% if volunteer.status == 'suspended' %}not-allowed{% else %}pointer{% endif %}; {% if volunteer.status == 'suspended' %}opacity:0.5;{% endif %}">
+            {{ radio.tag }}{% if volunteer.status == "suspended" %}{# radio disabled via JS below #}{% endif %}
+            <span class="status-name">{{ radio.choice_label }}</span>
           </label>
           {% if radio.choice_value == "active" %}
             <span class="status-desc"><strong>Can log in.</strong> On the rota, receives the digest email, appears in pool health. Normal state for a current volunteer.</span>
@@ -629,6 +648,25 @@ $(document).ready(function() {
 </div>
 {% endif %}
 
+<!-- ── Retention override (panopticon, inside main form) -->
+{% if request.user.is_superuser %}
+<div class="vol-section" id="vol-retention" style="margin-top:1rem;">
+  <h4>Data retention override</h4>
+  <p style="font-size:0.88em; color:#555; margin:0 0 0.5rem;">
+    When ticked, this volunteer is excluded from the pool health purge candidates list regardless of their status or last-activity date.
+  </p>
+  <div style="display:flex; align-items:baseline; gap:0.4rem; margin-bottom:0.4rem;">
+    {{ vol_form.retention_exempt }}
+    <label for="{{ vol_form.retention_exempt.id_for_label }}">Exempt from automatic purge candidates</label>
+  </div>
+  <div>
+    <label for="{{ vol_form.retention_exempt_reason.id_for_label }}" style="font-size:0.88em; color:#555; display:block; margin-bottom:0.2rem;">Reason (optional)</label>
+    {{ vol_form.retention_exempt_reason }}
+    {{ vol_form.retention_exempt_reason.errors }}
+  </div>
+</div>
+{% endif %}
+
 <!-- ── Permissions, Suspension, GDPR, Password (panopticon, outside main form) -->
 {% if request.user.is_superuser and volunteer.id %}
 <div id="vol-danger">
@@ -702,8 +740,51 @@ $(document).ready(function() {
     <form method="post" action="{% url "toggle-volunteer-suspension" volunteer.pk %}">
       {% csrf_token %}
       <input type="hidden" name="action" value="suspend">
+      <div style="margin-bottom:0.6rem;">
+        <label for="suspension_reason" style="font-weight:500; display:block; margin-bottom:0.2rem;">Reason for suspension <span style="color:#c00;">*</span></label>
+        <p style="font-size:0.82em; color:#888; margin:0 0 0.3rem;">Visible to Panopticons only — not shown to the volunteer.</p>
+        <textarea id="suspension_reason" name="suspension_reason" rows="2"
+          style="width:100%; max-width:360px; box-sizing:border-box;"
+          required placeholder="e.g. Safeguarding concern raised on 21/06/2026"></textarea>
+      </div>
       <button type="submit" class="btn btn-sm btn-danger">Suspend this volunteer</button>
     </form>
+  </div>
+  {% endif %}
+
+  {% if suspension_email_preview %}
+  <div class="vol-section" id="suspension-email-preview" style="border-left: 4px solid #e6a817; background:#fffdf0;">
+    <h4 style="margin-top:0;">Send suspension email?</h4>
+    <p style="font-size:0.88em; color:#555; margin:0 0 0.75rem;">
+      The volunteer has been suspended. You can optionally send them the email below.
+      This is a separate step — the suspension is already in effect.
+    </p>
+    <dl style="font-size:0.88em; margin-bottom:0.75rem;">
+      <dt>To</dt>
+      <dd style="margin-bottom:0.4rem;">{{ suspension_email_preview.to|default:"(no email address)" }}</dd>
+      <dt>Subject</dt>
+      <dd style="margin-bottom:0.4rem;">{{ suspension_email_preview.subject }}</dd>
+      <dt>Body</dt>
+      <dd><pre style="background:#f8f8f8; border:1px solid #ddd; padding:0.6rem; font-size:0.88em; white-space:pre-wrap; margin:0;">{{ suspension_email_preview.body }}</pre></dd>
+    </dl>
+    {% if suspension_email_preview.to %}
+    <div style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:center;">
+      <form method="post" action="{% url "send-suspension-email" volunteer.pk %}" style="margin:0;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-warning">Send suspension email</button>
+      </form>
+      <form method="post" action="{% url "skip-suspension-email" volunteer.pk %}" style="margin:0;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-outline-secondary">Skip — don't send</button>
+      </form>
+    </div>
+    {% else %}
+    <p class="text-muted" style="font-size:0.88em;">No email address on file — cannot send.</p>
+    <form method="post" action="{% url "skip-suspension-email" volunteer.pk %}" style="margin:0;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-secondary">Dismiss</button>
+    </form>
+    {% endif %}
   </div>
   {% endif %}
 
@@ -757,6 +838,13 @@ $(document).ready(function() {
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+
+  // ── Disable status radios while suspended ─────────────────────
+  {% if volunteer.status == "suspended" %}
+  document.querySelectorAll('#vol-status input[type="radio"]').forEach(function (r) {
+    r.disabled = true;
+  });
+  {% endif %}
 
   // ── Access rider share nudge ──────────────────────────────────
   var riderFields  = ['{{ vol_form.access_intro.id_for_label }}',

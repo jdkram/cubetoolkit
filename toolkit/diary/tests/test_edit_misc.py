@@ -31,7 +31,7 @@ from toolkit.diary.models import (
 import toolkit.diary.edit_prefs
 from toolkit.diary.form_widgets import JQueryDateTimePicker
 
-from .common import DiaryTestsMixin
+from .common import DiaryTestsMixin, UKTZ
 
 TINY_VALID_PNG = bytearray(
     b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08"
@@ -344,6 +344,47 @@ class ViewEventFieldTests(DiaryTestsMixin, TestCase):
         self.assertNotContains(response, "EVENT THREE TITLE")
         self.assertNotContains(response, "EVENT FOUR TITL\u0112")
 
+    def _add_private_showing_in_range(self):
+        """Add a confirmed showing for the private event e5 within the default date range."""
+        showing = Showing(
+            start=datetime(2013, 6, 15, 19, 0, tzinfo=UKTZ),
+            event=self.e5,
+            booked_by="User",
+            confirmed=True,
+        )
+        showing.save(force=True)
+        return showing
+
+    def test_copy_excludes_private_events(self):
+        self._add_private_showing_in_range()
+        url = reverse("view_event_field", kwargs={"field": "copy"})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "PRIVATE Event FIVE")
+
+    def test_copy_summary_excludes_private_events(self):
+        self._add_private_showing_in_range()
+        url = reverse("view_event_field", kwargs={"field": "copy_summary"})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "PRIVATE Event FIVE")
+
+    def test_terms_excludes_private_events(self):
+        self._add_private_showing_in_range()
+        url = reverse("view_event_field", kwargs={"field": "terms"})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "PRIVATE Event FIVE")
+
+    def test_rota_includes_private_events(self):
+        # Private events still need to appear on the internal rota.
+        self._add_private_showing_in_range()
+        url = reverse("view_event_field", kwargs={"field": "rota"})
+        url += "/2013/06/01?daysahead=30"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "PRIVATE Event FIVE")
+
 
 class ViewTermsReportCsvTests(DiaryTestsMixin, TestCase):
     def setUp(self):
@@ -635,8 +676,10 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
         }
 
         if multiroom_enabled:
-            # Showing 2 has a room booking → its event uses resourceIds (array)
-            # and room colour. Showings without bookings get no resourceIds key.
+            # All showings without room bookings are placed in the virtual "unroomed" lane.
+            for sid in expected_showings - {2}:
+                expected_data[sid]["resourceIds"] = ["unroomed"]
+            # Showing 2 has a room booking → uses the room's resourceId and colour.
             expected_data[2]["resourceIds"] = [2]
             expected_data[2]["id"] = data_by_showing[2]["id"]  # "rb-{pk}" string
             # In multiroom mode, colour comes from the FC resource eventColor,

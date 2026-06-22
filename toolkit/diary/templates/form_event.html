@@ -29,6 +29,10 @@ Event Details for {{ event.name }}
     #word-counter.wc-perfect   { color: #155724; background: #d4edda; font-weight: bold; }
     #word-counter.wc-over      { color: #721c24; background: #f8d7da; }
 
+    .section-arrow { display: inline-block; transition: transform .15s; margin-right: .3em; font-size: 0.8em; }
+    [aria-expanded="true"] .section-arrow { transform: rotate(90deg); }
+    .card-header:hover { background: #e9ecef; }
+
     #be-toggle { cursor: pointer; user-select: none; }
     #be-toggle:hover { background: #e9ecef; }
     .be-arrow { display: inline-block; transition: transform .15s; margin-right: 5px; font-size: 0.8em; }
@@ -230,6 +234,11 @@ $(document).ready(function() {
     }
 
     $(document).ready(function () {
+        var $filmCollapse = $('#film-section-collapse');
+        var $filmArrow = $('.film-section-arrow');
+        $filmCollapse.on('show.bs.collapse', function () { $filmArrow.css('transform', 'rotate(90deg)'); });
+        $filmCollapse.on('hide.bs.collapse', function () { $filmArrow.css('transform', 'rotate(0deg)'); });
+
         var $collapse = $('#be-collapse');
         var $arrow = $('.be-arrow');
 
@@ -257,7 +266,18 @@ $(document).ready(function () {
         'id_hire_name':                  'Name of the person or organisation hiring the venue. Shown on the rota so everyone on shift knows who to liaise with.',
         'id_private':                    'When ticked, this event is hidden from the public website entirely \u2014 it won\u2019t appear in any listing or be accessible via URL, even if showings are confirmed.',
         'id_notes':                      'Internal notes \u2014 never shown to the public. Use for booking contacts, reminders, or anything you need to track.',
-        'id_terms':                      'Booking or screening terms for this event. Must be filled in (minimum word count) before any showing can be confirmed, unless the event type exempts it.',
+        'id_cost_type':                  'The nature of the financial deal. Setting this unlocks structured cost fields and waives the minimum word-count check on Terms for confirmed events.',
+        'id_cost_distributor':           'Distribution company, agent, or booker contact. Used for film licences and performer bookings.',
+        'id_cost_flat_fee_gbp':          'Fixed upfront fee in pounds (e.g. a flat licence fee or guaranteed appearance fee).',
+        'id_cost_fee_includes_vat':      'Tick if the fee above already includes VAT.',
+        'id_cost_percentage_split':      'Percentage of net door takings paid to the distributor or performer.',
+        'id_cost_minimum_guarantee_gbp': 'Guaranteed minimum payment regardless of door takings, in pounds.',
+        'id_cost_total_gbp':             'Total agreed fee for the booking (performer / venue hire), in pounds. For private hires, records the income received.',
+        'id_terms':                      'Booking or screening terms for this event. Must be filled in (minimum word count) before any showing can be confirmed, unless the event type exempts it or a cost type is set above.',
+        'id_cost_rider_notes':           'Hospitality and rider requirements for the performer or hirer — food, drink, accommodation, etc.',
+        'id_cost_sound_engineer_name':   'Sound engineer name or contact, if one is booked for this event.',
+        'id_cost_sound_engineer_fee_gbp': 'Sound engineer fee in pounds.',
+        'id_cost_sound_engineer_paid_by': 'Who covers the sound engineer fee — the venue, the performer/act, or the hirer.',
         'id_copy':                       'The main event description shown in the public programme. Can be formatted with HTML (bold, links, etc.).',
         'id_copy_summary':               'Short plain-text description (ideally \u226425 words). Used in the print programme and brief online listings \u2014 separate from the full description above.',
         'id_media_file':                 'The event poster or promotional image shown in the public programme.',
@@ -268,7 +288,7 @@ $(document).ready(function () {
         'id_meeting_name':               'Optional. Name of the meeting, e.g. \u201cMonday meeting\u201d. Useful when minutes cover multiple meetings.',
         'id_meeting_minutes_url':        'Optional. Link to the meeting minutes (e.g. a shared doc or wiki page).',
         'id_programming_status':         'Internal status for the programming queue. \u201cActive\u201d is the default for normal events. Use \u201cDraft\u201d for ideas not yet ready to propose, \u201cProposed\u201d to flag for Monday meeting discussion.',
-        'id_programming_notes':          'Free text visible to all logged-in users. Use for meeting decisions, conditions attached to approval, or messages to the proposer.',
+        'id_programming_notes':          'Free text visible to all logged-in users. Use for meeting decisions, approval conditions, messages to the proposer, or tech/AV requirements.',
     };
 
     // Show/hide hire_name based on the outside_hire checkbox.
@@ -307,6 +327,92 @@ $(document).ready(function () {
         }
     }());
 
+    {% if structured_cost_terms_enabled %}
+    // Structured cost terms (9.54) — show/hide sub-fields, swap labels, and set
+    // contextual placeholder text on Terms based on cost_type.
+    (function () {
+        var FILM_FIELDS      = ['div_id_cost_distributor', 'div_id_cost_flat_fee_gbp', 'div_id_cost_fee_includes_vat',
+                                'div_id_cost_percentage_split', 'div_id_cost_minimum_guarantee_gbp'];
+        var PERFORMER_FIELDS = ['div_id_cost_distributor', 'div_id_cost_flat_fee_gbp', 'div_id_cost_fee_includes_vat',
+                                'div_id_cost_total_gbp',
+                                'div_id_cost_rider_notes', 'div_id_cost_sound_engineer_name',
+                                'div_id_cost_sound_engineer_fee_gbp', 'div_id_cost_sound_engineer_paid_by'];
+        var HIRE_FIELDS      = ['div_id_cost_distributor', 'div_id_cost_flat_fee_gbp', 'div_id_cost_fee_includes_vat',
+                                'div_id_cost_total_gbp',
+                                'div_id_cost_rider_notes', 'div_id_cost_sound_engineer_name',
+                                'div_id_cost_sound_engineer_fee_gbp', 'div_id_cost_sound_engineer_paid_by'];
+        var ALL_COST_FIELDS  = ['div_id_cost_distributor', 'div_id_cost_flat_fee_gbp', 'div_id_cost_fee_includes_vat',
+                                'div_id_cost_percentage_split', 'div_id_cost_minimum_guarantee_gbp', 'div_id_cost_total_gbp',
+                                'div_id_cost_rider_notes', 'div_id_cost_sound_engineer_name',
+                                'div_id_cost_sound_engineer_fee_gbp', 'div_id_cost_sound_engineer_paid_by'];
+
+        // field id → { label text, placeholder } per cost_type
+        var LABELS = {
+            'id_cost_distributor': {
+                'film_license':  'Distributor',
+                'performer_fee': 'Performer / booker',
+                'venue_hire':    'Hirer / contact',
+            },
+            'id_cost_percentage_split': {
+                'film_license':  '% of net door to distributor',
+                'performer_fee': '% of door to performer',
+            },
+            'id_cost_total_gbp': {
+                'film_license':  'Total cost (£)',
+                'performer_fee': 'Total agreed fee (£)',
+                'venue_hire':    'Total income (£)',
+            },
+        };
+        var DEFAULT_LABELS = {
+            'id_cost_distributor':    'Distributor / booker',
+            'id_cost_percentage_split': '% split to distributor',
+            'id_cost_total_gbp':       'Total cost (£)',
+        };
+        var TERMS_PLACEHOLDERS = {
+            'film_license':  'e.g. Exclusivity window until [date]; subtitles required; format restrictions.',
+            'performer_fee': 'e.g. Door deal: costs off the top (PRS, bar cut), then 70/30 split. Support act £50 from venue.',
+            'venue_hire':    'e.g. Hire includes main hall and PA. Hirer sets up and breaks down. Noise curfew 11pm.',
+        };
+        var DEFAULT_TERMS_PLACEHOLDER = '{{ DEFAULT_TERMS_TEXT|escapejs }}';
+
+        function applyFiledVisibility() {
+            var sel = document.getElementById('id_cost_type');
+            if (!sel) { return; }
+            var v = sel.value;
+            var show = [];
+            if (v === 'film_license')   { show = FILM_FIELDS; }
+            else if (v === 'performer_fee') { show = PERFORMER_FIELDS; }
+            else if (v === 'venue_hire')    { show = HIRE_FIELDS; }
+
+            ALL_COST_FIELDS.forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) { el.style.display = show.indexOf(id) !== -1 ? '' : 'none'; }
+            });
+
+            // Swap labels
+            Object.keys(LABELS).forEach(function (fieldId) {
+                var labelEl = document.querySelector('label[for="' + fieldId + '"]');
+                if (!labelEl) { return; }
+                var textNode = Array.from(labelEl.childNodes).find(function (n) { return n.nodeType === 3; });
+                var newText = (LABELS[fieldId][v] || DEFAULT_LABELS[fieldId] || '') + ':';
+                if (textNode) { textNode.textContent = newText; }
+            });
+
+            // Update terms placeholder
+            var termsEl = document.getElementById('id_terms');
+            if (termsEl) {
+                termsEl.placeholder = TERMS_PLACEHOLDERS[v] || DEFAULT_TERMS_PLACEHOLDER;
+            }
+        }
+
+        var costSel = document.getElementById('id_cost_type');
+        if (costSel) {
+            applyFiledVisibility();
+            costSel.addEventListener('change', applyFiledVisibility);
+        }
+    }());
+    {% endif %}
+
     $.each(FIELD_TIPS, function (fieldId, tipText) {
         var $label = $('label[for="' + fieldId + '"]');
         if ($label.length) {
@@ -325,7 +431,7 @@ $(document).ready(function () {
     (function () {
         var ticketDiv = document.getElementById('div_id_ticket_link');
         if (!ticketDiv) { return; }
-        var guideUrl = "{{ VENUE.film_programming_guide_url|escapejs }}";
+        var guideUrl = "{{ film_programming_guide_url|escapejs }}";
         var guideLink = guideUrl ? ' <a href="' + guideUrl + '" target="_blank" rel="noopener noreferrer">Full programming guide →</a>' : '';
         var guidanceBody = "{{ ticket_link_guidance_html|escapejs }}";
         var html = '<div class="mb-3 border rounded" id="ticket-link-guide">'
@@ -357,6 +463,54 @@ $(document).ready(function () {
                 new bootstrap.Tooltip(label);
             }
         });
+    }());
+    {% endif %}
+
+    {% if top_5_tag_pks_json %}
+    {# Split tag pills into "Common tags" (top 5 by usage) and "All tags" (every tag) groups. #}
+    {# Common tags are clones that delegate clicks to the real inputs in "All tags", so the #}
+    {# form always submits from one canonical set of checkboxes. #}
+    (function() {
+        var top5 = {{ top_5_tag_pks_json }};
+        var container = document.querySelector('.tag-pill-select');
+        if (!container || top5.length === 0) return;
+        var pills = Array.from(container.querySelectorAll('label.tag-pill'));
+        var topPills = pills.filter(function(l) { return top5.indexOf(parseInt(l.querySelector('input').value, 10)) !== -1; });
+        if (topPills.length === 0) return;
+
+        var commonHeading = document.createElement('span');
+        commonHeading.className = 'tag-pill-group-heading';
+        commonHeading.textContent = 'Common tags';
+
+        var allHeading = document.createElement('span');
+        allHeading.className = 'tag-pill-group-heading tag-pill-group-heading--all';
+        allHeading.textContent = 'All tags';
+
+        container.innerHTML = '';
+        container.appendChild(commonHeading);
+
+        topPills.forEach(function(originalLabel) {
+            var originalInput = originalLabel.querySelector('input');
+            var clone = originalLabel.cloneNode(true);
+            var cloneInput = clone.querySelector('input');
+
+            cloneInput.name = '';  /* exclude clone from form submission */
+            cloneInput.checked = originalInput.checked;
+
+            clone.addEventListener('click', function(e) {
+                e.preventDefault();
+                originalInput.click();
+                cloneInput.checked = originalInput.checked;
+            });
+            originalInput.addEventListener('change', function() {
+                cloneInput.checked = originalInput.checked;
+            });
+
+            container.appendChild(clone);
+        });
+
+        container.appendChild(allHeading);
+        pills.forEach(function(p) { container.appendChild(p); });
     }());
     {% endif %}
 
@@ -805,16 +959,322 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 </script>
+<script>
+(function() {
+  var SEARCH_URL = "{% url 'omdb-search' %}";
+  var LINK_URL   = "{% url 'link-film' event_id=event.id %}";
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var filmSection   = document.getElementById('film-section');
+    var lastSuggested = (filmSection && filmSection.dataset.suggested) || '';
+
+    /* ---- reposition film section immediately after film_information row ---- */
+    var fiField = document.getElementById('id_film_information');
+    if (fiField && filmSection) {
+      var fiRow = fiField.closest('.mb-3');
+      if (fiRow && fiRow.parentNode) {
+        fiRow.parentNode.insertBefore(filmSection, fiRow.nextSibling);
+      }
+    }
+
+    /* ---- helpers ---- */
+    function getCsrf() {
+      var el = document.querySelector('[name=csrfmiddlewaretoken]');
+      return el ? el.value : '';
+    }
+
+    function fillManualForm(film) {
+      var set = function(id, val) { var el = document.getElementById(id); if (el) el.value = val || ''; };
+      set('film-manual-title', film.title);
+      set('film-manual-year', film.year);
+      set('film-manual-director', film.director);
+      set('film-manual-runtime', film.runtime_minutes);
+      set('film-manual-countries', film.countries);
+      set('film-manual-languages', film.languages);
+      var typeEl = document.getElementById('film-manual-type');
+      if (typeEl) typeEl.value = film.media_type || 'film';
+    }
+
+    function showLinked(film) {
+      var linked     = document.getElementById('film-linked');
+      var searchWrap = document.getElementById('film-search-wrap');
+      var manualWrap = document.getElementById('film-manual-wrap');
+
+      document.getElementById('film-title').textContent =
+        film.title + (film.year ? ' (' + film.year + ')' : '');
+
+      var sourceBadge = document.getElementById('film-source-badge');
+      if (sourceBadge) {
+        if (film.imdb_id) {
+          sourceBadge.textContent = 'via OMDb';
+          sourceBadge.className = 'badge ms-1 text-bg-info';
+        } else {
+          sourceBadge.textContent = 'manually entered';
+          sourceBadge.className = 'badge ms-1 text-bg-secondary';
+        }
+        sourceBadge.style.fontSize = '0.7em';
+        sourceBadge.style.fontWeight = 'normal';
+      }
+
+      var editBtn = document.getElementById('film-edit-btn');
+      if (editBtn) editBtn.style.display = film.imdb_id ? 'none' : '';
+
+      var metaParts = [];
+      if (film.director) metaParts.push('Dir. ' + film.director);
+      if (film.runtime_minutes) metaParts.push(film.runtime_minutes + ' mins');
+      if (film.countries) metaParts.push(film.countries);
+      document.getElementById('film-meta').textContent = metaParts.join(' · ');
+
+      var poster = document.getElementById('film-poster-sm');
+      if (film.poster_url || film.poster_url_sm) {
+        poster.src = film.poster_url || film.poster_url_sm;
+        poster.style.display = '';
+      } else {
+        poster.style.display = 'none';
+      }
+
+      var linksEl = document.getElementById('film-links');
+      linksEl.innerHTML = '';
+      if (film.imdb_url) {
+        var a = document.createElement('a');
+        a.href = film.imdb_url; a.target = '_blank';
+        a.className = 'text-muted small'; a.textContent = 'IMDB ↗';
+        linksEl.appendChild(a);
+      }
+      var certTemplate = "{{ certificate_lookup_url|escapejs }}";
+      if (certTemplate && film.title) {
+        var certUrl = certTemplate
+          .replace('{title}', encodeURIComponent(film.title))
+          .replace('{year}', encodeURIComponent(film.year || ''));
+        var certLink = document.createElement('a');
+        certLink.href = certUrl; certLink.target = '_blank'; certLink.rel = 'noopener noreferrer';
+        certLink.className = 'text-muted small ms-2'; certLink.textContent = 'Check cert ↗';
+        linksEl.appendChild(certLink);
+      }
+
+      if (linked) linked.style.display = '';
+      if (searchWrap) searchWrap.style.display = 'none';
+      if (manualWrap) manualWrap.style.display = 'none';
+      var fc = document.getElementById('film-section-collapse');
+      if (fc && !fc.classList.contains('show')) {
+        new bootstrap.Collapse(fc, {toggle: false}).show();
+      }
+
+      /* pre-fill manual form so programmer only needs to fix one field */
+      fillManualForm(film);
+    }
+
+    function suggestFilmInfo(suggested) {
+      lastSuggested = suggested || '';
+      var fi = document.getElementById('id_film_information');
+      if (fi && !fi.value.trim()) fi.value = suggested;
+    }
+
+    /* ---- apply suggestion button ---- */
+    var applyInfoBtn = document.getElementById('film-apply-info-btn');
+    if (applyInfoBtn) {
+      applyInfoBtn.addEventListener('click', function() {
+        var fi = document.getElementById('id_film_information');
+        if (fi && lastSuggested) fi.value = lastSuggested;
+      });
+    }
+
+    /* ---- OMDb search ---- */
+    var searchInput   = document.getElementById('film-search-input');
+    var searchResults = document.getElementById('film-search-results');
+    var searchTimer   = null;
+
+    /* pre-fill search from event title when section expands with no film linked */
+    var filmCollapse = document.getElementById('film-section-collapse');
+    if (filmCollapse && searchInput) {
+      filmCollapse.addEventListener('show.bs.collapse', function() {
+        var linked   = document.getElementById('film-linked');
+        var isLinked = linked && linked.style.display !== 'none';
+        if (!isLinked && !searchInput.value.trim()) {
+          var nameField = document.getElementById('id_name');
+          if (nameField && nameField.value.trim()) {
+            searchInput.value = nameField.value.trim();
+            searchInput.dispatchEvent(new Event('input'));
+          }
+        }
+      });
+    }
+
+    /* "Use event title" button */
+    var useTitleBtn = document.getElementById('film-use-title-btn');
+    if (useTitleBtn && searchInput) {
+      useTitleBtn.addEventListener('click', function() {
+        searchInput.value = useTitleBtn.dataset.title || '';
+        searchInput.dispatchEvent(new Event('input'));
+        searchInput.focus();
+      });
+    }
+
+    if (searchInput) {
+      searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimer);
+        var q = searchInput.value.trim();
+        if (!q) { searchResults.style.display = 'none'; return; }
+        searchTimer = setTimeout(function() {
+          fetch(SEARCH_URL + '?q=' + encodeURIComponent(q), {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+          })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            searchResults.innerHTML = '';
+            if (!Array.isArray(data) || !data.length) {
+              searchResults.style.display = 'none'; return;
+            }
+            data.forEach(function(item) {
+              var btn = document.createElement('button');
+              btn.type = 'button';
+              btn.className = 'list-group-item list-group-item-action d-flex gap-2 align-items-center py-1';
+              var img = item.poster_url
+                ? '<img src="' + item.poster_url + '" width="32" style="border-radius:2px;flex-shrink:0" alt="">'
+                : '<span style="width:32px;flex-shrink:0"></span>';
+              var badge = item.media_type === 'tv'
+                ? '<span class="badge text-bg-secondary ms-1">TV</span>' : '';
+              btn.innerHTML = img + '<span>' + item.title + badge +
+                '<br><small class="text-muted">' + (item.year || '') +
+                (item.director ? ' · ' + item.director : '') + '</small></span>';
+              btn.addEventListener('click', function() { linkFilm(item.imdb_id, item.media_type); });
+              searchResults.appendChild(btn);
+            });
+            searchResults.style.display = '';
+          })
+          .catch(function() { searchResults.style.display = 'none'; });
+        }, 300);
+      });
+    }
+
+    function linkFilm(imdbId, mediaType) {
+      var formData = new FormData();
+      formData.append('csrfmiddlewaretoken', getCsrf());
+      formData.append('imdb_id', imdbId);
+      formData.append('media_type', mediaType);
+      fetch(LINK_URL, {method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'}})
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success) {
+          showLinked(data.film);
+          suggestFilmInfo(data.suggested_film_information);
+          if (searchResults) { searchResults.innerHTML = ''; searchResults.style.display = 'none'; }
+          if (searchInput) searchInput.value = '';
+        }
+      });
+    }
+
+    /* ---- unlink ---- */
+    var unlinkBtn = document.getElementById('film-unlink-btn');
+    if (unlinkBtn) {
+      unlinkBtn.addEventListener('click', function() {
+        var formData = new FormData();
+        formData.append('csrfmiddlewaretoken', getCsrf());
+        fetch(unlinkBtn.dataset.url, {method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.success) {
+            var linked     = document.getElementById('film-linked');
+            var searchWrap = document.getElementById('film-search-wrap');
+            var manualWrap = document.getElementById('film-manual-wrap');
+            if (linked) linked.style.display = 'none';
+            if (searchWrap) searchWrap.style.display = '';
+            else if (manualWrap) manualWrap.style.display = '';
+          }
+        });
+      });
+    }
+
+    /* ---- pre-fill manual form from server-side film data on page load ---- */
+    var initialFilmData = filmSection && filmSection.dataset.film;
+    if (initialFilmData && initialFilmData !== 'null') {
+      try { fillManualForm(JSON.parse(initialFilmData)); } catch(e) {}
+    }
+
+    /* ---- edit button for manually-entered films ---- */
+    var editBtn = document.getElementById('film-edit-btn');
+    if (editBtn) {
+      editBtn.addEventListener('click', function() {
+        var linked     = document.getElementById('film-linked');
+        var manualWrap = document.getElementById('film-manual-wrap');
+        var searchWrap = document.getElementById('film-search-wrap');
+        if (linked) linked.style.display = 'none';
+        if (searchWrap) searchWrap.style.display = 'none';
+        if (manualWrap) manualWrap.style.display = '';
+        var submitBtn = document.getElementById('film-manual-submit');
+        if (submitBtn) submitBtn.textContent = 'Save changes';
+      });
+    }
+
+    /* ---- manual toggle ---- */
+    var manualToggle = document.getElementById('film-manual-toggle');
+    var searchToggle = document.getElementById('film-search-toggle');
+    if (manualToggle) {
+      manualToggle.addEventListener('click', function() {
+        document.getElementById('film-search-wrap').style.display = 'none';
+        document.getElementById('film-manual-wrap').style.display = '';
+      });
+    }
+    if (searchToggle) {
+      searchToggle.addEventListener('click', function() {
+        document.getElementById('film-manual-wrap').style.display = 'none';
+        document.getElementById('film-search-wrap').style.display = '';
+        var submitBtn = document.getElementById('film-manual-submit');
+        if (submitBtn) submitBtn.textContent = 'Link this work';
+      });
+    }
+
+    /* ---- manual submit ---- */
+    var manualSubmit = document.getElementById('film-manual-submit');
+    if (manualSubmit) {
+      manualSubmit.addEventListener('click', function() {
+        var formData = new FormData();
+        formData.append('csrfmiddlewaretoken', getCsrf());
+        formData.append('media_type', document.getElementById('film-manual-type').value);
+        formData.append('title', document.getElementById('film-manual-title').value.trim());
+        formData.append('year', document.getElementById('film-manual-year').value);
+        formData.append('director', document.getElementById('film-manual-director').value.trim());
+        formData.append('runtime_minutes', document.getElementById('film-manual-runtime').value);
+        formData.append('certificate', document.getElementById('film-manual-cert').value.trim());
+        formData.append('countries', document.getElementById('film-manual-countries').value.trim());
+        formData.append('languages', document.getElementById('film-manual-languages').value.trim());
+        var errEl = document.getElementById('film-manual-error');
+        fetch(manualSubmit.dataset.url, {method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.success) {
+            showLinked(data.film);
+            suggestFilmInfo(data.suggested_film_information);
+            errEl.style.display = 'none';
+          } else {
+            errEl.textContent = data.error || 'Something went wrong.';
+            errEl.style.display = '';
+          }
+        });
+      });
+    }
+
+  }); // end DOMContentLoaded
+})();
+</script>
 {% endblock %}
 
 {% block body %}
 <div id="title">
 <h1>Edit details for "{{ event.name }}"</h1>
-<p>
-{% for showing in event.showings.all %}
-Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
-{% endfor %}
-</p>
+<div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+  <span class="text-muted small">{{ site_config.occurrence_noun_plural|capfirst }}:</span>
+  {% for showing in event.showings.all %}
+  <a href="{% url 'edit-showing' showing.id %}"
+     class="badge text-decoration-none {% if showing.cancelled %}text-bg-danger{% elif showing.confirmed %}text-bg-success{% else %}text-bg-secondary{% endif %}"
+     title="{% if showing.cancelled %}Cancelled{% elif showing.confirmed %}Confirmed — public{% else %}Unconfirmed — not yet public{% endif %} · Edit this {{ site_config.occurrence_noun }}">
+    {{ showing.start|date:"D j M Y, H:i" }}
+  </a>
+  {% empty %}
+  <span class="text-muted small">No {{ site_config.occurrence_noun_plural }} yet.</span>
+  {% endfor %}
+  <a href="{% url 'edit-event-details-view' event.pk %}" class="text-muted small ms-1">← Event hub</a>
+</div>
 </div>
 {% if event_form.errors or media_form.errors %}
 <div class="alert alert-danger">Missing or invalid information - see below for errors</div>
@@ -822,6 +1282,130 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
 <div id="forms">
 <form action="{% url "edit-event-details" event_id=event.id %}" method="post" enctype="multipart/form-data">
     {% crispy event_form %}
+
+    {# Film / screened work details (9.66) — managed via AJAX, not submitted with the main form #}
+    <div class="card mb-3" id="film-section" data-suggested="{{ suggested_film_information|escapejs }}"
+         data-film="{{ event_film_json|escape }}">
+      <div class="card-header p-2" id="film-section-toggle" style="cursor:pointer;user-select:none;"
+           data-bs-toggle="collapse" data-bs-target="#film-section-collapse"
+           aria-expanded="{% if event.film or has_film_tag %}true{% else %}false{% endif %}"
+           aria-controls="film-section-collapse">
+        <span class="film-section-arrow" style="display:inline-block;transition:transform 0.15s;{% if event.film or has_film_tag %}transform:rotate(90deg){% endif %}">&#9658;</span>
+        <strong>Film / screened work details</strong>
+        <small class="text-muted ms-2">optional — links structured metadata to this event</small>
+      </div>
+      <div id="film-section-collapse" class="collapse {% if event.film or has_film_tag %}show{% endif %}">
+      <div class="card-body">
+
+        {# STATE A: film already linked #}
+        <div id="film-linked" {% if not event.film %}style="display:none"{% endif %}>
+          <div class="d-flex gap-3 align-items-start" id="film-card">
+            <img id="film-poster-sm" src="{% if event.film %}{{ event.film.poster_url }}{% endif %}"
+                 alt="" width="46" style="border-radius:3px;flex-shrink:0;{% if not event.film or not event.film.poster_url %}display:none{% endif %}">
+            <div class="flex-grow-1">
+              <strong id="film-title">{% if event.film %}{{ event.film.title }}{% if event.film.year %} ({{ event.film.year }}){% endif %}{% endif %}</strong>
+              {% if event.film and event.film.media_type == "tv" %}<span class="badge text-bg-secondary ms-1">TV</span>{% endif %}
+              <span id="film-source-badge" class="badge ms-1 {% if event.film and event.film.imdb_id %}text-bg-info{% else %}text-bg-secondary{% endif %}" style="font-size:0.7em;font-weight:normal;">
+                {% if event.film %}{% if event.film.imdb_id %}via OMDb{% else %}manually entered{% endif %}{% endif %}
+              </span>
+              <br>
+              <span class="text-muted small" id="film-meta">
+                {% if event.film %}
+                  {% if event.film.director %}Dir. {{ event.film.director }}{% endif %}
+                  {% if event.film.runtime_minutes %} · {{ event.film.runtime_minutes }} mins{% endif %}
+                  {% if event.film.countries %} · {{ event.film.countries }}{% endif %}
+                {% endif %}
+              </span>
+              <div class="mt-1 d-flex gap-2 flex-wrap align-items-center">
+                <span id="film-links">
+                  {% if event.film and event.film.imdb_id %}<a id="film-imdb-link" href="https://www.imdb.com/title/{{ event.film.imdb_id }}/" target="_blank" class="text-muted small">IMDB ↗</a>{% endif %}
+                  {% if film_cert_lookup_url %}<a href="{{ film_cert_lookup_url }}" target="_blank" rel="noopener noreferrer" class="text-muted small ms-2">Check cert ↗</a>{% endif %}
+                </span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="film-apply-info-btn"
+                        title="Fill the Film Information field above from this linked work's metadata">Apply to Film Information field ↑</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="film-edit-btn"
+                        {% if event.film and event.film.imdb_id %}style="display:none"{% endif %}
+                        title="Edit the manually-entered details for this work">Edit details</button>
+                <button type="button" class="btn btn-sm btn-outline-danger ms-auto" id="film-unlink-btn"
+                        data-url="{% url 'unlink-film' event_id=event.id %}">Unlink</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# STATE B: no film linked — OMDb search (if API key configured) #}
+        {% if omdb_configured %}
+        <div id="film-search-wrap" {% if event.film %}style="display:none"{% endif %}>
+          <div class="input-group mb-1">
+            <input type="text" id="film-search-input" class="form-control" placeholder="Search by title…" autocomplete="off">
+            <button type="button" class="btn btn-outline-secondary" id="film-manual-toggle">Enter manually instead</button>
+          </div>
+          <div class="d-flex gap-3 align-items-center mb-2">
+            <small class="text-muted">
+              Title and year are usually enough. Select a result to link it.
+              <span tabindex="0" data-bs-toggle="tooltip" data-bs-placement="top"
+                    title="Results come from OMDb (Open Movie Database), a free community-maintained film database. If they have a mistake, you can unlink the film and use 'Enter manually instead' to correct the details."
+                    style="cursor:help; color:#6c757d;">&#9432;</span>
+            </small>
+            {% if event.name %}
+            <button type="button" class="btn btn-link btn-sm p-0 text-nowrap" id="film-use-title-btn"
+                    data-title="{{ event.name|escapejs }}">Use event title</button>
+            {% endif %}
+          </div>
+          <div id="film-search-results" class="list-group mb-2" style="display:none"></div>
+        </div>
+        {% endif %}
+
+        {# STATE C: manual entry #}
+        <div id="film-manual-wrap" {% if event.film or omdb_configured %}style="display:none"{% endif %}>
+          {% if omdb_configured %}<button type="button" class="btn btn-sm btn-link ps-0 mb-2" id="film-search-toggle">← Back to search</button>{% endif %}
+          <div class="row g-2">
+            <div class="col-md-6">
+              <label class="form-label small" for="film-manual-title">Title</label>
+              <input type="text" id="film-manual-title" class="form-control form-control-sm" placeholder="e.g. Twin Peaks">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small" for="film-manual-year">Year</label>
+              <input type="number" id="film-manual-year" class="form-control form-control-sm" placeholder="e.g. 1990" min="1888" max="2099">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small" for="film-manual-type">Type</label>
+              <select id="film-manual-type" class="form-select form-select-sm">
+                <option value="film">Film</option>
+                <option value="tv">TV show</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small" for="film-manual-director">Director / creator</label>
+              <input type="text" id="film-manual-director" class="form-control form-control-sm" placeholder="e.g. David Lynch, Mark Frost">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small" for="film-manual-runtime">Runtime (mins)</label>
+              <input type="number" id="film-manual-runtime" class="form-control form-control-sm" min="1" max="999">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small" for="film-manual-cert">Certificate</label>
+              <input type="text" id="film-manual-cert" class="form-control form-control-sm" placeholder="e.g. 15">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small" for="film-manual-countries">Countries</label>
+              <input type="text" id="film-manual-countries" class="form-control form-control-sm" placeholder="e.g. GB, US">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small" for="film-manual-languages">Languages</label>
+              <input type="text" id="film-manual-languages" class="form-control form-control-sm" placeholder="e.g. English">
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+              <button type="button" class="btn btn-sm btn-primary w-100" id="film-manual-submit"
+                      data-url="{% url 'link-film' event_id=event.id %}">Link this work</button>
+            </div>
+          </div>
+          <div id="film-manual-error" class="alert alert-danger mt-2 py-1 small" style="display:none"></div>
+        </div>
+
+      </div>{# /card-body #}
+      </div>{# /film-section-collapse #}
+    </div>{# /film-section #}
 
     {# Break-even calculator — advisory only, not submitted. Inputs use form="be-scratchpad" to decouple from main form validation. #}
     <div class="card mb-3" id="be-card">
@@ -901,6 +1485,16 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
 
     {# Hidden field for generated poster (set via AJAX) #}
     <input type="hidden" name="generated_media_id" id="generated_media_id" value="">
+
+    <div class="card mb-3">
+    <div class="card-header p-2" id="media-hdr" style="cursor:pointer;user-select:none;"
+         data-bs-toggle="collapse" data-bs-target="#media-body"
+         aria-expanded="true" aria-controls="media-body">
+      <span class="section-arrow" style="transform:rotate(90deg)">&#9658;</span>
+      <strong>Image</strong>
+    </div>
+    <div id="media-body" class="collapse show">
+    <div class="card-body pt-2 pb-1">
 
     {# Media file field with generate button #}
     <div class="mb-3 row" id="media_file_group">
@@ -1014,7 +1608,7 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
         </div>
     </div>
 
-    {# Rest of media form fields (media_file, bar_colour, crop fields rendered separately) #}
+    {# Alt text and credit sit inside the image card #}
     {% for field in media_form %}
         {% if field.name != 'media_file' and field.name != 'bar_colour' and field.name != 'crop_x' and field.name != 'crop_y' and field.name != 'crop_w' and field.name != 'crop_h' %}
             <div class="mb-3 row{% if field.errors %} has-error{% endif %}">
@@ -1031,6 +1625,10 @@ Booked for: {{ showing.start|date:"H:i d/m/Y"  }} <br>
             </div>
         {% endif %}
     {% endfor %}
+
+    </div>{# /card-body #}
+    </div>{# /media-body collapse #}
+    </div>{# /image card #}
 
     {# Hidden crop coordinates — set by Cropper.js on form submit #}
     <input type="hidden" name="crop_x" id="id_crop_x" value="{{ media_form.instance.crop_x|default:'' }}">

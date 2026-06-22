@@ -174,7 +174,7 @@ details[open].pq-guide > summary::before { content: "▾ "; }
 <div id="pq-nav-rail" aria-hidden="true"><div class="rail-inner"><div class="rail-cursor"></div></div></div>
 <div class="d-flex align-items-baseline gap-3 mb-1">
   <h1 class="mb-0">Programming Queue</h1>
-  <a href="{% url "add-event" %}" class="btn btn-sm btn-outline-primary">+ New event</a>
+  {% if can_write %}<a href="{% url "add-event" %}" class="btn btn-sm btn-outline-primary">+ New event</a>{% endif %}
 </div>
 <p class="text-muted">
   Events waiting for a decision.
@@ -575,5 +575,64 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initialise with month grouping active (button already has .active in HTML)
     applyFilterAndSort();
 });
+</script>
+<script>
+(function ($) {
+    "use strict";
+    var currentIdx = -1;
+
+    function getCards() {
+        return Array.from(document.querySelectorAll('#pq-list .pq-card')).filter(function (c) {
+            return c.offsetParent !== null;
+        });
+    }
+
+    function setCard(idx) {
+        var cards = getCards();
+        if (!cards.length) { return; }
+        idx = Math.max(0, Math.min(idx, cards.length - 1));
+        cards.forEach(function (c) { c.style.outline = ''; });
+        cards[idx].style.outline = '2px solid #0056b3';
+        cards[idx].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        currentIdx = idx;
+    }
+
+    function openCard() {
+        var cards = getCards();
+        if (currentIdx < 0 || currentIdx >= cards.length) { return; }
+        var link = cards[currentIdx].querySelector('a[href]');
+        if (link) { window.location.href = link.getAttribute('href'); }
+    }
+
+    $(document).on('keydown', function (e) {
+        if (e.ctrlKey || e.altKey || e.metaKey) { return; }
+        if (window.AdminKeyboardNav && window.AdminKeyboardNav.isNavMode()) { return; }
+        var tag = (document.activeElement || {}).tagName || "";
+        var inInput = /^(INPUT|TEXTAREA|SELECT)$/i.test(tag);
+        if (inInput) { return; }
+
+        switch (e.key) {
+            case 'j':
+                e.preventDefault();
+                setCard(currentIdx < 0 ? 0 : currentIdx + 1);
+                break;
+            case 'k':
+                e.preventDefault();
+                setCard(currentIdx < 0 ? 0 : currentIdx - 1);
+                break;
+            case 'Enter':
+            case 'o':
+                if (currentIdx >= 0) { e.preventDefault(); openCard(); }
+                break;
+        }
+    });
+
+    if (window.AdminKeyboardNav) {
+        window.AdminKeyboardNav.registerHelp([{ heading: "Programming queue", rows: [
+            ["j / k",     "Navigate cards"],
+            ["o / Enter", "Open event hub"]
+        ]}]);
+    }
+}(jQuery));
 </script>
 {% endblock %}

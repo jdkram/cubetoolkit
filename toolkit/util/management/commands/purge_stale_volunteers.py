@@ -12,6 +12,7 @@ and the audit log survive while personal data is cleared. This command is never
 scheduled — it is a conscious, manual action.
 """
 from django.core.management.base import BaseCommand, CommandError
+from django.utils import timezone
 
 from toolkit.diary.models import get_site_config
 from toolkit.members.models import Volunteer
@@ -36,6 +37,11 @@ class Command(BaseCommand):
             default="",
             help='Required with --apply. Must equal "anonymise N volunteers" (N = candidate count).',
         )
+        parser.add_argument(
+            "--include-members",
+            action="store_true",
+            help="Include candidates with an active membership. By default these are skipped with a warning.",
+        )
 
     def handle(self, *args, **options):
         config = get_site_config()
@@ -48,15 +54,45 @@ class Command(BaseCommand):
             )
             return
 
-        candidates = list(
+        include_members = options["include_members"]
+        today = timezone.now().date()
+
+        all_candidates = list(
             Volunteer.objects.purge_candidates(purge_days).select_related(
                 "member", "user"
             )
         )
+
+        # Separate out those with active memberships unless --include-members is set.
+        active_member_skipped = []
+        candidates = []
+        for vol in all_candidates:
+            m = vol.member
+            is_active_member = (
+                m.membership_expires is not None and m.membership_expires >= today
+            )
+            if is_active_member and not include_members:
+                active_member_skipped.append(vol)
+            else:
+                candidates.append(vol)
+
+        if active_member_skipped:
+            self.stdout.write(
+                self.style.WARNING(
+                    f"\nSkipping {len(active_member_skipped)} candidate(s) with an active membership "
+                    f"(re-run with --include-members to include them):"
+                )
+            )
+            for vol in active_member_skipped:
+                self.stdout.write(
+                    f"  pk={vol.pk} {vol.member.name} "
+                    f"(expires: {vol.member.membership_expires})"
+                )
+
         count = len(candidates)
 
         self.stdout.write(
-            f"{count} volunteer(s) past the {purge_days}-day retention window:"
+            f"\n{count} volunteer(s) past the {purge_days}-day retention window:"
         )
         for vol in candidates:
             last_login = vol.user.last_login

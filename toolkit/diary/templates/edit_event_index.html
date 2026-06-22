@@ -123,7 +123,8 @@ Editing {{ event_list_name }}
 
   /* ── Mobile list view ──────────────────────────────────────────── */
   .diary-mobile-list { display: none; }
-  .diary-month-table-wrap { display: block; }
+  .diary-month-table-wrap { display: block; scroll-margin-top: calc(56px + 1.25rem); }
+  tr[data-filter-text].kb-row-current { outline: 2px solid #0056b3; outline-offset: -1px; }
 
   @media (max-width: 767px) {
       .diary-month-table-wrap { display: none; }
@@ -391,8 +392,9 @@ $(document).ready(function() {
             minDate : 0,
         });
 
-        // Filter widget:
-        $('#id_input_filter').keyup(filter_events);
+        $('#id_input_filter').keyup(function() {
+            filter_events();
+        });
         filter_events();
 });
 function dateRangeSelected(dateText, inst) {
@@ -595,6 +597,111 @@ $(document).ready(function() {
     buildDiaryNavRail();
 });
 </script>
+
+<script>
+(function ($) {
+    "use strict";
+
+    // ── Keyboard shortcuts for diary edit list ─────────────────────────────
+
+    var _rowIdx = -1;
+
+    function getEventRows() {
+        return $('tr[data-filter-text]:visible').toArray();
+    }
+
+    function setEventRow(idx) {
+        var rows = getEventRows();
+        if (!rows.length) { return; }
+        idx = Math.max(0, Math.min(idx, rows.length - 1));
+        $(rows).removeClass('kb-row-current');
+        $(rows[idx]).addClass('kb-row-current');
+        rows[idx].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        _rowIdx = idx;
+    }
+
+    function openEventRow() {
+        var rows = getEventRows();
+        if (_rowIdx < 0 || _rowIdx >= rows.length) { return; }
+        var link = $(rows[_rowIdx]).find('a[href*="/edit/event/"]').first();
+        if (link.length) { window.location.href = link.attr('href'); }
+    }
+
+    // Reset cursor when filter changes so stale index doesn't misfire
+    $('#id_input_filter').on('keyup', function () { _rowIdx = -1; $('tr.kb-row-current').removeClass('kb-row-current'); });
+
+    function navigateMonths(direction) {
+        var wraps = $('.diary-month-table-wrap[id]:visible').toArray();
+        if (!wraps.length) { return; }
+        var navbar = document.querySelector('.navbar.fixed-top');
+        var navH   = navbar ? navbar.offsetHeight : 56;
+        var currentIdx = 0;
+        for (var i = 0; i < wraps.length; i++) {
+            if (wraps[i].getBoundingClientRect().top <= navH + 20) { currentIdx = i; }
+        }
+        var target = direction > 0
+            ? Math.min(currentIdx + 1, wraps.length - 1)
+            : Math.max(currentIdx - 1, 0);
+        wraps[target].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    $(document).on('keydown', function (e) {
+        if (window.AdminKeyboardNav && window.AdminKeyboardNav.isNavMode()) { return; }
+        if (e.ctrlKey || e.altKey || e.metaKey) { return; }
+        var tag    = (document.activeElement || {}).tagName || "";
+        var inInput = /^(INPUT|TEXTAREA|SELECT)$/i.test(tag);
+        var inEdit  = !!(document.activeElement && document.activeElement.isContentEditable);
+
+        if (e.key === 'Escape') {
+            var filter = document.getElementById('id_input_filter');
+            if (filter) { filter.value = ''; filter_events(); filter.blur(); }
+            return;
+        }
+
+        if (inInput || inEdit) { return; }
+
+        switch (e.key) {
+            case '/':
+                e.preventDefault();
+                $('#id_input_filter').focus().select();
+                break;
+            case 'F':
+                if (typeof diaryToggleFullscreen === 'function') { diaryToggleFullscreen(); }
+                break;
+            case 'n':
+                window.location.href = '{% url "add-event" %}';
+                break;
+            case '{':
+                e.preventDefault(); navigateMonths(-1); break;
+            case '}':
+                e.preventDefault(); navigateMonths(1); break;
+            case 'j':
+                e.preventDefault();
+                setEventRow(_rowIdx < 0 ? 0 : _rowIdx + 1);
+                break;
+            case 'k':
+                e.preventDefault();
+                setEventRow(_rowIdx <= 0 ? 0 : _rowIdx - 1);
+                break;
+            case 'Enter':
+            case 'o':
+                if (_rowIdx >= 0) { e.preventDefault(); openEventRow(); }
+                break;
+        }
+    });
+
+    if (window.AdminKeyboardNav) {
+        window.AdminKeyboardNav.registerHelp([{ heading: "Diary", rows: [
+            ["/",     "Focus filter"],
+            ["j / k", "Navigate events (respects filter)"],
+            ["o / Enter", "Open selected event"],
+            ["n",     "New event"],
+            ["{ / }", "Previous / next month"],
+            ["F",     "Toggle fullscreen"]
+        ]}]);
+    }
+}(jQuery));
+</script>
 {% endblock %}
 
 {% block body %}
@@ -611,9 +718,9 @@ $(document).ready(function() {
     <label>until: <input type="text" name="lookahead_to" value="{{ end|date:'j-m-Y'}}" id="id_lookahead_to"></label>
   </div>
   <div class="diary-controls-row">
-    <label>Filter: <input type="text" placeholder="event title or booker" id="id_input_filter" autofocus></label>
-    <a href="{% url "add-event" %}">+ New event</a>
-    <a href="{% url "quick-create-open-session" %}" title="Announce the building is open for volunteers">🔑 Building open</a>
+    <label>Filter: <input type="text" placeholder="event title or booker" id="id_input_filter" aria-keyshortcuts="/"></label>
+    {% if can_edit %}<a href="{% url "add-event" %}" aria-keyshortcuts="n">+ New event</a>{% endif %}
+    {% if can_edit %}<a href="{% url "quick-create-open-session" %}" title="Announce the building is open for volunteers">🔑 Building open</a>{% endif %}
     <button id="diary-fullscreen-btn" onclick="diaryToggleFullscreen()" title="Expand to full viewport width" style="background:none;border:1px solid #dee2e6;border-radius:4px;padding:0.2rem 0.5rem;font-size:0.85em;cursor:pointer;color:#6c757d;">⛶ Full width</button>
     <button id="diary-show-all-rooms-btn" onclick="diaryShowAllRooms()" title="Restore all hidden room columns" style="display:none;background:none;border:1px solid #dee2e6;border-radius:4px;padding:0.2rem 0.5rem;font-size:0.85em;cursor:pointer;color:#6c757d;">↔ Show all rooms</button>
   </div>
@@ -664,7 +771,7 @@ $(document).ready(function() {
     <tr class="diary-ideas-row">
       <td colspan="99">
         {% if month_ideas %}<span class="diary-ideas-text">{{ month_ideas }}</span> {% endif %}
-        <a class="diary-ideas-edit" href="{% url "edit-ideas" year=day.year month=day.month %}" title="{% if month_ideas %}Edit{% else %}Add{% endif %} monthly notes">✏{% if not month_ideas %} add notes for {{ day|date:"F" }}{% endif %}</a>
+        {% if can_edit %}<a class="diary-ideas-edit" href="{% url "edit-ideas" year=day.year month=day.month %}" title="{% if month_ideas %}Edit{% else %}Add{% endif %} monthly notes">✏{% if not month_ideas %} add notes for {{ day|date:"F" }}{% endif %}</a>{% endif %}
         {% if month_tbc %}
         <ul class="diary-tbc-list">{% for ev in month_tbc %}<li><a href="{% url "edit-event-details-view" event_id=ev.pk %}">{{ ev.name }}</a> <span class="diary-tbc-tag">[TBC]</span></li>{% endfor %}</ul>
         {% endif %}
@@ -679,8 +786,7 @@ $(document).ready(function() {
     {% if multiroom_enabled %}
     <tr class="{{ forloop.first|yesno:"first-in-day ," }}{% if forloop.first and day_dow == "1" %}week-start {% endif %}{{ day_even|yesno:"day-even,day-odd" }}" data-filter-text="{% for s in slot_showings %}{{ s.event.name }} {{ s.booked_by }} {% endfor %}">
       <td>
-        <a{% if not forloop.first %} class="hidden_date"{% endif %}
-           href="{% url "add-event" %}?date={{day|date:"j-m-Y"}}">{{ day|date:"D\&\n\b\s\p;j"|safe }}</a>
+        {% if can_edit %}<a{% if not forloop.first %} class="hidden_date"{% endif %} href="{% url "add-event" %}?date={{day|date:"j-m-Y"}}">{{ day|date:"D\&\n\b\s\p;j"|safe }}</a>{% else %}<span{% if not forloop.first %} class="hidden_date"{% endif %}>{{ day|date:"D\&\n\b\s\p;j"|safe }}</span>{% endif %}
       </td>
       <td {% if slot_local.hour <= 17 %}class="daytime"{% endif %}>{{ slot_local|date:"H:i" }}</td>
       {% for room in rooms %}
@@ -701,14 +807,14 @@ $(document).ready(function() {
           {{ showing.sold_out|yesno:"(marked SOLD OUT)," }}
         </td>
         {% else %}
-          <td class="room-col empty-slot" data-room="{{ room.pk }}"><a href="{% url "add-event" %}?date={{ day|date:"j-m-Y" }}&time={{ slot_local|date:"G:i" }}&room={{ room.id }}">+</a></td>
+          <td class="room-col empty-slot" data-room="{{ room.pk }}">{% if can_edit %}<a href="{% url "add-event" %}?date={{ day|date:"j-m-Y" }}&time={{ slot_local|date:"G:i" }}&room={{ room.id }}">+</a>{% endif %}</td>
         {% endif %}
       {% endfor %}
       {% if has_other_rooms %}
         {% other_room_bookings_at slot_showings time_slot as other_bookings %}
         <td class="room-col other-col" data-room="other">
           {% for rb, showing in other_bookings %}<a href="{% url "edit-event-details-view" event_id=showing.event.pk %}" class="other-room-badge" style="border-left-color:{{ rb.room.colour }};" title="{{ showing.event.name }} — {{ rb.room.name }}">{{ rb.room.name }}</a>{% endfor %}
-          <a href="{% url "add-event" %}?date={{ day|date:"j-m-Y" }}&time={{ slot_local|date:"G:i" }}" class="other-room-add">+</a>
+          {% if can_edit %}<a href="{% url "add-event" %}?date={{ day|date:"j-m-Y" }}&time={{ slot_local|date:"G:i" }}" class="other-room-add">+</a>{% endif %}
         </td>
       {% endif %}
       <td class="room-col col-bookedby">{% for s in slot_showings %}{{ s.booked_by }}{% if not s.confirmed %} <span class="pencilled-at" title="Pencilled in on {{ s.created_at|date:"d-m-y" }}">(&#x270f;&#xfe0f;{{ s.created_at|date:"d-m-y" }})</span>{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
@@ -718,8 +824,7 @@ $(document).ready(function() {
     {% with showing.start|localtime as start_localtime %}
     <tr class="{{ forloop.parentloop.first|yesno:"first-in-day ," }}{% if forloop.parentloop.first and day_dow == "1" %}week-start {% endif %}{{ day_even|yesno:"day-even,day-odd" }}" data-filter-text="{{ showing.event.name }} {{ showing.booked_by }}">
       <td>
-        <a{% if not forloop.parentloop.first or not forloop.first %} class="hidden_date"{% endif %}
-           href="{% url "add-event" %}?date={{day|date:"j-m-Y"}}">{{ day|date:"D\&\n\b\s\p;j"|safe }}</a>
+        {% if can_edit %}<a{% if not forloop.parentloop.first or not forloop.first %} class="hidden_date"{% endif %} href="{% url "add-event" %}?date={{day|date:"j-m-Y"}}">{{ day|date:"D\&\n\b\s\p;j"|safe }}</a>{% else %}<span{% if not forloop.parentloop.first or not forloop.first %} class="hidden_date"{% endif %}>{{ day|date:"D\&\n\b\s\p;j"|safe }}</span>{% endif %}
       </td>
       <td>
         <a href="{% url "edit-event-details-view" event_id=showing.event.pk %}" {% if start_localtime.hour <= 17 %}class="daytime"{% endif %}>{{ showing.start|date:"H:i" }}</a>
@@ -746,11 +851,11 @@ $(document).ready(function() {
     {% endwith %}
   {% empty %}
     <tr class="first-in-day {% if day_dow == "1" %}week-start {% endif %}{{ day_even|yesno:"day-even,day-odd" }}">
-      <td><a href="{% url "add-event" %}?date={{day|date:"j-m-Y"}}">{{ day|date:"D j"}}</a></td>
+      <td>{% if can_edit %}<a href="{% url "add-event" %}?date={{day|date:"j-m-Y"}}">{{ day|date:"D j"}}</a>{% else %}{{ day|date:"D j" }}{% endif %}</td>
       <td></td>
       {% if multiroom_enabled %}
-        {% for room in rooms %}<td class="room-col empty-slot"><a href="{% url "add-event" %}?date={{ day|date:"j-m-Y" }}&room={{ room.id }}">+</a></td>{% endfor %}
-        {% if has_other_rooms %}<td class="room-col other-col" data-room="other"><a href="{% url "add-event" %}?date={{ day|date:"j-m-Y" }}" class="other-room-add">+</a></td>{% endif %}
+        {% for room in rooms %}<td class="room-col empty-slot">{% if can_edit %}<a href="{% url "add-event" %}?date={{ day|date:"j-m-Y" }}&room={{ room.id }}">+</a>{% endif %}</td>{% endfor %}
+        {% if has_other_rooms %}<td class="room-col other-col" data-room="other">{% if can_edit %}<a href="{% url "add-event" %}?date={{ day|date:"j-m-Y" }}" class="other-room-add">+</a>{% endif %}</td>{% endif %}
       {% else %}
         <td></td>
       {% endif %}

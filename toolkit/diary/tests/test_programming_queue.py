@@ -33,11 +33,18 @@ class ProgrammingQueueViewTests(DiaryTestsMixin, TestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 302)
 
-    def test_read_only_user_can_view(self):
+    def test_programmer_can_view(self):
+        # admin (superuser) is logged in via setUp — can always access the queue
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_read_only_user_blocked(self):
+        # read_only user has toolkit.read but NOT toolkit.write; under the
+        # configurable permission system PERM_PROGRAMMER requires toolkit.write
         self.client.logout()
         self.client.login(username="read_only", password="T3stPassword!1")
         response = self.client.get(self.url)
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 403)
 
     def test_get_shows_draft_proposed_returned(self):
         response = self.client.get(self.url)
@@ -143,7 +150,6 @@ class ProgrammingStatusUpdateTests(DiaryTestsMixin, TestCase):
         self.client.logout()
         self.client.login(username="read_only", password="T3stPassword!1")
         response = self._post("propose")
-        self.assertEqual(response.status_code, 302)
-        self.assertNotIn("programming-queue", response["Location"])
+        self.assertEqual(response.status_code, 403)
         self.event.refresh_from_db()
         self.assertEqual(self.event.programming_status, "draft")

@@ -7,7 +7,7 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import render
 import django.template
 import django.utils.timezone as timezone
-from django.contrib.auth.decorators import permission_required
+from toolkit.toolkit_auth.decorators import write_required
 from django.views.decorators.http import (
     require_http_methods,
     require_POST,
@@ -102,7 +102,7 @@ def _render_mailout_form(request, body_text, body_html, subject_text, context):
     return render(request, "form_mailout.html", context)
 
 
-@permission_required("toolkit.write")
+@write_required
 @require_http_methods(["GET", "POST"])
 def mailout(request):
     # This view loads a form with a draft mailout subject & body. When the user
@@ -159,7 +159,7 @@ def mailout(request):
         )
 
 
-@permission_required("toolkit.write")
+@write_required
 @require_POST
 def queue_mailout(request):
     # If we have a query parameter "send_at=now" then we'll fiddle the send_at

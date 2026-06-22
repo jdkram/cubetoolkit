@@ -12,6 +12,7 @@
       <th>Rows</th>
       <th>Field groups</th>
       <th>Personal data?</th>
+      <th>Reason</th>
     </tr>
   </thead>
   <tbody>
@@ -28,6 +29,7 @@
         <span class="text-muted">no</span>
         {% endif %}
       </td>
+      <td>{{ log.export_reason|default:"—" }}</td>
     </tr>
     {% endfor %}
   </tbody>

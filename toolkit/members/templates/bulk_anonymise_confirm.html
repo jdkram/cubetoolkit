@@ -62,14 +62,6 @@
            autocomplete="off" spellcheck="false">
   </div>
 
-  {% if messages %}
-  <ul class="messages" style="list-style:none; padding:0;">
-    {% for message in messages %}
-    <li class="{{ message.tags }}">{{ message }}</li>
-    {% endfor %}
-  </ul>
-  {% endif %}
-
   <div style="display:flex; gap:0.75rem; align-items:center;">
     <button type="submit" class="btn btn-danger" id="confirm-btn" disabled>
       Anonymise {{ count }} volunteer{{ count|pluralize }}

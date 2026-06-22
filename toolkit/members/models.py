@@ -218,6 +218,9 @@ class VolunteerQuerySet(models.QuerySet):
         inducted 2 years ago who never logged in is not purged until 3 years after
         induction — so recent inductees are never eligible regardless of login status.
 
+        Retention-exempt volunteers are always excluded regardless of status or
+        last-activity date.
+
         Returns an empty queryset when `purge_days` is 0 (retention disabled).
         """
         if not purge_days:
@@ -225,7 +228,8 @@ class VolunteerQuerySet(models.QuerySet):
         cutoff = (now or timezone_now()) - datetime.timedelta(days=purge_days)
         return (
             self.filter(
-                status__in=[Volunteer.STATUS_DORMANT, Volunteer.STATUS_RETIRED]
+                retention_exempt=False,
+                status__in=[Volunteer.STATUS_DORMANT, Volunteer.STATUS_RETIRED],
             )
             .annotate(
                 last_activity=Greatest(
@@ -264,11 +268,22 @@ class Volunteer(models.Model):
     ]
 
     notes = models.TextField(blank=True)
+
+    # When True, this volunteer is never included in purge_candidates() regardless
+    # of status or last-activity date. Use for volunteers who have a long-term
+    # connection to the venue but may not log in regularly (e.g. founding members).
+    retention_exempt = models.BooleanField(default=False)
+    retention_exempt_reason = models.CharField(max_length=200, blank=True)
+
     status = models.CharField(
         max_length=10,
         choices=STATUS_CHOICES,
         default=STATUS_ACTIVE,
     )
+
+    # Reason recorded by the panopticon who suspended this volunteer.
+    # Cleared automatically on reinstatement. Panopticon-only — not shown to the volunteer.
+    suspension_reason = models.TextField(blank=True)
 
     @property
     def is_active(self):
@@ -333,6 +348,25 @@ class Volunteer(models.Model):
     last_digest_sent_at = models.DateTimeField(
         null=True, blank=True,
         help_text="Set automatically after each digest send. Used to compute the 'new on programme' lookback window.",
+    )
+
+    # Dashboard and diary personalisation — persisted to DB so preferences
+    # survive across devices and browser data clears.
+    dashboard_hidden_cards = models.JSONField(
+        default=list, blank=True,
+        help_text="Dashboard card IDs the user has hidden (e.g. 'dash_unconfirmed').",
+    )
+    dashboard_card_order = models.JSONField(
+        default=list, blank=True,
+        help_text="Ordered list of dashboard card IDs, as set by the user's drag-to-reorder.",
+    )
+    diary_days_ahead = models.IntegerField(
+        default=365,
+        help_text="Days ahead shown in the diary edit list. Set when the user selects a range.",
+    )
+    favourite_link_keys = models.JSONField(
+        default=list, blank=True,
+        help_text="Ordered list of link catalogue keys pinned to the dashboard favourites panel.",
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -681,12 +715,33 @@ class ExportAuditLog(models.Model):
     exported_at = models.DateTimeField(auto_now_add=True)
     fields_included = models.JSONField(default=list)
     recipient_count = models.PositiveIntegerField(default=0)
+    export_reason = models.CharField(max_length=500, blank=True, default="")
 
     class Meta:
         ordering = ["-exported_at"]
 
     def __str__(self):
         return f"Export by {self.exported_by} at {self.exported_at} ({self.recipient_count} rows)"
+
+
+class LastGaspEmailLog(models.Model):
+    """Records when a last-gasp re-engagement email was sent to a pool candidate.
+
+    Used to enforce the cooldown window — the action is suppressed if a record
+    exists for this volunteer within `SiteConfiguration.last_gasp_cooldown_days`.
+    """
+
+    volunteer = models.ForeignKey(
+        Volunteer, on_delete=models.PROTECT, related_name="last_gasp_emails"
+    )
+    sent_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-sent_at"]
+
+    def __str__(self):
+        return f"Last-gasp email to {self.volunteer_id} at {self.sent_at}"
 
 
 class PanopticonGrant(models.Model):

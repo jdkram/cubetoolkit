@@ -52,6 +52,12 @@ class Role(models.Model):
         "Roles used in past rota entries cannot be permanently deleted.",
     )
 
+    is_one_shot = models.BooleanField(
+        default=False,
+        help_text="One-shot roles are created on the fly for a specific showing "
+        "and do not appear in the permanent roles list.",
+    )
+
     beginner_friendly = models.BooleanField(
         default=False,
         help_text="Show the 🌱 good-first-role badge on the rota — "
@@ -84,6 +90,17 @@ class Role(models.Model):
         (GATE_ADVISORY, "Advisory"),
         (GATE_BLOCKING, "Blocking"),
     ]
+
+    stats_label = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        help_text=(
+            "Optional label used to group this role with others in volunteer stats. "
+            "E.g. set 'Bar' on 'Bar Staff - Shift 1' and 'Bar Staff - Shift 2' so they "
+            "appear as a single 'Bar' row. Leave blank to use the role name."
+        ),
+    )
 
     required_qualification = models.ForeignKey(
         "members.Qualification",
@@ -118,6 +135,7 @@ class Role(models.Model):
         # read only roles
         self._original_name = self.name
         self._original_read_only = self.read_only
+        self._original_is_one_shot = self.is_one_shot
 
     def save(self, *args, **kwargs):
         if self._original_read_only and self._original_name != self.name:
@@ -297,6 +315,92 @@ class EventTag(models.Model):
         return super().delete(*args, **kwargs)
 
 
+class Film(models.Model):
+    """Structured metadata for a film or TV show screened at the venue.
+
+    One Film record is shared across multiple Event screenings. imdb_id is the
+    primary external key; nullable so programmers can create records for
+    local/niche works not in OMDb.
+    """
+
+    MEDIA_TYPE_FILM = "film"
+    MEDIA_TYPE_TV = "tv"
+    MEDIA_TYPE_CHOICES = [("film", "Film"), ("tv", "TV show")]
+
+    # External identifiers (nullable — local works may have neither)
+    imdb_id = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name="IMDB ID",
+        help_text="e.g. tt0036775",
+    )
+    media_type = models.CharField(
+        max_length=8,
+        default=MEDIA_TYPE_FILM,
+        choices=MEDIA_TYPE_CHOICES,
+    )
+
+    # Core metadata (all optional so partial manual entry is supported)
+    title = models.CharField(max_length=500)
+    original_title = models.CharField(max_length=500, blank=True)
+    year = models.PositiveSmallIntegerField(null=True, blank=True)
+    director = models.CharField(
+        max_length=256,
+        blank=True,
+        help_text="Director(s) or TV creator(s), comma-separated if more than one.",
+    )
+    runtime_minutes = models.PositiveSmallIntegerField(null=True, blank=True)
+    countries = models.CharField(
+        max_length=256,
+        blank=True,
+        help_text="e.g. GB, US",
+    )
+    languages = models.CharField(
+        max_length=256,
+        blank=True,
+        help_text="e.g. English, French",
+    )
+    overview = models.TextField(
+        blank=True,
+        help_text="Plot summary. Internal reference only — not shown publicly.",
+    )
+    poster_url = models.CharField(
+        max_length=512,
+        blank=True,
+        verbose_name="Poster URL",
+        help_text="Direct URL to a poster image. Set automatically from OMDb.",
+    )
+
+    notes = models.TextField(
+        blank=True,
+        help_text="Internal programmer notes about this title.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["title", "year"]
+
+    def __str__(self):
+        year_str = f" ({self.year})" if self.year else ""
+        return f"{self.title}{year_str}"
+
+    def generate_film_information(self) -> str:
+        """Return a formatted display string suitable for Event.film_information.
+
+        Format: 'Dir. X, Country YYYY, N mins, Cert Z' — blank fields omitted.
+        """
+        parts = []
+        if self.director:
+            parts.append(f"Dir. {self.director}")
+        if self.countries:
+            parts.append(self.countries)
+        if self.year:
+            parts.append(str(self.year))
+        if self.runtime_minutes:
+            parts.append(f"{self.runtime_minutes} mins")
+        return ", ".join(parts)
+
+
 class Event(models.Model):
 
     name = models.CharField(max_length=256, blank=False)
@@ -317,6 +421,14 @@ class Event(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
+    )
+    film = models.ForeignKey(
+        Film,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="screenings",
+        help_text="Structured film/TV metadata. Optional — link via the film search in the edit form.",
     )
     tags = models.ManyToManyField(EventTag, db_table="Event_Tags", blank=True)
 
@@ -371,6 +483,118 @@ class Event(models.Model):
     )
 
     terms = models.TextField(max_length=4096, null=True, blank=True)
+
+    COST_TYPE_FILM_LICENSE = "film_license"
+    COST_TYPE_PERFORMER_FEE = "performer_fee"
+    COST_TYPE_VENUE_HIRE = "venue_hire"
+    COST_TYPE_INTERNAL = "internal"
+    COST_TYPE_TBC = "tbc"
+    COST_TYPE_CHOICES = [
+        ("film_license", "Film licence"),
+        ("performer_fee", "Performer fee / gig"),
+        ("venue_hire", "Venue hire"),
+        ("internal", "Internal / volunteer"),
+        ("tbc", "TBC"),
+    ]
+    cost_type = models.CharField(
+        max_length=32,
+        choices=COST_TYPE_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name="Cost type",
+        help_text="The nature of the financial deal for this event.",
+    )
+    cost_distributor = models.CharField(
+        max_length=256,
+        null=True,
+        blank=True,
+        verbose_name="Distributor / booker",
+        help_text="The distribution company or booker contact (film licence / performer fee).",
+    )
+    cost_flat_fee_gbp = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Flat fee (£)",
+        help_text="Fixed licence or performance fee in pounds.",
+    )
+    cost_fee_includes_vat = models.BooleanField(
+        null=True,
+        blank=True,
+        verbose_name="Fee includes VAT",
+    )
+    cost_percentage_split = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="% split to distributor",
+        help_text="Percentage of net door takings paid to the distributor/performer.",
+    )
+    cost_minimum_guarantee_gbp = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Minimum guarantee (£)",
+        help_text="Guaranteed minimum payment regardless of door takings.",
+    )
+    cost_total_gbp = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Total cost (£)",
+        help_text="Total agreed fee (performer / hire).",
+    )
+    cost_rider_notes = models.TextField(
+        max_length=4096,
+        null=True,
+        blank=True,
+        verbose_name="Hospitality / rider",
+        help_text="Food, drink, accommodation, or other rider requirements for the performer or hirer.",
+    )
+    SOUND_ENGINEER_PAID_BY_VENUE = "venue"
+    SOUND_ENGINEER_PAID_BY_PERFORMER = "performer"
+    SOUND_ENGINEER_PAID_BY_HIRER = "hirer"
+    SOUND_ENGINEER_PAID_BY_CHOICES = [
+        ("venue", "Venue"),
+        ("performer", "Performer"),
+        ("hirer", "Hirer"),
+    ]
+    cost_sound_engineer_name = models.CharField(
+        max_length=256,
+        null=True,
+        blank=True,
+        verbose_name="Sound engineer",
+        help_text="Name or contact for the sound engineer, if applicable.",
+    )
+    cost_sound_engineer_fee_gbp = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Sound engineer fee (£)",
+    )
+    cost_sound_engineer_paid_by = models.CharField(
+        max_length=16,
+        null=True,
+        blank=True,
+        choices=SOUND_ENGINEER_PAID_BY_CHOICES,
+        verbose_name="Sound engineer paid by",
+    )
+    technical_notes = models.TextField(
+        max_length=4096,
+        null=True,
+        blank=True,
+        verbose_name="Technical notes",
+        help_text=(
+            "AV / tech rider requirements, projection format, sound spec, etc. "
+            "Kept separate from financial terms so the two don't get conflated."
+        ),
+    )
+
     APPROVAL_MEETING = "meeting"
     APPROVAL_STANDING = "standing"
     APPROVAL_CHOICES = [
@@ -474,6 +698,24 @@ class Event(models.Model):
             ):
                 if not getattr(self, field):
                     setattr(self, field, getattr(tmpl, field) or "")
+            # Copy nullable cost fields from template when not yet set on this event.
+            for field in (
+                "cost_type",
+                "cost_distributor",
+                "cost_flat_fee_gbp",
+                "cost_fee_includes_vat",
+                "cost_percentage_split",
+                "cost_minimum_guarantee_gbp",
+                "cost_total_gbp",
+                "cost_rider_notes",
+                "cost_sound_engineer_name",
+                "cost_sound_engineer_fee_gbp",
+                "cost_sound_engineer_paid_by",
+            ):
+                if getattr(self, field) is None:
+                    tmpl_val = getattr(tmpl, field)
+                    if tmpl_val is not None:
+                        setattr(self, field, tmpl_val)
             # Booleans: only override if still at their default (False)
             if not self.private:
                 self.private = tmpl.private
@@ -617,6 +859,14 @@ class Event(models.Model):
 
     def terms_required(self):
         return not self.tags.contains_tag_to_not_need_terms()
+
+    def terms_satisfied(self):
+        """Terms requirement is met if: not required, OR freetext is long enough, OR a non-TBC cost type is recorded."""
+        if not self.terms_required():
+            return True
+        if self.terms_long_enough():
+            return True
+        return bool(self.cost_type and self.cost_type != self.COST_TYPE_TBC)
 
 
 class Room(models.Model):
@@ -1030,6 +1280,18 @@ class Showing(models.Model):
                 new_re.save()
                 existing_entries.append(new_re)
 
+        # Remove orphaned one-shot roles (no longer referenced by any RotaEntry)
+        self._cleanup_unused_oneshot_roles()
+
+    @staticmethod
+    def _cleanup_unused_oneshot_roles():
+        """Delete one-shot roles that are no longer referenced by any RotaEntry."""
+        from django.db.models import Count as _Count
+
+        Role.objects.filter(is_one_shot=True).annotate(
+            usage=_Count("rotaentry")
+        ).filter(usage=0).delete()
+
 
 class DiaryIdea(models.Model):
     month = models.DateField(editable=False)
@@ -1068,6 +1330,25 @@ class EventTemplate(models.Model):
     film_information = models.CharField(max_length=256, null=False, blank=True)
     private = models.BooleanField(default=False)
     outside_hire = models.BooleanField(default=False)
+
+    # Structured cost fields — pre-populate matching fields on new events
+    cost_type = models.CharField(
+        max_length=32,
+        choices=Event.COST_TYPE_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name="Cost type",
+    )
+    cost_distributor = models.CharField(max_length=256, null=True, blank=True, verbose_name="Distributor / booker")
+    cost_flat_fee_gbp = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, verbose_name="Flat fee (£)")
+    cost_fee_includes_vat = models.BooleanField(null=True, blank=True, verbose_name="Fee includes VAT")
+    cost_percentage_split = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="% split to distributor")
+    cost_minimum_guarantee_gbp = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, verbose_name="Minimum guarantee (£)")
+    cost_total_gbp = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, verbose_name="Total cost (£)")
+    cost_rider_notes = models.TextField(max_length=4096, null=True, blank=True, verbose_name="Hospitality / rider")
+    cost_sound_engineer_name = models.CharField(max_length=256, null=True, blank=True, verbose_name="Sound engineer")
+    cost_sound_engineer_fee_gbp = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, verbose_name="Sound engineer fee (£)")
+    cost_sound_engineer_paid_by = models.CharField(max_length=16, null=True, blank=True, choices=Event.SOUND_ENGINEER_PAID_BY_CHOICES, verbose_name="Sound engineer paid by")
 
     # Default rota notes — applied to the first showing on creation
     rota_notes = models.TextField(max_length=4096, null=False, blank=True)
@@ -1603,6 +1884,36 @@ class SiteConfiguration(models.Model):
         ),
     )
 
+    # --- Stats & programming ---
+    programming_min_event_shifts = models.PositiveSmallIntegerField(
+        default=10,
+        verbose_name="Programming eligibility threshold",
+        help_text=(
+            "Minimum confirmed non-training shifts before a volunteer is considered ready to "
+            "programme their own event. Shown on the volunteer stats page as a target — "
+            "never enforced by the system."
+        ),
+    )
+    stats_programming_note = models.TextField(
+        blank=True,
+        default="",
+        verbose_name="Programming eligibility note",
+        help_text=(
+            "Optional extra text shown below the programming eligibility count on the volunteer stats page. "
+            "Plain text only. Leave blank to show nothing."
+        ),
+    )
+    stats_training_tag_slugs = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Tags excluded from shift count",
+        help_text=(
+            "Events tagged with any of these are excluded from a volunteer's confirmed shift "
+            "count on the stats page. Use this to separate training and induction sessions "
+            "from regular programming activity."
+        ),
+    )
+
     # --- Volunteers ---
     general_training_enabled = models.BooleanField(
         default=True,
@@ -1698,6 +2009,40 @@ class SiteConfiguration(models.Model):
             "HTML shown in a collapsible panel directly below the ticket link field on the "
             "event edit form. Use this to guide programmers through setting up tickets on "
             "your chosen platform. Leave blank to hide the panel entirely."
+        ),
+    )
+    film_programming_guide_url = models.URLField(
+        blank=True,
+        default="",
+        verbose_name="Film programming guide URL",
+        help_text=(
+            "URL linked at the bottom of the ticket link setup guide panel on the event edit form. "
+            "Typically a full guide to your ticketing platform. Leave blank to omit the link."
+        ),
+    )
+
+    # --- External APIs ---
+    omdb_api_key = models.CharField(
+        blank=True,
+        default="",
+        max_length=256,
+        verbose_name="OMDb API key",
+        help_text=(
+            "API key for the Open Movie Database (OMDb). Used for film search and metadata import. "
+            "Get a free key at https://www.omdbapi.com/apikey.aspx. "
+            "If set here, this takes precedence over the OMDB_API_KEY environment variable."
+        ),
+    )
+    certificate_lookup_url = models.CharField(
+        blank=True,
+        default="https://www.bbfc.co.uk/search?q={title}",
+        max_length=512,
+        verbose_name="Certificate lookup URL",
+        help_text=(
+            "URL template for looking up a film's certificate. "
+            "Use {title} and {year} as placeholders — they will be URL-encoded and substituted when the link is generated. "
+            "Example (BBFC): https://www.bbfc.co.uk/search?q={title} "
+            "Leave blank to hide the lookup link."
         ),
     )
 
@@ -1864,6 +2209,138 @@ class SiteConfiguration(models.Model):
         help_text="Who can post new bulletins.",
     )
 
+    # --- Runtime-configurable feature access levels ---
+    PERM_VOLUNTEER = "volunteer"
+    PERM_PROGRAMMER = "programmer"
+    PERM_PANOPTICON = "panopticon"
+    PERMISSION_LEVEL_CHOICES = [
+        (PERM_VOLUNTEER, "All volunteers"),
+        (PERM_PROGRAMMER, "Programmer+"),
+        (PERM_PANOPTICON, "Panopticon only"),
+    ]
+
+    perm_diary_read = models.CharField(
+        max_length=12, choices=PERMISSION_LEVEL_CHOICES, default=PERM_VOLUNTEER,
+        verbose_name="Diary — view diary list",
+        help_text="Who can view the diary editing list (read-only for volunteers; event editing always requires Programmer+).",
+    )
+    perm_diary_calendar = models.CharField(
+        max_length=12, choices=PERMISSION_LEVEL_CHOICES, default=PERM_PROGRAMMER,
+        verbose_name="Diary — calendar",
+        help_text="Who can access the calendar edit view.",
+    )
+    perm_programming_queue_read = models.CharField(
+        max_length=12, choices=PERMISSION_LEVEL_CHOICES, default=PERM_VOLUNTEER,
+        verbose_name="Diary — programming queue (view)",
+        help_text="Who can view the programming queue.",
+    )
+    perm_programming_queue_write = models.CharField(
+        max_length=12, choices=PERMISSION_LEVEL_CHOICES, default=PERM_PROGRAMMER,
+        verbose_name="Diary — programming queue (change status)",
+        help_text="Who can approve, return, or skip events in the programming queue.",
+    )
+    perm_event_templates = models.CharField(
+        max_length=12, choices=PERMISSION_LEVEL_CHOICES, default=PERM_PROGRAMMER,
+        verbose_name="Diary — event templates",
+        help_text="Who can access event templates (list and detail). Template import always requires Panopticon.",
+    )
+    perm_event_tags = models.CharField(
+        max_length=12, choices=PERMISSION_LEVEL_CHOICES, default=PERM_PROGRAMMER,
+        verbose_name="Diary — event tags",
+        help_text="Who can edit event tags.",
+    )
+    perm_roles = models.CharField(
+        max_length=12, choices=PERMISSION_LEVEL_CHOICES, default=PERM_PROGRAMMER,
+        verbose_name="Diary — roles",
+        help_text="Who can edit rota roles.",
+    )
+    perm_rooms = models.CharField(
+        max_length=12, choices=PERMISSION_LEVEL_CHOICES, default=PERM_PROGRAMMER,
+        verbose_name="Diary — rooms",
+        help_text="Who can edit rooms.",
+    )
+    perm_diary_reports = models.CharField(
+        max_length=12, choices=PERMISSION_LEVEL_CHOICES, default=PERM_PROGRAMMER,
+        verbose_name="Diary — reports",
+        help_text="Who can access copy, terms, and text reports.",
+    )
+    perm_printed_programmes = models.CharField(
+        max_length=12, choices=PERMISSION_LEVEL_CHOICES, default=PERM_PROGRAMMER,
+        verbose_name="Diary — printed programmes",
+        help_text="Who can upload printed programmes.",
+    )
+    perm_rota_vacancies = models.CharField(
+        max_length=12, choices=PERMISSION_LEVEL_CHOICES, default=PERM_VOLUNTEER,
+        verbose_name="Rota — vacancies page",
+        help_text="Who can see the rota vacancies page.",
+    )
+    perm_donations_manage = models.CharField(
+        max_length=12, choices=PERMISSION_LEVEL_CHOICES, default=PERM_PROGRAMMER,
+        verbose_name="Website — donations manage",
+        help_text="Who can access the donations management page.",
+    )
+
+    # --- Last-gasp re-engagement email ---
+    last_gasp_email_subject = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Subject line for the last-gasp re-engagement email. Use {name} for the volunteer's name and {venue} for the venue name.",
+    )
+    last_gasp_email_body = models.TextField(
+        blank=True,
+        help_text="Body of the last-gasp email. Use {name} for the volunteer's name and {venue} for the venue name. Leave blank to disable sending.",
+    )
+    last_gasp_cooldown_days = models.PositiveSmallIntegerField(
+        default=30,
+        help_text="How many days must pass before a second last-gasp email can be sent to the same volunteer.",
+    )
+
+    # --- Suspension email ---
+    suspension_email_subject = models.CharField(
+        max_length=300,
+        blank=True,
+        default="Your volunteer account at {venue}",
+        verbose_name="Suspension email subject",
+        help_text=(
+            "Subject line for the email offered when suspending a volunteer. "
+            "Supports {name} and {venue} variables."
+        ),
+    )
+    suspension_email_body = models.TextField(
+        blank=True,
+        default=(
+            "Hi {name},\n\n"
+            "This is to let you know that your volunteer account at {venue} has been suspended. "
+            "Your login is currently disabled and you have been removed from upcoming shifts.\n\n"
+            "If you have any questions or would like to discuss this, please get in touch.\n\n"
+            "Best wishes,\n{venue}"
+        ),
+        verbose_name="Suspension email body",
+        help_text=(
+            "Body of the email offered when suspending a volunteer. "
+            "Supports {name} and {venue} variables."
+        ),
+    )
+
+    # --- Structured cost terms ---
+    structured_cost_terms_enabled = models.BooleanField(
+        default=False,
+        help_text=(
+            "Enable structured cost fields (cost type, flat fee, % split, etc.) on event edit forms. "
+            "When on, programmers can record the deal type directly rather than free-texting it into Terms. "
+            "The Terms textarea remains available for unusual arrangements and legacy records."
+        ),
+    )
+    structured_cost_required = models.BooleanField(
+        default=False,
+        help_text=(
+            "Require cost type to be set (to something other than TBC) before any showing can be confirmed. "
+            "Only takes effect when structured cost terms are enabled above. "
+            "When cost type is set, the terms word-count check is automatically waived; "
+            "TBC still falls back to the terms word-count check."
+        ),
+    )
+
     _CACHE_KEY = "diary.site_config.v1"
 
     class Meta:
@@ -1873,6 +2350,15 @@ class SiteConfiguration(models.Model):
 
     def __str__(self):
         return "Site configuration"
+
+    @staticmethod
+    def _passes_level(user, level):
+        """Return True if user meets the given PERM_* access level."""
+        if level == SiteConfiguration.PERM_VOLUNTEER:
+            return user.has_perm("diary.change_rotaentry")
+        if level == SiteConfiguration.PERM_PROGRAMMER:
+            return user.has_perm("toolkit.write")
+        return user.is_superuser
 
     def save(self, *args, **kwargs):
         # Singleton: always pk=1

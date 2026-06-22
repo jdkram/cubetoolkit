@@ -1,7 +1,7 @@
 {% extends 'base_admin.html' %}
 {% load thumbnail_l %}
 {% load hash_filter %}
-{% block title %}Volunteers Summary{% endblock %}
+{% block title %}Volunteer list{% endblock %}
 {% block css %}
 {{ block.super }}
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/messages.css">
@@ -33,7 +33,7 @@
 {% endblock %}
 
 {% block body %}
-<h2>{{ VENUE.name }} Volunteers</h2>
+<h2>Volunteer list</h2>
 
 <p>
 <a href="{% url "view-volunteer-list" %}" title="volunteers profiles">volunteers profiles</a> &#xb7;
@@ -122,6 +122,12 @@ Active {{ VENUE.name }} volunteers: {{ active_count }}{% if dormant_count %} &nb
 
 {% endblock %}
 
+{% block css %}
+{{ block.super }}
+<style>
+  #volunteer-table tbody tr.kb-row-current { outline: 2px solid #0056b3; outline-offset: -1px; }
+</style>
+{% endblock %}
 {% block script %}
 {{ block.super }}
 <script>
@@ -151,6 +157,52 @@ document.addEventListener('DOMContentLoaded', function () {
       rows.forEach(function (r) { tbody.appendChild(r); });
     });
   });
+
+  // \u2500\u2500 Keyboard navigation \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  var currentIdx = -1;
+
+  function getRows() { return Array.from(tbody.querySelectorAll('tr:not([style*="display: none"])')); }
+
+  function setRow(idx) {
+    var rows = getRows();
+    if (!rows.length) { return; }
+    idx = Math.max(0, Math.min(idx, rows.length - 1));
+    rows.forEach(function (r) { r.classList.remove('kb-row-current'); });
+    rows[idx].classList.add('kb-row-current');
+    rows[idx].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    currentIdx = idx;
+  }
+
+  function openRow() {
+    var rows = getRows();
+    if (currentIdx < 0 || currentIdx >= rows.length) { return; }
+    var link = rows[currentIdx].querySelector('a[href]');
+    if (link) { window.location.href = link.href; }
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.altKey || e.metaKey) { return; }
+    if (window.AdminKeyboardNav && window.AdminKeyboardNav.isNavMode()) { return; }
+    var tag = (document.activeElement || {}).tagName || '';
+    if (/^(INPUT|TEXTAREA|SELECT)$/i.test(tag)) { return; }
+    if (document.activeElement && document.activeElement.isContentEditable) { return; }
+
+    switch (e.key) {
+      case 'j': e.preventDefault(); setRow(currentIdx < 0 ? 0 : currentIdx + 1); break;
+      case 'k': e.preventDefault(); setRow(currentIdx <= 0 ? 0 : currentIdx - 1); break;
+      case 'Enter':
+      case 'o': if (currentIdx >= 0) { e.preventDefault(); openRow(); } break;
+      case 'n': e.preventDefault(); window.location.href = '{% url "add-volunteer" %}'; break;
+    }
+  });
+
+  if (window.AdminKeyboardNav) {
+    window.AdminKeyboardNav.registerHelp([{ heading: "Volunteer list", rows: [
+      ["j / k",     "Navigate rows"],
+      ["o / Enter", "Open selected volunteer"],
+      ["n",         "Add volunteer"]
+    ]}]);
+  }
 });
 </script>
 {% endblock %}

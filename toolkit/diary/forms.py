@@ -20,7 +20,7 @@ from toolkit.diary.form_widgets import (
 )
 
 import toolkit.diary.models
-from toolkit.diary.models import SiteConfiguration, get_site_config
+from toolkit.diary.models import EventTag, SiteConfiguration, get_site_config
 from collections import OrderedDict
 
 from toolkit.diary.validators import validate_in_future
@@ -33,6 +33,7 @@ class RoleForm(forms.ModelForm):
             "name",
             "standard",
             "description",
+            "stats_label",
             "beginner_friendly",
             "wheelchair_accessible",
             "keyholder_only",
@@ -52,6 +53,13 @@ class EventTemplateForm(forms.ModelForm):
             "film_information",
             "copy_summary",
             "copy",
+            "cost_type",
+            "cost_distributor",
+            "cost_flat_fee_gbp",
+            "cost_fee_includes_vat",
+            "cost_percentage_split",
+            "cost_minimum_guarantee_gbp",
+            "cost_total_gbp",
             "terms",
             "rota_notes",
             "private",
@@ -75,6 +83,10 @@ class EventTemplateForm(forms.ModelForm):
                     "placeholder": "e.g. Dir: [director], 1990, USA, 120 mins, Cert: 15",
                 }
             ),
+            "cost_flat_fee_gbp": forms.NumberInput(attrs={"step": "0.01", "min": "0", "style": "width:9em"}),
+            "cost_percentage_split": forms.NumberInput(attrs={"step": "0.01", "min": "0", "max": "100", "style": "width:7em"}),
+            "cost_minimum_guarantee_gbp": forms.NumberInput(attrs={"step": "0.01", "min": "0", "style": "width:9em"}),
+            "cost_total_gbp": forms.NumberInput(attrs={"step": "0.01", "min": "0", "style": "width:9em"}),
         }
 
 
@@ -123,6 +135,42 @@ class DiaryIdeaForm(forms.ModelForm):
         fields = ("ideas",)
 
 
+_COST_FIELDS = (
+    "cost_type",
+    "cost_distributor",
+    "cost_flat_fee_gbp",
+    "cost_fee_includes_vat",
+    "cost_percentage_split",
+    "cost_minimum_guarantee_gbp",
+    "cost_total_gbp",
+    "cost_rider_notes",
+    "cost_sound_engineer_name",
+    "cost_sound_engineer_fee_gbp",
+    "cost_sound_engineer_paid_by",
+)
+
+
+def _card_open(section_id: str, title: str, start_open: bool = True) -> str:
+    expanded = "true" if start_open else "false"
+    show_class = " show" if start_open else ""
+    arrow_style = "transform:rotate(90deg)" if start_open else ""
+    return (
+        f'<div class="card mb-3">'
+        f'<div class="card-header p-2" id="{section_id}-hdr" '
+        f'style="cursor:pointer;user-select:none;" '
+        f'data-bs-toggle="collapse" data-bs-target="#{section_id}-body" '
+        f'aria-expanded="{expanded}" aria-controls="{section_id}-body">'
+        f'<span class="section-arrow" style="{arrow_style}">&#9658;</span>'
+        f"<strong>{title}</strong>"
+        f"</div>"
+        f'<div id="{section_id}-body" class="collapse{show_class}">'
+        f'<div class="card-body pt-2 pb-1">'
+    )
+
+
+_CARD_CLOSE = "</div></div></div>"
+
+
 class EventForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -134,6 +182,11 @@ class EventForm(forms.ModelForm):
         # Build age restriction choices from site config so venues can use
         # their own rating scheme (BBFC, FSK, etc.) without a code change.
         cfg = get_site_config()
+        # Remove structured cost fields when the feature flag is off so they
+        # don't appear in the form and can't be submitted.
+        if not cfg.structured_cost_terms_enabled:
+            for f in _COST_FIELDS:
+                self.fields.pop(f, None)
         choices = [("", "Not stated")] + [
             (e["value"], e["label"])
             for e in cfg.age_rating_choices
@@ -141,6 +194,51 @@ class EventForm(forms.ModelForm):
         ]
         self.fields["age_restriction"].widget = forms.Select(choices=choices)
         self.fields["age_restriction"].widget.attrs.setdefault("class", "form-select")
+
+        if cfg.structured_cost_terms_enabled:
+            cost_and_terms = [
+                HTML(_card_open("costs", "Cost &amp; terms")),
+                "cost_type", "cost_distributor",
+                "cost_flat_fee_gbp", "cost_fee_includes_vat",
+                "cost_percentage_split", "cost_minimum_guarantee_gbp",
+                "cost_total_gbp",
+                "terms",
+                "cost_rider_notes",
+                "cost_sound_engineer_name",
+                "cost_sound_engineer_fee_gbp",
+                "cost_sound_engineer_paid_by",
+                HTML(_CARD_CLOSE),
+            ]
+        else:
+            cost_and_terms = [
+                HTML(_card_open("terms", "Terms")),
+                "terms",
+                HTML(_CARD_CLOSE),
+            ]
+        self.helper.layout = Layout(
+            HTML(_card_open("basics", "Basics")),
+            "name", "tags",
+            HTML(_CARD_CLOSE),
+            HTML(_card_open("public", "Public listing")),
+            "pricing", "ticket_link", "trailer_url",
+            "film_information",
+            "age_restriction", "pre_title", "post_title",
+            HTML(_CARD_CLOSE),
+            HTML(_card_open("programming", "Programming")),
+            "approval_type", "approved_at_meeting_date",
+            "meeting_name", "meeting_minutes_url",
+            "programming_status", "programming_notes", "duration",
+            HTML(_CARD_CLOSE),
+            HTML(_card_open("access", "Visibility &amp; access")),
+            "outside_hire", "hire_name", "private",
+            HTML(_CARD_CLOSE),
+            HTML(_card_open("description", "Description")),
+            "copy", "copy_summary",
+            HTML(_CARD_CLOSE),
+            *cost_and_terms,
+        )
+        for field in self.fields.values():
+            field.help_text = ""
 
     class Meta:
         model = toolkit.diary.models.Event
@@ -155,11 +253,18 @@ class EventForm(forms.ModelForm):
                     "placeholder": f"e.g {settings.DEFAULT_TERMS_TEXT}",
                 }
             ),
+            "cost_flat_fee_gbp": forms.NumberInput(attrs={"step": "0.01", "min": "0", "style": "width:9em"}),
+            "cost_percentage_split": forms.NumberInput(attrs={"step": "0.01", "min": "0", "max": "100", "style": "width:7em"}),
+            "cost_minimum_guarantee_gbp": forms.NumberInput(attrs={"step": "0.01", "min": "0", "style": "width:9em"}),
+            "cost_total_gbp": forms.NumberInput(attrs={"step": "0.01", "min": "0", "style": "width:9em"}),
+            "cost_rider_notes": forms.Textarea(attrs={"wrap": "soft", "rows": 3}),
+            "cost_sound_engineer_fee_gbp": forms.NumberInput(attrs={"step": "0.01", "min": "0", "style": "width:9em"}),
+            "cost_sound_engineer_paid_by": forms.Select(attrs={"style": "width:auto"}),
             "programming_notes": forms.Textarea(
                 attrs={
                     "wrap": "soft",
                     "rows": 5,
-                    "placeholder": "e.g. Looking for a Friday in May — this is a sample date",
+                    "placeholder": "e.g. Looking for a Friday in May; tech rider: DCP, 5.1 audio, projector set up by noon",
                 }
             ),
             "approved_at_meeting_date": forms.DateInput(attrs={"type": "date"}),
@@ -225,7 +330,18 @@ class EventForm(forms.ModelForm):
             "private",
             "copy",
             "copy_summary",
+            "cost_type",
+            "cost_distributor",
+            "cost_flat_fee_gbp",
+            "cost_fee_includes_vat",
+            "cost_percentage_split",
+            "cost_minimum_guarantee_gbp",
+            "cost_total_gbp",
             "terms",
+            "cost_rider_notes",
+            "cost_sound_engineer_name",
+            "cost_sound_engineer_fee_gbp",
+            "cost_sound_engineer_paid_by",
         )
 
     def clean_terms(self):
@@ -264,6 +380,9 @@ class EventForm(forms.ModelForm):
                     "approved_at_meeting_date",
                     "Please enter the date of the meeting at which this was approved.",
                 )
+            else:
+                # Meeting approved with a date set → treat as active.
+                cleaned_data["programming_status"] = "active"
         if self.instance.all_showings_confirmed():
             terms = cleaned_data.get("terms", "")
             terms_word_count = len(terms.split())
@@ -272,15 +391,35 @@ class EventForm(forms.ModelForm):
                 "tags"
             ).contains_tag_to_not_need_terms()
 
-            min_words = get_site_config().programme_event_terms_min_words
+            cost_type = cleaned_data.get("cost_type")
+            cost_type_set = bool(
+                cost_type and cost_type != toolkit.diary.models.Event.COST_TYPE_TBC
+            )
+
+            cfg = get_site_config()
+            min_words = cfg.programme_event_terms_min_words
+
+            if (
+                cfg.structured_cost_terms_enabled
+                and cfg.structured_cost_required
+                and not cost_type_set
+                and not terms_not_required
+            ):
+                self.add_error(
+                    "cost_type",
+                    f"Cost type must be set (to something other than TBC) before "
+                    f"'{self.instance.name}' can be confirmed.",
+                )
+
             if (
                 terms_word_count < min_words
                 and not terms_not_required
+                and not cost_type_set
             ):
                 msg = (
                     f"Event terms for confirmed event '{self.instance.name}' "
                     f"are missing or too short. Please enter at least "
-                    f"{min_words} words."
+                    f"{min_words} words, or set the cost type above."
                 )
                 self.add_error("terms", msg)
         return cleaned_data
@@ -395,8 +534,7 @@ class ShowingForm(forms.ModelForm):
         if (
             confirmed
             and self.instance.event_id
-            and self.instance.event.terms_required()
-            and not self.instance.event.terms_long_enough()
+            and not self.instance.event.terms_satisfied()
         ):
 
             raise forms.ValidationError(
@@ -433,8 +571,8 @@ def rota_form_factory(showing):
     # Members for RotaForm class:
     members = OrderedDict()
 
-    # All available roles:
-    roles = toolkit.diary.models.Role.objects.order_by("name")
+    # All permanent roles (one-shot roles are handled separately in the view)
+    roles = toolkit.diary.models.Role.objects.filter(is_one_shot=False).order_by("name")
 
     # list of role IDs, to get stored in form and used to build rota from
     # submitted form data (as submitted data won't include IDs where rota
@@ -626,7 +764,7 @@ class BatchAddShowingsForm(forms.Form):
                     f"The following dates are in the past: {date_strs}."
                 )
         if cleaned.get("confirmed") and self._event is not None:
-            if self._event.terms_required() and not self._event.terms_long_enough():
+            if not self._event.terms_satisfied():
                 self.add_error(
                     "confirmed",
                     "Add terms to the event before creating confirmed showings.",
@@ -1088,6 +1226,18 @@ class NewPrintedProgrammeForm(forms.ModelForm):
 
 
 class SiteConfigurationForm(forms.ModelForm):
+    stats_training_tag_slugs = forms.MultipleChoiceField(
+        choices=[],  # populated in __init__ from EventTag queryset
+        required=False,
+        label="Exclude these event tags from shift counts",
+        help_text=(
+            "Events tagged with any of these are not counted as confirmed shifts on the "
+            "volunteer stats page. Use this to keep induction sessions and training events "
+            "separate from the programming eligibility total."
+        ),
+        widget=forms.CheckboxSelectMultiple(attrs={"class": "list-unstyled ps-0 mt-1"}),
+    )
+
     class Meta:
         model = SiteConfiguration
         fields = (
@@ -1125,17 +1275,40 @@ class SiteConfigurationForm(forms.ModelForm):
             "volunteer_digest_day",
             "rota_gap_min_missing",
             "rota_gap_min_pct",
+            "programming_min_event_shifts",
+            "stats_programming_note",
+            "stats_training_tag_slugs",
             "image_copyright_guidance_url",
             "alt_text_guidance_url",
             "access_rider_guidance_url",
             "ticket_link_guidance_html",
+            "film_programming_guide_url",
             "community_exchange_enabled",
             "lost_and_found_retain_days",
             "bulletin_default_expiry_days",
             "bulletin_guidance",
             "bulletin_post_permission",
+            "perm_diary_read",
+            "perm_diary_calendar",
+            "perm_programming_queue_read",
+            "perm_programming_queue_write",
+            "perm_event_templates",
+            "perm_event_tags",
+            "perm_roles",
+            "perm_rooms",
+            "perm_diary_reports",
+            "perm_printed_programmes",
+            "perm_rota_vacancies",
+            "perm_donations_manage",
             "eventlink_extra_allowed_domains",
             "age_rating_choices",
+            "structured_cost_terms_enabled",
+            "structured_cost_required",
+            "last_gasp_email_subject",
+            "last_gasp_email_body",
+            "last_gasp_cooldown_days",
+            "suspension_email_subject",
+            "suspension_email_body",
             "collectives_intro",
             "collectives_mailing_list_signup_url",
             "donations_intro",
@@ -1144,6 +1317,8 @@ class SiteConfigurationForm(forms.ModelForm):
             "banner_level",
             "banner_text",
             "banner_dismissible",
+            "omdb_api_key",
+            "certificate_lookup_url",
         )
         widgets = {
             "programme_accent_colour": forms.TextInput(
@@ -1178,12 +1353,17 @@ class SiteConfigurationForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        tag_choices = [
+            (tag.slug, tag.name)
+            for tag in EventTag.objects.order_by("name")
+        ]
+        self.fields["stats_training_tag_slugs"].choices = tag_choices
         for name, field in self.fields.items():
             widget = field.widget
             if isinstance(widget, forms.CheckboxInput):
                 widget.attrs.setdefault("class", "form-check-input")
-            elif isinstance(widget, AgeRatingChoicesWidget):
-                pass  # widget manages its own markup; don't inject form-control
+            elif isinstance(widget, (AgeRatingChoicesWidget, forms.CheckboxSelectMultiple)):
+                pass  # these widgets manage their own markup; don't inject form-control
             else:
                 existing = widget.attrs.get("class", "")
                 if "form-control" not in existing:

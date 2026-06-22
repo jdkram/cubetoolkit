@@ -24,9 +24,11 @@ import django.db
 from django.db.models import Count, Q, Min
 import django.utils.timezone as timezone
 from django.contrib.auth.decorators import permission_required, user_passes_test
+from toolkit.toolkit_auth.decorators import feature_required, write_required, read_required
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.views.decorators.http import require_POST, require_http_methods
 from django.utils.html import escape, mark_safe
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from toolkit.diary.models import (
     Showing,
@@ -82,7 +84,7 @@ def _create_room_booking(showing, room, event):
     RoomBooking.objects.create(showing=showing, room=room, start=showing.start, end=end)
 
 
-@permission_required("toolkit.write")
+@write_required
 def cancel_edit(request):
     # Again, a dirty hack, used with the above method, used for the "Cancel"
     # link in forms, to either close the popup or just redirect to the edit
@@ -90,7 +92,7 @@ def cancel_edit(request):
     return _return_to_editindex(request)
 
 
-@permission_required("toolkit.read")
+@feature_required("diary_read")
 def edit_diary_list(request, year=None, day=None, month=None):
     # Basic "edit" list view. Logic about processing of year/month/day
     # parameters is basically the same as for the public diary view.
@@ -107,12 +109,17 @@ def edit_diary_list(request, year=None, day=None, month=None):
     # will look the same)
     query_days_ahead = request.GET.get("daysahead", None)
 
+    try:
+        _volunteer = request.user.volunteer
+    except Exception:
+        _volunteer = None
+
     if query_days_ahead:
-        edit_prefs.set_preference(request.session, "daysahead", query_days_ahead)
+        edit_prefs.set_preference(request.session, "daysahead", query_days_ahead, volunteer=_volunteer)
         default_days_ahead = query_days_ahead
     else:
         default_days_ahead = int(
-            edit_prefs.get_preference(request.session, "daysahead")
+            edit_prefs.get_preference(request.session, "daysahead", volunteer=_volunteer)
         )
 
     # utility function, shared with public diary view
@@ -249,7 +256,7 @@ def edit_diary_list(request, year=None, day=None, month=None):
     )
     context["start"] = startdatetime
     context["end"] = enddatetime
-    context["edit_prefs"] = edit_prefs.get_preferences(request.session)
+    context["edit_prefs"] = edit_prefs.get_preferences(request.session, volunteer=_volunteer)
     all_rooms = list(Room.objects.all())
     column_rooms = [r for r in all_rooms if r.show_column]
     other_rooms = [r for r in all_rooms if not r.show_column]
@@ -257,6 +264,7 @@ def edit_diary_list(request, year=None, day=None, month=None):
     context["other_rooms"] = other_rooms
     context["has_other_rooms"] = bool(other_rooms)
     context["multiroom_enabled"] = settings.MULTIROOM_ENABLED
+    context["can_edit"] = request.user.has_perm("toolkit.write")
     return render(request, "edit_event_index.html", context)
 
 
@@ -277,7 +285,7 @@ def _is_light_colour(hex_colour):
     return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5
 
 
-@permission_required("toolkit.read")
+@feature_required("diary_calendar")
 def edit_diary_data(request):
     date_format = "%Y-%m-%d"
 
@@ -374,7 +382,7 @@ def edit_diary_data(request):
                         "resourceIds": [rb.room_id],
                     })
             else:
-                # No room bookings: single event at showing time, grey, no resource lane.
+                # No room bookings: place in the virtual "unroomed" resource lane.
                 results.append({
                     **base,
                     "id": showing.pk,
@@ -382,6 +390,7 @@ def edit_diary_data(request):
                     "end": timezone.localtime(showing.end_time).isoformat(),
                     "hour": hour,
                     "color": settings.CALENDAR_DEFAULT_COLOUR,
+                    "resourceIds": ["unroomed"],
                 })
         else:
             showing_data = {
@@ -401,7 +410,7 @@ def edit_diary_data(request):
     )
 
 
-@permission_required("toolkit.read")
+@feature_required("diary_calendar")
 def edit_diary_calendar(request, year=None, month=None, day=None):
     defaultView = "dayGridMonth"
     try:
@@ -443,19 +452,20 @@ def edit_diary_calendar(request, year=None, month=None, day=None):
     return render(request, "edit_event_calendar_index.html", context)
 
 
-@permission_required("toolkit.read")
+@read_required
 def set_edit_preferences(request):
     # Store user preferences as specified in the request's GET variables,
     # and return a JSON object containing all current user preferences
-
-    # Store updated prefs
-    edit_prefs.set_preferences(request.session, request.GET)
-    # Retrieve and return prefs:
-    prefs = edit_prefs.get_preferences(request.session)
+    try:
+        volunteer = request.user.volunteer
+    except Exception:
+        volunteer = None
+    edit_prefs.set_preferences(request.session, request.GET, volunteer=volunteer)
+    prefs = edit_prefs.get_preferences(request.session, volunteer=volunteer)
     return HttpResponse(json.dumps(prefs), content_type="application/json")
 
 
-@permission_required("toolkit.write")
+@write_required
 @require_http_methods(["GET", "POST"])
 def event_detail_view(request, event_id):
     event = get_object_or_404(Event, pk=event_id)
@@ -485,13 +495,17 @@ def event_detail_view(request, event_id):
                 reverse("edit-event-details-view", kwargs={"event_id": event_id})
             )
 
+    has_film_tag = event.tags.filter(slug="film").exists()
     completeness = {
         "has_copy": bool(event.copy and event.copy.strip()),
         "has_copy_summary": bool(event.copy_summary and event.copy_summary.strip()),
         "has_image": event.media.exists(),
-        "terms_ok": not event.terms_required() or event.terms_long_enough(),
+        "terms_ok": event.terms_satisfied(),
         "terms_required": event.terms_required(),
         "has_future_showing": bool(future_showings),
+        # Only shown when the event has the "film" tag
+        "film_details_required": has_film_tag,
+        "has_film_details": bool(event.film_id),
     }
 
     unconfirmed_future_count = sum(
@@ -517,7 +531,7 @@ def event_detail_view(request, event_id):
     )
 
 
-@permission_required("toolkit.write")
+@write_required
 @require_POST
 def update_showing_status(request, showing_id):
     showing = get_object_or_404(Showing, pk=showing_id)
@@ -527,7 +541,7 @@ def update_showing_status(request, showing_id):
     else:
         action = request.POST.get("action", "")
         if action == "confirm":
-            if showing.event.terms_required() and not showing.event.terms_long_enough():
+            if not showing.event.terms_satisfied():
                 messages.error(
                     request,
                     "Add terms to the event before confirming — "
@@ -557,12 +571,12 @@ def update_showing_status(request, showing_id):
     )
 
 
-@permission_required("toolkit.write")
+@write_required
 @require_POST
 def confirm_all_showings(request, event_id):
     """Confirm all unconfirmed future showings on an event in one action."""
     event = get_object_or_404(Event, pk=event_id)
-    if event.terms_required() and not event.terms_long_enough():
+    if not event.terms_satisfied():
         messages.error(
             request,
             "Add terms to the event before confirming showings.",
@@ -583,7 +597,7 @@ def confirm_all_showings(request, event_id):
     )
 
 
-@permission_required("toolkit.write")
+@write_required
 @require_http_methods(["GET", "POST"])
 def clone_event(request, event_id):
     """Clone an existing event as a brand-new event.
@@ -680,7 +694,7 @@ def clone_event(request, event_id):
     )
 
 
-@permission_required("toolkit.write")
+@write_required
 @require_http_methods(["GET", "POST"])
 def batch_add_showings(request, event_id):
     """Add multiple showings to an existing event across several dates at once.
@@ -746,7 +760,7 @@ def batch_add_showings(request, event_id):
     )
 
 
-@permission_required("toolkit.write")
+@write_required
 @require_http_methods(["GET", "POST"])
 def edit_event_links(request, event_id):
     """Edit the (up to 3) resource links attached to an event.
@@ -779,7 +793,7 @@ def edit_event_links(request, event_id):
     )
 
 
-@permission_required("toolkit.write")
+@write_required
 @require_http_methods(["GET", "POST"])
 def quick_create_open_session(request):
     """One-step form for a keyholder to announce the building is open.
@@ -871,7 +885,7 @@ def _template_data():
     return result
 
 
-@permission_required("toolkit.write")
+@write_required
 @require_http_methods(["GET", "POST"])
 def add_event(request):
     # Called GET, with a "date" parameter of the form day-month-year:
@@ -1026,7 +1040,69 @@ def add_event(request):
         return render(request, "form_new_event_and_showing.html", context)
 
 
-@permission_required("toolkit.write")
+def _get_oneshot_roles_for_showing(showing):
+    """Return a list of {pk, name, description, current_count} dicts for one-shot roles on this showing."""
+    from django.db.models import Count as _Count
+
+    return list(
+        Role.objects.filter(rotaentry__showing=showing, is_one_shot=True)
+        .annotate(current_count=_Count("rotaentry"))
+        .values("pk", "name", "description", "current_count")
+        .distinct()
+    )
+
+
+def _parse_oneshot_roles(post_data, showing):
+    """
+    Parse oneshot_id_N / oneshot_name_N / oneshot_count_N fields from POST data.
+    Returns a dict {role_pk: count} to merge into the rota update dict.
+    Existing one-shot roles not present in the submission are included at count=0
+    so update_rota() removes their RotaEntries.
+    """
+    result = {}
+    # Seed with 0 for any existing one-shots so omitted rows get cleared
+    for role_id in (
+        showing.rotaentry_set.filter(role__is_one_shot=True)
+        .values_list("role_id", flat=True)
+        .distinct()
+    ):
+        result[role_id] = 0
+
+    i = 0
+    while True:
+        name_key = f"oneshot_name_{i}"
+        if name_key not in post_data:
+            break
+        name = post_data.get(name_key, "").strip()
+        desc = post_data.get(f"oneshot_desc_{i}", "").strip()
+        try:
+            count = max(0, int(post_data.get(f"oneshot_count_{i}", 0) or 0))
+        except (ValueError, TypeError):
+            count = 0
+        role_id_str = post_data.get(f"oneshot_id_{i}", "")
+
+        if role_id_str.isdigit():
+            # Existing one-shot role — update by its PK; persist any description edit
+            role_pk = int(role_id_str)
+            result[role_pk] = count
+            if desc:
+                Role.objects.filter(pk=role_pk, is_one_shot=True).update(description=desc)
+        elif name and count > 0:
+            # New one-shot — find or create by name
+            role, _ = Role.objects.get_or_create(
+                name=name,
+                defaults={"is_one_shot": True, "standard": False, "description": desc},
+            )
+            if desc and not role.description:
+                role.description = desc
+                role.save(update_fields=["description"])
+            result[role.pk] = count
+        i += 1
+
+    return result
+
+
+@write_required
 @require_http_methods(["GET", "POST"])
 def edit_showing(request, showing_id=None):
     from toolkit.diary.clash import find_clashes
@@ -1055,6 +1131,7 @@ def edit_showing(request, showing_id=None):
         ):
             modified_showing = form.save()
             rota = rota_form.get_rota()
+            rota.update(_parse_oneshot_roles(request.POST, showing))
             modified_showing.update_rota(rota)
             rota_notes_form.save()
             room_booking_formset.save()
@@ -1080,6 +1157,7 @@ def edit_showing(request, showing_id=None):
                     "clashes": clashes,
                     "max_role_assignment_count": get_site_config().max_count_per_role,
                     "rooms_json": _rooms_json(),
+                    "oneshot_roles": _get_oneshot_roles_for_showing(modified_showing),
                 }
                 return render(request, "form_showing.html", context)
 
@@ -1113,6 +1191,7 @@ def edit_showing(request, showing_id=None):
         "room_booking_formset": room_booking_formset,
         "max_role_assignment_count": get_site_config().max_count_per_role,
         "rooms_json": _rooms_json(),
+        "oneshot_roles": _get_oneshot_roles_for_showing(showing),
     }
 
     return render(request, "form_showing.html", context)
@@ -1233,6 +1312,13 @@ class EditEventView(PermissionRequiredMixin, View):
             "thumbnail_crop_height": cfg.thumbnail_crop_height,
             "programme_accent_colour": cfg.programme_accent_colour,
             "ticket_link_guidance_html": cfg.ticket_link_guidance_html,
+            "film_programming_guide_url": cfg.film_programming_guide_url,
+            "omdb_configured": bool(_get_omdb_api_key()),
+            "certificate_lookup_url": cfg.certificate_lookup_url,
+            "film_cert_lookup_url": _build_cert_lookup_url(cfg.certificate_lookup_url, event.film),
+            "structured_cost_terms_enabled": cfg.structured_cost_terms_enabled,
+            "has_film_tag": event.tags.filter(slug="film").exists(),
+            "event_film_json": json.dumps(_film_json(event.film)) if event.film else "null",
         }
         return render(request, "form_event.html", context)
 
@@ -1259,6 +1345,13 @@ class EditEventView(PermissionRequiredMixin, View):
             .values("pk", "description")
         }
 
+        top_5_tag_pks = list(
+            EventTag.objects.filter(archived=False)
+            .annotate(event_count=Count("event"))
+            .order_by("-event_count")
+            .values_list("pk", flat=True)[:5]
+        )
+
         context = {
             "event": event,
             "event_form": form,
@@ -1268,16 +1361,27 @@ class EditEventView(PermissionRequiredMixin, View):
             "breakeven_fc_standard_threshold": cfg.breakeven_fc_standard_threshold,
             "breakeven_fc_music_threshold": cfg.breakeven_fc_music_threshold,
             "tag_descriptions_json": mark_safe(_safe_json(tag_descriptions)),
+            "top_5_tag_pks_json": mark_safe(json.dumps(top_5_tag_pks)),
             "thumbnail_crop_width": cfg.thumbnail_crop_width,
             "thumbnail_crop_height": cfg.thumbnail_crop_height,
             "programme_accent_colour": cfg.programme_accent_colour,
             "ticket_link_guidance_html": cfg.ticket_link_guidance_html,
+            "film_programming_guide_url": cfg.film_programming_guide_url,
+            "omdb_configured": bool(_get_omdb_api_key()),
+            "certificate_lookup_url": cfg.certificate_lookup_url,
+            "film_cert_lookup_url": _build_cert_lookup_url(cfg.certificate_lookup_url, event.film),
+            "structured_cost_terms_enabled": cfg.structured_cost_terms_enabled,
+            "suggested_film_information": (
+                event.film.generate_film_information() if event.film else ""
+            ),
+            "has_film_tag": event.tags.filter(slug="film").exists(),
+            "event_film_json": json.dumps(_film_json(event.film)) if event.film else "null",
         }
 
         return render(request, "form_event.html", context)
 
 
-@permission_required("toolkit.write")
+@write_required
 def edit_ideas(request, year=None, month=None):
     # GET: return form for editing event for given month/year
     # POST: store editied idea, go back to edit list
@@ -1330,7 +1434,7 @@ def edit_ideas(request, year=None, month=None):
         return render(request, "form_idea.html", context)
 
 
-@permission_required("toolkit.write")
+@write_required
 @require_POST
 def delete_showing(request, showing_id):
     # Delete the given showing
@@ -1366,7 +1470,7 @@ def delete_showing(request, showing_id):
     )
 
 
-@permission_required("toolkit.read")
+@feature_required("diary_reports")
 def view_terms_report_csv(request, year: int, month: int, day: int) -> HttpResponse:
     query_days_ahead = request.GET.get("daysahead", None)
     start_date, days_ahead = get_date_range(year, month, day, query_days_ahead)
@@ -1404,7 +1508,7 @@ def view_terms_report_csv(request, year: int, month: int, day: int) -> HttpRespo
     return response
 
 
-@permission_required("toolkit.read")
+@feature_required("diary_reports")
 def view_event_field(request, field, year=None, month=None, day=None):
     # Method shared across various (slightly primitive) views into event data;
     # the copy, terms and rota reports.
@@ -1421,10 +1525,10 @@ def view_event_field(request, field, year=None, month=None, day=None):
         raise Http404(days_ahead)
     end_date = start_date + datetime.timedelta(days=days_ahead)
     # The rota view should include cancelled showings so volunteers can see what's off.
-    # Copy/terms/copy_summary reports only care about active events.
+    # Copy/terms/copy_summary reports only care about active, non-private events.
     showings_qs = Showing.objects.confirmed().start_in_range(start_date, end_date)
     if field != "rota":
-        showings_qs = showings_qs.not_cancelled()
+        showings_qs = showings_qs.not_cancelled().filter(event__private=False)
     showings = (
         showings_qs
         .order_by("start")
@@ -1455,14 +1559,14 @@ def view_event_field(request, field, year=None, month=None, day=None):
     return render(request, f"view_{field}.html", context)
 
 
-@permission_required("toolkit.write")
+@feature_required("event_templates")
 def edit_event_templates(request):
     """List all event templates with links to per-template edit pages."""
     templates = EventTemplate.objects.prefetch_related("role_slots__role", "tags").all()
     return render(request, "edit_event_templates.html", {"templates": templates})
 
 
-@permission_required("toolkit.write")
+@feature_required("event_templates")
 def edit_event_template_detail(request, template_id=None):
     """Create or edit a single event template."""
     if template_id is not None:
@@ -1647,7 +1751,7 @@ def import_event_template(request):
     return render(request, "import_event_template.html", {})
 
 
-@permission_required("toolkit.write")
+@feature_required("event_tags")
 def edit_event_tags(request):
     active_qs = EventTag.objects.filter(archived=False)
     archived_qs = EventTag.objects.filter(archived=True)
@@ -1722,15 +1826,15 @@ def edit_event_tags(request):
     return render(request, "edit_event_tags.html", context)
 
 
-@permission_required("toolkit.write")
+@feature_required("roles")
 def edit_roles(request):
     # This is pretty slow, but it's not a commonly used bit of the UI.
     active_qs = (
-        Role.objects.filter(archived=False)
+        Role.objects.filter(archived=False, is_one_shot=False)
         .select_related("required_qualification")
         .annotate(rota_count=Count("rotaentry"))
     )
-    archived_qs = Role.objects.filter(archived=True)
+    archived_qs = Role.objects.filter(archived=True, is_one_shot=False)
 
     RoleFormset = modelformset_factory(
         Role,
@@ -1832,7 +1936,7 @@ def edit_roles(request):
     })
 
 
-@permission_required("toolkit.write")
+@feature_required("printed_programmes")
 def printed_programme_edit(request, operation):
     assert operation in ("edit", "add")
 
@@ -1883,7 +1987,7 @@ def printed_programme_edit(request, operation):
     return render(request, "form_printedprogramme_archive.html", context)
 
 
-@permission_required("diary.change_rotaentry")
+@feature_required("rota_vacancies")
 def view_rota_vacancies(request):
     try:
         days_ahead = int(request.GET.get("daysahead"))
@@ -2207,7 +2311,7 @@ def toggle_event_mark(request):
     return JsonResponse({"mark_type": mark_type})
 
 
-@permission_required("toolkit.write")
+@write_required
 def view_force_error(request):
     raise AssertionError("Forced exception")
 
@@ -2286,8 +2390,27 @@ def edit_site_configuration(request):
             ],
         ),
         (
+            "Last-gasp re-engagement email",
+            [
+                "last_gasp_email_subject",
+                "last_gasp_email_body",
+                "last_gasp_cooldown_days",
+            ],
+        ),
+        (
+            "Suspension email",
+            [
+                "suspension_email_subject",
+                "suspension_email_body",
+            ],
+        ),
+        (
             "Dashboard",
             ["rota_gap_min_missing", "rota_gap_min_pct"],
+        ),
+        (
+            "Volunteer stats",
+            ["programming_min_event_shifts", "stats_programming_note", "stats_training_tag_slugs"],
         ),
         (
             "Guidance URLs",
@@ -2296,7 +2419,12 @@ def edit_site_configuration(request):
                 "alt_text_guidance_url",
                 "access_rider_guidance_url",
                 "ticket_link_guidance_html",
+                "film_programming_guide_url",
             ],
+        ),
+        (
+            "Structured cost terms",
+            ["structured_cost_terms_enabled", "structured_cost_required"],
         ),
         (
             "Community exchange",
@@ -2331,6 +2459,10 @@ def edit_site_configuration(request):
                 "banner_dismissible",
             ],
         ),
+        (
+            "External APIs",
+            ["omdb_api_key", "certificate_lookup_url"],
+        ),
     ]
 
     if request.method == "POST":
@@ -2348,37 +2480,48 @@ def edit_site_configuration(request):
         (label, [form[name] for name in names]) for label, names in field_groups
     ]
 
-    # Read-only permission table (Phase 1 of 9.124).
-    # Reflects actual view decorators; update here whenever a decorator changes.
-    VOLUNTEER = "All volunteers"
-    PROGRAMMER = "Programmer+"
-    PANOPTICON = "Panopticon only"
-    CONFIGURABLE = "Configurable"
+    # Permission table: configurable rows carry the bound form field so the template
+    # can render a dropdown; fixed rows carry only a display string.
+    from toolkit.diary.models import SiteConfiguration
+    _level_labels = dict(SiteConfiguration.PERMISSION_LEVEL_CHOICES)
+    def _fixed(label):
+        return {"field": None, "display": label}
+    def _configurable(field_name):
+        return {"field": form[field_name], "display": _level_labels.get(getattr(config, field_name), "?")}
     permission_rows = [
-        ("Diary — view/edit diary list", PROGRAMMER),
-        ("Diary — calendar", PROGRAMMER),
-        ("Diary — programming queue", PROGRAMMER),
-        ("Diary — event templates", PROGRAMMER),
-        ("Diary — event tags", PROGRAMMER),
-        ("Diary — roles", PROGRAMMER),
-        ("Diary — rooms", PROGRAMMER),
-        ("Diary — copy / terms / text reports", PROGRAMMER),
-        ("Diary — upload printed programmes", PROGRAMMER),
-        ("Rota — view and sign up", VOLUNTEER),
-        ("Rota — vacancies page", PROGRAMMER),
-        ("Community — post bulletins", f"{CONFIGURABLE} (see Bulletins section)"),
-        ("Community — other features", VOLUNTEER),
-        ("Website — donations manage", PROGRAMMER),
-        ("Website — Wagtail CMS", PANOPTICON),
-        ("People — volunteer profiles / training", PANOPTICON),
-        ("People — export CSV / audit log", PANOPTICON),
-        ("People — qualification report", PANOPTICON),
-        ("People — bulk training / qual record", PANOPTICON),
-        ("People — pool health", PANOPTICON),
-        ("People — member management", PANOPTICON),
-        ("Meta — access levels", PANOPTICON),
-        ("Meta — site settings", PANOPTICON),
+        ("Diary — view diary list", _configurable("perm_diary_read")),
+        ("Diary — create / edit events", _fixed("Programmer+")),
+        ("Diary — calendar", _configurable("perm_diary_calendar")),
+        ("Diary — programming queue (view)", _configurable("perm_programming_queue_read")),
+        ("Diary — programming queue (change status)", _configurable("perm_programming_queue_write")),
+        ("Diary — event templates (list & detail)", _configurable("perm_event_templates")),
+        ("Diary — event templates (import)", _fixed("Panopticon only")),
+        ("Diary — event tags", _configurable("perm_event_tags")),
+        ("Diary — roles", _configurable("perm_roles")),
+        ("Diary — rooms", _configurable("perm_rooms")),
+        ("Diary — copy / terms / text reports", _configurable("perm_diary_reports")),
+        ("Diary — upload printed programmes", _configurable("perm_printed_programmes")),
+        ("Rota — view and sign up", _fixed("All volunteers")),
+        ("Rota — vacancies page", _configurable("perm_rota_vacancies")),
+        ("Community — post bulletins", _fixed("Configurable (see Bulletins section)")),
+        ("Community — other features", _fixed("All volunteers")),
+        ("Website — donations manage", _configurable("perm_donations_manage")),
+        ("Website — Wagtail CMS", _fixed("Panopticon only")),
+        ("People — volunteer profiles / training", _fixed("Panopticon only")),
+        ("People — export CSV / audit log", _fixed("Panopticon only")),
+        ("People — qualification report", _fixed("Panopticon only")),
+        ("People — bulk training / qual record", _fixed("Panopticon only")),
+        ("People — pool health", _fixed("Panopticon only")),
+        ("People — member management", _fixed("Panopticon only")),
+        ("Meta — access levels", _fixed("Panopticon only")),
+        ("Meta — site settings", _fixed("Panopticon only")),
     ]
+
+    try:
+        from toolkit.inductions.models import get_inductions_settings
+        inductions_settings = get_inductions_settings()
+    except Exception:
+        inductions_settings = None
 
     return render(
         request,
@@ -2387,12 +2530,13 @@ def edit_site_configuration(request):
             "form": form,
             "grouped_fields": grouped_fields,
             "permission_rows": permission_rows,
+            "inductions_settings": inductions_settings,
         },
     )
 
 
 @require_POST
-@permission_required("toolkit.write")
+@write_required
 def generate_event_poster(request, event_id):
     """Generate a placeholder poster image for an event (AJAX endpoint).
 
@@ -2424,7 +2568,7 @@ def generate_event_poster(request, event_id):
         )
 
 
-@permission_required("toolkit.write")
+@feature_required("rooms")
 @require_http_methods(["GET", "POST"])
 def edit_rooms(request):
     """List all rooms; handle create-new-room POST."""
@@ -2442,7 +2586,7 @@ def edit_rooms(request):
     return render(request, "edit_rooms.html", {"rooms": rooms, "form": form})
 
 
-@permission_required("toolkit.write")
+@feature_required("rooms")
 @require_http_methods(["GET", "POST"])
 def edit_room_detail(request, room_id):
     """Edit or delete a single room."""
@@ -2474,7 +2618,7 @@ def edit_room_detail(request, room_id):
     return render(request, "edit_room_detail.html", {"room": room, "form": form})
 
 
-@permission_required("toolkit.read")
+@feature_required("programming_queue_read")
 def programming_queue(request):
     """Show all events in the programming queue (draft, proposed, or returned for changes)."""
     queue = (
@@ -2506,10 +2650,11 @@ def programming_queue(request):
         "queue": queue_items,
         "fc_standard_threshold": cfg.breakeven_fc_standard_threshold,
         "fc_music_threshold": cfg.breakeven_fc_music_threshold,
+        "can_write": request.user.has_perm("toolkit.write"),
     })
 
 
-@permission_required("toolkit.write")
+@feature_required("programming_queue_write")
 @require_POST
 def update_event_programming_status(request, event_id):
     """Update the programming_status (and optionally programming_notes) of an event.
@@ -2564,7 +2709,179 @@ def update_event_programming_status(request, event_id):
     event.save()
 
     # Return to the queue if coming from there, otherwise to Event Hub
-    next_url = request.POST.get("next") or reverse(
-        "edit-event-details-view", kwargs={"event_id": event_id}
-    )
+    next_url = request.POST.get("next")
+    if not next_url or not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        next_url = reverse("edit-event-details-view", kwargs={"event_id": event_id})
     return HttpResponseRedirect(next_url)
+
+
+# ---------------------------------------------------------------------------
+# Film metadata views (TMDB integration — 9.66)
+# ---------------------------------------------------------------------------
+
+
+def _build_cert_lookup_url(url_template: str, film) -> str:
+    """Substitute {title} and {year} into the certificate lookup URL template."""
+    if not url_template or not film:
+        return ""
+    from urllib.parse import quote
+    return (
+        url_template
+        .replace("{title}", quote(film.title or ""))
+        .replace("{year}", quote(str(film.year or "")))
+    )
+
+
+def _get_omdb_api_key() -> str:
+    """Return the active OMDb API key: DB setting takes precedence over env var."""
+    from toolkit.diary.models import get_site_config
+    db_key = get_site_config().omdb_api_key.strip()
+    return db_key or settings.OMDB_API_KEY
+
+
+@write_required
+def omdb_search(request):
+    """AJAX: search OMDb for films and TV shows.
+
+    GET /diary/edit/omdb/search/?q=...
+    Returns JSON list of results or {"error": "..."}.
+    """
+    from toolkit.diary.omdb import search_works
+    import urllib.error
+
+    api_key = _get_omdb_api_key()
+    if not api_key:
+        return JsonResponse({"error": "OMDb not configured"}, status=503)
+
+    query = request.GET.get("q", "").strip()
+    if not query:
+        return JsonResponse([], safe=False)
+
+    try:
+        results = search_works(query, api_key)
+    except urllib.error.URLError as exc:
+        logger.warning("OMDb search failed: %s", exc)
+        return JsonResponse({"error": "OMDb request failed"}, status=502)
+    except Exception as exc:
+        logger.error("Unexpected OMDb error: %s", exc)
+        return JsonResponse({"error": "Unexpected error"}, status=500)
+
+    return JsonResponse(results, safe=False)
+
+
+def _post_int_or_none(val):
+    """Return val coerced to int, or None if blank or non-numeric."""
+    if not val or not str(val).strip():
+        return None
+    try:
+        return int(val)
+    except (ValueError, TypeError):
+        return None
+
+
+@write_required
+@require_http_methods(["POST"])
+def link_film(request, event_id):
+    """AJAX: link a Film record to an Event.
+
+    POST body fields:
+      imdb_id + media_type  — look up OMDb and create/fetch Film
+      title + year + ...    — manual entry (imdb_id absent or empty)
+
+    Returns JSON with the film summary and a suggested film_information string.
+    """
+    from toolkit.diary.models import Film
+    from toolkit.diary.omdb import fetch_film_details
+    import urllib.error
+
+    event = get_object_or_404(Event, pk=event_id)
+    imdb_id_raw = request.POST.get("imdb_id", "").strip()
+    media_type = request.POST.get("media_type", Film.MEDIA_TYPE_FILM)
+
+    if imdb_id_raw:
+        # OMDb-sourced path
+        api_key = _get_omdb_api_key()
+        if not api_key:
+            return JsonResponse({"error": "OMDb not configured"}, status=503)
+
+        try:
+            details = fetch_film_details(imdb_id_raw, api_key)
+        except urllib.error.URLError as exc:
+            logger.warning("OMDb detail fetch failed: %s", exc)
+            return JsonResponse({"error": "OMDb request failed"}, status=502)
+        except Exception as exc:
+            logger.error("Unexpected OMDb error: %s", exc)
+            return JsonResponse({"error": "Unexpected error"}, status=500)
+
+        film, _ = Film.objects.update_or_create(
+            imdb_id=imdb_id_raw,
+            defaults={k: v for k, v in details.items() if k != "imdb_id"},
+        )
+    else:
+        # Manual entry path — update the existing manually-entered Film if present,
+        # otherwise create a new one. Never update an OMDb-linked record this way.
+        if event.film and not event.film.imdb_id:
+            film = event.film
+            film.media_type = media_type
+            film.title = request.POST.get("title", "").strip()
+            film.year = _post_int_or_none(request.POST.get("year"))
+            film.director = request.POST.get("director", "").strip()
+            film.runtime_minutes = _post_int_or_none(request.POST.get("runtime_minutes"))
+            film.countries = request.POST.get("countries", "").strip()
+            film.languages = request.POST.get("languages", "").strip()
+            film.overview = request.POST.get("overview", "").strip()
+            film.notes = request.POST.get("notes", "").strip()
+            film.save()
+        else:
+            film = Film.objects.create(
+                media_type=media_type,
+                title=request.POST.get("title", "").strip(),
+                year=_post_int_or_none(request.POST.get("year")),
+                director=request.POST.get("director", "").strip(),
+                runtime_minutes=_post_int_or_none(request.POST.get("runtime_minutes")),
+                countries=request.POST.get("countries", "").strip(),
+                languages=request.POST.get("languages", "").strip(),
+                overview=request.POST.get("overview", "").strip(),
+                notes=request.POST.get("notes", "").strip(),
+            )
+
+    event.film = film
+    event.save(update_fields=["film"])
+
+    return JsonResponse(
+        {
+            "success": True,
+            "film": _film_json(film),
+            "suggested_film_information": film.generate_film_information(),
+        }
+    )
+
+
+@write_required
+@require_POST
+def unlink_film(request, event_id):
+    """AJAX: remove the film link from an event."""
+    event = get_object_or_404(Event, pk=event_id)
+    event.film = None
+    event.save(update_fields=["film"])
+    return JsonResponse({"success": True})
+
+
+def _film_json(film) -> dict:
+    """Serialise a Film instance to a JSON-safe dict for AJAX responses."""
+    return {
+        "id": film.pk,
+        "imdb_id": film.imdb_id,
+        "media_type": film.media_type,
+        "title": film.title,
+        "original_title": film.original_title,
+        "year": film.year,
+        "director": film.director,
+        "runtime_minutes": film.runtime_minutes,
+        "countries": film.countries,
+        "languages": film.languages,
+        "overview": film.overview,
+        "poster_url_sm": film.poster_url,
+        "poster_url_md": film.poster_url,
+        "imdb_url": f"https://www.imdb.com/title/{film.imdb_id}/" if film.imdb_id else "",
+    }

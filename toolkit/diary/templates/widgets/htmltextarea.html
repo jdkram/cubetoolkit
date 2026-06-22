@@ -64,6 +64,10 @@
         }
     });
 
+    quill.on('text-change', function() {
+        textarea.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
     var form = textarea.closest('form');
     if (form) {
         form.addEventListener('submit', function() {

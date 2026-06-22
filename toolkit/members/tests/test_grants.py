@@ -162,6 +162,6 @@ class MarkPanopticonReviewedTests(MembersTestsMixin, TestCase):
     def test_requires_panopticon(self):
         self.client.login(username="vol1", password="testpass")
         response = self.client.post(self.url)
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 403)
         self.grant.refresh_from_db()
         self.assertIsNone(self.grant.last_reviewed_at)

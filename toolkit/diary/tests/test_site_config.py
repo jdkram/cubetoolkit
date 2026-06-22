@@ -1,6 +1,7 @@
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from toolkit.diary.forms import SiteConfigurationForm
 from toolkit.diary.models import EventTag, SiteConfiguration, get_site_config
 from toolkit.diary.tests.common import DiaryTestsMixin
 
@@ -110,23 +111,54 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
             ),
             "volunteer_purge_days": str(config.volunteer_purge_days),
             "volunteer_digest_day": str(config.volunteer_digest_day),
+            "last_gasp_email_subject": "",
+            "last_gasp_email_body": "",
+            "last_gasp_cooldown_days": str(config.last_gasp_cooldown_days),
             "rota_gap_min_missing": str(config.rota_gap_min_missing),
             "rota_gap_min_pct": str(config.rota_gap_min_pct),
+            "programming_min_event_shifts": str(config.programming_min_event_shifts),
+            "stats_training_tag_slugs": [],  # MultipleChoiceField; empty = no tags excluded
             "image_copyright_guidance_url": "",
             "alt_text_guidance_url": "",
             "access_rider_guidance_url": "",
+            "ticket_link_guidance_html": "",
+            "film_programming_guide_url": "",
             "lost_and_found_retain_days": str(config.lost_and_found_retain_days),
             "bulletin_default_expiry_days": str(config.bulletin_default_expiry_days),
             "bulletin_guidance": "",
             "bulletin_post_permission": config.bulletin_post_permission,
+            "perm_diary_read": config.perm_diary_read,
+            "perm_diary_calendar": config.perm_diary_calendar,
+            "perm_programming_queue_read": config.perm_programming_queue_read,
+            "perm_programming_queue_write": config.perm_programming_queue_write,
+            "perm_event_templates": config.perm_event_templates,
+            "perm_event_tags": config.perm_event_tags,
+            "perm_roles": config.perm_roles,
+            "perm_rooms": config.perm_rooms,
+            "perm_diary_reports": config.perm_diary_reports,
+            "perm_printed_programmes": config.perm_printed_programmes,
+            "perm_rota_vacancies": config.perm_rota_vacancies,
+            "perm_donations_manage": config.perm_donations_manage,
             "eventlink_extra_allowed_domains": "",
+            "community_exchange_enabled": "",
+            "age_rating_choices_value_0": "U",
+            "age_rating_choices_label_0": "U — Universal",
+            "age_rating_choices_value_1": "PG",
+            "age_rating_choices_label_1": "PG — Parental Guidance",
+            "structured_cost_terms_enabled": "",
+            "structured_cost_required": "",
+            "suspension_email_subject": "",
+            "suspension_email_body": "",
             "collectives_intro": "",
+            "collectives_mailing_list_signup_url": "",
             "donations_intro": "",
             "show_donations_in_public_nav": "",
             "banner_active": "",
             "banner_level": config.banner_level,
             "banner_text": "",
             "banner_dismissible": "on",
+            "omdb_api_key": "",
+            "certificate_lookup_url": "",
         }
         response = self.client.post(self.url, post_data)
         self.assertEqual(response.status_code, 302)
@@ -137,6 +169,24 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
             reloaded.films_start_on_time_banner_text, "Films start at the listed time."
         )
         self.assertEqual(reloaded.max_count_per_role, 20)
+
+    def test_permission_fields_are_inside_form_element(self):
+        # Guards against the bug where the Access Levels table was outside </form>,
+        # causing perm_* fields to be silently dropped on POST and saves to appear
+        # to work while actually reverting to DB values.
+        self.client.login(username="admin", password="T3stPassword!")
+        response = self.client.get(self.url)
+        content = response.content.decode()
+        perm_pos = content.find('name="perm_diary_read"')
+        # rfind: the main config </form> is the last one on the page; find() would
+        # hit the nav logout form first and give a false failure.
+        form_close_pos = content.rfind("</form>")
+        self.assertGreater(perm_pos, 0, "perm_diary_read input not found in page")
+        self.assertGreater(
+            form_close_pos,
+            perm_pos,
+            "perm_diary_read appears after </form> — the Access Levels table must be inside the form element",
+        )
 
 
 class FilmsStartOnTimeBannerTests(DiaryTestsMixin, TestCase):
@@ -202,4 +252,64 @@ class FilmsStartOnTimeBannerTests(DiaryTestsMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.context["films_start_on_time"], False
+        )
+
+
+class SiteConfigurationConsistencyTests(DiaryTestsMixin, TestCase):
+    """Assert that the three places listing SiteConfiguration fields stay in sync.
+
+    If you add a field to the model, you must also add it to
+    SiteConfigurationForm.Meta.fields and to the field_groups in the
+    edit_site_configuration view — or this test will tell you which is missing.
+    """
+
+    def _get_form_fields(self):
+        return set(SiteConfigurationForm.Meta.fields)
+
+    def _get_view_fields(self):
+        self.client.login(username="admin", password="T3stPassword!")
+        response = self.client.get(reverse("edit-site-configuration"))
+        self.assertEqual(response.status_code, 200)
+        # grouped_fields is [(label, [BoundField, ...]), ...]; extract names via .name
+        grouped_fields = response.context["grouped_fields"]
+        fields_in_groups = {bound_field.name for _label, fields in grouped_fields for bound_field in fields}
+        # permission_rows renders perm_* form fields outside grouped_fields
+        permission_rows = response.context["permission_rows"]
+        fields_in_perm_table = {
+            row["field"].name for _feature, row in permission_rows if row["field"] is not None
+        }
+        return fields_in_groups | fields_in_perm_table
+
+    def _get_model_fields(self):
+        excluded = {"id"}
+        return {
+            f.name
+            for f in SiteConfiguration._meta.get_fields()
+            if not f.is_relation and f.name not in excluded
+        }
+
+    def test_form_fields_match_model_fields(self):
+        form_fields = self._get_form_fields()
+        model_fields = self._get_model_fields()
+        self.assertEqual(
+            form_fields,
+            model_fields,
+            msg=(
+                f"SiteConfigurationForm.Meta.fields is out of sync with the model.\n"
+                f"  In model but not form: {model_fields - form_fields}\n"
+                f"  In form but not model: {form_fields - model_fields}"
+            ),
+        )
+
+    def test_view_field_groups_match_form_fields(self):
+        form_fields = self._get_form_fields()
+        view_fields = self._get_view_fields()
+        self.assertEqual(
+            view_fields,
+            form_fields,
+            msg=(
+                f"field_groups in edit_site_configuration view is out of sync with SiteConfigurationForm.\n"
+                f"  In form but not view: {form_fields - view_fields}\n"
+                f"  In view but not form: {view_fields - form_fields}"
+            ),
         )

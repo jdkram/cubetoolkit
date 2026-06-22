@@ -34,7 +34,6 @@
 <div class="container-fluid mt-3">
 
   <div class="alert alert-info">
-    <strong>Panopticon-only page.</strong>
     <ul class="mb-0">
       <li><strong>Archiving a role</strong> hides it from rota dropdowns and volunteer profiles. Past rota entries are preserved.
         Roles used in past rota entries are automatically archived rather than deleted.</li>
@@ -62,6 +61,7 @@
               <th>Role name</th>
               <th class="text-center" style="width:90px">Standard</th>
               <th>Description</th>
+              <th style="width:120px" title="Groups this role with others in volunteer stats (e.g. 'Bar' for all bar shifts)">Stats label</th>
               <th class="text-center" style="width:50px" title="🌱 Good first role">🌱</th>
               <th class="text-center" style="width:50px" title="♿ Confirmed wheelchair-accessible">♿</th>
               <th class="text-center" style="width:50px" title="🔑 Keyholder slot">🔑</th>
@@ -80,7 +80,7 @@
           {% for form in formset %}
             {% if form.errors %}
             <tr class="table-danger">
-              <td colspan="10">
+              <td colspan="11">
                 <strong>Error:</strong>
                 {{ form.name.errors.as_text }}
                 {{ form.standard.errors.as_text }}
@@ -94,6 +94,7 @@
                 {# Model on the back end enforces the read_only flag — no integrity worries about the hidden field #}
                 <td class="text-center">{{ form.standard }}</td>
                 <td>{{ form.description }}</td>
+                <td>{{ form.stats_label }}</td>
                 <td class="text-center">{{ form.beginner_friendly }}</td>
                 <td class="text-center">{{ form.wheelchair_accessible }}</td>
                 <td class="text-center">{{ form.keyholder_only }}</td>
@@ -116,6 +117,7 @@
                 </td>
                 <td class="text-center">{{ form.standard }}</td>
                 <td>{{ form.description }}</td>
+                <td>{{ form.stats_label }}</td>
                 <td class="text-center">{{ form.beginner_friendly }}</td>
                 <td class="text-center">{{ form.wheelchair_accessible }}</td>
                 <td class="text-center">{{ form.keyholder_only }}</td>

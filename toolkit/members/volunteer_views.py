@@ -18,7 +18,15 @@ from django.core.exceptions import PermissionDenied
 from django.contrib import messages
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST, require_safe
-from django.db.models import Exists, F, OuterRef, Prefetch
+from django.db.models import (
+    Count,
+    Exists,
+    F,
+    OuterRef,
+    Prefetch,
+    Value,
+)
+from django.db.models.functions import Coalesce, NullIf
 from django.utils import timezone
 import csv
 
@@ -29,7 +37,7 @@ from toolkit.members.forms import (
     TrainingRecordForm,
     GroupTrainingForm,
 )
-from toolkit.members.models import Member, Volunteer, TrainingRecord, ExportAuditLog
+from toolkit.members.models import Member, Volunteer, TrainingRecord, ExportAuditLog, LastGaspEmailLog
 from toolkit.diary.models import Role, RotaEntry, get_site_config
 
 logger = logging.getLogger(__name__)
@@ -166,15 +174,17 @@ def export_volunteers_as_csv(request):
         rows = list(volunteers)
 
         # Log the export.
+        export_reason = request.POST.get("export_reason", "").strip()
         is_sensitive = bool(set(selected_ids) & _SENSITIVE_GROUP_IDS)
         logger.info(
             f"User {request.user} exported {len(rows)} volunteers "
-            f"(fields: {selected_ids}, sensitive={is_sensitive})"
+            f"(fields: {selected_ids}, sensitive={is_sensitive}, reason={export_reason!r})"
         )
         ExportAuditLog.objects.create(
             exported_by=request.user,
             fields_included=selected_ids,
             recipient_count=len(rows),
+            export_reason=export_reason,
         )
 
         now = datetime.now().strftime("%d %b %Y %I-%M %p")
@@ -205,9 +215,6 @@ def export_audit_log(request):
 @panopticon_required
 @require_safe
 def view_volunteer_summary(request):
-    if not request.user.is_superuser:
-        raise PermissionDenied
-
     order = request.GET.get("order", "name")
 
     base_qs = (
@@ -294,6 +301,12 @@ def view_volunteer_pool_health(request):
         .order_by("user__last_login", "member__name")
     )
 
+    retention_exempt = (
+        Volunteer.objects.filter(retention_exempt=True)
+        .select_related("member", "user")
+        .order_by("member__name")
+    )
+
     context = {
         "never_onboarded": never_onboarded,
         "never_onboarded_count": never_onboarded.count(),
@@ -301,9 +314,13 @@ def view_volunteer_pool_health(request):
         "long_inactive_count": long_inactive.count(),
         "recently_dormant": recently_dormant,
         "recently_dormant_count": recently_dormant.count(),
+        "retention_exempt": retention_exempt,
+        "retention_exempt_count": retention_exempt.count(),
         "dormancy_days": config.volunteer_dormancy_days,
         "never_logged_in_grace_days": config.volunteer_never_logged_in_grace_days,
         "purge_days": config.volunteer_purge_days,
+        "last_gasp_body_configured": bool(config.last_gasp_email_body.strip()),
+        "last_gasp_cooldown_days": config.last_gasp_cooldown_days,
     }
     return render(request, "volunteer_pool_health.html", context)
 
@@ -415,6 +432,141 @@ def bulk_anonymise_volunteers(request):
             return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
 
     return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
+
+
+@panopticon_required
+@require_POST
+def admin_restore_volunteer(request, volunteer_id):
+    """One-click restore-to-active from the pool health page (Panopticon only)."""
+    volunteer = get_object_or_404(
+        Volunteer.objects.select_related("member", "user"),
+        pk=volunteer_id,
+    )
+    if volunteer.status not in (Volunteer.STATUS_DORMANT, Volunteer.STATUS_RETIRED):
+        messages.warning(request, f"{volunteer.member.name} is not dormant or retired — no change made.")
+        return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
+
+    volunteer.status = Volunteer.STATUS_ACTIVE
+    volunteer.save()
+    _notify_vols_admin_status_change(request, volunteer, now_active=True)
+    messages.success(request, f"{volunteer.member.name} restored to Active.")
+    return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
+
+
+@panopticon_required
+@require_safe
+def auto_dormancy_preview(request):
+    """Preview which active volunteers would be marked Dormant by auto-dormancy."""
+    config = get_site_config()
+    dormancy_days = config.volunteer_dormancy_days
+    grace_days = config.volunteer_never_logged_in_grace_days
+    now = timezone.now()
+
+    active = Volunteer.objects.filter(status=Volunteer.STATUS_ACTIVE).select_related("member", "user")
+
+    inactive = Volunteer.objects.none()
+    if dormancy_days:
+        inactive = active.filter(
+            user__last_login__lt=now - timedelta(days=dormancy_days)
+        )
+
+    never_logged_in = Volunteer.objects.none()
+    if grace_days:
+        never_logged_in = active.filter(
+            user__last_login__isnull=True,
+            user__date_joined__lt=now - timedelta(days=grace_days),
+        )
+
+    return render(request, "auto_dormancy_preview.html", {
+        "inactive": list(inactive),
+        "never_logged_in": list(never_logged_in),
+        "total": inactive.count() + never_logged_in.count(),
+        "dormancy_days": dormancy_days,
+        "grace_days": grace_days,
+        "disabled": not dormancy_days and not grace_days,
+    })
+
+
+@panopticon_required
+@require_POST
+def auto_dormancy_apply(request):
+    """Apply auto-dormancy: mark qualifying active volunteers as Dormant."""
+    config = get_site_config()
+    dormancy_days = config.volunteer_dormancy_days
+    grace_days = config.volunteer_never_logged_in_grace_days
+    now = timezone.now()
+
+    if not dormancy_days and not grace_days:
+        messages.warning(request, "Auto-dormancy is disabled — no thresholds configured.")
+        return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
+
+    active = Volunteer.objects.filter(status=Volunteer.STATUS_ACTIVE)
+    count = 0
+    if dormancy_days:
+        count += active.filter(
+            user__last_login__lt=now - timedelta(days=dormancy_days)
+        ).update(status=Volunteer.STATUS_DORMANT)
+    if grace_days:
+        count += active.filter(
+            user__last_login__isnull=True,
+            user__date_joined__lt=now - timedelta(days=grace_days),
+        ).update(status=Volunteer.STATUS_DORMANT)
+
+    messages.success(request, f"Marked {count} volunteer{'s' if count != 1 else ''} as Dormant.")
+    return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
+
+
+@panopticon_required
+def last_gasp_email(request, volunteer_id):
+    """Preview and send a last-gasp re-engagement email to a purge candidate."""
+    config = get_site_config()
+    volunteer = get_object_or_404(
+        Volunteer.objects.select_related("member", "user"),
+        pk=volunteer_id,
+    )
+
+    subject_template = config.last_gasp_email_subject or "Are you still with us at {venue}?"
+    body_template = config.last_gasp_email_body
+    cooldown_days = config.last_gasp_cooldown_days
+
+    if not body_template.strip():
+        messages.warning(request, "Last-gasp email body is not configured. Add it in Site settings.")
+        return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
+
+    name = volunteer.member.name
+    venue = settings.VENUE.get("longname", settings.VENUE.get("name", "the venue"))
+    subject = subject_template.replace("{name}", name).replace("{venue}", venue)
+    body = body_template.replace("{name}", name).replace("{venue}", venue)
+
+    # Check cooldown
+    cooldown_cutoff = timezone.now() - timedelta(days=cooldown_days)
+    recent_log = (
+        LastGaspEmailLog.objects
+        .filter(volunteer=volunteer, sent_at__gt=cooldown_cutoff)
+        .order_by("-sent_at")
+        .first()
+    )
+
+    if request.method == "POST":
+        if recent_log:
+            messages.warning(
+                request,
+                f"A last-gasp email was sent to {name} {(timezone.now() - recent_log.sent_at).days} day(s) ago — cooldown not yet elapsed.",
+            )
+            return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
+        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [volunteer.member.email])
+        LastGaspEmailLog.objects.create(volunteer=volunteer, sent_by=request.user)
+        messages.success(request, f"Last-gasp email sent to {name} ({volunteer.member.email}).")
+        return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
+
+    return render(request, "last_gasp_email_preview.html", {
+        "volunteer": volunteer,
+        "member": volunteer.member,
+        "subject": subject,
+        "body": body,
+        "recent_log": recent_log,
+        "cooldown_days": cooldown_days,
+    })
 
 
 @panopticon_required
@@ -547,7 +699,7 @@ def edit_volunteer(request, volunteer_id, create_new=False):
                 messages.add_message(
                     request,
                     messages.WARNING,
-                    f"{member.name} has been suspended: their login is now "
+                    f"{member.name} has been suspended — their login is now "
                     f"disabled and they have been removed from all upcoming shifts.",
                 )
             elif not create_new and was_suspended and not now_suspended:
@@ -598,6 +750,13 @@ def edit_volunteer(request, volunteer_id, create_new=False):
                         vols_admin,
                         fail_silently=False,
                     )
+            # After a new suspension, stay on the edit page with email preview.
+            if not create_new and now_suspended and not was_suspended:
+                request.session[f"suspension_email_pending_{volunteer.pk}"] = True
+                return HttpResponseRedirect(
+                    reverse("edit-volunteer", kwargs={"volunteer_id": volunteer.pk})
+                    + "#suspension-email-preview"
+                )
             # Go to the volunteer list view (summary for panopticon, list for others):
             if request.user.is_superuser:
                 return HttpResponseRedirect(reverse("view-volunteer-summary"))
@@ -618,6 +777,26 @@ def edit_volunteer(request, volunteer_id, create_new=False):
 
     from toolkit.members.models import Qualification
     site_config = get_site_config()
+
+    suspension_email_preview = None
+    session_key = f"suspension_email_pending_{volunteer.pk}"
+    if not create_new and (
+        request.session.get(session_key)
+        or request.GET.get("suspension_email_pending") == "1"
+    ) and volunteer.status == Volunteer.STATUS_SUSPENDED:
+        venue_name = settings.VENUE.get("longname", settings.VENUE.get("name", ""))
+        vol_name = volunteer.member.name or ""
+        suspension_email_preview = {
+            "to": volunteer.member.email or "",
+            "subject": site_config.suspension_email_subject.replace(
+                "{name}", vol_name
+            ).replace("{venue}", venue_name),
+            "body": site_config.suspension_email_body.replace(
+                "{name}", vol_name
+            ).replace("{venue}", venue_name),
+        }
+        request.session[session_key] = True
+
     context = {
         "pagetitle": "Add Volunteer" if create_new else "Edit Volunteer",
         "default_mugshot": settings.DEFAULT_MUGSHOT,
@@ -631,6 +810,7 @@ def edit_volunteer(request, volunteer_id, create_new=False):
         "general_training_enabled": site_config.general_training_enabled,
         "all_qualifications": Qualification.objects.all(),
         "is_panopticon": is_panopticon,
+        "suspension_email_preview": suspension_email_preview,
     }
     return render(request, "form_volunteer.html", context)
 
@@ -848,6 +1028,12 @@ def anonymise_volunteer(request, volunteer_id):
         )
         return HttpResponseRedirect(reverse("search-members"))
 
+    today = timezone.now().date()
+    has_active_membership = (
+        member.membership_expires is not None
+        and member.membership_expires >= today
+    )
+
     return render(
         request,
         "anonymise_volunteer.html",
@@ -856,6 +1042,7 @@ def anonymise_volunteer(request, volunteer_id):
             "member": member,
             "rota_match_count": rota_match_count,
             "rota_sample": rota_sample,
+            "has_active_membership": has_active_membership,
         },
     )
 
@@ -887,7 +1074,6 @@ def set_volunteer_password(request, volunteer_id):
     return HttpResponseRedirect(reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id}))
 
 
-@require_POST
 def _send_password_set_email(request, user, welcome=False):
     """Send a password-set link to a volunteer user.
 
@@ -1354,17 +1540,25 @@ def toggle_volunteer_suspension(request, volunteer_id):
 
     if action == "suspend" and volunteer.status != Volunteer.STATUS_SUSPENDED:
         volunteer.status = Volunteer.STATUS_SUSPENDED
+        volunteer.suspension_reason = request.POST.get("suspension_reason", "").strip()
         volunteer.save()
+        request.session[f"suspension_email_pending_{volunteer.pk}"] = True
         messages.warning(
             request,
-            f"{volunteer.member.name} has been suspended: their login is now "
-            f"disabled and they have been removed from all upcoming shifts.",
+            f"{volunteer.member.name} has been suspended — their login is now "
+            f"disabled and they have been removed from all upcoming shifts. "
+            f"See the suspension email panel below to notify them.",
         )
         logger.info(
             "Volunteer pk=%s suspended by %s", volunteer.pk, request.user.username
         )
+        return HttpResponseRedirect(
+            reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id})
+            + "#suspension-email-preview"
+        )
     elif action == "reinstate" and volunteer.status == Volunteer.STATUS_SUSPENDED:
         volunteer.status = Volunteer.STATUS_ACTIVE
+        volunteer.suspension_reason = ""
         volunteer.save()
         messages.info(
             request,
@@ -1379,4 +1573,296 @@ def toggle_volunteer_suspension(request, volunteer_id):
 
     return HttpResponseRedirect(
         reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id})
+    )
+
+
+@panopticon_required
+@require_POST
+def send_suspension_email(request, volunteer_id):
+    """Send the pre-composed suspension email to the volunteer. Organiser-initiated."""
+    volunteer = get_object_or_404(Volunteer, pk=volunteer_id)
+    member = volunteer.member
+
+    if not member.email:
+        messages.error(request, f"{member.name} has no email address — suspension email not sent.")
+        return HttpResponseRedirect(
+            reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id})
+        )
+
+    site_config = get_site_config()
+    venue_name = settings.VENUE.get("longname", settings.VENUE.get("name", ""))
+    vol_name = member.name or ""
+
+    subject = site_config.suspension_email_subject.replace(
+        "{name}", vol_name
+    ).replace("{venue}", venue_name)
+    body = site_config.suspension_email_body.replace(
+        "{name}", vol_name
+    ).replace("{venue}", venue_name)
+
+    send_mail(
+        subject,
+        body,
+        settings.VENUE["mailout_from_address"],
+        [member.email],
+        fail_silently=False,
+    )
+    logger.info(
+        "EMAIL SENT: suspension email to %s (volunteer pk=%s) by %s",
+        member.email, volunteer.pk, request.user.username,
+    )
+    request.session.pop(f"suspension_email_pending_{volunteer_id}", None)
+    messages.success(request, f"Suspension email sent to {member.name} ({member.email}).")
+    return HttpResponseRedirect(
+        reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id})
+    )
+
+
+@panopticon_required
+@require_POST
+def skip_suspension_email(request, volunteer_id):
+    """Dismiss the suspension email prompt without sending — clears the pending flag."""
+    request.session.pop(f"suspension_email_pending_{volunteer_id}", None)
+    return HttpResponseRedirect(
+        reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id})
+    )
+
+
+@login_required
+@require_safe
+def volunteer_stats(request, volunteer_id=None):
+    if volunteer_id is not None:
+        if not request.user.is_superuser:
+            raise PermissionDenied
+        volunteer = get_object_or_404(
+            Volunteer.objects.select_related("member", "user"), pk=volunteer_id
+        )
+        is_own = False
+    else:
+        try:
+            volunteer = request.user.volunteer
+        except Volunteer.DoesNotExist:
+            return HttpResponseRedirect(reverse("login"))
+        volunteer = (
+            Volunteer.objects.select_related("member", "user").get(pk=volunteer.pk)
+        )
+        is_own = True
+
+    config = get_site_config()
+    now = timezone.now()
+
+    exclude_slugs = config.stats_training_tag_slugs or []
+
+    base_qs = (
+        RotaEntry.objects.filter(
+            volunteer=volunteer,
+            showing__confirmed=True,
+            showing__start__lt=now,
+            showing__cancelled=False,
+        )
+        .select_related("showing__event", "role")
+        .order_by("showing__start")
+    )
+
+    upcoming_shifts = list(
+        RotaEntry.objects.filter(
+            volunteer=volunteer,
+            showing__confirmed=True,
+            showing__start__gte=now,
+            showing__cancelled=False,
+        )
+        .select_related("showing__event", "role")
+        .order_by("showing__start")
+    )
+
+    # Per-month bar chart for upcoming shifts.
+    from collections import Counter
+    _upcoming_months: Counter = Counter()
+    for entry in upcoming_shifts:
+        key = entry.showing.start.strftime("%b %Y")
+        _upcoming_months[key] += 1
+    # Preserve chronological order (Counter doesn't guarantee it in all Pythons).
+    _seen: set = set()
+    _upcoming_month_order = []
+    for entry in upcoming_shifts:
+        key = entry.showing.start.strftime("%b %Y")
+        if key not in _seen:
+            _seen.add(key)
+            _upcoming_month_order.append(key)
+    _upcoming_max = max(_upcoming_months.values()) if _upcoming_months else 1
+    upcoming_by_month = [
+        {"label": k, "count": _upcoming_months[k], "pct": round(_upcoming_months[k] * 100 / _upcoming_max)}
+        for k in _upcoming_month_order
+    ]
+
+    two_weeks_ahead = (now + timedelta(weeks=2)).date()
+
+    # Event shifts: exclude training-tagged events for the programming gate count.
+    if exclude_slugs:
+        event_entries_qs = base_qs.exclude(
+            showing__event__tags__slug__in=exclude_slugs
+        )
+    else:
+        event_entries_qs = base_qs
+
+    # All confirmed past shifts (including training) for secondary headline count.
+    all_shifts_count = base_qs.count()
+
+    # Materialise event entries once — used for milestones and role first-dates.
+    event_entries = list(event_entries_qs)
+    total_shifts = len(event_entries)
+
+    first_shift = event_entries[0] if event_entries else None
+    last_shift = event_entries[-1] if event_entries else None
+
+    if first_shift and last_shift:
+        years_active = (
+            last_shift.showing.start.year - first_shift.showing.start.year + 1
+        )
+    else:
+        years_active = 0
+
+    # Shifts per year.
+    shifts_by_year = list(
+        event_entries_qs.values("showing__start__year")
+        .annotate(count=Count("pk"))
+        .order_by("showing__start__year")
+    )
+    year_max = max((r["count"] for r in shifts_by_year), default=1)
+    for r in shifts_by_year:
+        r["pct"] = round(r["count"] * 100 / year_max)
+
+    # Heatmap: list of {year, months: [{mo, count, level}]} rows.
+    heatmap_raw = (
+        event_entries_qs.values(
+            yr=F("showing__start__year"), mo=F("showing__start__month")
+        )
+        .annotate(count=Count("pk"))
+    )
+    _heatmap_dict = {(r["yr"], r["mo"]): r["count"] for r in heatmap_raw}
+    heatmap_years = sorted({k[0] for k in _heatmap_dict}) if _heatmap_dict else []
+    heatmap_max = max(_heatmap_dict.values()) if _heatmap_dict else 0
+
+    _MONTH_NAMES = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ]
+
+    def _heat_level(n):
+        if n == 0:
+            return 0
+        if n == 1:
+            return 1
+        if n <= 3:
+            return 2
+        if n <= 6:
+            return 3
+        return 4
+
+    heatmap_rows = [
+        {
+            "year": yr,
+            "months": [
+                {
+                    "mo": mo,
+                    "name": _MONTH_NAMES[mo - 1],
+                    "count": _heatmap_dict.get((yr, mo), 0),
+                    "level": _heat_level(_heatmap_dict.get((yr, mo), 0)),
+                }
+                for mo in range(1, 13)
+            ],
+        }
+        for yr in heatmap_years
+    ]
+
+    # Role breakdown, grouped by stats_label (falls back to role name).
+    role_rows = list(
+        event_entries_qs.annotate(
+            label=Coalesce(
+                NullIf(F("role__stats_label"), Value("")),
+                F("role__name"),
+            )
+        )
+        .values("label")
+        .annotate(count=Count("pk"))
+        .order_by("-count")[:10]
+    )
+    total_for_pct = sum(r["count"] for r in role_rows) or 1
+    role_breakdown = [
+        {**r, "pct": round(r["count"] * 100 / total_for_pct)}
+        for r in role_rows
+    ]
+
+    # Role evolution: first occurrence of each label, chronological.
+    seen_labels = {}
+    for entry in event_entries:
+        label = entry.role.stats_label or entry.role.name
+        if label not in seen_labels:
+            seen_labels[label] = {
+                "role_name": label,
+                "first_date": entry.showing.start,
+                "event_name": entry.showing.event.name,
+            }
+    role_first_dates = sorted(seen_labels.values(), key=lambda x: x["first_date"])
+
+    # Milestones: 1st, 5th, 10th, 25th, 50th, 100th, 150th, 200th...
+    _milestone_ns = [1, 5, 10, 25, 50, 100, 150, 200, 250, 300]
+    milestones = []
+    for n in _milestone_ns:
+        if n <= total_shifts:
+            entry = event_entries[n - 1]
+            milestones.append({
+                "n": n,
+                "date": entry.showing.start,
+                "event_name": entry.showing.event.name,
+            })
+
+    # Training records and qualifications.
+    training_records = list(
+        volunteer.training_records.select_related("role").order_by("training_date")
+    )
+    qualifications = list(
+        volunteer.qualifications.select_related("qualification").order_by(
+            "qualification__name"
+        )
+    )
+
+    programming_min = config.programming_min_event_shifts
+    programming_gate_met = total_shifts >= programming_min if programming_min else None
+    programming_note = config.stats_programming_note
+
+    # Full shift log: all confirmed past shifts, newest first, for the history table.
+    all_past_shifts = list(
+        base_qs.select_related("showing__event", "role").order_by("-showing__start")
+    )
+
+    return render(
+        request,
+        "volunteer_stats.html",
+        {
+            "volunteer": volunteer,
+            "is_own": is_own,
+            "total_shifts": total_shifts,
+            "all_shifts_count": all_shifts_count,
+            "first_shift": first_shift,
+            "last_shift": last_shift,
+            "years_active": years_active,
+            "shifts_by_year": shifts_by_year,
+            "heatmap_rows": heatmap_rows,
+            "heatmap_years": heatmap_years,
+            "heatmap_max": heatmap_max,
+            "year_max": year_max,
+            "role_breakdown": role_breakdown,
+            "role_first_dates": role_first_dates,
+            "milestones": milestones,
+            "training_records": training_records,
+            "qualifications": qualifications,
+            "programming_min": programming_min,
+            "programming_gate_met": programming_gate_met,
+            "programming_note": programming_note,
+            "all_past_shifts": all_past_shifts,
+            "upcoming_shifts": upcoming_shifts,
+            "upcoming_by_month": upcoming_by_month,
+            "two_weeks_ahead": two_weeks_ahead,
+        },
     )

@@ -1,0 +1,48 @@
+{% extends "base_admin.html" %}
+{% block title %}1:1 induction queue{% endblock %}
+
+{% block body %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>1:1 induction queue</h2>
+  <a href="{% url "inductions:manage_session_list" %}" class="btn btn-outline-secondary btn-sm">All sessions</a>
+</div>
+
+<div class="mb-3">
+  <strong>Filter by status:</strong>
+  <a href="?" class="btn btn-sm {% if not current_status %}btn-secondary{% else %}btn-outline-secondary{% endif %} ms-1">All</a>
+  {% for value, label in status_choices %}
+  <a href="?status={{ value }}" class="btn btn-sm {% if current_status == value %}btn-secondary{% else %}btn-outline-secondary{% endif %} ms-1">{{ label }}</a>
+  {% endfor %}
+</div>
+
+{% if requests %}
+<table class="table table-sm table-hover">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Email</th>
+      <th>Status</th>
+      <th>Submitted</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for req in requests %}
+    <tr>
+      <td>{{ req.name }}</td>
+      <td>{{ req.email }}</td>
+      <td>
+        <span class="badge bg-{% if req.status == 'pending' %}warning text-dark{% elif req.status == 'completed' %}success{% elif req.status == 'purged' %}dark{% else %}secondary{% endif %}">
+          {{ req.get_status_display }}
+        </span>
+      </td>
+      <td>{{ req.submitted_at|date:"j M Y" }}</td>
+      <td><a href="{% url "inductions:manage_access_needs_detail" request_id=req.pk %}" class="btn btn-outline-primary btn-sm">View</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="text-muted">No requests{% if current_status %} with status "{{ current_status }}"{% endif %}.</p>
+{% endif %}
+{% endblock %}

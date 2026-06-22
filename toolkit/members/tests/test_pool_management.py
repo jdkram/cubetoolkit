@@ -304,3 +304,171 @@ class TestBeginnerHighlightHint(PoolManagementBase):
         self.client.force_login(vol.user)
         resp = self.client.get(reverse("rota-edit"))
         self.assertFalse(resp.context["force_beginner_highlight"])
+
+
+class TestRetentionExempt(PoolManagementBase):
+    def test_exempt_volunteer_excluded_from_purge_candidates(self):
+        self._set_config(volunteer_purge_days=1095)
+        vol = self._make_vol("ex", status=Volunteer.STATUS_DORMANT,
+                             last_login=_days_ago(1200), joined_days_ago=1200)
+        vol.retention_exempt = True
+        vol.save()
+        pks = set(Volunteer.objects.purge_candidates(1095).values_list("pk", flat=True))
+        self.assertNotIn(vol.pk, pks)
+
+    def test_non_exempt_volunteer_included_in_purge_candidates(self):
+        self._set_config(volunteer_purge_days=1095)
+        vol = self._make_vol("ne", status=Volunteer.STATUS_DORMANT,
+                             last_login=_days_ago(1200), joined_days_ago=1200)
+        pks = set(Volunteer.objects.purge_candidates(1095).values_list("pk", flat=True))
+        self.assertIn(vol.pk, pks)
+
+    def test_exempt_section_shown_on_pool_health(self):
+        vol = self._make_vol("exv", status=Volunteer.STATUS_DORMANT)
+        vol.retention_exempt = True
+        vol.retention_exempt_reason = "Founding member"
+        vol.save()
+        self.client.login(username="admin", password="T3stPassword!")
+        resp = self.client.get(reverse("view-volunteer-pool-health"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Retention-exempt")
+        self.assertContains(resp, "PM exv")
+
+
+class TestAdminRestoreVolunteer(PoolManagementBase):
+    def test_restores_dormant_to_active(self):
+        vol = self._make_vol("rv", status=Volunteer.STATUS_DORMANT)
+        self.client.login(username="admin", password="T3stPassword!")
+        resp = self.client.post(reverse("admin-restore-volunteer", kwargs={"volunteer_id": vol.pk}))
+        self.assertEqual(resp.status_code, 302)
+        vol.refresh_from_db()
+        self.assertEqual(vol.status, Volunteer.STATUS_ACTIVE)
+
+    def test_restores_retired_to_active(self):
+        vol = self._make_vol("rr", status=Volunteer.STATUS_RETIRED)
+        self.client.login(username="admin", password="T3stPassword!")
+        self.client.post(reverse("admin-restore-volunteer", kwargs={"volunteer_id": vol.pk}))
+        vol.refresh_from_db()
+        self.assertEqual(vol.status, Volunteer.STATUS_ACTIVE)
+
+    def test_non_superuser_forbidden(self):
+        vol = self._make_vol("nsp", status=Volunteer.STATUS_DORMANT)
+        self.client.force_login(vol.user)
+        resp = self.client.post(reverse("admin-restore-volunteer", kwargs={"volunteer_id": vol.pk}))
+        self.assertNotEqual(resp.status_code, 200)
+        vol.refresh_from_db()
+        self.assertEqual(vol.status, Volunteer.STATUS_DORMANT)
+
+    def test_get_not_allowed(self):
+        vol = self._make_vol("gna", status=Volunteer.STATUS_DORMANT)
+        self.client.login(username="admin", password="T3stPassword!")
+        resp = self.client.get(reverse("admin-restore-volunteer", kwargs={"volunteer_id": vol.pk}))
+        self.assertEqual(resp.status_code, 405)
+
+
+class TestAutoDormancyGUI(PoolManagementBase):
+    def setUp(self):
+        super().setUp()
+        self._set_config(volunteer_dormancy_days=365, volunteer_never_logged_in_grace_days=90)
+
+    def test_preview_shows_candidates(self):
+        self._make_vol("ia", status=Volunteer.STATUS_ACTIVE, last_login=_days_ago(400), joined_days_ago=400)
+        self.client.login(username="admin", password="T3stPassword!")
+        resp = self.client.get(reverse("auto-dormancy-preview"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "PM ia")
+
+    def test_apply_marks_dormant(self):
+        vol = self._make_vol("ap", status=Volunteer.STATUS_ACTIVE, last_login=_days_ago(400), joined_days_ago=400)
+        self.client.login(username="admin", password="T3stPassword!")
+        resp = self.client.post(reverse("auto-dormancy-apply"))
+        self.assertEqual(resp.status_code, 302)
+        vol.refresh_from_db()
+        self.assertEqual(vol.status, Volunteer.STATUS_DORMANT)
+
+    def test_non_superuser_cannot_preview(self):
+        vol = self._make_vol("nsp2", status=Volunteer.STATUS_ACTIVE)
+        self.client.force_login(vol.user)
+        resp = self.client.get(reverse("auto-dormancy-preview"))
+        self.assertNotEqual(resp.status_code, 200)
+
+
+class TestAnonymiseMembershipGuard(PoolManagementBase):
+    def test_warning_shown_for_active_member(self):
+        import datetime as dt
+        vol = self._make_vol("mg", status=Volunteer.STATUS_DORMANT)
+        vol.member.membership_expires = (timezone.now() + dt.timedelta(days=30)).date()
+        vol.member.save()
+        self.client.login(username="admin", password="T3stPassword!")
+        resp = self.client.get(reverse("anonymise-volunteer", kwargs={"volunteer_id": vol.pk}))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.context["has_active_membership"])
+        self.assertContains(resp, "active membership")
+
+    def test_no_warning_for_expired_member(self):
+        import datetime as dt
+        vol = self._make_vol("em", status=Volunteer.STATUS_DORMANT)
+        vol.member.membership_expires = (timezone.now() - dt.timedelta(days=30)).date()
+        vol.member.save()
+        self.client.login(username="admin", password="T3stPassword!")
+        resp = self.client.get(reverse("anonymise-volunteer", kwargs={"volunteer_id": vol.pk}))
+        self.assertFalse(resp.context["has_active_membership"])
+
+    def test_purge_command_skips_active_member(self):
+        import datetime as dt
+        self._set_config(volunteer_purge_days=1095)
+        vol = self._make_vol("pm", status=Volunteer.STATUS_DORMANT,
+                             last_login=_days_ago(1200), joined_days_ago=1200)
+        vol.member.membership_expires = (timezone.now() + dt.timedelta(days=30)).date()
+        vol.member.save()
+        out = StringIO()
+        call_command("purge_stale_volunteers", stdout=out)
+        output = out.getvalue()
+        self.assertIn("Skipping", output)
+        self.assertIn("active membership", output)
+        vol.refresh_from_db()
+        self.assertNotEqual(vol.status, Volunteer.STATUS_ANONYMISED)
+
+
+class TestLastGaspEmail(PoolManagementBase):
+    from django.test import override_settings
+
+    def setUp(self):
+        super().setUp()
+        config = get_site_config()
+        config.last_gasp_email_subject = "Still with us, {name}?"
+        config.last_gasp_email_body = "Hi {name}, we miss you at {venue}."
+        config.last_gasp_cooldown_days = 30
+        config.save()
+
+    def test_preview_renders(self):
+        vol = self._make_vol("lg", status=Volunteer.STATUS_DORMANT, last_login=_days_ago(1200))
+        self.client.login(username="admin", password="T3stPassword!")
+        resp = self.client.get(reverse("last-gasp-email", kwargs={"volunteer_id": vol.pk}))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "PM lg")
+        self.assertContains(resp, "Still with us")
+
+    def test_send_creates_log_entry(self):
+        from toolkit.members.models import LastGaspEmailLog
+        vol = self._make_vol("lgsend", status=Volunteer.STATUS_DORMANT, last_login=_days_ago(1200))
+        self.client.login(username="admin", password="T3stPassword!")
+        with self.settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend"):
+            self.client.post(reverse("last-gasp-email", kwargs={"volunteer_id": vol.pk}))
+        self.assertEqual(LastGaspEmailLog.objects.filter(volunteer=vol).count(), 1)
+
+    def test_cooldown_blocks_second_send(self):
+        from toolkit.members.models import LastGaspEmailLog
+        vol = self._make_vol("lgcd", status=Volunteer.STATUS_DORMANT, last_login=_days_ago(1200))
+        LastGaspEmailLog.objects.create(volunteer=vol, sent_by=None)
+        self.client.login(username="admin", password="T3stPassword!")
+        with self.settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend"):
+            resp = self.client.post(reverse("last-gasp-email", kwargs={"volunteer_id": vol.pk}))
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(LastGaspEmailLog.objects.filter(volunteer=vol).count(), 1)
+
+    def test_non_superuser_forbidden(self):
+        vol = self._make_vol("lgperm", status=Volunteer.STATUS_DORMANT)
+        self.client.force_login(vol.user)
+        resp = self.client.get(reverse("last-gasp-email", kwargs={"volunteer_id": vol.pk}))
+        self.assertNotEqual(resp.status_code, 200)

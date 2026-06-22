@@ -1239,23 +1239,19 @@ class TestMemberPIIPermissionBoundary(MembersTestsMixin, TestCase):
 
     def test_read_only_denied_member_search(self):
         resp = self.client.get(reverse("search-members"))
-        self.assertEqual(resp.status_code, 302)
-        self.assertIn("/login", resp["Location"])
+        self.assertEqual(resp.status_code, 403)
 
     def test_read_only_denied_member_view(self):
         resp = self.client.get(reverse("view-member", kwargs={"member_id": self.mem_1.pk}))
-        self.assertEqual(resp.status_code, 302)
-        self.assertIn("/login", resp["Location"])
+        self.assertEqual(resp.status_code, 403)
 
     def test_read_only_denied_member_statistics(self):
         resp = self.client.get(reverse("member-statistics"))
-        self.assertEqual(resp.status_code, 302)
-        self.assertIn("/login", resp["Location"])
+        self.assertEqual(resp.status_code, 403)
 
     def test_read_only_denied_member_duplicates(self):
         resp = self.client.get(reverse("member-duplicates"))
-        self.assertEqual(resp.status_code, 302)
-        self.assertIn("/login", resp["Location"])
+        self.assertEqual(resp.status_code, 403)
 
     def test_panopticon_can_search_members(self):
         self.client.login(username="admin", password="T3stPassword!")

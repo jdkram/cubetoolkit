@@ -1,0 +1,39 @@
+{% extends 'base_admin.html' %}
+{% block title %}Last-gasp email: {{ member.name }}{% endblock %}
+
+{% block body %}
+<h2>Last-gasp re-engagement email</h2>
+<p><a href="{% url "view-volunteer-pool-health" %}">← Back to pool maintenance</a></p>
+
+<p style="color:#555; font-size:0.9em;">
+  This email gives the volunteer a chance to re-engage before their record is anonymised.
+  A cooldown of {{ cooldown_days }} days applies after sending.
+</p>
+
+{% if recent_log %}
+<div class="alert alert-warning">
+  A last-gasp email was already sent to <strong>{{ member.name }}</strong> on {{ recent_log.sent_at|date:"j N Y" }}
+  ({{ recent_log.sent_at|timesince }} ago). The {{ cooldown_days }}-day cooldown has not elapsed — sending is disabled.
+  <p><a href="{% url "view-volunteer-pool-health" %}" class="btn btn-sm btn-secondary" style="margin-top:0.5rem;">Back to pool maintenance</a></p>
+</div>
+{% else %}
+<table class="table table-sm" style="max-width:42rem;">
+  <tr><th style="width:8rem; color:#555; font-weight:normal;">To</th><td>{{ member.name }} &lt;{{ member.email }}&gt;</td></tr>
+  <tr><th style="color:#555; font-weight:normal;">Subject</th><td>{{ subject }}</td></tr>
+  <tr>
+    <th style="color:#555; font-weight:normal; vertical-align:top;">Body</th>
+    <td><pre style="font-family:inherit; white-space:pre-wrap; margin:0;">{{ body }}</pre></td>
+  </tr>
+</table>
+
+<form method="post">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-primary"
+    onclick="return confirm('Send this email to {{ member.email }}?')">
+    Send email to {{ member.name }}
+  </button>
+  <a href="{% url "view-volunteer-pool-health" %}" class="btn btn-secondary" style="margin-left:0.5rem;">Cancel</a>
+</form>
+{% endif %}
+
+{% endblock %}

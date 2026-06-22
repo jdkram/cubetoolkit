@@ -1,0 +1,80 @@
+{% extends "base_admin.html" %}
+{% block title %}Inductions settings{% endblock %}
+
+{% block body %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>Inductions settings</h2>
+  <a href="{% url "inductions:manage_session_list" %}" class="btn btn-outline-secondary btn-sm">Back to sessions</a>
+</div>
+
+<form method="post" style="max-width: 700px;">
+  {% csrf_token %}
+
+  <h5>General</h5>
+  {% for field in form %}{% if field.name in "inductions_enabled,induction_purge_days,organiser_notification_email" %}
+  <div class="mb-3">
+    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+    {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+  </div>
+  {% endif %}{% endfor %}
+
+  <h5 class="mt-4">Welcome pack</h5>
+  <p class="text-muted small">Linked in the welcome email sent to attendees when they're checked in.</p>
+  {% for field in form %}{% if field.name in "welcome_pack_url,welcome_pack_label" %}
+  <div class="mb-3">
+    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+    {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+  </div>
+  {% endif %}{% endfor %}
+
+  <hr>
+  <p class="text-muted small">
+    Email templates. Leave blank to use the built-in defaults.<br>
+    Available variables: <code>{name}</code> <code>{venue}</code> <code>{session_title}</code>
+    <code>{session_date}</code> <code>{session_location}</code> <code>{calendar_url}</code>
+    <code>{password_url}</code> <code>{validity}</code> <code>{welcome_pack_section}</code>
+  </p>
+
+  <h5>Sign-up confirmation email</h5>
+  {% for field in form %}{% if field.name in "confirmation_email_subject,confirmation_email_body" %}
+  <div class="mb-3">
+    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+  </div>
+  {% endif %}{% endfor %}
+
+  <h5>Reminder email (3 days before)</h5>
+  {% for field in form %}{% if field.name in "reminder_email_subject,reminder_email_body" %}
+  <div class="mb-3">
+    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+  </div>
+  {% endif %}{% endfor %}
+
+  <h5>Welcome email (on check-in)</h5>
+  {% for field in form %}{% if field.name in "welcome_email_subject,welcome_email_body" %}
+  <div class="mb-3">
+    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+  </div>
+  {% endif %}{% endfor %}
+
+  <h5>Access needs acknowledgement email</h5>
+  {% for field in form %}{% if field.name in "access_needs_ack_subject,access_needs_ack_body" %}
+  <div class="mb-3">
+    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+  </div>
+  {% endif %}{% endfor %}
+
+  <button type="submit" class="btn btn-primary">Save settings</button>
+</form>
+{% endblock %}

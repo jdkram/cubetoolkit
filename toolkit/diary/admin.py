@@ -7,6 +7,7 @@ from toolkit.diary.models import (
     EventTemplateRole,
     EventTemplateRoom,
     EventTermsRevision,
+    Film,
     MediaItem,
     Showing,
     Room,
@@ -57,6 +58,20 @@ class RoleAdmin(admin.ModelAdmin):
     search_fields = ("name",)
 
 
+@admin.register(Film)
+class FilmAdmin(admin.ModelAdmin):
+    list_display = ("title", "year", "media_type", "director", "runtime_minutes", "imdb_id")
+    search_fields = ("title", "director", "imdb_id")
+    readonly_fields = ("created_at",)
+    fieldsets = (
+        (None, {"fields": ("title", "original_title", "year", "media_type")}),
+        ("Details", {"fields": ("runtime_minutes", "countries", "languages", "overview", "poster_url")}),
+        ("External IDs", {"fields": ("imdb_id",)}),
+        ("Notes", {"fields": ("notes",)}),
+        ("Metadata", {"fields": ("created_at",), "classes": ("collapse",)}),
+    )
+
+
 @admin.register(EventTag)
 class EventTagAdmin(admin.ModelAdmin):
     list_display = ("name", "slug")
@@ -103,10 +118,11 @@ class EventTermsRevisionInline(admin.TabularInline):
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    list_display = ("name", "created_at", "private")
+    list_display = ("name", "created_at", "private", "film")
     list_filter = ("private", "tags")
     search_fields = ("name", "copy", "booked_by")
     readonly_fields = ("created_at", "updated_at", "legacy_id")
+    raw_id_fields = ("film",)
     inlines = (ShowingInline, EventLinkInline, EventTermsRevisionInline)
 
 

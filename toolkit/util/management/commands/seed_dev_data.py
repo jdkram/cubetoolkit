@@ -205,6 +205,12 @@ class Command(BaseCommand):
                     mi.media_file.delete(save=False)
                 mi.delete()
             EventLink.objects.all().delete()
+            from toolkit.inductions.models import InductionSession, InductionSignup, InductionRequest
+            InductionSignup.objects.all().delete()
+            InductionRequest.objects.all().delete()
+            InductionSession.objects.all().delete()
+            from toolkit.diary.models import Film
+            Film.objects.all().delete()
             Volunteer.objects.all().delete()
             Member.objects.all().delete()
             User.objects.filter(username__contains=".").delete()
@@ -240,6 +246,10 @@ class Command(BaseCommand):
             "jobs": 0,
             "map_notes": 0,
             "exchange_items": 0,
+            "film_records": 0,
+            "induction_sessions": 0,
+            "induction_signups": 0,
+            "induction_requests": 0,
         }
 
         # Roles
@@ -255,6 +265,7 @@ class Command(BaseCommand):
             role.keyholder_only = role_data.get("keyholder_only", False)
             role.programmer_contact = role_data.get("programmer_contact", False)
             role.description = role_data.get("description", "")
+            role.stats_label = role_data.get("stats_label", "")
             role.save(
                 update_fields=[
                     "beginner_friendly",
@@ -262,6 +273,7 @@ class Command(BaseCommand):
                     "keyholder_only",
                     "programmer_contact",
                     "description",
+                    "stats_label",
                 ]
             )
 
@@ -910,11 +922,21 @@ class Command(BaseCommand):
         cfg.occurrence_noun = "date"
         cfg.occurrence_noun_plural = "dates"
         cfg.confirm_label = "Publish & open rota"
+        cfg.stats_training_tag_slugs = ["induction", "training-for-volunteers"]
+        cfg.structured_cost_terms_enabled = True
+        if not cfg.stats_programming_note:
+            cfg.stats_programming_note = (
+                "This is a guideline, not a hard rule. "
+                "Talk to other programmers if you're interested in putting something on."
+            )
         cfg.save(
             update_fields=[
                 "occurrence_noun",
                 "occurrence_noun_plural",
                 "confirm_label",
+                "stats_training_tag_slugs",
+                "structured_cost_terms_enabled",
+                "stats_programming_note",
             ]
         )
 
@@ -1094,6 +1116,15 @@ class Command(BaseCommand):
             )
             counts["exchange_items"] += 1
 
+        # Historical past showings with FK-linked rota entries (volunteer stats / heatmap)
+        self._seed_historical_shifts(volunteer_objects, counts)
+
+        # Induction sessions and sign-ups
+        self._seed_inductions(counts)
+
+        # Film records (9.66)
+        self._seed_film_records(counts)
+
         # Bulk test volunteers (performance testing only)
         if options["bulk_volunteers"] > 0:
             counts["volunteers"] += self._seed_bulk_volunteers(
@@ -1123,8 +1154,161 @@ class Command(BaseCommand):
                 f"  Jobs:            {counts['jobs']} new\n"
                 f"  Map notes:       {counts['map_notes']} new\n"
                 f"  Exchange items:  {counts['exchange_items']} new\n"
+                f"  Film records:    {counts['film_records']} new\n"
+                f"  Induction sessions: {counts['induction_sessions']} new\n"
+                f"  Induction signups:  {counts['induction_signups']} new\n"
+                f"  Induction requests: {counts['induction_requests']} new\n"
             )
         )
+
+    def _seed_historical_shifts(self, volunteer_objects, counts):
+        """Seed ~4 years of past confirmed showings with FK-linked volunteer rota entries.
+
+        Volunteer stats / heatmap page uses RotaEntry.volunteer FK — the existing
+        seed events use the free-text name field only, so show nothing on that page.
+        This fills in a realistic history.
+
+        Interesting patterns:
+        - Most volunteers are active throughout 2022-2026
+        - Every third volunteer has a quiet spell in 2024 (visible gap in their heatmap)
+        - The last volunteer in the pool only joins from mid-2023
+        - Roles cycle across all standard types for a varied role breakdown
+        """
+        now = timezone.now()
+        today = now.date()
+        history_start = datetime.date(2022, 1, 1)
+        history_end = today - datetime.timedelta(days=14)
+
+        # Include demo accounts (admin etc.) which are created after volunteer_objects
+        vols = list(
+            Volunteer.objects.select_related("member").filter(
+                member__isnull=False
+            ).exclude(member__name="")
+        )
+        if not vols:
+            return
+
+        role_names = [
+            "Keyholder",
+            "Projectionist - DCP",
+            "Box Office - Admission Tickets",
+            "Bar Staff - Shift 1",
+            "Bar Staff - Shift 2",
+            "Usher - Fire Trained",
+            "Bar Shadow",
+            "Cafe Staff",
+        ]
+        roles = []
+        for rn in role_names:
+            try:
+                roles.append(Role.objects.get(name=rn))
+            except Role.DoesNotExist:
+                pass
+        if not roles:
+            roles = list(Role.objects.filter(standard=True)[:6])
+        if not roles:
+            return
+
+        hist_event_names = [
+            "Sunday Film Night",
+            "Thursday Screening",
+            "Late Show",
+            "Community Event Night",
+            "Shorts Programme",
+        ]
+        hist_events = []
+        for name in hist_event_names:
+            event, created = Event.objects.get_or_create(
+                name=name,
+                defaults={
+                    "copy_summary": "",
+                    "copy": "",
+                    "film_information": "",
+                    "pricing": "£7/£5/£3/£0",
+                    "private": False,
+                    "outside_hire": False,
+                    "terms": "",
+                    "duration": datetime.time(2, 0),
+                },
+            )
+            if created:
+                counts["events"] += 1
+            hist_events.append(event)
+
+        n_vols = len(vols)
+        # Every third volunteer skips most of 2024
+        quiet_2024_ids = {id(v) for v in vols[::3]}
+        # One volunteer (second-to-last named, so demo accounts don't land here)
+        # starts mid-2023 with no history before that
+        late_joiner_id = id(vols[-2]) if n_vols > 2 else None
+
+        current = history_start.replace(day=1)
+        event_cycle_idx = 0
+
+        while current <= history_end:
+            year, month = current.year, current.month
+
+            # Four showings per month: 2nd and 4th Thursday + 2nd and 4th Sunday
+            showing_dates = []
+            for weekday, ns in [(3, [2, 4]), (6, [2, 4])]:
+                for n in ns:
+                    d = _nth_weekday_of_month(year, month, weekday, n)
+                    if d and d <= history_end:
+                        showing_dates.append(d)
+
+            for show_date in showing_dates:
+                event = hist_events[event_cycle_idx % len(hist_events)]
+                event_cycle_idx += 1
+
+                showing_dt = timezone.make_aware(
+                    datetime.datetime.combine(show_date, datetime.time(19, 0, 0))
+                )
+                showing, s_created = Showing.objects.get_or_create(
+                    event=event,
+                    start=showing_dt,
+                    defaults={
+                        "booked_by": "seed_dev_data",
+                        "confirmed": True,
+                        "cancelled": False,
+                        "discounted": False,
+                        "hide_in_programme": False,
+                        "rota_notes": "",
+                    },
+                )
+                if s_created:
+                    counts["showings"] += 1
+
+                # Assign ~12 FK-linked rota slots per showing: cycle through
+                # the volunteer pool multiple times to give each vol ~3/month.
+                offset = (event_cycle_idx * 7) % n_vols
+                for slot_idx in range(12):
+                    vol = vols[(offset + slot_idx) % n_vols]
+
+                    if id(vol) == late_joiner_id and show_date < datetime.date(2023, 6, 1):
+                        continue
+
+                    # Quiet 2024 spell: skip Feb–Oct for this cohort
+                    if id(vol) in quiet_2024_ids and year == 2024 and 2 <= month <= 10:
+                        continue
+
+                    role = roles[slot_idx % len(roles)]
+                    _, re_created = RotaEntry.objects.get_or_create(
+                        showing=showing,
+                        volunteer=vol,
+                        role=role,
+                        defaults={
+                            "required": True,
+                            "name": vol.member.name,
+                            "rank": 1,
+                        },
+                    )
+                    if re_created:
+                        counts["rota_entries"] += 1
+
+            if month == 12:
+                current = current.replace(year=year + 1, month=1)
+            else:
+                current = current.replace(month=month + 1)
 
     def _seed_recurring_events(self, rooms_dict, vol_list, counts, anchor):
         today = timezone.now().date()
@@ -1988,6 +2172,326 @@ class Command(BaseCommand):
                 programmers_group.user_set.add(user)
 
         return created_count
+
+    def _seed_inductions(self, counts):
+        from toolkit.inductions.models import (
+            InductionSession,
+            InductionSignup,
+            InductionRequest,
+            InductionsSettings,
+        )
+
+        cfg, _ = InductionsSettings.objects.get_or_create(pk=1)
+        if not cfg.inductions_enabled:
+            cfg.inductions_enabled = True
+            cfg.save(update_fields=["inductions_enabled"])
+
+        today = timezone.now().date()
+
+        def _first_sunday_after_month_start(year, month):
+            d = datetime.date(year, month, 1)
+            while d.weekday() != 6:
+                d += datetime.timedelta(days=1)
+            return d
+
+        y, m = today.year, today.month
+        session_dates = []
+        for _ in range(4):
+            m += 1
+            if m > 12:
+                m = 1
+                y += 1
+            session_dates.append(_first_sunday_after_month_start(y, m))
+
+        # Tapering signup counts — many for the soonest, trail off for later ones
+        signup_counts = [14, 8, 4, 2]
+
+        # New-to-the-community people signing up for group inductions
+        _new_arrivals = [
+            ("Jamie Thornton", "jamie.thornton@example.com"),
+            ("Amara Ndiaye", "amara.ndiaye@example.com"),
+            ("Felix Brauer", "felix.brauer@example.com"),
+            ("Tanya Kulkarni", "tanya.kulkarni@example.com"),
+            ("Ollie Pearce", "ollie.pearce@example.com"),
+            ("Keisha Williams", "keisha.williams@example.com"),
+            ("Seb Morales", "seb.morales@example.com"),
+            ("Rosa Stein", "rosa.stein@example.com"),
+            ("Marcus Webb", "marcus.webb@example.com"),
+            ("Preethi Singh", "preethi.singh@example.com"),
+            ("Callum Brady", "callum.brady@example.com"),
+            ("Leila Farsi", "leila.farsi@example.com"),
+            ("Tom Elliot", "tom.elliot@example.com"),
+            ("Natasha Ivanova", "natasha.ivanova@example.com"),
+            ("Diego Santos", "diego.santos@example.com"),
+            ("Yemi Adekunle", "yemi.adekunle@example.com"),
+            ("Hana Kobayashi", "hana.kobayashi@example.com"),
+            ("Patrick O'Brien", "p.obrien@example.com"),
+            ("Zoe Fletcher", "zoe.fletcher@example.com"),
+            ("Sam Osei", "sam.osei@example.com"),
+            ("Mia Chen", "mia.chen@example.com"),
+            ("Jordan Nkosi", "jordan.nkosi@example.com"),
+            ("Alice Roy", "alice.roy@example.com"),
+            ("Ben Whitfield", "ben.whitfield@example.com"),
+            ("Nia Davies", "nia.davies@example.com"),
+            ("Oscar Lindgren", "oscar.lindgren@example.com"),
+            ("Fatou Diallo", "fatou.diallo@example.com"),
+            ("Charlie Brook", "charlie.brook@example.com"),
+        ]
+
+        signup_idx = 0
+        for session_date, count in zip(session_dates, signup_counts):
+            session_dt = timezone.make_aware(
+                datetime.datetime.combine(session_date, datetime.time(14, 0))
+            )
+            title = f"Volunteer Induction — {session_date.strftime('%B %Y')}"
+
+            session, created = InductionSession.objects.get_or_create(
+                title=title,
+                defaults={
+                    "session_type": InductionSession.TYPE_REGULAR,
+                    "date": session_dt,
+                    "location": "Cinema, Star and Shadow",
+                    "status": InductionSession.STATUS_OPEN,
+                },
+            )
+            if created:
+                counts["induction_sessions"] += 1
+
+            for _ in range(count):
+                name, email = _new_arrivals[signup_idx % len(_new_arrivals)]
+                signup_idx += 1
+                _, signup_created = InductionSignup.objects.get_or_create(
+                    session=session,
+                    email=email,
+                    defaults={"name": name, "status": InductionSignup.STATUS_PENDING},
+                )
+                if signup_created:
+                    counts["induction_signups"] += 1
+
+        # 1:1 induction sessions and requests — access needs pathway
+        _one_to_one_data = [
+            {
+                "title": "1:1 Induction — Alex",
+                "date_offset_weeks": 3,
+                "hour": 14,
+                "location": "Meeting room, Star and Shadow",
+                "request": {
+                    "name": "Alex Mwangi",
+                    "email": "alex.mwangi@example.com",
+                    "access_needs": (
+                        "I'm a wheelchair user and need to know which parts of the building "
+                        "are accessible, where the accessible toilet is, and whether the "
+                        "cinema space itself is step-free. I'd also like to understand what "
+                        "roles are realistically available to me given mobility constraints."
+                    ),
+                    "rough_availability": "Weekday afternoons usually work best. Saturdays are OK too.",
+                    "status": InductionRequest.STATUS_SCHEDULED,
+                },
+            },
+            {
+                "title": "1:1 Induction — Sam",
+                "date_offset_weeks": 5,
+                "hour": 11,
+                "location": "Café area, Star and Shadow",
+                "request": {
+                    "name": "Sam Whitley",
+                    "email": "sam.whitley@example.com",
+                    "access_needs": (
+                        "I'm autistic and find large group settings quite overwhelming. "
+                        "A quieter one-to-one introduction would help a lot. I'd like to "
+                        "walk through the building and meet a small number of people at a "
+                        "time. Advance information about what to expect on the day would also "
+                        "be really helpful."
+                    ),
+                    "rough_availability": "Weekend mornings, or Tuesday/Thursday afternoons.",
+                    "status": InductionRequest.STATUS_SCHEDULED,
+                },
+            },
+        ]
+
+        for spec in _one_to_one_data:
+            session_dt = timezone.make_aware(
+                datetime.datetime.combine(
+                    today + datetime.timedelta(weeks=spec["date_offset_weeks"]),
+                    datetime.time(spec["hour"], 0),
+                )
+            )
+            session, created = InductionSession.objects.get_or_create(
+                title=spec["title"],
+                defaults={
+                    "session_type": InductionSession.TYPE_ONE_TO_ONE,
+                    "date": session_dt,
+                    "location": spec["location"],
+                    "status": InductionSession.STATUS_OPEN,
+                },
+            )
+            if created:
+                counts["induction_sessions"] += 1
+
+            req_data = spec["request"]
+            req, req_created = InductionRequest.objects.get_or_create(
+                email=req_data["email"],
+                defaults={
+                    "name": req_data["name"],
+                    "access_needs": req_data["access_needs"],
+                    "rough_availability": req_data.get("rough_availability", ""),
+                    "status": req_data["status"],
+                    "linked_session": session,
+                },
+            )
+            if req_created:
+                counts["induction_requests"] += 1
+            elif req.linked_session_id != session.pk:
+                req.linked_session = session
+                req.save(update_fields=["linked_session"])
+
+            # Create a signup in the session for this person
+            _, signup_created = InductionSignup.objects.get_or_create(
+                session=session,
+                email=req_data["email"],
+                defaults={"name": req_data["name"], "status": InductionSignup.STATUS_PENDING},
+            )
+            if signup_created:
+                counts["induction_signups"] += 1
+
+        # Pending and contacted requests in the queue (not yet scheduled)
+        _unscheduled_requests = [
+            {
+                "name": "Bilal Chaudhry",
+                "email": "bilal.chaudhry@example.com",
+                "access_needs": (
+                    "I have chronic fatigue and my energy levels vary a lot day to day. "
+                    "I'd like to understand what the lowest-intensity roles look like and "
+                    "whether I can commit on a flexible basis rather than to a regular rota. "
+                    "Standing for long periods is difficult."
+                ),
+                "rough_availability": "I need to respond to how I'm feeling on the day — hard to book far ahead.",
+                "status": InductionRequest.STATUS_PENDING,
+            },
+            {
+                "name": "Miriam Okonkwo",
+                "email": "miriam.okonkwo@example.com",
+                "access_needs": (
+                    "I'm DeafBlind and use a combination of tactile signing and close-up "
+                    "written communication. I'll be bringing a support worker to my "
+                    "induction. I'd like to find out whether any current volunteers have "
+                    "BSL skills and what support the community can offer."
+                ),
+                "rough_availability": "Saturdays after 12 or Sundays.",
+                "status": InductionRequest.STATUS_CONTACTED,
+                "contacted_at": timezone.now() - datetime.timedelta(days=4),
+            },
+        ]
+
+        for req_data in _unscheduled_requests:
+            defaults = {
+                "name": req_data["name"],
+                "access_needs": req_data["access_needs"],
+                "rough_availability": req_data.get("rough_availability", ""),
+                "status": req_data["status"],
+            }
+            if req_data.get("contacted_at"):
+                defaults["contacted_at"] = req_data["contacted_at"]
+            req, req_created = InductionRequest.objects.get_or_create(
+                email=req_data["email"],
+                defaults=defaults,
+            )
+            if req_created:
+                counts["induction_requests"] += 1
+
+    def _seed_film_records(self, counts):
+        """Create Film records with stored metadata and link them to matching Events.
+
+        Uses hardcoded data so no TMDB API call is needed at seed time.
+        TMDB IDs and poster paths are taken from the films already referenced in
+        films.toml; they are correct as of 2025 but can be re-verified against
+        https://www.themoviedb.org/ if needed.
+        """
+        from toolkit.diary.models import Film
+
+        seed_films = [
+            {
+                "title": "Akira",
+                "year": 1988,
+                "director": "Katsuhiro Otomo",
+                "runtime_minutes": 124,
+                "countries": "JP",
+                "languages": "Japanese",
+                "overview": (
+                    "A secret military project endangers Neo-Tokyo when it turns a biker "
+                    "gang member into a rampaging psychic, and only two teenagers and a group "
+                    "of psychics can stop him."
+                ),
+            },
+            {
+                "title": "La Haine",
+                "year": 1995,
+                "director": "Mathieu Kassovitz",
+                "runtime_minutes": 98,
+                "countries": "FR",
+                "languages": "French",
+                "overview": (
+                    "After a chaotic night of rioting in a Paris suburb, three young friends "
+                    "wander around waiting for news about a mutual friend seriously injured "
+                    "while confronting police."
+                ),
+            },
+            {
+                "title": "Stalker",
+                "year": 1979,
+                "director": "Andrei Tarkovsky",
+                "runtime_minutes": 163,
+                "countries": "SU",
+                "languages": "Russian",
+                "overview": (
+                    "Near a grey and unnamed city is the Zone, where the normal laws of physics "
+                    "are victim to frequent anomalies. A Stalker guides two men into the Zone, "
+                    "to an area where deep-seated desires are granted."
+                ),
+            },
+            {
+                "title": "Perfect Blue",
+                "year": 1997,
+                "director": "Satoshi Kon",
+                "runtime_minutes": 81,
+                "countries": "JP",
+                "languages": "Japanese",
+                "overview": (
+                    "Rising pop star Mima quits singing to pursue acting. After she takes a role "
+                    "on a detective show, her collaborators begin turning up murdered."
+                ),
+            },
+            {
+                "title": "Titane",
+                "year": 2021,
+                "director": "Julia Ducournau",
+                "runtime_minutes": 108,
+                "countries": "FR",
+                "languages": "French",
+                "overview": (
+                    "A woman with a metal plate in her head from a childhood car accident "
+                    "embarks on a bizarre journey, bringing her into contact with a firefighter "
+                    "who has been reunited with his missing son."
+                ),
+            },
+        ]
+
+        for data in seed_films:
+            film, created = Film.objects.get_or_create(
+                title=data["title"],
+                defaults={
+                    "year": data.get("year"),
+                    "director": data.get("director", ""),
+                    "runtime_minutes": data.get("runtime_minutes"),
+                    "countries": data.get("countries", ""),
+                    "languages": data.get("languages", ""),
+                    "media_type": Film.MEDIA_TYPE_FILM,
+                    "overview": data.get("overview", ""),
+                },
+            )
+            if created:
+                counts["film_records"] += 1
+            Event.objects.filter(name=data["title"], film__isnull=True).update(film=film)
 
     def _make_poster_image(self, event_name, bg_colour, width=600, height=900):
         from toolkit.diary.poster import make_poster_image

@@ -300,12 +300,8 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
         )
         self.assertRedirects(response, reverse("view-volunteer-summary"))
 
-        self.assertContains(
-            response,
-            '<li class="success">Created volunteer &#x27;New Volunteer, '
-            "called \u0187hri\u01a8topher&#x27;</li>",
-            html=True,
-        )
+        self.assertContains(response, "Created volunteer")
+        self.assertContains(response, "New Volunteer, called")
 
         # one more of each:
         self.assertEqual(Volunteer.objects.count(), init_vol_count + 1)
@@ -347,12 +343,8 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
 
         self.assertRedirects(response, reverse("view-volunteer-summary"))
 
-        self.assertContains(
-            response,
-            '<li class="success">Created volunteer &#x27;Another New '
-            "Volunteer&#x27;</li>",
-            html=True,
-        )
+        self.assertContains(response, "Created volunteer")
+        self.assertContains(response, "Another New Volunteer")
 
         # one more of each:
         self.assertEqual(Volunteer.objects.count(), init_vol_count + 1)
@@ -406,12 +398,8 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
         )
         self.assertRedirects(response, reverse("view-volunteer-summary"))
 
-        self.assertContains(
-            response,
-            '<li class="success">Updated volunteer &#x27;Renam\u018fd '
-            "Vol&#x27;</li>",
-            html=True,
-        )
+        self.assertContains(response, "Updated volunteer")
+        self.assertContains(response, "Renam\u018fd Vol")
 
         # same number of each:
         self.assertEqual(Volunteer.objects.count(), init_vol_count)
@@ -472,12 +460,8 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
 
         self.assertRedirects(response, reverse("view-volunteer-summary"))
 
-        self.assertContains(
-            response,
-            '<li class="success">Updated volunteer &#x27;Renam\u018fd '
-            "Vol&#x27;</li>",
-            html=True,
-        )
+        self.assertContains(response, "Updated volunteer")
+        self.assertContains(response, "Renam\u018fd Vol")
 
         # same number of each:
         self.assertEqual(Volunteer.objects.count(), init_vol_count)
@@ -1445,28 +1429,23 @@ class TestVolunteerPIIPermissionBoundary(MembersTestsMixin, TestCase):
 
     def test_read_only_denied_volunteer_list(self):
         resp = self._get("view-volunteer-list")
-        self.assertEqual(resp.status_code, 302)
-        self.assertIn("/login", resp["Location"])
+        self.assertEqual(resp.status_code, 403)
 
     def test_read_only_denied_volunteer_summary(self):
         resp = self._get("view-volunteer-summary")
-        self.assertEqual(resp.status_code, 302)
-        self.assertIn("/login", resp["Location"])
+        self.assertEqual(resp.status_code, 403)
 
     def test_read_only_denied_volunteer_role_report(self):
         resp = self._get("view-volunteer-role-report")
-        self.assertEqual(resp.status_code, 302)
-        self.assertIn("/login", resp["Location"])
+        self.assertEqual(resp.status_code, 403)
 
     def test_read_only_denied_volunteer_export(self):
         resp = self._get("view-volunteer-export")
-        self.assertEqual(resp.status_code, 302)
-        self.assertIn("/login", resp["Location"])
+        self.assertEqual(resp.status_code, 403)
 
     def test_read_only_denied_volunteer_training_report(self):
         resp = self._get("view-volunteer-training-report")
-        self.assertEqual(resp.status_code, 302)
-        self.assertIn("/login", resp["Location"])
+        self.assertEqual(resp.status_code, 403)
 
     def test_read_only_denied_edit_other_volunteer(self):
         resp = self._get("edit-volunteer", volunteer_id=self.vol_1.pk)

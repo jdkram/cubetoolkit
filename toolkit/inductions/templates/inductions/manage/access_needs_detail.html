@@ -1,0 +1,40 @@
+{% extends "base_admin.html" %}
+{% block title %}Access needs request — {{ req.name }}{% endblock %}
+
+{% block body %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>{{ req.name }}</h2>
+  <a href="{% url "inductions:manage_access_needs_list" %}" class="btn btn-outline-secondary btn-sm">Back to queue</a>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-6">
+    <dl class="row">
+      <dt class="col-sm-4">Email</dt>
+      <dd class="col-sm-8"><a href="mailto:{{ req.email }}">{{ req.email }}</a></dd>
+      <dt class="col-sm-4">Submitted</dt>
+      <dd class="col-sm-8">{{ req.submitted_at|date:"j M Y H:i" }}</dd>
+      <dt class="col-sm-4">Status</dt>
+      <dd class="col-sm-8">{{ req.get_status_display }}</dd>
+      <dt class="col-sm-4">Access needs</dt>
+      <dd class="col-sm-8">{{ req.access_needs|linebreaksbr }}</dd>
+      <dt class="col-sm-4">Availability</dt>
+      <dd class="col-sm-8">{{ req.rough_availability|linebreaksbr|default:"—" }}</dd>
+    </dl>
+  </div>
+</div>
+
+<h5>Update request</h5>
+<form method="post" style="max-width: 600px;">
+  {% csrf_token %}
+  {% for field in form %}
+  <div class="mb-3">
+    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+    {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+  </div>
+  {% endfor %}
+  <button type="submit" class="btn btn-primary">Save</button>
+</form>
+{% endblock %}

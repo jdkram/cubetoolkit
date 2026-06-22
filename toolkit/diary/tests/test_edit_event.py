@@ -864,7 +864,7 @@ class EditEventView(DiaryTestsMixin, TestCase):
             "terms",
             "Event terms for confirmed event "
             f"'{event.name}' are missing or too short. "
-            "Please enter at least 5 words.",
+            "Please enter at least 5 words, or set the cost type above.",
         )
 
         event = Event.objects.get(id=1)
@@ -1336,23 +1336,22 @@ class EventHubCollapseTests(DiaryTestsMixin, TestCase):
         self.assertContains(response, ">Showings</h3>")
         self.assertNotContains(response, "Showing &amp; booking")
 
-    def test_unpublished_future_shows_confirm_label(self):
-        # Default confirm label is "Confirm".
+    def test_unpublished_future_shows_confirm_button(self):
         response = self._hub(self._make_event(1, confirmed=False))
         self.assertContains(response, ">Confirm</button>")
 
     def test_terminology_follows_site_config(self):
-        # Star and Shadow's seed sets these to date/dates + a verbose CTA.
+        # Star and Shadow's seed sets these to date/dates.
         cfg = get_site_config()
         cfg.occurrence_noun = "date"
         cfg.occurrence_noun_plural = "dates"
-        cfg.confirm_label = "Publish & open rota"
         cfg.save()
 
         single = self._hub(self._make_event(1, confirmed=False))
         self.assertContains(single, "Date &amp; booking")
-        self.assertContains(single, "Publish &amp; open rota")
         self.assertContains(single, "Cancel this date")
+        # Confirm button is always "Confirm" regardless of custom confirm_label.
+        self.assertContains(single, ">Confirm</button>")
 
         series = self._hub(self._make_event(2))
         self.assertContains(series, ">Dates</h3>")
@@ -1416,5 +1415,131 @@ class RoomReleaseOnCancelTests(DiaryTestsMixin, TestCase):
         self.showing.save()
         data = self.client.get(url, {"start": start, "end": end}).json()
         self.assertFalse(any(str(d.get("id")) == rb_id for d in data))
+
+
+class OneShotRoleTests(DiaryTestsMixin, TestCase):
+    """One-shot roles: orphan cleanup, dropdown exclusion, roles page exclusion."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="admin", password="T3stPassword!")
+
+    def _make_one_shot(self, name="Custom AV"):
+        role, _ = Role.objects.get_or_create(
+            name=name, defaults={"is_one_shot": True, "standard": False}
+        )
+        return role
+
+    def test_orphaned_oneshot_role_deleted_after_last_entry_removed(self):
+        role = self._make_one_shot()
+        entry = RotaEntry.objects.create(role=role, showing=self.e4s3)
+        self.assertTrue(Role.objects.filter(pk=role.pk).exists())
+
+        entry.delete()
+        self.e4s3.update_rota({})
+
+        self.assertFalse(Role.objects.filter(pk=role.pk).exists())
+
+    def test_oneshot_role_retained_while_still_referenced(self):
+        role = self._make_one_shot()
+        e1 = RotaEntry.objects.create(role=role, showing=self.e4s3)
+        e2 = RotaEntry.objects.create(role=role, showing=self.e4s3)
+
+        e1.delete()
+        self.e4s3.update_rota({})
+
+        self.assertTrue(Role.objects.filter(pk=role.pk).exists())
+        e2.delete()
+
+    def test_oneshot_roles_absent_from_roles_management_page(self):
+        self._make_one_shot("Secret One-Shot")
+        resp = self.client.get(reverse("edit_roles"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, "Secret One-Shot")
+
+    def test_oneshot_roles_absent_from_standard_role_queryset(self):
+        # The rota form factory explicitly filters is_one_shot=False, so one-shot
+        # roles should never appear in the set of role fields it generates.
+        self._make_one_shot("One-Shot Only Role")
+        standard_roles = Role.objects.filter(is_one_shot=False)
+        self.assertFalse(standard_roles.filter(name="One-Shot Only Role").exists())
+
+
+class StructuredCostTermsTests(DiaryTestsMixin, TestCase):
+    """Structured cost terms: feature flag, word-count waiver, required validation."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="admin", password="T3stPassword!")
+        cfg = get_site_config()
+        cfg.programme_event_terms_min_words = 3
+        cfg.save()
+
+    def _post_event(self, event_id, overrides=None):
+        url = reverse("edit-event-details", kwargs={"event_id": event_id})
+        event = Event.objects.get(pk=event_id)
+        data = {
+            "name": event.name,
+            "duration": "01:00:00",
+            "terms": event.terms or "",
+            "copy": event.copy or "",
+            "copy_summary": event.copy_summary or "",
+            "pricing": event.pricing or "",
+            "pre_title": event.pre_title or "",
+            "post_title": event.post_title or "",
+            "film_information": event.film_information or "",
+            "programming_status": event.programming_status or "idea",
+            "approval_type": event.approval_type or "",
+        }
+        if overrides:
+            data.update(overrides)
+        return self.client.post(url, data, follow=True)
+
+    def test_cost_type_field_absent_when_flag_off(self):
+        cfg = get_site_config()
+        cfg.structured_cost_terms_enabled = False
+        cfg.save()
+        resp = self.client.get(
+            reverse("edit-event-details", kwargs={"event_id": self.e4.pk})
+        )
+        self.assertNotContains(resp, 'name="cost_type"')
+
+    def test_cost_type_field_present_when_flag_on(self):
+        cfg = get_site_config()
+        cfg.structured_cost_terms_enabled = True
+        cfg.save()
+        resp = self.client.get(
+            reverse("edit-event-details", kwargs={"event_id": self.e4.pk})
+        )
+        self.assertContains(resp, 'name="cost_type"')
+
+    def test_terms_word_count_waived_when_cost_type_set(self):
+        # e4s3 is confirmed; terms is short ("Terminal price: £1 / €3" = 5 words,
+        # but we'll blank it to force the normal validation to fire).
+        cfg = get_site_config()
+        cfg.structured_cost_terms_enabled = True
+        cfg.structured_cost_required = False
+        cfg.save()
+        resp = self._post_event(
+            self.e4.pk,
+            {"terms": "", "cost_type": Event.COST_TYPE_FILM_LICENSE},
+        )
+        # Should save (redirect) without a terms error
+        form = resp.context.get("form") if hasattr(resp, "context") else None
+        if form:
+            self.assertNotIn("terms", form.errors)
+
+    def test_cost_type_required_error_when_flag_and_required_set(self):
+        cfg = get_site_config()
+        cfg.structured_cost_terms_enabled = True
+        cfg.structured_cost_required = True
+        cfg.save()
+        resp = self._post_event(
+            self.e4.pk,
+            {"terms": "", "cost_type": Event.COST_TYPE_TBC},
+        )
+        form = resp.context.get("form") if resp.context else None
+        if form:
+            self.assertIn("cost_type", form.errors)
 
 

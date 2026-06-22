@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Volunteer inductions — {{ VENUE.name }}{% endblock %}
+
+{% block body %}
+<div class="container mt-4 mb-5" style="max-width:680px;">
+  <h1 class="mb-1">Volunteer inductions</h1>
+  <p class="text-muted mb-4">Sign up for an induction session to join the {{ VENUE.name }} volunteer community.</p>
+
+  {% if sessions %}
+  <div class="list-group">
+    {% for session in sessions %}
+    <div class="list-group-item list-group-item-action p-3">
+      <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+        <div>
+          <strong>{{ session.title }}</strong>
+          {% if session.session_type == "small_group" %}
+          <span class="badge bg-info text-dark ms-1" title="This session is for a specific small group, not open to all volunteers.">Small group</span>
+          {% elif session.session_type == "one_to_one" %}
+          <span class="badge bg-warning text-dark ms-1" title="1:1 session for volunteers with specific access requirements.">Access needs 1:1</span>
+          {% endif %}
+          <br>
+          <span class="text-muted">{{ session.date|date:"l j F Y" }} at {{ session.date|time:"H:i" }}</span>
+          {% if session.location %}<br><span class="text-muted small">{{ session.location }}</span>{% endif %}
+        </div>
+        <a href="{% url 'inductions:signup' slug=session.slug %}" class="btn btn-success btn-sm flex-shrink-0">Sign up →</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="text-muted">No induction sessions are currently open for sign-up. Check back soon, or contact us if you'd like to find out more about volunteering.</p>
+  {% endif %}
+
+  <div class="mt-4 p-3 bg-light rounded border">
+    <strong>Have specific access requirements?</strong>
+    <p class="mb-2 mt-1 text-muted small">If you need a 1:1 session or have any accessibility needs we can support, please use our access needs form rather than signing up above.</p>
+    <a href="{% url 'inductions:access_needs_signup' %}" class="btn btn-outline-secondary btn-sm">Access needs form →</a>
+  </div>
+</div>
+{% endblock %}

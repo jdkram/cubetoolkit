@@ -48,12 +48,12 @@ $(document).ready(function() {
 
 <p class="pad">Programme of events.</p>
 
-{% for showing in showings %}
+{% for showing in showings %}{% if not showing.event.private and not showing.hide_in_programme %}
     {% ifchanged %}<p class="pad">{{ showing.start|date:"Y" }}</p>{% endifchanged %}
     {% ifchanged %}<p class="pad">{{ showing.start|date:"F"|upper }}</p>{% endifchanged %}
     {% ifchanged %}<p class="day">{{ showing.start|date:"D"}} {{ showing.start|date:"d" }}{% else %}
-    <p>      {% endifchanged %} {{showing.start|date:"H:i"}} .... {% if showing.hide_in_programme or showing.event.private %}Closed for private event.{% else %}{{ showing.event.name|capfirst }}{% if showing.cancelled %} (CANCELLED){% endif %}{% if showing.discounted %} *{% endif %}{% endif %}</p>
-{% endfor %}
+    <p>      {% endifchanged %} {{showing.start|date:"H:i"}} .... {{ showing.event.name|capfirst }}{% if showing.cancelled %} (CANCELLED){% endif %}{% if showing.discounted %} *{% endif %}</p>
+{% endif %}{% endfor %}
 <p>&nbsp;</p>
 <p>* cheap night</p>
 

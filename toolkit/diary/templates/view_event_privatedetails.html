@@ -72,16 +72,80 @@ function hideAddShowingForm() {
     document.getElementById("add-showing-form").classList.add("d-none");
 }
 </script>
+<script>
+(function ($) {
+    "use strict";
+
+    // ── Keyboard shortcuts for event hub ───────────────────────────────────
+    var currentCardIdx = 0;
+
+    function getCards() { return $('.showing-card:visible').toArray(); }
+
+    function scrollToCard(idx) {
+        var cards = getCards();
+        if (!cards.length) { return; }
+        idx = Math.max(0, Math.min(idx, cards.length - 1));
+        currentCardIdx = idx;
+        cards[idx].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    $(document).on('keydown', function (e) {
+        if (window.AdminKeyboardNav && window.AdminKeyboardNav.isNavMode()) { return; }
+        if (e.ctrlKey || e.altKey || e.metaKey) { return; }
+        var tag    = (document.activeElement || {}).tagName || "";
+        var inInput = /^(INPUT|TEXTAREA|SELECT)$/i.test(tag);
+        var inEdit  = !!(document.activeElement && document.activeElement.isContentEditable);
+        if (inInput || inEdit) { return; }
+
+        switch (e.key) {
+            case 'e': {
+                // Go to "Edit event" details form
+                var editLink = $('a.btn:contains("Edit event")').first();
+                if (editLink.length) { window.location.href = editLink.attr('href'); }
+                break;
+            }
+            case 'b':
+                history.back();
+                break;
+            case 'r': {
+                // Jump to first rota link on a showing card
+                var rotaLink = $('.showing-card a:contains("Rota")').first();
+                if (rotaLink.length) { window.location.href = rotaLink.attr('href'); }
+                break;
+            }
+            case 'j':
+                e.preventDefault(); scrollToCard(currentCardIdx + 1); break;
+            case 'k':
+                e.preventDefault(); scrollToCard(currentCardIdx - 1); break;
+            case 'Enter': {
+                var cards = getCards();
+                if (!cards.length) { break; }
+                var editShowingLink = $(cards[currentCardIdx]).find('a.btn:contains("Edit")').first();
+                if (editShowingLink.length) { window.location.href = editShowingLink.attr('href'); }
+                break;
+            }
+        }
+    });
+
+    if (window.AdminKeyboardNav) {
+        window.AdminKeyboardNav.registerHelp([{ heading: "Event hub", rows: [
+            ["e",        "Edit event details"],
+            ["b",        "Go back"],
+            ["r",        "Go to rota"],
+            ["j / k",    "Scroll between showings"],
+            ["Enter",    "Edit current showing"]
+        ]}]);
+    }
+}(jQuery));
+</script>
 {% endblock %}
 
 {% block body %}
 <div>
 <h1>{{ event.name }}</h1>
 
-{% include "bs_messages.html" %}
-
 {% with c=completeness %}
-{% if not c.has_copy or not c.has_copy_summary or not c.has_image or not c.terms_ok %}
+{% if not c.has_copy or not c.has_copy_summary or not c.has_image or not c.terms_ok or c.film_details_required and not c.has_film_details %}
 <div class="completeness-bar mb-3">
     <strong>Checklist:</strong>
     {% if not c.has_copy %}<a href="{% url "edit-event-details" event.pk %}#div_id_copy" class="badge text-bg-warning text-decoration-none">No description yet →</a>{% endif %}
@@ -92,6 +156,7 @@ function hideAddShowingForm() {
         <a href="{% url "edit-event-details" event.pk %}#div_id_terms" class="badge text-bg-danger text-decoration-none">Terms needed before confirming →</a>
         {% endif %}
     {% endif %}
+    {% if c.film_details_required and not c.has_film_details %}<a href="{% url "edit-event-details" event.pk %}#film-section" class="badge text-bg-warning text-decoration-none">Film details not linked →</a>{% endif %}
 </div>
 {% elif unconfirmed_future_count and c.has_future_showing %}
 <div class="alert alert-success d-flex align-items-center gap-3 mb-3 py-2 flex-wrap">
@@ -100,18 +165,18 @@ function hideAddShowingForm() {
     <form method="post" action="{% url 'update-showing-status' showing.id %}" class="mb-0">
         {% csrf_token %}<input type="hidden" name="action" value="confirm">
         <button type="submit" class="btn btn-success" data-bs-toggle="tooltip"
-                title="Makes this {{ site_config.occurrence_noun }} public in the online programme AND opens the rota for volunteer sign-ups. Event terms must be filled in first (unless the event type is exempt).">{{ site_config.confirm_label }} →</button>
+                title="Publishes this {{ site_config.occurrence_noun }} in the online programme and opens the rota for volunteer sign-ups.">Confirm →</button>
     </form>
     {% endif %}{% endwith %}
     {% else %}
-    <span class="text-muted small">Use the "Confirm all" button below.</span>
+    <span class="text-muted small">Use the "Confirm all" button in the Showings section below.</span>
     {% endif %}
 </div>
 {% endif %}
 {% endwith %}
 
 {# ── Programming status ────────────────────────────────────────────────────── #}
-{% if event.programming_status != "active" or event.programming_notes %}
+{% if event.programming_status != "active" and not event.approved_at_meeting_date or event.programming_notes %}
 <div class="mb-3 p-2 border rounded" style="background:#f8f9fa;">
   <div class="d-flex align-items-center gap-2 flex-wrap">
     <strong>Programming:</strong>
@@ -122,7 +187,7 @@ function hideAddShowingForm() {
     {% elif event.programming_status == "rejected" %}
       <span class="badge text-bg-warning text-dark">Returned for changes</span>
     {% endif %}
-    {% if perms.toolkit.write %}
+    {% if perms.toolkit.write and not event.approved_at_meeting_date %}
       {% if event.programming_status != "proposed" %}
       <form method="post" action="{% url "update-event-programming-status" event.pk %}" class="d-inline">
         {% csrf_token %}
@@ -218,12 +283,42 @@ function hideAddShowingForm() {
   </dt>
   <dd class="col-sm-9">{{ event.film_information|default:"—" }}</dd>
 
+  {% if event.film %}
+  <dt class="col-sm-3">Screened work</dt>
+  <dd class="col-sm-9">
+    <div class="d-flex gap-2 align-items-start">
+      {% if event.film.poster_url %}
+      <img src="{{ event.film.poster_url }}" alt="Poster for {{ event.film.title }}"
+           width="46" style="border-radius:3px;flex-shrink:0;">
+      {% endif %}
+      <div>
+        <strong>{{ event.film.title }}</strong>
+        {% if event.film.original_title and event.film.original_title != event.film.title %}
+          <span class="text-muted small">({{ event.film.original_title }})</span>
+        {% endif %}
+        {% if event.film.year %} ({{ event.film.year }}){% endif %}
+        {% if event.film.media_type == "tv" %}<span class="badge text-bg-secondary ms-1">TV</span>{% endif %}
+        <br>
+        {% if event.film.director %}<span class="text-muted small">Dir. {{ event.film.director }}</span><br>{% endif %}
+        <span class="text-muted small">
+          {% if event.film.runtime_minutes %}{{ event.film.runtime_minutes }} mins{% endif %}
+          {% if event.film.countries %} · {{ event.film.countries }}{% endif %}
+          {% if event.film.languages %} · {{ event.film.languages }}{% endif %}
+        </span>
+        <div class="mt-1">
+          {% if event.film.imdb_id %}<a href="https://www.imdb.com/title/{{ event.film.imdb_id }}/" target="_blank" class="text-muted small">IMDB ↗</a>{% endif %}
+        </div>
+      </div>
+    </div>
+  </dd>
+  {% endif %}
+
   <dt class="col-sm-3">Age restriction
     <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
           title="Under 18s must be accompanied by an adult at all events. Use this to flag family-friendly events (&ldquo;All ages welcome&rdquo;) or a minimum admission age (16+ / 18+ only).">ⓘ</span>
   </dt>
   <dd class="col-sm-9">
-    {% if event.age_restriction %}{{ event.get_age_restriction_display }}
+    {% if event.age_restriction %}<span class="badge text-bg-secondary fw-normal">{{ event.get_age_restriction_display }}</span>
     {% else %}<span class="text-muted">Not stated</span>{% endif %}
   </dd>
 
@@ -289,9 +384,39 @@ function hideAddShowingForm() {
     {% endif %}
   </dd>
 
+  {% if site_config.structured_cost_terms_enabled %}
+  <dt class="col-sm-3">Cost type
+    <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
+          title="The nature of the financial deal for this event.">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">
+    {% if event.cost_type %}
+    <strong>{{ event.get_cost_type_display }}</strong>
+    {% if event.cost_distributor %}<br><span class="text-muted small">{{ event.cost_distributor }}</span>{% endif %}
+    {% if event.cost_flat_fee_gbp %}<br>Flat fee: <strong>£{{ event.cost_flat_fee_gbp }}</strong>{% if event.cost_fee_includes_vat %} (incl. VAT){% endif %}{% endif %}
+    {% if event.cost_percentage_split %}<br>% split: <strong>{{ event.cost_percentage_split }}%</strong>{% if event.cost_minimum_guarantee_gbp %} (MG: £{{ event.cost_minimum_guarantee_gbp }}){% endif %}{% endif %}
+    {% if event.cost_total_gbp and not event.cost_flat_fee_gbp %}<br>Total: <strong>£{{ event.cost_total_gbp }}</strong>{% endif %}
+    {% else %}
+    <span class="text-muted">—</span>
+    {% endif %}
+  </dd>
+
+  <dt class="col-sm-3">Technical notes
+    <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
+          title="AV / tech rider requirements, separate from financial terms.">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">
+    {% if event.technical_notes %}
+    <pre class="mb-0" style="font-family:inherit; white-space:pre-wrap;">{{ event.technical_notes }}</pre>
+    {% else %}
+    <span class="text-muted">—</span>
+    {% endif %}
+  </dd>
+  {% endif %}
+
   <dt class="col-sm-3">Terms
     <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
-          title="Booking or screening terms for this event. Must be filled in (minimum word count) before any {{ site_config.occurrence_noun }} can be confirmed, unless the event type exempts it.">ⓘ</span>
+          title="Booking or screening terms for this event. Must be filled in (minimum word count) before any {{ site_config.occurrence_noun }} can be confirmed, unless the event type exempts it or a cost type is set.">ⓘ</span>
   </dt>
   <dd class="col-sm-9">
     {% if event.terms %}
@@ -328,10 +453,21 @@ function hideAddShowingForm() {
   <dd class="col-sm-9">
     {% with event.media.all.0 as media_item %}
     {% if media_item %}
-    <a href="{% get_media_prefix %}{{ media_item.media_file }}">
-      <img src="{{ media_item.media_file|thumbnail_url:'editpreview' }}"
-           alt="{% if media_item.alt_text %}{{ media_item.alt_text }}{% else %}Picture for event {{ event.name }}{% endif %}">
-    </a>
+    <div class="d-flex gap-3 flex-wrap align-items-start">
+      <div>
+        <p class="text-muted small mb-1">Original</p>
+        <a href="{% get_media_prefix %}{{ media_item.media_file }}">
+          <img src="{{ media_item.media_file|thumbnail_url:'editpreview' }}"
+               alt="{% if media_item.alt_text %}{{ media_item.alt_text }}{% else %}Picture for event {{ event.name }}{% endif %}">
+        </a>
+      </div>
+      <div>
+        <p class="text-muted small mb-1">Card thumbnail</p>
+        <img src="{{ media_item.media_file|thumbnail_url:'indexview' }}"
+             alt="Card thumbnail preview"
+             style="max-width: 120px; border: 1px solid #dee2e6; border-radius: 4px;">
+      </div>
+    </div>
     {% else %}
     <span class="text-muted">No image yet</span>
     {% endif %}
@@ -468,7 +604,7 @@ function hideAddShowingForm() {
         <form method="post" action="{% url 'update-showing-status' showing.id %}">
           {% csrf_token %}<input type="hidden" name="action" value="confirm">
           <button type="submit" class="btn btn-sm btn-success" data-bs-toggle="tooltip"
-                  title="Makes this {{ site_config.occurrence_noun }} public in the online programme AND opens the rota for volunteer sign-ups. Event terms must be filled in first (unless the event type is exempt).">{{ site_config.confirm_label }}</button>
+                  title="Publishes this {{ site_config.occurrence_noun }} in the online programme and opens the rota for volunteer sign-ups.">Confirm</button>
         </form>
         <form method="post" action="{% url 'update-showing-status' showing.id %}">
           {% csrf_token %}<input type="hidden" name="action" value="cancel">

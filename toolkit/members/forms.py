@@ -212,6 +212,7 @@ class VolunteerForm(forms.ModelForm):
         model = toolkit.members.models.Volunteer
         fields = (
             "portrait", "notes", "status",
+            "retention_exempt", "retention_exempt_reason",
             "access_intro", "access_needs", "access_links",
             "emergency_contact_name", "emergency_contact_relationship", "emergency_contact_phone",
             "dir_share_listed", "dir_share_name_style",
@@ -286,13 +287,26 @@ class TrainingRecordForm(forms.ModelForm):
 
 class GroupTrainingForm(forms.Form):
     type = forms.ChoiceField(
-        choices=TrainingRecord.TRAINING_TYPE_CHOICES, required=True
+        choices=TrainingRecord.TRAINING_TYPE_CHOICES,
+        required=True,
+        widget=forms.Select(attrs={"class": "form-select form-select-sm"}),
     )
     role = forms.ModelChoiceField(
-        queryset=toolkit.diary.models.Role.objects.all(), required=False
+        queryset=toolkit.diary.models.Role.objects.all(),
+        required=False,
+        widget=forms.Select(attrs={"class": "form-select form-select-sm"}),
     )
-    training_date = forms.DateField(required=True, initial=datetime.date.today)
-    trainer = forms.CharField(min_length=2, max_length=128, required=True)
+    training_date = forms.DateField(
+        required=True,
+        initial=datetime.date.today,
+        widget=forms.DateInput(attrs={"type": "date", "class": "form-control form-control-sm"}),
+    )
+    trainer = forms.CharField(
+        min_length=2,
+        max_length=128,
+        required=True,
+        widget=forms.TextInput(attrs={"class": "form-control form-control-sm"}),
+    )
     volunteers = forms.ModelMultipleChoiceField(
         queryset=Member.objects.filter(
             volunteer__status=toolkit.members.models.Volunteer.STATUS_ACTIVE
@@ -301,7 +315,7 @@ class GroupTrainingForm(forms.Form):
         required=True,
     )
     notes = forms.CharField(
-        widget=forms.Textarea,
+        widget=forms.Textarea(attrs={"class": "form-control form-control-sm", "rows": "3"}),
         required=False,
         help_text="(will be added to all selected volunteer's training "
         "records)",

@@ -1,5 +1,5 @@
 {% extends 'base_admin.html' %}
-{% block title %}Bulk record — {{ mode|title }}{% endblock %}
+{% block title %}Log training / quals — {{ mode|title }}{% endblock %}
 
 {% block css %}
 {{ block.super }}
@@ -75,6 +75,88 @@ document.addEventListener("DOMContentLoaded", function () {
   });
   updateCount();
   {% endif %}
+
+  // ── Confirmation modal ────────────────────────────────────────────────
+  var modalEl = document.getElementById("bulk-confirm-modal");
+  var bsModal = new bootstrap.Modal(modalEl);
+  var confirmOk = document.getElementById("bulk-confirm-ok");
+  var pendingForm = null;
+
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function buildConfirmBody(action, names) {
+    var n = names.length;
+    var html = "<p>" + action + "</p>";
+    html += "<p class='mb-2'><strong>" + n + " volunteer" + (n !== 1 ? "s" : "") + "</strong> will be recorded.</p>";
+    html += "<div style='max-height:280px;overflow-y:auto;border:1px solid #dee2e6;border-radius:4px;padding:0.5rem 0.75rem'>";
+    html += "<ol class='mb-0 ps-3'>";
+    names.forEach(function (name) { html += "<li>" + esc(name) + "</li>"; });
+    html += "</ol></div>";
+    return html;
+  }
+
+  function attachConfirm(form, getNames, getAction) {
+    form.addEventListener("submit", function (e) {
+      var names = getNames();
+      if (!names.length) return;
+      e.preventDefault();
+      document.getElementById("bulk-confirm-body").innerHTML = buildConfirmBody(getAction(), names);
+      pendingForm = form;
+      bsModal.show();
+    });
+  }
+
+  confirmOk.addEventListener("click", function () {
+    bsModal.hide();
+    if (pendingForm) { pendingForm.submit(); pendingForm = null; }
+  });
+
+  var trainingModeInput = document.querySelector('form input[name="mode"][value="training"]');
+  if (trainingModeInput) {
+    var trainingForm = trainingModeInput.closest("form");
+    attachConfirm(trainingForm,
+      function () {
+        var sel = trainingForm.querySelector('select[name="volunteers"]');
+        return sel ? Array.from(sel.selectedOptions).map(function (o) { return o.text.trim(); }) : [];
+      },
+      function () {
+        var typeEl = document.getElementById("id_type");
+        var roleEl = document.getElementById("id_role");
+        var dateEl = document.getElementById("id_training_date");
+        var trainerEl = document.getElementById("id_trainer");
+        var typeText = typeEl ? typeEl.options[typeEl.selectedIndex].text : "";
+        var roleActive = roleEl && !roleEl.disabled && roleEl.selectedIndex > 0;
+        var roleText = roleActive ? roleEl.options[roleEl.selectedIndex].text : "";
+        var s = "Training: <strong>" + esc(typeText) + "</strong>";
+        if (roleText) s += " &mdash; role: <strong>" + esc(roleText) + "</strong>";
+        if (dateEl && dateEl.value) s += "<br>Date: " + esc(dateEl.value);
+        if (trainerEl && trainerEl.value) s += " &nbsp;&middot;&nbsp; Trainer: " + esc(trainerEl.value);
+        return s;
+      }
+    );
+  }
+
+  var qualForm = document.getElementById("award-form");
+  if (qualForm) {
+    attachConfirm(qualForm,
+      function () {
+        var names = [];
+        qualForm.querySelectorAll(".vol-check:not([disabled]):checked").forEach(function (cb) {
+          var row = cb.closest("tr");
+          if (row) {
+            var cell = row.querySelector("td:nth-child(2)");
+            if (cell) names.push(cell.textContent.trim());
+          }
+        });
+        return names;
+      },
+      function () {
+        return "Awarding qualification: <strong>{% if selected_qual %}{{ selected_qual.name|escapejs }}{% endif %}</strong>";
+      }
+    );
+  }
 });
 </script>
 {% endblock %}
@@ -82,45 +164,83 @@ document.addEventListener("DOMContentLoaded", function () {
 {% block body %}
 <div class="container-fluid mt-3">
 
-<h2>Bulk record</h2>
+<h2>Log training / quals</h2>
 
 {# ── Type selector ─────────────────────────────────────────────────────── #}
 <div class="card mb-3">
   <div class="card-body py-2">
-    <div class="d-flex align-items-start gap-4 flex-wrap">
-      <div>
-        <div class="fw-semibold mb-1">Record type</div>
-        <div class="d-flex gap-3">
-          <a href="{% url "bulk-record" %}?mode=training"
-             class="btn btn-sm {% if mode == "training" %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-            Training record
-          </a>
-          <a href="{% url "bulk-record" %}?mode=qualification"
-             class="btn btn-sm {% if mode == "qualification" %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-            Qualification grant
-          </a>
-        </div>
-      </div>
-      <div class="text-muted small" style="max-width:480px">
-        {% if mode == "training" %}
-        <strong>Training records</strong> are event-based log entries (e.g. "attended General Safety Training on 12 May"). They expire and are used for audit, not access control.
-        {% else %}
-        <strong>Qualifications</strong> are durable clearances that gate rota sign-ups (e.g. "cleared for Projection"). They don't expire unless a certificate type is set.
-        {% endif %}
-      </div>
+    <div class="fw-semibold mb-2">Record type</div>
+    <div class="d-flex gap-3 mb-2">
+      <a href="{% url "bulk-record" %}?mode=training"
+         class="btn btn-sm {% if mode == "training" %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+        Training record
+      </a>
+      <a href="{% url "bulk-record" %}?mode=qualification"
+         class="btn btn-sm {% if mode == "qualification" %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+        Qualification grant
+      </a>
     </div>
+    <p class="text-muted small mb-0">
+      {% if mode == "training" %}
+      <strong>Training records</strong> are event-based log entries (e.g. "attended General Safety Training on 12 May"). They expire and are used for audit, not access control.
+      {% else %}
+      <strong>Qualifications</strong> are durable clearances that gate rota sign-ups (e.g. "cleared for Projection"). They don't expire unless a certificate type is set.
+      {% endif %}
+    </p>
   </div>
 </div>
 
 {# ── Training section ──────────────────────────────────────────────────── #}
 {% if mode == "training" %}
+{{ form.media }}
 <form action="" method="POST">
   {% csrf_token %}
   <input type="hidden" name="mode" value="training">
-  <table>
-    {{ form.as_table }}
-    <tr><td colspan="2"><input type="submit" value="Add training records"></td></tr>
-  </table>
+
+  <div class="card mb-3">
+    <div class="card-header fw-semibold">Training details</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-sm-4">
+          <label for="id_type" class="form-label">Training type</label>
+          {{ form.type }}
+          {% if form.type.errors %}<div class="text-danger small mt-1">{{ form.type.errors }}</div>{% endif %}
+        </div>
+        <div class="col-sm-4" id="div_id_role">
+          <label for="id_role" class="form-label">Role <span class="text-muted">(role-specific only)</span></label>
+          {{ form.role }}
+          {% if form.role.errors %}<div class="text-danger small mt-1">{{ form.role.errors }}</div>{% endif %}
+        </div>
+        <div class="col-sm-4">
+          <label for="id_training_date" class="form-label">Training date</label>
+          {{ form.training_date }}
+          {% if form.training_date.errors %}<div class="text-danger small mt-1">{{ form.training_date.errors }}</div>{% endif %}
+        </div>
+        <div class="col-sm-6">
+          <label for="id_trainer" class="form-label">Trainer / delivered by</label>
+          {{ form.trainer }}
+          {% if form.trainer.errors %}<div class="text-danger small mt-1">{{ form.trainer.errors }}</div>{% endif %}
+        </div>
+        <div class="col-sm-6">
+          <label for="id_notes" class="form-label">Notes <span class="text-muted">(added to every record)</span></label>
+          {{ form.notes }}
+          {% if form.notes.errors %}<div class="text-danger small mt-1">{{ form.notes.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header fw-semibold">Volunteers</div>
+    <div class="card-body">
+      {% if form.volunteers.errors %}<div class="text-danger small mb-2">{{ form.volunteers.errors }}</div>{% endif %}
+      {{ form.volunteers }}
+    </div>
+    <div class="card-footer d-flex justify-content-end">
+      <button type="submit" class="btn btn-primary">Add training records</button>
+    </div>
+  </div>
+
 </form>
 {% endif %}
 
@@ -133,7 +253,8 @@ document.addEventListener("DOMContentLoaded", function () {
     <form method="get" class="d-flex align-items-center flex-wrap" style="gap:0.75rem">
       <input type="hidden" name="mode" value="qualification">
       <label for="qualification_id" class="mb-0 fw-semibold">Qualification:</label>
-      <select name="qualification_id" id="qualification_id" class="form-select form-select-sm" style="max-width:280px">
+      <select name="qualification_id" id="qualification_id" class="form-select form-select-sm"
+              style="max-width:280px" onchange="this.form.submit()">
         <option value="">-- choose --</option>
         {% for qual in all_qualifications %}
           <option value="{{ qual.pk }}"{% if selected_qual.pk == qual.pk %} selected{% endif %}>{{ qual.name }}</option>
@@ -147,7 +268,6 @@ document.addEventListener("DOMContentLoaded", function () {
           <label class="form-check-label" for="hide-holders">Hide already-qualified</label>
         </div>
       {% endif %}
-      <button type="submit" class="btn btn-sm btn-outline-secondary">Filter</button>
     </form>
   </div>
 </div>
@@ -233,5 +353,23 @@ document.addEventListener("DOMContentLoaded", function () {
 {% endif %}
 {% endif %}
 
+</div>
+
+{# ── Bulk-action confirmation modal ───────────────────────────────────────── #}
+<div class="modal fade" id="bulk-confirm-modal" tabindex="-1"
+     aria-labelledby="bulk-confirm-title" aria-modal="true" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="bulk-confirm-title">Confirm bulk action</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="bulk-confirm-body"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="bulk-confirm-ok">Confirm and save</button>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

@@ -56,10 +56,11 @@
 
 <h1>Anonymise volunteer: {{ member.name }}</h1>
 
-{% if messages %}
-  {% for message in messages %}
-    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-  {% endfor %}
+{% if has_active_membership %}
+<div class="anon-warning" style="border-color: #dc3545; background: #f8d7da;">
+  <h2 style="color: #721c24;">⚠ This volunteer has an active membership</h2>
+  <p>Their membership has not expired. Anonymising will permanently destroy their membership record. This is allowed, but it should be a conscious decision — confirm you intend to erase an active member before proceeding.</p>
+</div>
 {% endif %}
 
 <div class="anon-warning">

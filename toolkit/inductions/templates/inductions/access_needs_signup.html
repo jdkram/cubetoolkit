@@ -1,0 +1,36 @@
+{% extends "base_public.html" %}
+{% block title %}1:1 Induction Request{% endblock %}
+
+{% block body %}
+<div style="max-width: 600px; margin: 2rem auto;">
+  <h2>Request a 1:1 induction</h2>
+  <p>
+    If you'd like an induction tailored to your access requirements, fill in the form below.
+    Someone will be in touch to arrange a time that works for you.
+  </p>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="error-list">
+      {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+    </div>
+    {% endif %}
+
+    {% for field in form %}
+    <div class="form-field{% if field.errors %} field-error{% endif %}">
+      <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-hidden="true">*</span>{% endif %}</label>
+      {{ field }}
+      {% if field.help_text %}<p class="help-text">{{ field.help_text }}</p>{% endif %}
+      {% for error in field.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+    </div>
+    {% endfor %}
+
+    <p><button type="submit">Send request</button></p>
+  </form>
+
+  <p><small>
+    Looking for a group induction instead? <a href="{% url "inductions:manage_session_list" %}">See upcoming sessions.</a>
+  </small></p>
+</div>
+{% endblock %}

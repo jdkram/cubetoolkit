@@ -39,6 +39,9 @@ from toolkit.diary.edit_views import (
     import_event_template,
     programming_queue,
     update_event_programming_status,
+    omdb_search,
+    link_film,
+    unlink_film,
 )
 from toolkit.diary.public_views import (
     ArchiveIndex,
@@ -280,6 +283,10 @@ diary_urls = [
         update_event_programming_status,
         name="update-event-programming-status",
     ),
+    # Film metadata (OMDb integration)
+    re_path(r"^edit/omdb/search/$", omdb_search, name="omdb-search"),
+    re_path(r"^edit/event/id/(?P<event_id>\d+)/film/link/$", link_film, name="link-film"),
+    re_path(r"^edit/event/id/(?P<event_id>\d+)/film/unlink/$", unlink_film, name="unlink-film"),
     re_path(r"^edit/eventtags/", edit_event_tags, name="edit_event_tags"),
     # Edit event roles
     re_path(r"^edit/roles/", edit_roles, name="edit_roles"),

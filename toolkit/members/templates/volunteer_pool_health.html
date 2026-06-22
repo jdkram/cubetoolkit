@@ -38,12 +38,23 @@
 <p class="pool-meta">
   Volunteers grouped by how safe it is to anonymise them, oldest first within each group.
   Anonymisation is irreversible &mdash; it erases PII while keeping rota history.
-  Nothing on this page changes records except the bulk anonymise action at the bottom.
 </p>
 <p>
   <a href="{% url "view-volunteer-list" %}">volunteer profiles</a> &#xb7;
   <a href="{% url "view-volunteer-summary" %}">volunteer summary</a>
 </p>
+
+{# ── Auto-dormancy ──────────────────────────────────────────────────────── #}
+<section class="pool-section" style="border: 1px solid #dee2e6; border-radius:0.375rem; padding:0.75rem 1rem; margin-bottom:1.5rem;">
+  <h3 style="margin-top:0;">Auto-dormancy</h3>
+  <p class="pool-meta" style="margin-bottom:0.5rem;">
+    Marks active volunteers as Dormant when they have been quiet too long.
+    {% if dormancy_days %}Dormancy threshold: {{ dormancy_days }} days without login.{% endif %}
+    {% if never_logged_in_grace_days %}Never-logged-in grace period: {{ never_logged_in_grace_days }} days.{% endif %}
+    {% if not dormancy_days and not never_logged_in_grace_days %}<strong>Disabled</strong> — configure thresholds in Site settings.{% endif %}
+  </p>
+  <a href="{% url "auto-dormancy-preview" %}" class="btn btn-sm btn-outline-secondary">Preview auto-dormancy &rarr;</a>
+</section>
 
 <form method="post" action="{% url "bulk-anonymise-volunteers" %}" id="bulk-anonymise-form">
 {% csrf_token %}
@@ -76,7 +87,12 @@
         <td><input type="checkbox" name="volunteer_ids" value="{{ v.pk }}" class="purge-checkbox" data-tier="never-onboarded"></td>
         <td><a href="{% url "edit-volunteer" v.pk %}">{{ v.member.name }}</a></td>
         <td>{{ v.created_at|date:"d/m/Y" }}</td>
-        <td><a href="{% url "anonymise-volunteer" v.pk %}">Anonymise&hellip;</a></td>
+        <td style="white-space:nowrap;">
+          {% if last_gasp_body_configured %}
+          <a href="{% url "last-gasp-email" v.pk %}" class="me-2">Email&hellip;</a>
+          {% endif %}
+          <a href="{% url "anonymise-volunteer" v.pk %}">Anonymise&hellip;</a>
+        </td>
       </tr>
       {% endfor %}
     </tbody>
@@ -118,7 +134,12 @@
         <td><a href="{% url "edit-volunteer" v.pk %}">{{ v.member.name }}</a></td>
         <td>{{ v.get_status_display }}</td>
         <td>{{ v.user.last_login|date:"d/m/Y" }}</td>
-        <td><a href="{% url "anonymise-volunteer" v.pk %}">Anonymise&hellip;</a></td>
+        <td style="white-space:nowrap;">
+          {% if last_gasp_body_configured %}
+          <a href="{% url "last-gasp-email" v.pk %}" class="me-2">Email&hellip;</a>
+          {% endif %}
+          <a href="{% url "anonymise-volunteer" v.pk %}">Anonymise&hellip;</a>
+        </td>
       </tr>
       {% endfor %}
     </tbody>
@@ -163,6 +184,47 @@
         <td><a href="{% url "edit-volunteer" v.pk %}">{{ v.member.name }}</a></td>
         <td>{{ v.created_at|date:"d/m/Y" }}</td>
         <td>{{ v.user.last_login|date:"d/m/Y"|default:"Never" }}</td>
+        <td style="white-space:nowrap;">
+          <form method="post" action="{% url "admin-restore-volunteer" v.pk %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-success tier-select-btn"
+              onclick="return confirm('Restore {{ v.member.name }} to Active?')">Restore to active</button>
+          </form>
+          <a href="{% url "edit-volunteer" v.pk %}" class="ms-1">edit</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="pool-empty">None.</p>
+  {% endif %}
+</section>
+
+{# ── Tier 4: Retention-exempt ───────────────────────────────────────────── #}
+<section class="pool-section" style="margin-top:2rem;">
+  <h3>
+    Retention-exempt
+    <span class="pool-tier-label" style="background:#e2e3e5; color:#383d41;">excluded from purge</span>
+    <span class="pool-meta">({{ retention_exempt_count }})</span>
+  </h3>
+  <p class="pool-meta">
+    These volunteers are excluded from the purge candidates list regardless of their status or last-activity date.
+    To remove the exemption, edit their profile.
+  </p>
+
+  {% if retention_exempt %}
+  <table class="table table-sm table-striped">
+    <thead>
+      <tr><th>Name</th><th>Status</th><th>Last login</th><th>Reason</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for v in retention_exempt %}
+      <tr>
+        <td><a href="{% url "edit-volunteer" v.pk %}">{{ v.member.name }}</a></td>
+        <td>{{ v.get_status_display }}</td>
+        <td>{{ v.user.last_login|date:"d/m/Y"|default:"Never" }}</td>
+        <td class="pool-meta">{{ v.retention_exempt_reason|default:"—" }}</td>
         <td><a href="{% url "edit-volunteer" v.pk %}">edit</a></td>
       </tr>
       {% endfor %}

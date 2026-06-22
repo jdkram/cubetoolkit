@@ -116,7 +116,7 @@ Add a new event
         <div class="entry-mode-card selected" data-value="queue"
              title="Use this for films, external guests, or anything that needs the full programming process — discussed and voted on at a meeting.">
           Needs meeting approval
-          <small>Goes into the programming queue for discussion at the next meeting.</small>
+          <small>Goes into the programming queue for discussion at the next meeting. If you add a date, it's held as a placeholder on the calendar straight away.</small>
         </div>
         <div class="entry-mode-card" data-value="standing"
              title="Use this for recurring or self-authorised events: the regular café shift, cleaning days, workshops that run without separate approval each time.">
@@ -273,6 +273,53 @@ $(document).ready(function () {
         new bootstrap.Tooltip(el);
     });
 
+    // Date picker: start in single mode; checkbox switches to multi mode.
+    // multidatepicker_init.js has already initialised this in multiple mode —
+    // we destroy that instance and take over.
+    var datesEl = document.getElementById('id_dates');
+    var fpDates = null;
+
+    function reinitDatePicker(mode) {
+        var selected = fpDates ? fpDates.selectedDates.slice() : [];
+        if (datesEl._flatpickr) { datesEl._flatpickr.destroy(); }
+        datesEl.setAttribute('placeholder', mode === 'single' ? 'Click to select a date…' : 'Click to select dates…');
+        fpDates = flatpickr(datesEl, {
+            mode: mode,
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'D j M Y',
+            conjunction: ', ',
+        });
+        if (selected.length) {
+            fpDates.setDate(mode === 'single' ? selected[0] : selected, false);
+        }
+    }
+
+    reinitDatePicker('single');
+
+    // Inject "Multiple dates" toggle below the dates field row.
+    var datesGroup = datesEl.closest('.form-group');
+    if (datesGroup) {
+        var multiToggleDiv = document.createElement('div');
+        multiToggleDiv.className = 'form-group row';
+        multiToggleDiv.id = 'multi-date-toggle-row';
+        multiToggleDiv.innerHTML = (
+            '<div class="col-sm-2"></div>'
+            + '<div class="col-sm-10">'
+            + '<div class="form-check">'
+            + '<input class="form-check-input" type="checkbox" id="id_multi_date_toggle">'
+            + '<label class="form-check-label text-muted" for="id_multi_date_toggle">'
+            + 'Multiple dates'
+            + '</label>'
+            + '</div></div>'
+        );
+        datesGroup.after(multiToggleDiv);
+    }
+
+    document.getElementById('id_multi_date_toggle').addEventListener('change', function () {
+        reinitDatePicker(this.checked ? 'multiple' : 'single');
+    });
+
     // Show target_month only when entry_mode=queue and no dates are chosen.
     function updateTargetMonthVisibility() {
         var mode = document.getElementById('id_entry_mode').value;
@@ -290,5 +337,34 @@ $(document).ready(function () {
     $('#id_dates').on('change input', updateTargetMonthVisibility);
     updateTargetMonthVisibility();
 });
+</script>
+<script>
+(function ($) {
+    "use strict";
+    $(document).on('keydown', function (e) {
+        if (e.altKey || e.metaKey) { return; }
+        var tag = (document.activeElement || {}).tagName || "";
+        var inInput = /^(INPUT|TEXTAREA|SELECT)$/i.test(tag);
+
+        // Ctrl+Enter: submit the form from anywhere on the page
+        if (e.ctrlKey && e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('new-event-form').submit();
+            return;
+        }
+        if (e.ctrlKey) { return; }
+
+        if (e.key === 'Escape' && !inInput) {
+            window.location.href = '{% url "cancel-edit" %}';
+        }
+    });
+
+    if (window.AdminKeyboardNav) {
+        window.AdminKeyboardNav.registerHelp([{ heading: "New event", rows: [
+            ["Ctrl+Enter", "Create event"],
+            ["Esc",        "Cancel and go back"]
+        ]}]);
+    }
+}(jQuery));
 </script>
 {% endblock %}

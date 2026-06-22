@@ -9,17 +9,10 @@ from .common import MembersTestsMixin
 class SecurityTests(MembersTestsMixin, TestCase):
     """Basic test that the private pages do not load without a login"""
 
-    # Views that use @permission_required: redirect to login even when
-    # the user is logged in but lacks the required permission.
+    # Views that use @permission_required or @ip_or_permission_required:
+    # redirect to login even when the user is logged in but lacks the permission.
     write_required = {
-        # Volunteer urls:
-        "add-volunteer-training-group-record": {},
-        "add-volunteer-training-record": {"volunteer_id": 1},
-        "delete-volunteer-training-record": {"training_record_id": 1},
-        # Member urls:
         "add-member": {},
-        "edit-member": {"member_id": 1},
-        "delete-member": {"member_id": 1},
     }
 
     # Views that use @login_required + raise PermissionDenied: unauthenticated
@@ -29,14 +22,21 @@ class SecurityTests(MembersTestsMixin, TestCase):
         "edit-volunteer": {"volunteer_id": 1},
     }
 
-    only_read_required = {
+    # Views that use @panopticon_required (or call it internally): unauthenticated
+    # users get a login redirect (302); authenticated non-superusers get 403.
+    panopticon_required = {
         # Volunteer urls:
+        "add-volunteer-training-group-record": {},
+        "add-volunteer-training-record": {"volunteer_id": 1},
+        "delete-volunteer-training-record": {"training_record_id": 1},
         "view-volunteer-list": {},
         "view-volunteer-role-report": {},
         "view-volunteer-training-report": {},
         "view-qualification-report": {},
         "view-volunteer-export-audit": {},
-        # Member urls:
+        # Member urls (edit/delete use panopticon_required internally for non-key access):
+        "edit-member": {"member_id": 1},
+        "delete-member": {"member_id": 1},
         "search-members": {},
         "view-member": {"member_id": 1},
         "member-statistics": {},
@@ -66,12 +66,12 @@ class SecurityTests(MembersTestsMixin, TestCase):
     def test_need_login(self):
         """
         Checks all URLs that shouldn't work when not logged in at all.
-        Both @permission_required and @login_required views redirect to login.
+        Both @permission_required and @panopticon_required redirect to login.
         """
         views_to_test = {}
         views_to_test.update(self.write_required)
         views_to_test.update(self.write_or_own_required)
-        views_to_test.update(self.only_read_required)
+        views_to_test.update(self.panopticon_required)
 
         self._assert_need_login(views_to_test)
 
@@ -87,21 +87,19 @@ class SecurityTests(MembersTestsMixin, TestCase):
         self.client.login(username="read_only", password="T3stPassword!1")
         self._assert_need_login(self.write_required)
         self._assert_need_perm(self.write_or_own_required)
+        self._assert_need_perm(self.panopticon_required)
 
     def test_need_read_or_write(self):
         """
         Checks all URLs that shouldn't work when logged in user doesn't have
         'toolkit.write' or 'toolkit.read' permission.
         """
-        views_to_test = {}
-        views_to_test.update(self.write_required)
-        views_to_test.update(self.only_read_required)
-
         # login as no permission user:
         self.client.login(username="no_perm", password="T3stPassword!2")
 
-        self._assert_need_login(views_to_test)
+        self._assert_need_login(self.write_required)
         self._assert_need_perm(self.write_or_own_required)
+        self._assert_need_perm(self.panopticon_required)
 
     def test_protected_urls(self):
         """URLs which should only work if the member key is known"""
