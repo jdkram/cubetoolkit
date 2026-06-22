@@ -6,6 +6,115 @@ Each release below is tagged (`v2026.03.0` through `v2026.05.7`) and represents 
 
 ---
 
+## v2026.06.3 — Personal Feature Sprint
+
+**Tagged at:** `2026.06.3` (2026-06-22)
+
+Honest framing: this release is personal feature creep. No external user asked for most of it. After many releases of porting S+S-specific workflows and fixing bugs, this sprint was an excuse to build things that seemed interesting, useful-to-me, or that I'd been quietly wanting for months. Some of it is genuinely useful to S+S (film metadata, induction sign-ups, cost terms). Some of it is just fun (keyboard shortcuts, day-of-week colour motifs). All of it passes tests.
+
+### What's new
+
+**Film and event production**
+
+- **Film metadata via OMDb (9.66)** — `Film` model linked to `Event` via nullable FK. Three-state section in the event edit form: linked summary card (source badge "via OMDb" / "manually entered"; Edit button for manual corrections), OMDb search box, and manual entry form. Manual form pre-populates after an unlink so programmers can correct one field without retyping everything. Film section auto-expands when the event has the "film" tag; completeness bar nudges programmers who haven't linked a film. API key configurable in Site Settings → External APIs. Previously used TMDB; migrated to OMDb (stdlib only, no new deps). 34 tests
+- **Structured cost terms (9.54)** — `cost_type` dropdown (film licence / performer fee / venue hire / internal / TBC) with conditional sub-fields (distributor, flat fee, VAT, percentage split, minimum guarantee). Separate `technical_notes` field for AV/tech rider. Cost summary shown in Event Hub when structured terms are enabled. Gated behind `structured_cost_terms_enabled` site setting
+- **Structured cost rider fields** — sound engineer name, fee, and "paid by" fields for Performer fee events
+
+**Volunteer management**
+
+- **Volunteer stats page (9.99)** — personal "your history at S+S" page: activity heatmap (Unicode block characters, both colour and character encoding for accessibility), shifts per year bar chart, role breakdown grouped by `stats_label`, role evolution timeline, milestone shifts, training and qualifications, programming gate showing when the threshold is unlocked. Panopticon can view any volunteer's stats. `stats_label` field on `Role`; `programming_min_event_shifts` and `stats_training_tag_slugs` in SiteConfiguration
+- **Pool management GUI (9.96)** — pool health page gains: auto-dormancy preview with "Apply now" button; one-click "Restore to active" on dormant/retired rows; `retention_exempt` flag on volunteers (excludes them from purge candidates); last-gasp re-engagement email per purge candidate (configurable subject/body/cooldown in SiteConfiguration; `LastGaspEmailLog` enforces cooldown)
+- **Export reason field** — optional "Export reason" field on volunteer CSV export, displayed in the audit log
+- **Suspension email** — configurable subject/body in SiteConfiguration; after any suspension, a preview panel appears with the rendered message; sending is a separate deliberate step
+
+**Induction sign-up system (9.4)**
+
+A full induction workflow for new volunteer onboarding. Gated by `InductionsSettings.inductions_enabled`:
+
+- **Public sign-up** — `InductionSession` with slug-based public URL, per-session custom questions as JSON, access needs queue (`InductionRequest`)
+- **Panopticon session management** — live check-in page: checkboxes mark attendance (reversible AJAX), "Create accounts and send welcome emails" is a separate irreversible step. Inline edit modal per row. "Select all pending" pre-ticks without creating
+- **Simplelists CSV export** — first/last/email, no headers, ready to paste into simplelists
+- **3-day reminder** and **auto-purge** management commands
+- **Public session listing** for upcoming induction dates
+
+**Keyboard shortcuts and command palette (9.125)**
+
+An extended keyboard power-user layer. Probably only useful to the maintainer, but it's very satisfying:
+
+- **Ctrl+K command palette** — fuzzy-search modal over all admin commands, grouped by category, permission-filtered via Django template conditionals, shortcut hints as passive learning
+- **g-key nav mode** — on every admin page: `g→d` diary, `g→r` rota, `g→c` calendar, etc. Sub-menu drill-down (`g→w` shows Website submenu items with letter badges). Public sidebar gets the same treatment
+- **Rota shortcuts** — J/K to navigate one week forward/back, Ctrl+Enter to save rota notes, y/l to copy permalink
+- **Calendar shortcuts** — `[`/`]` prev/next period, `m/w/3/R/M` view modes, `t` today, `n` new event, `/` focus search
+- **Diary list** — `j`/`k` event row navigation, `{`/`}` month navigation, `n` add event, `/` focus filter, Escape blur, `F` fullscreen
+- **Volunteer list/summary, programming queue, event hub** — `j`/`k`/Enter/`o` navigation shortcuts
+- **Filter persistence** — diary and volunteer list filter inputs persist to `sessionStorage` across reloads
+- **Shared `?` help modal** — every admin page now has a working `?` shortcut showing global nav plus page-specific sections. Rota keeps its own elaborate modal
+- `aria-keyshortcuts` attributes on key interactive elements
+
+**Runtime-configurable permissions (9.49)**
+
+- 11 `perm_*` fields on `SiteConfiguration` (all editable at runtime via the site settings dashboard). `feature_required(feature_name)` decorator reads the configured level at request time
+- Diary read/write split: a new `perm_diary_read` level (default Volunteer) gives read-only diary access; `perm_diary_edit` gates write operations. The diary list conditionally hides edit controls for read-only users while keeping event names and links visible
+- `write_required` / `read_required` / `write_required_strict` decorators replace raw `@permission_required` calls throughout — and now correctly set `request.view_access_level` so the access-level footer badge resolves to the right tier (was always showing "All volunteers")
+
+**Collectives**
+
+- **Sample role field (9.68.2)** — `Collective.sample_role` short text shown internally as "Example of what you might do" and on the public directory as "Example role:"
+- **CollectiveRole model (9.128)** — structured roles per collective (title, description, time commitment, getting-started text, open-to-new-volunteers flag). Inline formset on collective edit. Public directory shows open roles with "looking for people" badge
+
+**Dashboard**
+
+- **Dashboard preferences to DB (9.126)** — card visibility and order now persisted to the volunteer record (not localStorage) via an AJAX endpoint. Server renders initial hidden state so no flash of wrong content on load
+- **Diary days ahead** setting migrated from session to the `Volunteer` record
+- **Favourite links** — volunteers can pin up to 8 links from a permission-filtered catalogue (19 links). Pinned links appear as a "Quick links" dashboard card
+
+**Public programme**
+
+- **Day-of-week colour motifs (9.133)** — each programme card gets a 3px left-border stripe in a day-specific colour (Mon violet → Sun pink). A colour-swatch legend strip sits above the grid. The same day filter lets visitors filter by day (separate to the type filter row). S+S template only
+
+**Misc UX**
+
+- **Notification alerts redesign** — `bs_messages.html` rebuilt as dismissible Bootstrap alerts with icons and left accent borders for warnings. `base_admin.html` uses it everywhere (was inconsistent)
+- **Event hub image preview (9.135)** — "Original" and "Card thumbnail" shown side-by-side on the event hub, so the crop result is visible without switching pages
+- **Top-5 tags in tag picker (9.136)** — a "Common tags" group (the 5 most-used across all events) appears above "All tags" in the event edit tag picker; clicking either syncs both
+
+### How to demo
+
+1. `git checkout v2026.06.3`
+2. `docker compose up --build -d`
+3. `docker compose exec toolkit /venv/bin/python3 manage.py configure_toolkit_users --password password`
+4. `docker compose exec toolkit /venv/bin/python3 manage.py seed_dev_data`
+5. Log in as `admin` / `password`
+
+| Page to show | URL | What to point out |
+|---|---|---|
+| Edit event (film) | `/diary/edit/event/<id>/` | Add "film" tag; film section expands; search OMDb; link/unlink/manual |
+| Edit event (cost) | `/diary/edit/event/<id>/` | Enable structured_cost_terms; cost_type dropdown + conditional sub-fields |
+| Volunteer stats | `/volunteers/stats/` | Heatmap, shifts/year, role breakdown, programming gate |
+| Pool health | `/volunteers/view/pool-health/` | Auto-dormancy preview; one-click restore; retention_exempt |
+| Inductions | `/inductions/manage/` | Session list; check-in; create accounts card |
+| Command palette | Any admin page, Ctrl+K | Fuzzy search; permission filtering; shortcut hints |
+| Rota | `/diary/edit/rota/` | Press ? for help modal; try g→d navigation |
+| Site settings | `/diary/edit/siteconfiguration/` | Permission dropdowns; access level table |
+| Programme | `/programme/` | Day-of-week left-border stripes; legend strip |
+| Event hub | `/diary/edit/<id>/` | Original + thumbnail image side-by-side |
+| Edit event (tags) | `/diary/edit/event/<id>/` | Common tags group above All tags |
+| Favourite links | `/toolkit/favourites/` | Pin up to 8 links; appear in dashboard Quick links card |
+
+### State of the code
+
+- 916 tests passing
+- 89 diary migrations, 28 members migrations, 24 labs migrations, 2 inductions migrations
+
+### Known rough edges
+
+- OMDb search requires an API key configured in Site Settings; without it the search box is hidden (correct) but there's no in-form prompt to set one
+- Induction session custom questions are JSON-edited directly in the model (no GUI builder yet)
+- Keyboard shortcuts are not documented anywhere in the app except the `?` help modal — discoverability depends on volunteers finding the modal
+- Structured cost terms behind a feature flag that defaults off; enabling it in the seed data will be a future task
+
+---
+
 ## v2026.06.2 — Programmer UX Overhaul & Volunteer Data Tools
 
 **Tagged at:** `2026.06.2` (2026-06-11)
