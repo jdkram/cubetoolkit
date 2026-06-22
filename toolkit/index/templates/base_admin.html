@@ -41,6 +41,40 @@ body {
   margin-left: 0.3em;
   vertical-align: 0.05em;
 }
+.rota-nav-key-badge {
+  display: inline-block;
+  margin-left: 0.3em;
+  font-size: 0.85em;
+  font-family: monospace;
+  font-weight: bold;
+  background: #ffc107 !important;
+  color: #000 !important;
+  border: 1px solid rgba(0,0,0,0.25);
+  border-radius: 3px;
+  padding: 0.1em 0.4em;
+  line-height: 1.4;
+  vertical-align: middle;
+}
+.tk-access-footer {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  padding: 0.2rem 0.75rem;
+  font-size: 0.75rem;
+  color: #999;
+  background: rgba(255,255,255,0.9);
+  border-top: 1px solid #e9ecef;
+  border-left: 1px solid #e9ecef;
+  border-radius: 4px 0 0 0;
+  z-index: 1000;
+}
+.tk-access-label {
+  margin-right: 0.3em;
+}
+.tk-access-badge {
+  font-weight: 500;
+  color: #495057;
+}
 
 </style>
 {% endblock %}
@@ -48,6 +82,89 @@ body {
 {% block script %}
     <script src="{{ STATIC_URL }}js/lib/jquery-3.5.1.min.js"></script>
     <script src="{{ STATIC_URL }}js/lib/bootstrap/bootstrap.bundle.min.js"></script>
+    <script src="{{ STATIC_URL }}js/keyboard-nav-admin.js"></script>
+    <script src="{{ STATIC_URL }}js/command-palette.js"></script>
+    <script>
+    window.TOOLKIT_COMMANDS = [
+      {label:"Home",               category:"Navigate", shortcut:"g → h", href:"{% url 'toolkit-index' %}",      keywords:"dashboard index"},
+      {label:"Rota",               category:"Navigate", shortcut:"g → r", href:"{% url 'rota-edit' %}",          keywords:"shifts schedule volunteering sign up"},
+      {label:"Rota vacancies",     category:"Navigate",                         href:"{% url 'view-rota-vacancies' %}", keywords:"gaps empty unfilled shifts"},
+      {% if feature_perms.diary_read %}
+      {label:"Diary",              category:"Navigate", shortcut:"g → d", href:"{% url 'default-edit' %}",       keywords:"events showings edit list"},
+      {% endif %}
+      {% if feature_perms.diary_calendar %}
+      {label:"Calendar",           category:"Navigate", shortcut:"g → c", href:"{% url 'diary-edit-calendar' %}", keywords:"events week month view"},
+      {% endif %}
+      {% if feature_perms.programming_queue_read %}
+      {label:"Programming queue",  category:"Navigate", shortcut:"g → q", href:"{% url 'programming-queue' %}",  keywords:"films proposals planning queue labs"},
+      {% endif %}
+      {% if feature_perms.rota_vacancies %}
+      {label:"Rota vacancies",     category:"Navigate",                         href:"{% url 'view-rota-vacancies' %}", keywords:"gaps empty unfilled shifts"},
+      {% endif %}
+      {label:"Public programme",   category:"Website",                          href:"{% url 'default-view' %}",       keywords:"front website public listings"},
+      {label:"Donations wishlist",  category:"Website",                         href:"{% url 'labs-donations' %}",     keywords:"want list labs"},
+      {% if feature_perms.donations_manage %}
+      {label:"Manage donations",   category:"Website",                          href:"{% url 'labs-donations-manage' %}", keywords:"wishlist labs"},
+      {% endif %}
+      {% if user.is_superuser %}
+      {label:"Wagtail CMS",        category:"Website",                          href:"{% url 'wagtailadmin_home' %}",  keywords:"pages articles content cms"},
+      {% endif %}
+      {label:"Bulletins",          category:"Community",                        href:"{% url 'labs-bulletins' %}",     keywords:"notices news announcements board labs"},
+      {label:"Collectives",        category:"Community",                        href:"{% url 'labs-collectives' %}",   keywords:"groups teams labs"},
+      {label:"Volunteer directory",category:"Community",                        href:"{% url 'volunteer-directory' %}", keywords:"people contacts find labs"},
+      {label:"Jobs board",         category:"Community",                        href:"{% url 'labs-jobs' %}",          keywords:"tasks help wanted labs"},
+      {label:"Building map",       category:"Community",                        href:"{% url 'labs-floorplan' %}",     keywords:"rooms floor plan layout labs"},
+      {label:"Shopping list",      category:"Community",                        href:"{% url 'labs-shopping' %}",      keywords:"buy stock supplies labs"},
+      {label:"Lost and found",     category:"Community",                        href:"{% url 'labs-found-items' %}",   keywords:"lost found items log labs"},
+      {% if user.is_superuser %}
+      {label:"Volunteer profiles", category:"People",                           href:"{% url 'view-volunteer-list' %}", keywords:"list all volunteers"},
+      {label:"Volunteer list",     category:"People",                           href:"{% url 'view-volunteer-summary' %}", keywords:"stats overview count summary"},
+      {label:"Add volunteer",      category:"People",     shortcut:"n (People)", href:"{% url 'add-volunteer' %}",      keywords:"new create volunteer"},
+      {label:"Export volunteers",  category:"People",                           href:"{% url 'view-volunteer-export' %}", keywords:"csv download data"},
+      {label:"Training report",    category:"People",                           href:"{% url 'view-volunteer-training-report' %}", keywords:"records training completion"},
+      {label:"Qualification report",category:"People",                          href:"{% url 'view-qualification-report' %}", keywords:"quals skills labs"},
+      {label:"Log training / quals", category:"People",                         href:"{% url 'bulk-record' %}",        keywords:"batch mass training add bulk record"},
+      {label:"Pool maintenance",   category:"People",                           href:"{% url 'view-volunteer-pool-health' %}", keywords:"health dormant retired labs"},
+      {label:"Add member",         category:"People",                           href:"{% url 'add-member' %}",         keywords:"new create member"},
+      {label:"Search members",     category:"People",                           href:"{% url 'search-members' %}",     keywords:"find lookup member"},
+      {label:"Member statistics",  category:"People",                           href:"{% url 'member-statistics' %}",  keywords:"stats count overview"},
+      {label:"Send mailout",       category:"People",                           href:"{% url 'members-mailout' %}",    keywords:"email newsletter send"},
+      {% if inductions_settings.inductions_enabled %}
+      {label:"Inductions",         category:"People",                           href:"{% url 'inductions:manage_session_list' %}", keywords:"new volunteers onboarding labs"},
+      {% endif %}
+      {% endif %}
+      {% if feature_perms.event_tags %}
+      {label:"Tags",               category:"Meta",                             href:"{% url 'edit_event_tags' %}",    keywords:"event labels categories"},
+      {% endif %}
+      {% if feature_perms.event_templates %}
+      {label:"Templates",          category:"Meta",                             href:"{% url 'edit_event_templates' %}", keywords:"event blueprints reuse"},
+      {% endif %}
+      {% if feature_perms.rooms %}
+      {label:"Rooms",              category:"Meta",                             href:"{% url 'edit_rooms' %}",         keywords:"spaces venues booking"},
+      {% endif %}
+      {% if feature_perms.roles %}
+      {label:"Roles",              category:"Meta",                             href:"{% url 'edit_roles' %}",         keywords:"rota jobs positions volunteer"},
+      {% endif %}
+      {% if feature_perms.diary_reports %}
+      {label:"Copy report",        category:"Meta",                             href:"{% url 'view_event_field' field='copy' %}", keywords:"descriptions text events"},
+      {label:"Copy summary report",category:"Meta",                             href:"{% url 'view_event_field' field='copy_summary' %}", keywords:"summaries blurbs"},
+      {label:"Terms report",       category:"Meta",                             href:"{% url 'view_event_field' field='terms' %}", keywords:"contract hiring external"},
+      {% endif %}
+      {% if feature_perms.printed_programmes %}
+      {label:"Printed programmes", category:"Meta",                             href:"{% url 'edit-printed-programmes' %}", keywords:"upload pdf print"},
+      {% endif %}
+      {% if user.is_superuser %}
+      {label:"Access levels",      category:"Meta",                             href:"{% url 'toolkit-access' %}",     keywords:"permissions roles panopticon labs"},
+      {label:"Site settings",      category:"Meta",                             href:"{% url 'edit-site-configuration' %}", keywords:"config venue setup labs"},
+      {% endif %}
+      {% if perms.toolkit.write %}
+      {label:"New event",          category:"Actions",   shortcut:"n (Diary)",  href:"{% url 'add-event' %}",          keywords:"create add showing booking"},
+      {% endif %}
+      {% if user.is_superuser %}
+      {label:"Building open",      category:"Actions",                          href:"{% url 'quick-create-open-session' %}", keywords:"open session announce keyholder"},
+      {% endif %}
+    ];
+    </script>
 {% endblock %}
 
 {% block meta %}
@@ -71,33 +188,35 @@ body {
         <ul class="navbar-nav me-auto">
 
           <li class="nav-item">
-            <a class="nav-link" href="{% url "toolkit-index" %}">Home</a>
+            <a class="nav-link" href="{% url "toolkit-index" %}" data-nav-key="h">Home</a>
           </li>
 
           <li class="nav-item">
-            <a class="nav-link" href="{% url "rota-edit" %}">Rota</a>
+            <a class="nav-link" href="{% url "rota-edit" %}" data-nav-key="r">Rota</a>
           </li>
 
-          {% if perms.toolkit.write %}
+          {% if feature_perms.diary_read %}
           <li class="nav-item">
-            <a class="nav-link" href="{% url "default-edit" %}">Diary</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{% url "diary-edit-calendar" %}">Calendar</a>
+            <a class="nav-link" href="{% url "default-edit" %}" data-nav-key="d">Diary</a>
           </li>
           {% endif %}
-          {% if perms.toolkit.read %}
+          {% if feature_perms.diary_calendar %}
           <li class="nav-item">
-            <a class="nav-link" href="{% url "programming-queue" %}">Queue <span class="labs-tag">labs</span></a>
+            <a class="nav-link" href="{% url "diary-edit-calendar" %}" data-nav-key="c">Calendar</a>
+          </li>
+          {% endif %}
+          {% if feature_perms.programming_queue_read %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url "programming-queue" %}" data-nav-key="q">Queue <span class="labs-tag">labs</span></a>
           </li>
           {% endif %}
 
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="{% url "default-view" %}" id="dropdown-website" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Website</a>
+            <a class="nav-link dropdown-toggle" href="{% url "default-view" %}" id="dropdown-website" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-nav-key="w">Website</a>
             <div class="dropdown-menu" aria-labelledby="dropdown-website">
               <a class="dropdown-item" href="{% url "default-view" %}">Public programme</a>
               <a class="dropdown-item" href="{% url "labs-donations" %}">Donations wishlist <span class="labs-tag">labs</span></a>
-              {% if perms.toolkit.write %}
+              {% if feature_perms.donations_manage %}
               <a class="dropdown-item" href="{% url "labs-donations-manage" %}">Manage donations <span class="labs-tag">labs</span></a>
               {% endif %}
               {% if user.is_superuser %}
@@ -107,7 +226,7 @@ body {
           </li>
 
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="dropdown-community" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Community</a>
+            <a class="nav-link dropdown-toggle" href="#" id="dropdown-community" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-nav-key="o">Community</a>
             <div class="dropdown-menu" aria-labelledby="dropdown-community">
               <a class="dropdown-item" href="{% url "labs-bulletins" %}">Bulletins <span class="labs-tag">labs</span></a>
               <a class="dropdown-item" href="{% url "labs-collectives" %}">Collectives <span class="labs-tag">labs</span></a>
@@ -124,46 +243,25 @@ body {
             </div>
           </li>
 
-          {% if perms.toolkit.write %}
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="dropdown-meta" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Meta</a>
-            <div class="dropdown-menu" aria-labelledby="dropdown-meta">
-              <a class="dropdown-item" href="{% url "edit_event_tags" %}">Tags</a>
-              <a class="dropdown-item" href="{% url "edit_event_templates" %}">Templates</a>
-              <a class="dropdown-item" href="{% url "edit_rooms" %}">Rooms</a>
-              <div class="dropdown-divider"></div>
-              <a class="dropdown-item" href="{% url "view_event_field" field="copy" %}">Copy report</a>
-              <a class="dropdown-item" href="{% url "view_event_field" field="copy_summary" %}">Copy summary report</a>
-              <a class="dropdown-item" href="{% url "view_event_field" field="terms" %}">Terms report</a>
-              <a class="dropdown-item" href="{% url "edit-printed-programmes" %}">Upload printed programmes</a>
-              <div class="dropdown-divider"></div>
-              <a class="dropdown-item" href="{% url "edit_roles" %}">Roles</a>
-              {% if user.is_superuser %}
-              <a class="dropdown-item" href="{% url "toolkit-access" %}">Access levels <span class="labs-tag">labs</span></a>
-              <div class="dropdown-divider"></div>
-              <a class="dropdown-item" href="{% url "edit-site-configuration" %}">Site settings <span class="labs-tag">labs</span></a>
-              {% if VENUE.show_user_management %}
-              <a class="dropdown-item" href="/toolkit/admin/">Admin backend</a>
-              {% endif %}
-              {% endif %}
-            </div>
-          </li>
-          {% endif %}
-
           {% if user.is_superuser %}
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="{% url "view-volunteer-summary" %}" id="dropdown-people" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">People</a>
+            <a class="nav-link dropdown-toggle" href="{% url "view-volunteer-summary" %}" id="dropdown-people" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-nav-key="p">People</a>
             <div class="dropdown-menu" aria-labelledby="dropdown-people">
-              <a class="dropdown-item" href="{% url "view-volunteer-summary" %}">Summary</a>
-              <a class="dropdown-item" href="{% url "view-volunteer-list" %}">Profiles</a>
+              <a class="dropdown-item" href="{% url "view-volunteer-summary" %}">Volunteer list</a>
+              <a class="dropdown-item" href="{% url "view-volunteer-list" %}">Volunteer profiles</a>
               <a class="dropdown-item" href="{% url "add-volunteer" %}">Add volunteer</a>
               <a class="dropdown-item" href="{% url "view-volunteer-export" %}">Export CSV</a>
               <div class="dropdown-divider"></div>
               <a class="dropdown-item" href="{% url "view-volunteer-training-report" %}">Training report</a>
               <a class="dropdown-item" href="{% url "view-qualification-report" %}">Qualification report <span class="labs-tag">labs</span></a>
-              <a class="dropdown-item" href="{% url "bulk-record" %}">Bulk record</a>
+              <a class="dropdown-item" href="{% url "bulk-record" %}">Log training / quals</a>
               <a class="dropdown-item" href="{% url "view-volunteer-pool-health" %}">Pool maintenance <span class="labs-tag">labs</span></a>
               <a class="dropdown-item" href="{% url "view-rota-vacancies" %}">Rota vacancies <span class="labs-tag">labs</span></a>
+              {% if inductions_settings.inductions_enabled %}
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="{% url "inductions:manage_session_list" %}">Inductions <span class="labs-tag">labs</span></a>
+              <a class="dropdown-item" href="{% url "inductions:manage_access_needs_list" %}">1:1 induction queue <span class="labs-tag">labs</span></a>
+              {% endif %}
               <div class="dropdown-divider"></div>
               <a class="dropdown-item" href="{% url "add-member" %}">Add Member</a>
               <a class="dropdown-item" href="{% url "search-members" %}">Search Members</a>
@@ -178,9 +276,53 @@ body {
           </li>
           {% endif %}
 
+          {% if feature_perms.event_tags or feature_perms.event_templates or feature_perms.rooms or feature_perms.roles or feature_perms.diary_reports or feature_perms.printed_programmes or user.is_superuser %}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="dropdown-meta" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-nav-key="m">Meta</a>
+            <div class="dropdown-menu" aria-labelledby="dropdown-meta">
+              {% if feature_perms.event_tags %}
+              <a class="dropdown-item" href="{% url "edit_event_tags" %}">Tags</a>
+              {% endif %}
+              {% if feature_perms.event_templates %}
+              <a class="dropdown-item" href="{% url "edit_event_templates" %}">Templates</a>
+              {% endif %}
+              {% if feature_perms.rooms %}
+              <a class="dropdown-item" href="{% url "edit_rooms" %}">Rooms</a>
+              {% endif %}
+              {% if feature_perms.diary_reports %}
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="{% url "view_event_field" field="copy" %}">Copy report</a>
+              <a class="dropdown-item" href="{% url "view_event_field" field="copy_summary" %}">Copy summary report</a>
+              <a class="dropdown-item" href="{% url "view_event_field" field="terms" %}">Terms report</a>
+              {% endif %}
+              {% if feature_perms.printed_programmes %}
+              <a class="dropdown-item" href="{% url "edit-printed-programmes" %}">Upload printed programmes</a>
+              {% endif %}
+              {% if feature_perms.roles %}
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="{% url "edit_roles" %}">Roles</a>
+              {% endif %}
+              {% if user.is_superuser %}
+              <a class="dropdown-item" href="{% url "toolkit-access" %}">Access levels <span class="labs-tag">labs</span></a>
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="{% url "edit-site-configuration" %}">Site settings <span class="labs-tag">labs</span></a>
+              {% if VENUE.show_user_management %}
+              <a class="dropdown-item" href="/toolkit/admin/">Admin backend</a>
+              {% endif %}
+              {% endif %}
+            </div>
+          </li>
+          {% endif %}
+
           {% if user.volunteer.pk %}
-          <li class="nav-item">
-            <a class="nav-link" href="{% url "edit-volunteer" user.volunteer.pk %}"><span class="fa fa-user"></span> {{ user.volunteer.member.name }}</a>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <span class="fa fa-user"></span> {{ user.volunteer.member.name }}
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="{% url "edit-volunteer" user.volunteer.pk %}">Edit profile</a></li>
+              <li><a class="dropdown-item" href="{% url "volunteer-stats" %}">Your history</a></li>
+            </ul>
           </li>
           {% endif %}
           <li class="nav-item">
@@ -191,13 +333,16 @@ body {
           </li>
 
         </ul>
+        <button type="button" class="tk-cp-hint-btn d-none d-md-inline-block ms-2"
+                onclick="window.TKCommandPalette && window.TKCommandPalette.open()"
+                title="Command palette (Ctrl+K or Ctrl+/)">&#x2318;K</button>
         {% block header-navbar-extra-post %}{% endblock %}
       </div>
     </nav>
 
     <div class="container">
         <div class="admin-template">
-        {% include "messages.html" %}
+        {% include "bs_messages.html" %}
 {% endblock %}
 
 {% block body %}
@@ -207,4 +352,10 @@ body {
 {% block footer %}
         </div><!-- /.admin-template -->
     </div><!-- /.container -->
+    {% if user.is_authenticated %}
+    <div class="tk-access-footer">
+      <span class="tk-access-label">Page access:</span>
+      <span class="tk-access-badge">{{ request.view_access_level|default:"All volunteers" }}</span>
+    </div>
+    {% endif %}
 {% endblock %}

@@ -143,6 +143,10 @@ MEMBERSHIP_LENGTH_DAYS = 365
 # Example: EVENTLINK_EXTRA_ALLOWED_DOMAINS = ["files.starandshadow.org.uk"]
 EVENTLINK_EXTRA_ALLOWED_DOMAINS = []
 
+# OMDb (Open Movie Database) API key — used for film/TV metadata lookup.
+# Free tier: 1,000 requests/day. Get a key at https://www.omdbapi.com/apikey.aspx
+OMDB_API_KEY = os.environ.get("OMDB_API_KEY", "")
+
 ###############################################################################
 #
 # Wagtail settings
@@ -354,6 +358,7 @@ ROOT_URLCONF = "toolkit.urls"
 INSTALLED_APPS = (
     "toolkit.diary",
     "toolkit.members",
+    "toolkit.inductions",
     "toolkit.toolkit_auth",
     "toolkit.index",
     "toolkit.util",

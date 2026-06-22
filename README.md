@@ -35,7 +35,7 @@ Venue-specific settings (name, logo, email addresses, social media, feature flag
 |---|---|
 | [docs/ONBOARDING.md](docs/ONBOARDING.md) | Developer setup, Docker, project structure, running tests |
 | [docs/SPEC.md](docs/SPEC.md) | System specification: data model, workflows, permission model |
-| [docs/TASKS.md](docs/TASKS.md) | Design rationale and specs for proposed features |
+| [docs/TASKS.md](docs/TASKS.md) | Index of feature specs; full specs in [docs/tasks/](docs/tasks/) split by domain |
 | [CURRENT_WORK.md](CURRENT_WORK.md) | Current priorities, in-progress work, and completed items |
 
 ## License

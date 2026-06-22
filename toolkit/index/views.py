@@ -1,4 +1,5 @@
 import datetime
+import json
 from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
@@ -6,8 +7,8 @@ from django.contrib.auth.models import User, Group
 from django.contrib import messages
 from django.db import connection, OperationalError
 from django.db.models import Count, ExpressionWrapper, F, IntegerField, Min, Q
-from django.http import HttpResponse, HttpResponseServerError, HttpResponseRedirect
-from django.shortcuts import get_object_or_404, render
+from django.http import HttpResponse, HttpResponseServerError, HttpResponseRedirect, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -17,6 +18,44 @@ from toolkit.diary.models import RotaEntry, Showing, VolunteerEventMark, get_sit
 from toolkit.index.models import IndexLink
 from toolkit.members.models import PanopticonGrant, Volunteer
 from toolkit.toolkit_auth.decorators import panopticon_required
+
+
+# Curated catalogue of pinnable dashboard links.
+# perm: Django permission codename required, or None for any logged-in user.
+# toolkit.read = volunteer-level; toolkit.write = programmer+.
+_LINK_CATALOGUE = [
+    {"key": "diary",       "label": "Diary",                "url_name": "default-edit",              "perm": "toolkit.write"},
+    {"key": "rota",        "label": "Rota",                 "url_name": "rota-edit",                 "perm": "toolkit.read"},
+    {"key": "calendar",    "label": "Calendar",             "url_name": "diary-edit-calendar",       "perm": "toolkit.write"},
+    {"key": "bulletins",   "label": "Bulletins",            "url_name": "labs-bulletins",            "perm": "toolkit.read"},
+    {"key": "collectives", "label": "Collectives",          "url_name": "labs-collectives",          "perm": "toolkit.read"},
+    {"key": "directory",   "label": "Volunteer directory",  "url_name": "view-volunteer-list",       "perm": "toolkit.read"},
+    {"key": "jobs",        "label": "Jobs board",           "url_name": "labs-jobs",                 "perm": "toolkit.read"},
+    {"key": "exchange",    "label": "Community exchange",   "url_name": "labs-exchange",             "perm": "toolkit.read"},
+    {"key": "floorplan",   "label": "Building map",         "url_name": "labs-floorplan",            "perm": "toolkit.read"},
+    {"key": "shopping",    "label": "Shopping list",        "url_name": "labs-shopping",             "perm": "toolkit.read"},
+    {"key": "lost-found",  "label": "Lost & found",         "url_name": "labs-found-items",          "perm": "toolkit.read"},
+    {"key": "stats",       "label": "Your history",         "url_name": "volunteer-stats",           "perm": "toolkit.read"},
+    {"key": "tags",        "label": "Tags",                 "url_name": "edit_event_tags",           "perm": "toolkit.write"},
+    {"key": "templates",   "label": "Event templates",      "url_name": "edit_event_templates",      "perm": "toolkit.write"},
+    {"key": "rooms",       "label": "Rooms",                "url_name": "edit_rooms",                "perm": "toolkit.write"},
+    {"key": "roles",       "label": "Roles",                "url_name": "edit_roles",                "perm": "toolkit.write"},
+    {"key": "site-settings","label": "Site settings",       "url_name": "edit-site-configuration",  "perm": "toolkit.write"},
+    {"key": "access-levels","label": "Access levels",       "url_name": "toolkit-access",            "perm": "toolkit.read"},
+    {"key": "qual-report", "label": "Qualification report", "url_name": "view-qualification-report", "perm": "toolkit.read"},
+]
+
+_MAX_FAVOURITE_LINKS = 8
+
+
+def _available_links(user):
+    """Return catalogue entries accessible to `user`, with `url` resolved."""
+    result = []
+    for item in _LINK_CATALOGUE:
+        if item["perm"] and not user.has_perm(item["perm"]):
+            continue
+        result.append({**item, "url": reverse(item["url_name"])})
+    return result
 
 
 class ToolkitIndexView(ListView):
@@ -35,6 +74,14 @@ class ToolkitIndexView(ListView):
 
         if volunteer:
             context["has_volunteer"] = True
+            context["dash_hidden_cards"] = volunteer.dashboard_hidden_cards or []
+            context["dash_card_order"] = volunteer.dashboard_card_order or []
+            saved_keys = volunteer.favourite_link_keys or []
+            available = {link["key"]: link for link in _available_links(user)}
+            favourite_links = [available[k] for k in saved_keys if k in available]
+            if favourite_links:
+                context["favourite_links"] = favourite_links
+            context["manage_favourites_url"] = reverse("manage-favourite-links")
 
             # Welcome-back card: a logged-in Dormant volunteer is, by definition,
             # a returner. Offer a one-click route back to Active and nudge them
@@ -232,6 +279,54 @@ def toolkit_access(request):
             "programmer_users": programmer_users,
         },
     )
+
+
+@login_required
+@require_POST
+def dashboard_prefs(request):
+    """AJAX endpoint: save dashboard card visibility and order for this volunteer."""
+    try:
+        volunteer = request.user.volunteer
+    except Exception:
+        return JsonResponse({"error": "no volunteer"}, status=403)
+    try:
+        data = json.loads(request.body)
+    except (ValueError, TypeError):
+        return JsonResponse({"error": "bad request"}, status=400)
+    if "hidden_cards" in data:
+        volunteer.dashboard_hidden_cards = [str(k) for k in data["hidden_cards"]]
+    if "card_order" in data:
+        volunteer.dashboard_card_order = [str(k) for k in data["card_order"]]
+    volunteer.save(update_fields=["dashboard_hidden_cards", "dashboard_card_order"])
+    return JsonResponse({"ok": True})
+
+
+@login_required
+def manage_favourite_links(request):
+    """Let a volunteer choose which nav links appear in their dashboard panel."""
+    try:
+        volunteer = request.user.volunteer
+    except Exception:
+        return redirect("toolkit-index")
+
+    available = _available_links(request.user)
+    available_keys = {link["key"] for link in available}
+
+    if request.method == "POST":
+        selected = [k for k in request.POST.getlist("links") if k in available_keys]
+        volunteer.favourite_link_keys = selected[:_MAX_FAVOURITE_LINKS]
+        volunteer.save(update_fields=["favourite_link_keys"])
+        messages.success(request, "Favourite links saved.")
+        return redirect("toolkit-index")
+
+    saved_keys = set(volunteer.favourite_link_keys or [])
+    for link in available:
+        link["selected"] = link["key"] in saved_keys
+
+    return render(request, "manage_favourite_links.html", {
+        "available_links": available,
+        "max_links": _MAX_FAVOURITE_LINKS,
+    })
 
 
 @panopticon_required

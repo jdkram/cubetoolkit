@@ -123,6 +123,11 @@ class Collective(models.Model):
     organising = models.TextField(blank=True, default="", verbose_name="How they meet and organise")
     proud_of = models.TextField(blank=True, default="", verbose_name="What they're most proud of")
     get_involved = models.TextField(blank=True, default="", verbose_name="How to get involved")
+    sample_role = models.TextField(
+        blank=True, default="",
+        verbose_name="Sample role",
+        help_text="A short, concrete example of what a member might actually do — shown to help people decide whether to join.",
+    )
     contact = models.CharField(
         max_length=256, blank=True, default="",
         help_text="Contact email or address shown at the bottom of the card.",
@@ -180,6 +185,39 @@ class CollectiveLink(models.Model):
 
     def __str__(self):
         return f"{self.label} ({self.collective_id})"
+
+
+class CollectiveRole(models.Model):
+    """A structured role within a collective — shown to help volunteers decide whether to join."""
+
+    collective = models.ForeignKey(
+        Collective, on_delete=models.CASCADE, related_name="defined_roles"
+    )
+    title = models.CharField(max_length=128)
+    description = models.TextField(blank=True, default="")
+    time_commitment = models.CharField(
+        max_length=128, blank=True, default="",
+        help_text="e.g. '~3hrs/month', 'weekly Tuesday evenings'",
+    )
+    getting_started = models.TextField(
+        blank=True, default="",
+        help_text="First concrete step for someone interested in this role.",
+    )
+    needs_volunteers = models.BooleanField(
+        default=False,
+        help_text="Flag this role as actively seeking more people (shown as a badge).",
+    )
+    open_to_new_volunteers = models.BooleanField(
+        default=True,
+        help_text="Uncheck if this role is currently invite-only or full.",
+    )
+    display_order = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ["display_order", "pk"]
+
+    def __str__(self):
+        return f"{self.title} ({self.collective})"
 
 
 class Job(models.Model):

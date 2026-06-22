@@ -5,7 +5,8 @@ from django.utils.html import mark_safe
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, HTML
 from toolkit.diary.form_widgets import HtmlTextarea
-from .models import Bulletin, Collective, CollectiveLink, DonationItem, ExchangeItem, FoundItem, Job, COLLECTIVE_PALETTE
+from toolkit.diary.models import get_site_config
+from .models import AreaPhoto, Bulletin, Collective, CollectiveLink, CollectiveRole, DonationItem, ExchangeItem, FoundItem, Job, LoftItemPhoto, COLLECTIVE_PALETTE
 
 
 class ColourPickerWidget(forms.TextInput):
@@ -91,7 +92,7 @@ class ColourPickerWidget(forms.TextInput):
 class CollectiveForm(forms.ModelForm):
     class Meta:
         model = Collective
-        fields = ("colour", "volunteer_count", "about", "roles", "organising", "proud_of", "get_involved", "contact", "listed_publicly", "public_copy")
+        fields = ("colour", "volunteer_count", "about", "roles", "organising", "proud_of", "get_involved", "sample_role", "contact", "listed_publicly", "public_copy")
         widgets = {
             "colour": ColourPickerWidget(),
             "about": forms.Textarea(attrs={"rows": 5}),
@@ -99,6 +100,7 @@ class CollectiveForm(forms.ModelForm):
             "organising": forms.Textarea(attrs={"rows": 4}),
             "proud_of": forms.Textarea(attrs={"rows": 4}),
             "get_involved": forms.Textarea(attrs={"rows": 5}),
+            "sample_role": forms.Textarea(attrs={"rows": 3}),
             "public_copy": forms.Textarea(attrs={"rows": 4}),
         }
 
@@ -107,7 +109,7 @@ class CollectiveForm(forms.ModelForm):
         self.helper = FormHelper()
         self.helper.form_tag = False
         self.helper.layout = Layout(
-            "colour", "volunteer_count", "about", "roles", "organising", "proud_of", "get_involved", "contact",
+            "colour", "volunteer_count", "about", "roles", "organising", "proud_of", "get_involved", "sample_role", "contact",
             HTML(
                 '<hr style="margin: 1.5rem 0 1rem;">'
                 '<h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem;">Public directory</h2>'
@@ -137,6 +139,49 @@ CollectiveLinkFormSet = inlineformset_factory(
             "class": "form-control form-control-sm",
         }),
     },
+)
+
+
+class CollectiveRoleForm(forms.ModelForm):
+    class Meta:
+        model = CollectiveRole
+        fields = ("title", "time_commitment", "description", "getting_started", "needs_volunteers", "open_to_new_volunteers")
+        widgets = {
+            "title": forms.TextInput(attrs={
+                "placeholder": "e.g. Head Cook",
+                "class": "form-control form-control-sm",
+            }),
+            "time_commitment": forms.TextInput(attrs={
+                "placeholder": "e.g. ~3hrs/month",
+                "class": "form-control form-control-sm",
+            }),
+            "description": forms.Textarea(attrs={
+                "rows": 2, "class": "form-control form-control-sm",
+                "placeholder": "What does this role involve?",
+            }),
+            "getting_started": forms.Textarea(attrs={
+                "rows": 2, "class": "form-control form-control-sm",
+                "placeholder": "e.g. Come to our next meeting, message us on Signal…",
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.instance.pk:
+            # Extra (unsaved) rows: override initial so BooleanField defaults don't
+            # cause has_changed() to return True on an otherwise empty row, which
+            # would trigger required-field validation on title.
+            self.initial.setdefault("open_to_new_volunteers", False)
+            self.initial.setdefault("needs_volunteers", False)
+
+
+CollectiveRoleFormSet = inlineformset_factory(
+    Collective,
+    CollectiveRole,
+    form=CollectiveRoleForm,
+    extra=1,
+    max_num=12,
+    can_delete=True,
 )
 
 
@@ -332,4 +377,38 @@ class ExchangeItemForm(forms.ModelForm):
             Volunteer.objects.active().select_related("member").order_by("member__name")
         )
         self.fields["owner_volunteer"].label_from_instance = lambda v: v.member.name
+
+
+class LoftItemPhotoForm(forms.ModelForm):
+    class Meta:
+        model = LoftItemPhoto
+        fields = ("image", "caption")
+
+    def clean_image(self):
+        image = self.cleaned_data.get("image")
+        if image:
+            size_mb = image.size / 1048576.0
+            max_mb = get_site_config().programme_media_max_size_mb
+            if size_mb > max_mb:
+                raise forms.ValidationError(
+                    f"Image must be {max_mb} MB or less (uploaded file is {size_mb:.2f} MB)"
+                )
+        return image
+
+
+class AreaPhotoForm(forms.ModelForm):
+    class Meta:
+        model = AreaPhoto
+        fields = ("image", "caption")
+
+    def clean_image(self):
+        image = self.cleaned_data.get("image")
+        if image:
+            size_mb = image.size / 1048576.0
+            max_mb = get_site_config().programme_media_max_size_mb
+            if size_mb > max_mb:
+                raise forms.ValidationError(
+                    f"Image must be {max_mb} MB or less (uploaded file is {size_mb:.2f} MB)"
+                )
+        return image
         self.fields["owner_volunteer"].required = False

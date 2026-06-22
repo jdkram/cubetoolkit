@@ -28,6 +28,7 @@ services:
       DB_PORT: "3306"
       SECRET_KEY: "${DJANGO_SECRET_KEY:-really_bad_django_secret_key}"
       DJANGO_SETTINGS_MODULE: "toolkit.docker_settings_starandshadow"
+      TMDB_API_KEY: "${TMDB_API_KEY:-}"
     ports:
       - target: "8000"
         published: "8000"

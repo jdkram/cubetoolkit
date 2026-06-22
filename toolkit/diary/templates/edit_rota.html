@@ -191,14 +191,26 @@
         color: #777;
     }
 
-    .showing-meta .showing-anchor-link {
-        font-size: 0.9rem;
-        color: #ccc;
+    /* Chain-link permalink icon — SVG via CSS mask so it renders as
+       plain text-colour on every device, with no emoji font variance. */
+    .showing-anchor-link {
+        display: inline-block;
+        width: 1rem;
+        height: 1rem;
+        margin-left: 0.25em;
+        vertical-align: -0.15em;
+        color: transparent;    /* suppress any fallback text */
         text-decoration: none;
-        margin-left: 0.2em;
+        background-color: #ccc;
+        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z'/%3E%3Cpath d='M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z'/%3E%3C/svg%3E");
+        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z'/%3E%3Cpath d='M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z'/%3E%3C/svg%3E");
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
     }
-    .showing-meta .showing-anchor-link:hover {
-        color: #777;
+    .showing-anchor-link:hover {
+        background-color: #777;
     }
 
     .showing-room-badge {
@@ -435,7 +447,8 @@
         .outside-hire-badge       { order: 4; }
         .rota-role-warning-badge  { order: 5; }
         .event-tag-badges         { order: 6; }
-        .showing-public-link      { order: 7; }
+        .showing-anchor-link      { order: 7; }
+        .showing-public-link      { order: 8; }
         /* Pull toggle out of flow into the left gutter */
         .rota-mark-toggle {
             position: absolute;
@@ -475,7 +488,11 @@
         border-radius: 4px 0 0 4px;
         padding: 0.4em 0;
         pointer-events: auto;
+        max-height: 72vh;
+        overflow-y: auto;
+        scrollbar-width: none; /* Firefox */
     }
+    #rota-nav-rail .rail-inner::-webkit-scrollbar { display: none; } /* Chrome/Safari */
     .rail-month {
         display: block;
         text-align: center;
@@ -488,9 +505,42 @@
         transition: color 0.1s, background 0.1s;
         border-radius: 2px;
         margin: 0 0.2em;
+        text-decoration: none;
     }
     .rail-month:hover { color: #212529; background: #e9ecef; }
     .rail-month.rail-active { color: #212529; font-weight: 600; }
+    /* Monday sub-links: smaller, indented, quiet */
+    .rail-monday {
+        display: block;
+        text-align: center;
+        font-size: 0.56em;
+        color: #adb5bd;
+        padding: 0.06em 0.4em;
+        cursor: pointer;
+        border-radius: 2px;
+        margin: 0 0.4em;
+        line-height: 1.3;
+        transition: color 0.1s, background 0.1s;
+    }
+    .rail-monday:hover { color: #495057; background: #e9ecef; }
+    /* "Later ↓" and "Next →" links at the bottom of the rail */
+    .rail-later, .rail-next-batch {
+        border-top: 1px solid #dee2e6;
+        margin-top: 0.35em;
+        padding-top: 0.25em;
+        font-size: 0.63em;
+    }
+    .rail-later { color: #6c757d; }
+    .rail-next-batch { color: #0056b3; }
+    /* ── Next-batch prompt at the bottom of the page ──────────────── */
+    .rota-next-prompt {
+        text-align: center;
+        padding: 1.4em 1em 1em;
+        margin-top: 0.5em;
+        border-top: 1px solid #dee2e6;
+        font-size: 0.88em;
+    }
+    .rota-next-prompt a { color: #0056b3; }
     .rail-cursor {
         position: absolute;
         left: 0;
@@ -532,9 +582,42 @@
         font-family: monospace;
         white-space: pre-wrap;
         padding: 0.4em 1em;
+        margin-top: 0;
         margin-left: 3em;
         overflow: auto;
     }
+    /* Remove browser default ul margin so the gap above the notes bar
+       matches the gap above the first role (symmetrical). */
+    ul.rota { margin-bottom: 0; }
+
+    /* ── Notes inline-edit UI ────────────────────────────────────────── */
+    .showing_rota_notes form,
+    .past_showing_rota_notes form {
+        margin-top: 0.3em;
+        white-space: normal;
+    }
+    /* Force the textarea to block so the action buttons appear below it,
+       not squeezed into the remaining inline space beside it. */
+    .showing_rota_notes form textarea,
+    .past_showing_rota_notes form textarea {
+        display: block;
+        margin-bottom: 0.4em;
+    }
+    .showing_rota_notes .rota-notes-save,
+    .past_showing_rota_notes .rota-notes-save {
+        vertical-align: middle;
+    }
+    .showing_rota_notes .rota-notes-cancel,
+    .past_showing_rota_notes .rota-notes-cancel {
+        font-size: 0.85em;
+        color: #6c757d;
+        margin-left: 0.6em;
+        text-decoration: none;
+        vertical-align: middle;
+    }
+    .showing_rota_notes .rota-notes-cancel:hover,
+    .past_showing_rota_notes .rota-notes-cancel:hover { color: #dc3545; }
+
     .showing_rota_notes span {
         cursor: pointer;
     }
@@ -582,6 +665,12 @@
         text-decoration-style: dotted;
         text-underline-offset: 2px;
         cursor: help;
+    }
+    li[data-one-shot="1"] .rota_role::after {
+        content: " ✦";
+        color: #999;
+        font-size: 0.7em;
+        vertical-align: middle;
     }
     .rota-role-desc {
         display: block;
@@ -642,6 +731,157 @@
         animation: rota-linked-bg 5s ease-out forwards;
         border-radius: 0 2px 2px 0;
     }
+
+    /* ── Keyboard shortcuts help overlay ────────────────────────────── */
+    #rota-kb-help {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .rota-kb-help-card {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 1.2em 1.5em 1em;
+        max-width: 30em;
+        width: 90vw;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        font-size: 0.9em;
+    }
+    .rota-kb-help-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.8em;
+        padding-bottom: 0.5em;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .rota-kb-help-close {
+        background: none;
+        border: none;
+        font-size: 1.1em;
+        color: #6c757d;
+        cursor: pointer;
+        padding: 0 0.2em;
+        line-height: 1;
+    }
+    .rota-kb-help-close:hover { color: #212529; }
+    .rota-kb-section { margin-bottom: 0.8em; }
+    .rota-kb-section-heading {
+        font-size: 0.75em;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: #6c757d;
+        margin-bottom: 0.3em;
+    }
+    .rota-kb-row {
+        display: flex;
+        align-items: baseline;
+        gap: 0.75em;
+        padding: 0.15em 0;
+        line-height: 1.45;
+    }
+    .rota-kb-row kbd {
+        display: inline-block;
+        min-width: 5em;
+        text-align: right;
+        font-family: monospace;
+        font-size: 0.85em;
+        background: #f8f9fa;
+        border: 1px solid #ced4da;
+        border-radius: 3px;
+        padding: 0.1em 0.4em;
+        color: #212529;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    .rota-kb-row span { color: #495057; }
+
+    /* ── Link-copied toast ───────────────────────────────────────────── */
+    #rota-toast {
+        position: fixed;
+        bottom: 1.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #212529;
+        color: #fff;
+        padding: 0.5em 1em;
+        border-radius: 4px;
+        font-size: 0.85em;
+        z-index: 9998;
+        opacity: 1;
+        transition: opacity 0.8s;
+        pointer-events: none;
+    }
+    #rota-toast.rota-toast-fade { opacity: 0; }
+
+    /* ── Role signup picker modal ─────────────────────────────────────── */
+    #rota-signup-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        z-index: 9999;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding-top: 6rem;
+    }
+    .rota-signup-card {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 1em 1.2em;
+        max-width: 26em;
+        width: 90vw;
+        max-height: 70vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        font-size: 0.9em;
+    }
+    .rota-signup-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.6em;
+        padding-bottom: 0.5em;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .rota-signup-close {
+        background: none;
+        border: none;
+        font-size: 1.1em;
+        color: #6c757d;
+        cursor: pointer;
+        padding: 0 0.2em;
+        line-height: 1;
+    }
+    .rota-signup-close:hover { color: #212529; }
+    #rota-signup-search { margin-bottom: 0.5em; flex-shrink: 0; }
+    #rota-signup-role-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        overflow-y: auto;
+    }
+    .rota-signup-role-item {
+        padding: 0.4em 0.6em;
+        border-radius: 4px;
+        line-height: 1.35;
+    }
+    .rota-signup-role-available { cursor: pointer; }
+    .rota-signup-role-mine { cursor: pointer; color: #0a6640; font-weight: 500; }
+    .rota-signup-role-taken { color: #6c757d; font-style: italic; }
+    .rota-signup-role-available:hover,
+    .rota-signup-role-active.rota-signup-role-available { background: #e8f4e8; color: #1a5c1a; }
+    .rota-signup-role-mine:hover,
+    .rota-signup-role-active.rota-signup-role-mine { background: #d4edda; }
 </style>
 {% endblock %}
 
@@ -961,6 +1201,22 @@ edit_rota(
         applyShowingHighlights();
     }
 
+    // Direct mark jump for keyboard shortcuts (bypasses the cycle).
+    function setShowingMark(showing, targetMark) {
+        var btn = showing.find(".rota-mark-toggle");
+        if (!btn.length || btn.prop("disabled")) { return; }
+        if ((btn.attr("data-mark") || "") === targetMark) { return; }
+        var eventId = btn.data("event-id");
+        btn.prop("disabled", true);
+        $.ajax({
+            url:  MARK_TOGGLE_URL,
+            type: "POST",
+            data: { mark_type: targetMark, event_id: eventId, csrfmiddlewaretoken: "{{ csrf_token }}" },
+            success: function(resp) { setToggleState(btn, resp.mark_type); },
+            complete: function() { btn.prop("disabled", false); }
+        });
+    }
+
     function initMarkButtons() {
         $(".rota-mark-toggle").each(function() {
             var btn     = $(this);
@@ -986,53 +1242,117 @@ edit_rota(
     {% endif %}
 
     // ── Month navigation rail ──────────────────────────────────────────────
+    var ROTA_NEXT_BATCH_URL = (function() {
+        var p = "{{ end_date|date:'Y-m-d' }}".split("-");
+        return "{% url 'rota-edit' %}/" +
+            p[0] + "/" + parseInt(p[1], 10) + "/" + parseInt(p[2], 10) +
+            "?daysahead={{ days_ahead }}";
+    })();
+
     function buildNavRail() {
         var headers = $("h2.rota-month-header");
-        if (headers.length < 2) {
-            // Rail adds no value with only one month
+        if (headers.length < 1) {
             $("#rota-nav-rail").hide();
             return;
         }
 
-        var inner   = $("#rota-nav-rail .rail-inner");
-        var cursor  = $(".rail-cursor");
+        var inner  = $("#rota-nav-rail .rail-inner");
+        var cursor = $(".rail-cursor");
 
-        // Build a label per month header
-        headers.each(function() {
+        // Build sorted list of all showing dates so we can find nearest-previous
+        // for any given Monday that has no showing of its own.
+        var showingDates   = [];
+        var showingDateMap = {}; // "YYYY-MM-DD" → day-group header element
+        $(".rota-day-group-header[data-date]").each(function() {
+            var ds = $(this).attr("data-date");
+            showingDates.push(ds);
+            showingDateMap[ds] = this;
+        });
+        showingDates.sort();
+
+        function nearestShowingOnOrBefore(targetDateStr) {
+            var lo = 0, hi = showingDates.length - 1, result = null;
+            while (lo <= hi) {
+                var mid = (lo + hi) >> 1;
+                if (showingDates[mid] <= targetDateStr) { result = showingDates[mid]; lo = mid + 1; }
+                else                                    { hi = mid - 1; }
+            }
+            return result ? showingDateMap[result] : null;
+        }
+
+        // All Mondays (day-of-month numbers) in a given year+month (1-indexed).
+        function mondaysInMonth(year, month) {
+            var mondays = [];
+            var d = new Date(year, month - 1, 1);
+            var daysToFirst = d.getDay() === 1 ? 0 : (8 - d.getDay()) % 7;
+            var daysInMonth = new Date(year, month, 0).getDate();
+            for (var day = 1 + daysToFirst; day <= daysInMonth; day += 7) {
+                mondays.push(day);
+            }
+            return mondays;
+        }
+
+        headers.each(function(i) {
             var h      = $(this);
             var parts  = h.text().trim().split(" ");   // ["April", "2026"]
             var label  = parts[0].slice(0, 3) + " '" + (parts[1] || "").slice(2); // "Apr '26"
-            $('<span class="rail-month">').text(label)
+            var year   = parseInt(h.attr("data-year"),  10);
+            var month  = parseInt(h.attr("data-month"), 10);
+
+            $('<span class="rail-month rail-month-label">').text(label)
                 .on("click", function() {
                     h[0].scrollIntoView({ behavior: "smooth", block: "start" });
                 })
                 .appendTo(inner);
+
+            // Show all Mondays in this month; each links to the nearest showing
+            // on or before that Monday (so the user lands at the closest relevant entry).
+            var mondays = mondaysInMonth(year, month);
+            $.each(mondays, function(_, day) {
+                var pad = ("0" + month).slice(-2);
+                var dayPad = ("0" + day).slice(-2);
+                var dateStr = year + "-" + pad + "-" + dayPad;
+                var targetEl = nearestShowingOnOrBefore(dateStr);
+                if (!targetEl) { return; } // no showings yet loaded before this date
+                $('<span class="rail-monday">').text(day)
+                    .attr("title", "Mon " + day + " " + parts[0])
+                    .on("click", (function(el) {
+                        return function() { el.scrollIntoView({ behavior: "smooth", block: "start" }); };
+                    })(targetEl))
+                    .appendTo(inner);
+            });
         });
+
+        $('<span class="rail-month rail-later">').text("Later ↓")
+            .on("click", function() {
+                var anchor = document.getElementById("rota-later-anchor");
+                if (anchor) { anchor.scrollIntoView({ behavior: "smooth" }); }
+            })
+            .appendTo(inner);
+
+        $('<a class="rail-month rail-next-batch">').text("Next →")
+            .attr("href", ROTA_NEXT_BATCH_URL)
+            .appendTo(inner);
 
         cursor.appendTo(inner); // keep cursor as last child in DOM
 
         function updateRail() {
-            var scrollY     = window.scrollY;
-            var docH        = document.body.scrollHeight;
-            var winH        = window.innerHeight;
-            var scrollFrac  = docH > winH ? scrollY / (docH - winH) : 0;
-            var railH       = inner.height();
+            var scrollY    = window.scrollY;
+            var docH       = document.body.scrollHeight;
+            var winH       = window.innerHeight;
+            var scrollFrac = docH > winH ? scrollY / (docH - winH) : 0;
+            var railH      = inner.height();
 
-            // Move scroll cursor
             cursor.css("top", Math.round(scrollFrac * railH) + "px");
 
-            // Highlight whichever month header is nearest the top of the viewport
             var navH    = document.querySelector(".navbar.fixed-top").offsetHeight;
             var current = null;
             headers.each(function() {
-                if (this.getBoundingClientRect().top <= navH + 20) {
-                    current = this;
-                }
+                if (this.getBoundingClientRect().top <= navH + 20) { current = this; }
             });
-            inner.find(".rail-month").removeClass("rail-active");
+            inner.find(".rail-month-label").removeClass("rail-active");
             if (current) {
-                var idx = headers.index(current);
-                inner.find(".rail-month").eq(idx).addClass("rail-active");
+                inner.find(".rail-month-label").eq(headers.index(current)).addClass("rail-active");
             }
         }
 
@@ -1127,6 +1447,426 @@ edit_rota(
     }
     window.addEventListener('resize', updateDayHeaderOffset);
 
+    // ── Keyboard navigation and shortcuts ─────────────────────────────────
+    function setupKeyboardNavigation() {
+
+        function stickyOffset() {
+            var nav  = document.querySelector('.navbar.fixed-top');
+            var dayH = document.querySelector('.rota-day-group-header');
+            return (nav ? nav.offsetHeight : 58) + (dayH ? dayH.offsetHeight : 36) + 8;
+        }
+
+        function getCurrentShowing() {
+            var showings = $(".rota-showing:visible").toArray();
+            if (!showings.length) { return null; }
+            var threshold = stickyOffset();
+            var current = showings[0];
+            for (var i = 0; i < showings.length; i++) {
+                if (showings[i].getBoundingClientRect().top <= threshold) { current = showings[i]; }
+            }
+            return current;
+        }
+
+        function navigateShowings(direction) {
+            var showings = $(".rota-showing:visible").toArray();
+            if (!showings.length) { return; }
+            var idx = showings.indexOf(getCurrentShowing());
+            var target = direction > 0
+                ? Math.min(idx + 1, showings.length - 1)
+                : Math.max(idx - 1, 0);
+            showings[target].scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+
+        function navigateDays(direction) {
+            var headers = $(".rota-day-group-header:visible").toArray();
+            if (!headers.length) { return; }
+            var threshold = stickyOffset();
+            var idx = 0;
+            for (var i = 0; i < headers.length; i++) {
+                if (headers[i].getBoundingClientRect().top <= threshold + 5) { idx = i; }
+            }
+            var target = direction > 0
+                ? Math.min(idx + 1, headers.length - 1)
+                : Math.max(idx - 1, 0);
+            headers[target].scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+
+        function navigateWeeks(direction) {
+            var headers = $(".rota-day-group-header:visible").toArray();
+            if (!headers.length) { return; }
+            var threshold = stickyOffset();
+            var currentIdx = 0;
+            for (var i = 0; i < headers.length; i++) {
+                if (headers[i].getBoundingClientRect().top <= threshold + 5) { currentIdx = i; }
+            }
+            var current = new Date($(headers[currentIdx]).data("date"));
+            var target = new Date(current);
+            target.setDate(target.getDate() + direction * 7);
+            var best = currentIdx, bestDiff = Infinity;
+            for (var i = 0; i < headers.length; i++) {
+                var d = new Date($(headers[i]).data("date"));
+                var diff = Math.abs(d - target);
+                if (diff < bestDiff) { bestDiff = diff; best = i; }
+            }
+            headers[best].scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+
+        function showToast(msg) {
+            $('#rota-toast').remove();
+            var toast = $('<div id="rota-toast">').text(msg).appendTo('body');
+            setTimeout(function() { toast.addClass('rota-toast-fade'); }, 50);
+            setTimeout(function() { toast.remove(); }, 2000);
+        }
+
+        // ── Help modal ────────────────────────────────────────────────────
+        var helpVisible = false;
+
+        function buildHelpModal() {
+            if (document.getElementById('rota-kb-help')) { return; }
+            var canMark    = !!$(".rota-mark-toggle").length;
+            var canEdit    = !!$("a.showing-event-name[href*='edit']").length;
+            var hasVacancy = !!document.getElementById('rota-filter-vacancies');
+            var hasStar    = !!document.getElementById('rota-filter-starred');
+            var hasMine    = !!document.getElementById('rota-filter-mine');
+            var sections = [
+                { heading: "Navigate", rows: [
+                    ["j / k",        "Next / previous showing"],
+                    ["] / [",        "Next / previous day"],
+                    ["J / }",        "Forward one week"],
+                    ["K / {",        "Back one week"],
+                    ["g → g",        "First showing"],
+                    ["g → key",      "Go to page (badges appear on nav)"],
+                    ["G",            "Last showing"]
+                ]},
+                { heading: "Current showing", rows: [
+                    canEdit ? ["e / h", "Jump to event hub"] : null,
+                    ["r",   "Sign up for a role (fuzzy picker)"],
+                    ["n",   "Edit rota notes"],
+                    ["o / x", "Open public view (new tab)"],
+                    ["y / l", "Copy permalink to clipboard"]
+                ].filter(Boolean)},
+                canMark ? { heading: "Marks", rows: [
+                    ["s",         "Cycle mark  ☆ → ★ → ☽ → ☆"],
+                    ["1 / 2 / 0", "Star ★ / shadow ☽ / clear ☆"]
+                ]} : null,
+                hasVacancy ? { heading: "Filters", rows: [
+                    ["v",                  "Toggle Vacancies filter"],
+                    hasStar ? ["*", "Toggle Starred filter"]    : null,
+                    hasMine ? ["f", "Toggle My shifts filter"]  : null
+                ].filter(Boolean)} : null,
+                { heading: "Search", rows: [
+                    ["/",   "Focus search (event names, volunteers)"],
+                    ["F",   "Focus search (alternative)"],
+                    ["Esc", "Clear search  ·  close overlays"]
+                ]},
+                { heading: "Help", rows: [
+                    ["?", "Toggle this panel"]
+                ]}
+            ].filter(Boolean);
+
+            var html = '<div id="rota-kb-help" tabindex="-1" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">' +
+                '<div class="rota-kb-help-card">' +
+                '<div class="rota-kb-help-header"><strong>Keyboard shortcuts</strong>' +
+                '<button class="rota-kb-help-close" aria-label="Close">&#x2715;</button></div>';
+
+            $.each(sections, function(i, section) {
+                html += '<div class="rota-kb-section"><div class="rota-kb-section-heading">' +
+                    section.heading + '</div>';
+                $.each(section.rows, function(j, row) {
+                    html += '<div class="rota-kb-row"><kbd>' + row[0] + '</kbd><span>' + row[1] + '</span></div>';
+                });
+                html += '</div>';
+            });
+            html += '</div></div>';
+
+            $('body').append(html);
+            $('#rota-kb-help').on('click', function(e) {
+                if ($(e.target).is('#rota-kb-help') || $(e.target).hasClass('rota-kb-help-close')) {
+                    toggleHelp(false);
+                }
+            });
+        }
+
+        function toggleHelp(force) {
+            buildHelpModal();
+            helpVisible = force !== undefined ? force : !helpVisible;
+            $('#rota-kb-help').toggle(helpVisible);
+            if (helpVisible) { $('#rota-kb-help').focus(); }
+        }
+
+        // ── Role signup picker ─────────────────────────────────────────────
+        function escHtml(str) { return $('<span>').text(str || "").html(); }
+
+        function openSignupModal(showing) {
+            $('#rota-signup-modal').remove();
+
+            var myPk  = ("{{ current_volunteer_pk }}").toString();
+            var roles = [];
+            showing.find(".rota > li").each(function() {
+                var li       = $(this);
+                var nameSpan = li.find(".rota_name");
+                if (!nameSpan.length) { return; }
+                var entryId  = nameSpan.attr("id");
+                var volId    = (nameSpan.attr("data-volunteer-id") || "").toString();
+                var isMine   = !!(myPk && volId === myPk);
+                var isAvail  = nameSpan.hasClass("rota-signup-available");
+                var takenName = (!isAvail && !isMine && volId) ? $.trim(nameSpan.text()) : "";
+                roles.push({ entryId: entryId, roleName: li.attr("data-role-name") || "Role",
+                              isMine: isMine, isAvail: isAvail, takenName: takenName });
+            });
+
+            if (!roles.length) { return; }
+
+            roles.sort(function(a, b) {
+                if (a.isMine  !== b.isMine)  { return a.isMine  ? -1 : 1; }
+                if (a.isAvail !== b.isAvail) { return a.isAvail ? -1 : 1; }
+                return a.roleName.localeCompare(b.roleName);
+            });
+
+            var listItems = "";
+            $.each(roles, function(i, role) {
+                var cls = "rota-signup-role-item";
+                var text;
+                if (role.isMine) {
+                    cls  += " rota-signup-role-mine";
+                    text  = "✓ " + role.roleName + " — signed up (Enter to unsign)";
+                } else if (role.isAvail) {
+                    cls  += " rota-signup-role-available";
+                    text  = role.roleName;
+                } else {
+                    cls  += " rota-signup-role-taken";
+                    text  = role.roleName + (role.takenName ? " — " + role.takenName : " — taken");
+                }
+                listItems += '<li class="' + cls + '" data-entry-id="' + escHtml(role.entryId) +
+                    '" data-role-name="' + escHtml(role.roleName) + '">' + escHtml(text) + '</li>';
+            });
+
+            $('body').append(
+                '<div id="rota-signup-modal" tabindex="-1" role="dialog" aria-modal="true" aria-label="Sign up for a role">' +
+                '<div class="rota-signup-card">' +
+                '<div class="rota-signup-header"><strong>Sign up for a role</strong>' +
+                '<button class="rota-signup-close" aria-label="Close">&#x2715;</button></div>' +
+                '<input type="text" id="rota-signup-search" class="form-control form-control-sm" placeholder="Filter roles…" autocomplete="off">' +
+                '<ul id="rota-signup-role-list">' + listItems + '</ul>' +
+                '</div></div>'
+            );
+
+            var searchInput = $('#rota-signup-search');
+            var roleList    = $('#rota-signup-role-list');
+
+            setTimeout(function() { searchInput.focus(); }, 10);
+
+            $('#rota-signup-modal').on('click', function(e) {
+                if ($(e.target).is('#rota-signup-modal') || $(e.target).hasClass('rota-signup-close')) {
+                    closeSignupModal();
+                }
+            });
+
+            searchInput.on('input', function() {
+                var term = $(this).val().toLowerCase();
+                roleList.children("li").each(function() {
+                    $(this).toggle(($(this).data("role-name") || "").toString().toLowerCase().indexOf(term) !== -1);
+                });
+                roleList.children("li.rota-signup-role-active").removeClass("rota-signup-role-active");
+                roleList.children("li:visible:first").addClass("rota-signup-role-active");
+            });
+
+            searchInput.on('keydown', function(e) {
+                if (e.key === "Escape") { e.stopPropagation(); closeSignupModal(); return; }
+                if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                    e.preventDefault();
+                    var items   = roleList.children("li:visible");
+                    var active  = roleList.children("li.rota-signup-role-active");
+                    var idx     = items.index(active);
+                    var nextIdx = e.key === "ArrowDown"
+                        ? Math.min(idx + 1, items.length - 1)
+                        : Math.max(idx - 1, 0);
+                    active.removeClass("rota-signup-role-active");
+                    $(items[nextIdx]).addClass("rota-signup-role-active");
+                }
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    var target = roleList.children("li.rota-signup-role-active:visible");
+                    if (!target.length) {
+                        target = roleList.children("li.rota-signup-role-available:visible, li.rota-signup-role-mine:visible").first();
+                    }
+                    if (target.length) { target.trigger("click"); }
+                }
+            });
+
+            roleList.on('click', 'li.rota-signup-role-available, li.rota-signup-role-mine', function() {
+                var entryId = $(this).data('entry-id');
+                if (!entryId) { return; }
+                closeSignupModal();
+                $('#' + entryId).trigger('click');
+            });
+
+            var mineItem  = roleList.children("li.rota-signup-role-mine:first");
+            var firstAvail = roleList.children("li.rota-signup-role-available:first");
+            (mineItem.length ? mineItem : firstAvail).addClass("rota-signup-role-active");
+        }
+
+        function closeSignupModal() { $('#rota-signup-modal').remove(); }
+
+        // Ctrl+Enter in notes textarea submits the jeditable form
+        $(document).on('keydown', '.showing_rota_notes textarea, .past_showing_rota_notes textarea', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                $(this).closest('form').find('.rota-notes-save').trigger('click');
+            }
+        });
+
+        // ── Key handler ───────────────────────────────────────────────────
+        var lastKey = null, lastKeyTime = 0;
+
+        $(document).on("keydown", function(e) {
+            // Yield to global nav handler while it owns g-key nav mode
+            if (window.AdminKeyboardNav && window.AdminKeyboardNav.isNavMode()) { return; }
+
+            if (e.ctrlKey || e.altKey || e.metaKey) { return; }
+            var tag     = (document.activeElement || {}).tagName || "";
+            var inInput = /^(INPUT|TEXTAREA|SELECT)$/i.test(tag);
+            var inEdit  = !!(document.activeElement && document.activeElement.isContentEditable);
+
+            // Escape: always handle regardless of focus
+            if (e.key === "Escape") {
+                if ($('#rota-signup-modal').length) { closeSignupModal(); return; }
+                if (helpVisible) { toggleHelp(false); return; }
+                var search = document.getElementById('rota-search');
+                if (search && search.value) {
+                    $(search).val("").trigger("input");
+                    search.blur();
+                }
+                return;
+            }
+
+            if (inInput || inEdit) { return; }
+
+            var now = Date.now();
+            var key = e.key;
+
+            lastKey = key;
+            lastKeyTime = now;
+
+            switch (key) {
+                // Navigation
+                case "j":
+                    e.preventDefault(); navigateShowings(1); break;
+                case "k":
+                    e.preventDefault(); navigateShowings(-1); break;
+                case "J": case "}":
+                    e.preventDefault(); navigateWeeks(1); break;
+                case "K": case "{":
+                    e.preventDefault(); navigateWeeks(-1); break;
+                case "]":
+                    e.preventDefault(); navigateDays(1); break;
+                case "[":
+                    e.preventDefault(); navigateDays(-1); break;
+                case "G":
+                    e.preventDefault();
+                    var lastShowing = $(".rota-showing:visible").last()[0];
+                    if (lastShowing) { lastShowing.scrollIntoView({ behavior: "smooth", block: "start" }); }
+                    break;
+
+                // Current showing: event hub / public view / permalink / notes / signup
+                case "e": case "h": {
+                    var editShowing = getCurrentShowing();
+                    if (!editShowing) { break; }
+                    var editHref = $(editShowing).find("a.showing-event-name[href]").attr("href");
+                    if (editHref) { window.location.href = editHref; }
+                    break;
+                }
+                case "o": case "x": {
+                    var openShowing = getCurrentShowing();
+                    if (!openShowing) { break; }
+                    var openHref = $(openShowing).find(".showing-public-link[href]").attr("href");
+                    if (openHref) { window.open(openHref, "_blank", "noopener"); }
+                    break;
+                }
+                case "y": case "l": {
+                    var yankShowing = getCurrentShowing();
+                    if (yankShowing) {
+                        $(yankShowing).find(".showing-anchor-link").trigger("click");
+                        showToast("Link copied");
+                    }
+                    break;
+                }
+                case "n": {
+                    var notesShowing = getCurrentShowing();
+                    if (!notesShowing) { break; }
+                    e.preventDefault();
+                    $(notesShowing).find(".showing_rota_notes span").first().trigger("click");
+                    break;
+                }
+                case "r": {
+                    var sigShowing = getCurrentShowing();
+                    if (!sigShowing) { break; }
+                    e.preventDefault();
+                    openSignupModal($(sigShowing));
+                    break;
+                }
+
+                // Marks (s = cycle; 1/2/0 = direct)
+                case "s": {
+                    var markShowing = getCurrentShowing();
+                    if (markShowing) { $(markShowing).find(".rota-mark-toggle").trigger("click"); }
+                    break;
+                }
+                case "1": {
+                    var mark1Showing = getCurrentShowing();
+                    if (mark1Showing && typeof setShowingMark === "function") {
+                        setShowingMark($(mark1Showing), "star");
+                    }
+                    break;
+                }
+                case "2": {
+                    var mark2Showing = getCurrentShowing();
+                    if (mark2Showing && typeof setShowingMark === "function") {
+                        setShowingMark($(mark2Showing), "shadow");
+                    }
+                    break;
+                }
+                case "0": {
+                    var mark0Showing = getCurrentShowing();
+                    if (mark0Showing && typeof setShowingMark === "function") {
+                        setShowingMark($(mark0Showing), "");
+                    }
+                    break;
+                }
+
+                // Filter toggles
+                case "v": {
+                    var vcb = document.getElementById('rota-filter-vacancies');
+                    if (vcb) { $(vcb).prop('checked', !vcb.checked).trigger('change'); }
+                    break;
+                }
+                case "*": {
+                    var scb = document.getElementById('rota-filter-starred');
+                    if (scb) { $(scb).prop('checked', !scb.checked).trigger('change'); }
+                    break;
+                }
+                case "f": {
+                    var fcb = document.getElementById('rota-filter-mine');
+                    if (fcb) { $(fcb).prop('checked', !fcb.checked).trigger('change'); }
+                    break;
+                }
+
+                // Search
+                case "/":
+                case "F":
+                    e.preventDefault();
+                    $("#rota-search").focus().select();
+                    break;
+
+                // Help
+                case "?":
+                    e.preventDefault();
+                    toggleHelp();
+                    break;
+            }
+        });
+    }
+
     // ── Role description tap-to-reveal ────────────────────────────────────
     function setupRoleDescriptions() {
         $(document).on("click", ".rota_role--described", function() {
@@ -1153,6 +1893,8 @@ edit_rota(
         initBadgeToggles();
         applyCriticalSlotWarnings();
         setupRoleDescriptions();
+        setupKeyboardNavigation();
+        if (window.AdminKeyboardNav) { window.AdminKeyboardNav.suppressGlobalHelp(); }
         {% if can_mark_events %}initMarkButtons();{% endif %}
         applyShowingHighlights();
 
@@ -1305,7 +2047,7 @@ document.addEventListener('DOMContentLoaded', function () {
     {% with placeholder_text="<span class='na'>Click to edit</span>" %}
     {% for showing in showings %}
         {% ifchanged showing.start|date:"F Y" %}
-        <h2 class="rota-month-header">{{ showing.start|date:"F Y" }}</h2>
+        <h2 class="rota-month-header" data-year="{{ showing.start|date:'Y' }}" data-month="{{ showing.start|date:'n' }}">{{ showing.start|date:"F Y" }}</h2>
         {% endifchanged %}
         {% ifchanged showing.start|date:"j M Y" %}
         <div class="rota-day-group-header" id="day-{{ showing.start|date:'Y-m-d' }}" data-date="{{ showing.start|date:'Y-m-d' }}"><a class="rota-day-anchor" href="#day-{{ showing.start|date:'Y-m-d' }}">{{ showing.start|date:"l j F" }}</a></div>
@@ -1328,13 +2070,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         <span class="showing-meta-tail">
                         {% if MULTIROOM_ENABLED %}{% with pr=showing.primary_room %}{% if pr %}<span class="showing-room-badge"><span class="room-colour-dot" style="background-color: {{ pr.colour }};"></span>{{ showing.rooms_display }}</span>{% endif %}{% endwith %}{% endif %}
                         {% if showing.event.outside_hire %}<span class="outside-hire-badge">Outside hire{% if showing.event.hire_name %}: {{ showing.event.hire_name }}{% endif %}</span>{% endif %}
-                        <a class="showing-public-link"
-                           href="{% noprefix_url 'single-showing-view' showing.pk %}"
-                           title="Public programme view">↗</a>
                         {% with yr=showing.start|date:"Y" mo=showing.start|date:"n" %}<a class="showing-anchor-link"
                            href="{% noprefix_url 'rota-edit-month' year=yr month=mo %}#showing-{{ showing.pk }}"
                            title="Copy link to this entry"
-                           onclick="navigator.clipboard.writeText(window.location.origin + '{% noprefix_url 'rota-edit-month' year=yr month=mo %}#showing-{{ showing.pk }}'); return false;">§</a>{% endwith %}
+                           onclick="navigator.clipboard.writeText(window.location.origin + '{% noprefix_url 'rota-edit-month' year=yr month=mo %}#showing-{{ showing.pk }}'); return false;"></a>{% endwith %}
+                        <a class="showing-public-link"
+                           href="{% noprefix_url 'single-showing-view' showing.pk %}"
+                           title="Public programme view">↗</a>
                         </span>
                     </span>
                     {# Title row: event name (links to edit or public view) + optional tags #}
@@ -1362,7 +2104,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     data-beginner="{{ rota_entry.role.beginner_friendly|yesno:'1,0' }}"
                     data-wheelchair="{{ rota_entry.role.wheelchair_accessible|yesno:'1,0' }}"
                     data-keyholder="{{ rota_entry.role.keyholder_only|yesno:'1,0' }}"
-                    data-programmer="{{ rota_entry.role.programmer_contact|yesno:'1,0' }}">
+                    data-programmer="{{ rota_entry.role.programmer_contact|yesno:'1,0' }}"
+                    data-one-shot="{{ rota_entry.role.is_one_shot|yesno:'1,0' }}">
                 {% with role=rota_entry.role %}
                 <span class="rota_role{% if role.description %} rota_role--described{% endif %}{% if role.has_active_gate %} rota_role--gated{% endif %}"{% if role.description or role.has_active_gate %} title="{% if role.description %}{{ role.description }}{% if role.has_active_gate %} · {% endif %}{% endif %}{% if role.has_active_gate %}Requires: {{ role.required_qualification.name }}{% if role.qualification_gate == 'advisory' %} (advisory){% elif role.qualification_gate == 'blocking' %} (required){% endif %}{% endif %}"{% endif %}>{{ rota_entry|role_label:showing }}</span>
                 {% endwith %}
@@ -1393,6 +2136,11 @@ document.addEventListener('DOMContentLoaded', function () {
         {% endwith %}
     {% endfor %}
     {% endwith %}
+
+    {# Anchor for the rail's "Later ↓" link; also the next-batch prompt #}
+    <div id="rota-later-anchor" class="rota-next-prompt">
+        <a href="{% url 'rota-edit' %}/{{ end_date|date:'Y' }}/{{ end_date|date:'n' }}/{{ end_date|date:'j' }}?daysahead={{ days_ahead }}">Load next {{ days_ahead }} days →</a>
+    </div>
 
 </div>
 {% endblock %}

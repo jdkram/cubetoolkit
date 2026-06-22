@@ -1,8 +1,23 @@
 {% if messages %}
-    {% for message in messages %}
-    <div class="alert alert-{% if message.level_tag == "error" %}danger{% else %}{{ message.level_tag }}{% endif %}"
-         role="alert">
-        {{ message }}
-    </div>
-    {% endfor %}
+{% for message in messages %}
+{% if message.level_tag == "error" %}
+<div class="alert alert-danger alert-dismissible d-flex align-items-start gap-2 mb-3" role="alert">
+  <span aria-hidden="true" class="flex-shrink-0" style="font-size:1.1em;">✕</span>
+  <div class="flex-grow-1">{{ message }}</div>
+  <button type="button" class="btn-close ms-1" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% elif message.level_tag == "warning" %}
+<div class="alert alert-warning alert-dismissible d-flex align-items-start gap-2 mb-3" role="alert"
+     style="border-left:4px solid #e6a817;">
+  <span aria-hidden="true" class="flex-shrink-0" style="font-size:1.1em;">⚠</span>
+  <div class="flex-grow-1"><strong>{{ message }}</strong></div>
+  <button type="button" class="btn-close ms-1" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% else %}
+<div class="alert alert-{% if message.level_tag == "success" %}success{% else %}info{% endif %} alert-dismissible d-flex align-items-center gap-2 mb-3" role="alert">
+  <div class="flex-grow-1">{{ message }}</div>
+  <button type="button" class="btn-close ms-1" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+{% endfor %}
 {% endif %}

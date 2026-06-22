@@ -397,6 +397,7 @@ The Docker settings expect these environment variables (with defaults from `dock
 | `DB_HOST` | `mariadb` | Database hostname |
 | `DB_PORT` | `3306` | Database port |
 | `SECRET_KEY` | `really_bad_django_secret_key` | Django secret key (change in production!) |
+| `TMDB_API_KEY` | *(empty — TMDB disabled)* | API key for The Movie Database. Optional. Enables the film metadata search in the event edit form (feature 9.66). Register at themoviedb.org — free for non-commercial use. The contact email for the account should be recorded in Site Settings → External APIs. |
 
 ---
 
@@ -581,11 +582,17 @@ No image rebuild is needed because `tk_run.sh` is bind-mounted from source in de
 | Job | Command | Fires | Behaviour controlled by |
 |-----|---------|-------|------------------------|
 | Auto-dormancy | `auto_dormancy` | Daily at 03:00 | `volunteer_dormancy_days`, `volunteer_never_logged_in_grace_days` in SiteConfiguration |
+| Purge induction sign-ups | `purge_induction_signups` | Daily at 03:30 | `InductionsSettings.induction_purge_days`; no-op if `inductions_enabled = False` |
+| Induction reminders | `send_induction_reminders` | Daily at 08:00 | `InductionsSettings.inductions_enabled`; sends once per session in the 72-hour window |
 | Volunteer digest | `send_volunteer_digest` | Daily at 09:00 | `volunteer_digest_day` in SiteConfiguration |
 
 **`auto_dormancy`** marks active volunteers as Dormant when they have gone quiet: no login for `volunteer_dormancy_days`, or never logged in within `volunteer_never_logged_in_grace_days` of joining. Dormant is soft and reversible — it does not disable login or rota signup. Set either field to 0 in Site settings to disable that cohort. Run `manage.py auto_dormancy --dry-run` to preview.
 
-**`send_volunteer_digest`** sends a personalised plain-text weekly summary to each opted-in active volunteer: upcoming shifts, new programme items, and starred events. The scheduler fires this command every day at 09:00, but the command checks `SiteConfiguration.volunteer_digest_day` (default: Thursday) and exits quietly on non-matching days. Set the field to **Disabled** in Site settings to suppress sending without touching the container. Only volunteers who have explicitly opted in (`weekly_digest = True` on their profile, default off) and are currently Active receive the email.
+**`purge_induction_signups`** nulls name, email, and custom responses on `pending` and `no_show` sign-ups whose `purge_after` date has passed, then marks the session as purged. Also purges stale access-needs requests that were never scheduled. The purge window is set per-session at creation time (default: `induction_purge_days` days after the session date, configurable in Inductions settings). The command is safe to run even when inductions is disabled — it simply finds nothing to purge.
+
+**`send_induction_reminders`** finds open sessions scheduled within the next 72 hours that have not yet had a reminder sent, emails all pending sign-ups, and stamps `reminder_sent_at` on the session so it only fires once. Does nothing if `inductions_enabled` is False or if no sessions are in the window.
+
+**`send_volunteer_digest`** sends a personalised plain-text weekly summary to each opted-in active volunteer: upcoming shifts, new programme items, and starred events. The scheduler fires this command every day at 09:00, but the command checks `SiteConfiguration.volunteer_digest_day` (default: Thursday) and exits quietly on non-matching days. Set the field to **Disabled** in Site settings to suppress sending without counting the container. Only volunteers who have explicitly opted in (`weekly_digest = True` on their profile, default off) and are currently Active receive the email.
 
 ### Viewing scheduler logs
 
@@ -616,6 +623,130 @@ Each job logs its start time, completion, and any failure with an exit code.
 ### Archived commands
 
 `email_vols_rota_vacancies` — originally intended as a periodic rota-vacancy email blast to all active volunteers. Superseded by the weekly digest, which is personalised and opt-in. The command also had two blocking issues: `settings.ROTA_DAYS_AHEAD` was never defined (instant crash), and the recipient list was hardcoded to two test usernames. The file is kept at `toolkit/util/management/commands/email_vols_rota_vacancies.py.archived` for reference but is not importable.
+
+---
+
+## Testing the Inductions Feature in Development
+
+### Email visibility in dev
+
+Dev uses the console email backend (`EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'` in `devserver_settings.py`). All outgoing email is printed to the Docker log of the `toolkit` container rather than sent. Watch it with:
+
+```bash
+docker compose logs -f toolkit
+```
+
+Every sign-up confirmation, reminder, check-in welcome, and access-needs acknowledgement will appear there in full. The password-set link in welcome emails is real and functional — you can copy it from the log and open it in a browser.
+
+### Step-by-step smoke test
+
+**1. Enable inductions**
+
+Log in as `admin` and go to `/inductions/manage/settings/`. Tick **Inductions enabled**, set purge days to something short (e.g. 1 for testing), and save.
+
+The People menu in the nav now shows "Inductions" and "Access needs queue".
+
+**2. Create a session**
+
+Go to `/inductions/manage/new/`:
+- Title: "Test Induction"
+- Type: Regular
+- Date: a time in the near future (within 3 days to test reminders, or any future date otherwise)
+- Location: Cinema
+- Add one custom question: label "How did you hear about us?", type Text, not required
+- Save
+
+You'll land on the session detail page. Copy the sign-up URL shown there.
+
+**3. Sign up as an attendee (in a separate browser / incognito)**
+
+Visit the sign-up URL. Fill in name and email, submit. You'll see the thanks page.
+
+In the toolkit log you'll see the confirmation email including the calendar link:
+
+```bash
+docker compose logs -f toolkit   # watch for the email text
+```
+
+**4. Download the .ics file**
+
+Visit `/inductions/<slug>/calendar.ics`. Open the downloaded file — it should import cleanly into any calendar app.
+
+**5. Test the reminder command**
+
+If you set the session date within the next 72 hours, run the reminder command manually:
+
+```bash
+docker compose exec toolkit /venv/bin/python3 manage.py send_induction_reminders
+```
+
+Check the log for the reminder email. The session's `reminder_sent_at` is now set — running the command again does nothing for that session.
+
+**6. Check in an attendee (Panopticon)**
+
+Go to `/inductions/manage/<slug>/`. You'll see the signup in the table.
+
+- Bump the "Count in room" counter to 1.
+- Click **Check in** next to the attendee's name.
+- A confirmation modal appears: "Check in [name] — [email]?" — click **Check in**.
+- The row turns green; the checked-in count increments.
+- In the log you'll see the welcome email with the password-set link.
+
+Copy the password-set link from the log and open it in a fresh incognito tab. Set a password. You should be logged in as the new volunteer immediately.
+
+**7. Download the Simplelists CSV**
+
+On the session detail page, click **Download Simplelists CSV**. Open the file — it should contain one row: `Firstname,Lastname,email@example.com` with no header.
+
+**8. Test the access needs queue**
+
+Visit `/inductions/access-needs/`, fill in name, email, access needs, and availability. Submit.
+
+Log shows the acknowledgement email. If `organiser_notification_email` is set in Inductions settings, a second email goes there too.
+
+In the toolkit as `admin`, go to `/inductions/manage/access-needs/`. You'll see the new request. Click **View** to open the detail; update status to "Contacted" and add a note.
+
+**9. Test the purge command**
+
+```bash
+docker compose exec toolkit /venv/bin/python3 manage.py purge_induction_signups
+```
+
+With `purge_days = 1` and a session date in the past, this will null the name/email/responses on any pending or no-show signups and mark the session purged. The checked-in volunteer's records are unaffected.
+
+### Useful one-liners
+
+```bash
+# Watch all outgoing email in real time
+docker compose logs -f toolkit
+
+# Run reminders immediately (useful when session date is close)
+docker compose exec toolkit /venv/bin/python3 manage.py send_induction_reminders
+
+# Purge immediately (for testing; set purge_after to a past date first)
+docker compose exec toolkit /venv/bin/python3 manage.py purge_induction_signups
+
+# Force-reset purge_after to now so purge runs immediately
+docker compose exec toolkit /venv/bin/python3 manage.py shell -c "
+from toolkit.inductions.models import InductionSession
+from django.utils import timezone
+InductionSession.objects.update(purge_after=timezone.now() - timezone.timedelta(minutes=1))
+print('purge_after reset on all sessions')
+"
+
+# Check what the reminder command would process without sending
+docker compose exec toolkit /venv/bin/python3 manage.py shell -c "
+from toolkit.inductions.models import InductionSession
+from django.utils import timezone
+now = timezone.now()
+sessions = InductionSession.objects.filter(
+    status='open', date__gte=now, date__lte=now + timezone.timedelta(hours=72),
+    reminder_sent_at__isnull=True
+)
+for s in sessions:
+    print(s.title, s.date, s.pending_count, 'pending signups')
+"
+```
 
 ---
 

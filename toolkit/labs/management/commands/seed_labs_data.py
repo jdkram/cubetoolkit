@@ -14,7 +14,7 @@ from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from toolkit.labs.models import Collective, CollectiveLink, DonationItem, FoundItem, Job, RoomNote, COLLECTIVE_PALETTE
+from toolkit.labs.models import Collective, CollectiveLink, CollectiveRole, DonationItem, FoundItem, Job, RoomNote, COLLECTIVE_PALETTE
 
 DATA_DIR = Path(__file__).parent / "seed_data"
 
@@ -69,6 +69,7 @@ class Command(BaseCommand):
         created = 0
         for item in data["collectives"]:
             links = item.pop("links", [])
+            roles = item.pop("defined_roles", [])
             item.setdefault("colour", random.choice(palette_hexes))
             collective, made = Collective.objects.get_or_create(slug=item["slug"], defaults=item)
             if made:
@@ -79,10 +80,13 @@ class Command(BaseCommand):
                 if collective.invite_only != invite_only:
                     collective.invite_only = invite_only
                     collective.save(update_fields=["invite_only"])
-            # Sync links: clear and recreate so TOML is always the source of truth.
+            # Sync links and roles: clear and recreate so TOML is always the source of truth.
             collective.links.all().delete()
             for order, link in enumerate(links):
                 CollectiveLink.objects.create(collective=collective, order=order, **link)
+            collective.defined_roles.all().delete()
+            for order, role in enumerate(roles):
+                CollectiveRole.objects.create(collective=collective, display_order=order, **role)
         return created
 
     def _seed_donations(self):

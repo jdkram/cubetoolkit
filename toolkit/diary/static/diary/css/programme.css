@@ -648,10 +648,18 @@ span.tags {
     font-size: 0.75em;
     color: #666;
     text-decoration: underline;
+    margin-left: auto;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .filter-reset-btn:hover {
     color: #000;
+}
+
+.filter-reset-btn--inactive {
+    opacity: 0.3;
+    pointer-events: none;
 }
 
 /* Cards hidden by the search filter */
@@ -783,4 +791,22 @@ span.tags {
         /* 4 cols × 400px + 3 gutters × 10px = 1630px; trim 40px */
         padding-right: 40px;
     }
+}
+
+/* Day-of-week filter row — takes its own full line inside .programme-header-row */
+.programme-dow-filter-row {
+    flex-basis: 100%;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.35rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-top: 0.2rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.programme-dow-filter-row::-webkit-scrollbar {
+    display: none;
 }

@@ -200,7 +200,19 @@ function edit_rota(jQuery, rota_edit_base_url, edit_rota_notes_url_prefix, vol_e
                         rows: 5,
                         width: '90%',
                         placeholder: '<span class="na">General notes (click to edit)</span>',
-                        submit: 'Save',
+                        submit: '<button type="submit" class="btn btn-sm btn-primary rota-notes-save">Save</button>',
+                        cancel: '<a href="#" class="rota-notes-cancel">✕ Cancel</a>',
+                        // Save on blur (tab away). jeditable's onblur receives (value, settings)
+                        // with this = the original <span>. We find the form as a child of that
+                        // element; if it's still in the DOM after 200 ms (i.e. the user neither
+                        // clicked Save nor Cancel, which would have removed it), we submit.
+                        onblur: function() {
+                            var form = $(this).find('form');
+                            if (!form.length) { return; }
+                            setTimeout(function() {
+                                if (form.closest('body').length) { form.trigger('submit'); }
+                            }, 200);
+                        },
                         submitdata: {
                             csrfmiddlewaretoken: CSRF_TOKEN
                         },

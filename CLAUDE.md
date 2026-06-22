@@ -49,7 +49,7 @@ Using `.only("pk", "some_field")` on any of these defers the cached fields. Acce
 
 **Status tracking — one file only:**
 - Bug fixes / features completed → mark ✅ + date in **[CURRENT_WORK.md](CURRENT_WORK.md)** (inline in the table, or add a row to the Done section). Do **not** also update TASKS.md.
-- New features proposed → add to [docs/TASKS.md](docs/TASKS.md) section 9.x with sizing label (🟢 XS / 🔵 S / 🟡 M / 🟠 L / 🔴 XL / ⛔ XXL), and add a row to CURRENT_WORK.md.
+- New features proposed → add to the appropriate domain file in [docs/tasks/](docs/tasks/) (see [docs/TASKS.md](docs/TASKS.md) for the index) using the next available `9.X` number and a sizing label (🟢 XS / 🔵 S / 🟡 M / 🟠 L / 🔴 XL / ⛔ XXL), and add a row to CURRENT_WORK.md.
 
 **Spec — update when the system changes:**
 - Data model changes → update [docs/SPEC.md](docs/SPEC.md) section 8 (data model) and ER diagram
@@ -193,7 +193,7 @@ docker compose exec toolkit /venv/bin/python3 manage.py test toolkit.diary.tests
 | S+S-specific templates | [star_and_shadow_templates/](star_and_shadow_templates/) |
 | Current work / status / roadmap | [CURRENT_WORK.md](CURRENT_WORK.md) |
 | System specification | [docs/SPEC.md](docs/SPEC.md) |
-| Feature specs & design rationale | [docs/TASKS.md](docs/TASKS.md) |
+| Feature specs & design rationale | [docs/TASKS.md](docs/TASKS.md) (index) → [docs/tasks/](docs/tasks/) (domain files) |
 | Current version string | [VERSION](VERSION) |
 
 ---

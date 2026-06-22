@@ -193,15 +193,13 @@ was trained for which role, when, by whom). In practice at Star and Shadow these
 
 ## 2. Who can access what — permission model
 
-> ⚠️ **Needs collective ratification.** The three-tier model and the specific gates below represent the developer's best judgement, implemented 2026-03-02. The specific questions (who can edit templates? who can edit tags? who approves Programmer access?) have not yet been formally agreed by the Star and Shadow collective. See TASKS.md §9.49 for the questions to put to the collective before deploying this to production. Until ratified, treat this section as a proposal, not settled policy.
-
 The system has three permission tiers:
 
 | Tier | Django permissions | Distinguishing check | What it allows |
 | --- | --- | --- | --- |
-| **Volunteer** | `diary.change_rotaentry` | — | Edit the rota; view rota vacancies. Cannot create/edit events, see member data, or use the CMS. |
-| **Programmer** | `toolkit.write` + `toolkit.read` + `diary.change_rotaentry` | `perms.toolkit.write` | Everything a volunteer can do, plus: create and edit events and showings, manage tags and event templates, write rota entries, see diary copy/terms reports. Cannot manage roles, access volunteer/member data, or use the CMS. |
-| **Panopticon** | same as Programmer + `is_superuser = True` | `user.is_superuser` | Full access: everything a programmer can do, plus: edit available roles (guarded by `is_superuser` because role deletion cascades silently to all rota assignments), website edits via Wagtail CMS, access to sensitive volunteer and member data (names, emails, addresses, notes), adding and retiring volunteers, sending mailouts. Intended for a small group of trusted coordinators. |
+| **Volunteer** | `diary.change_rotaentry` | — | Edit the rota. Cannot create/edit events, see member data, or use the CMS. |
+| **Programmer** | `toolkit.write` + `toolkit.read` + `diary.change_rotaentry` | `perms.toolkit.write` | Everything a volunteer can do, plus: create and edit events and showings. Access to diary list, calendar, programming queue, event templates/tags, roles, rooms, reports, printed programmes, and donations management — **each individually configurable** (see below). |
+| **Panopticon** | same as Programmer + `is_superuser = True` | `user.is_superuser` | Full access: everything a programmer can do, plus: website edits via Wagtail CMS, access to sensitive volunteer and member data (names, emails, addresses, notes), adding and retiring volunteers, sending mailouts. Also controls site settings (including permission levels). Intended for a small group of trusted coordinators. |
 
 Authentication is via Django's built-in session-based auth (username + password). There is no public registration.
 
@@ -209,9 +207,25 @@ The `CUBE_IP_ADDRESSES` setting defines a list of IP addresses that bypass the l
 
 Volunteers with the `Programmer` BooleanField set on their profile are automatically added to the `Programmers` Django group, which grants `toolkit.write` + `toolkit.read`. Panopticon (`is_superuser`) is assigned manually by an existing superuser.
 
-**Access audit trail:** When Panopticon or Programmer access is granted, a `PanopticonGrant` or `ProgrammerGrant` record is created (models in `toolkit/members/models.py`). Each grant stores the granting user, a mandatory reason (Panopticon only), and the date granted. `PanopticonGrant` also tracks last-reviewed date and reviewer. Access grants are visible to all logged-in volunteers at `/toolkit/access/` — a transparency page that also explains what each tier can do in plain language. Panopticon users can mark their own grants as reviewed; reviews are considered overdue after 365 days without a review.
+**Runtime-configurable feature access (9.49):** The following features have a `perm_*` field on `SiteConfiguration` that Panopticons can adjust at runtime via Site Settings, without a code deploy. Each defaults to `PERM_PROGRAMMER` (`toolkit.write` check) except `perm_rota_vacancies` which defaults to `PERM_VOLUNTEER`.
 
-**Why role deletion requires Panopticon:** Deleting a `Role` object cascades (via `on_delete=CASCADE`) to every `RotaEntry` for that role across all past and future showings, and to every `EventTemplateRole` slot. There is no confirmation step and no undo at the database level. The `edit_roles` view is therefore gated on `is_superuser`, not just `toolkit.write`. Roles marked `read_only=True` are additionally protected at the model layer.
+| `SiteConfiguration` field | Feature |
+| --- | --- |
+| `perm_diary_edit` | Diary edit list |
+| `perm_diary_calendar` | Calendar edit view |
+| `perm_programming_queue` | Programming queue |
+| `perm_event_templates` | Event templates (list + detail; import always Panopticon) |
+| `perm_event_tags` | Event tags |
+| `perm_roles` | Roles edit |
+| `perm_rooms` | Rooms edit |
+| `perm_diary_reports` | Copy, terms, and text reports |
+| `perm_printed_programmes` | Upload printed programmes |
+| `perm_rota_vacancies` | Rota vacancies page (default: All volunteers) |
+| `perm_donations_manage` | Donations manage |
+
+The `feature_required(feature_name)` decorator in `toolkit/toolkit_auth/decorators.py` reads the level at request time from the cached `SiteConfiguration` singleton. The `feature_perms` context variable (computed in `diary_settings` context processor) exposes the same checks to templates so nav links are hidden for features the current user can't access.
+
+**Access audit trail:** When Panopticon or Programmer access is granted, a `PanopticonGrant` or `ProgrammerGrant` record is created (models in `toolkit/members/models.py`). Each grant stores the granting user, a mandatory reason (Panopticon only), and the date granted. `PanopticonGrant` also tracks last-reviewed date and reviewer. Access grants are visible to all logged-in volunteers at `/toolkit/access/` — a transparency page that also explains what each tier can do in plain language. Panopticon users can mark their own grants as reviewed; reviews are considered overdue after 365 days without a review.
 
 ---
 
@@ -860,10 +874,31 @@ erDiagram
         datetime updated_at
     }
 
+    Film {
+        int id PK
+        int tmdb_id "nullable, unique"
+        string imdb_id
+        string media_type "film or tv"
+        string title
+        int year
+        string director
+        int runtime_minutes
+        string countries
+        string languages
+        string tmdb_certificate
+        text overview
+        string tmdb_poster_path
+        datetime tmdb_fetched_at
+        text notes
+        datetime created_at
+    }
+
     Event ||--o{ Showing : "has showings"
     Event }o--|| EventTemplate : "based on (optional)"
     Event }o--o{ EventTag : "tagged"
     Event }o--o{ MediaItem : "has images"
+    Event }o--o| Film : "linked film (optional)"
+    Film ||--o{ Event : "screenings"
     Showing ||--o{ RoomBooking : "books rooms"
     RoomBooking }o--|| Room : "for this room"
     EventTemplate ||--o{ EventTemplateRoom : "default rooms"
@@ -921,7 +956,10 @@ Key fields:
 - `copy` — full description (HTML). Legacy events have a `legacy_copy` flag and
 are pre-processed to fix wrapping/links.
 - `copy_summary` — shorter version for listings (max 450 chars)
-- `terms` — booking/hire terms (template text provided by the system)
+- `terms` — booking/hire terms (free text; fallback for unusual arrangements and legacy records)
+- `cost_type` — structured cost classification: `film_license`, `performer_fee`, `venue_hire`, `internal`, `tbc`, or null. When set (and not `tbc`), the minimum word-count validation on `terms` is waived for confirmed events.
+- `cost_distributor`, `cost_flat_fee_gbp`, `cost_fee_includes_vat`, `cost_percentage_split`, `cost_minimum_guarantee_gbp`, `cost_total_gbp` — structured cost fields; which are relevant depends on `cost_type`. All nullable. Shown/hidden conditionally in the edit form.
+- `technical_notes` — AV / tech rider requirements; kept separate from financial terms
 - `notes` — programmer's internal notes (not public)
 - `pricing` — free text (e.g. "£5/£3 concs")
 - `ticket_link` — URL to external ticketing (TicketSource)
@@ -1042,7 +1080,7 @@ PENDING ──► SENDING ──► SENT
 #### EventTemplate
 A reusable blueprint for recurring event types. When a new event is created from a template, it pre-populates the new `Event` with default values for roles, tags, pricing, copy, copy_summary, terms, film_information, private, and outside_hire. The first `Showing` also receives the template's default rota_notes. The programmer can override all of these after creation.
 
-Fields: `name`, `roles` (M2M via `EventTemplateRole`), `tags` (M2M), `pricing`, `copy`, `copy_summary`, `terms`, `film_information`, `private`, `outside_hire`, `rota_notes`.
+Fields: `name`, `roles` (M2M via `EventTemplateRole`), `tags` (M2M), `pricing`, `copy`, `copy_summary`, `terms`, `film_information`, `private`, `outside_hire`, `rota_notes`. Also carries all structured cost fields (`cost_type`, `cost_distributor`, `cost_flat_fee_gbp`, `cost_fee_includes_vat`, `cost_percentage_split`, `cost_minimum_guarantee_gbp`, `cost_total_gbp`) — these pre-populate the matching fields on new events created from the template.
 
 `EventTemplateRole` (through model): `template`, `role`, `count` (default 1). Allows "3 × Bar Staff" — `reset_rota_to_default()` creates `count` `RotaEntry` objects per slot.
 

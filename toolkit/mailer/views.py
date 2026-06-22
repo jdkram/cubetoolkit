@@ -1,5 +1,5 @@
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
-from django.contrib.auth.decorators import permission_required
+from toolkit.toolkit_auth.decorators import write_required, read_required
 from django.urls import reverse
 from django.views.decorators.http import require_POST, require_GET
 from django.shortcuts import get_object_or_404, render
@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404, render
 from .models import MailoutJob
 
 
-@permission_required("toolkit.write")
+@write_required
 @require_POST
 def job_cancel(request: HttpRequest, job_id: int) -> HttpResponse:
     job = get_object_or_404(MailoutJob, pk=job_id)
@@ -32,7 +32,7 @@ def _query_jobs(show_completed: bool, show_failed: bool):
     return jobs
 
 
-@permission_required("toolkit.read")
+@read_required
 @require_GET
 def jobs_list(request: HttpRequest) -> HttpResponse:
     show_completed = False
@@ -61,7 +61,7 @@ def jobs_list(request: HttpRequest) -> HttpResponse:
     )
 
 
-@permission_required("toolkit.read")
+@read_required
 @require_GET
 def jobs_table(request: HttpRequest) -> HttpResponse:
     show_completed = request.GET.get("show-completed") == "on"

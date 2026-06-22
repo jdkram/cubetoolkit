@@ -35,9 +35,31 @@ setup_page(false);
       <div style="border-left: 4px solid {{ collective.colour }}; padding: 1rem 1rem 1rem 1.25rem; background: #f8f4ef;">
         <h2 style="font-size: 1.1rem; margin: 0 0 0.5rem; color: {{ collective.colour }};">{{ collective.name }}</h2>
         <p style="margin: 0 0 0.75rem; font-size: 0.95rem;">{{ collective.public_copy }}</p>
+        {% if collective.sample_role %}
+        <p style="margin: 0 0 0.5rem; font-size: 0.875rem;"><strong>Example role:</strong> {{ collective.sample_role }}</p>
+        {% endif %}
         {% if collective.get_involved %}
         <p style="margin: 0 0 0.5rem; font-size: 0.875rem;"><strong>How to join:</strong> {{ collective.get_involved }}</p>
         {% endif %}
+        {% with pub_roles=collective.defined_roles.all %}
+        {% if pub_roles %}
+        <div style="margin: 0.5rem 0 0.5rem;">
+          {% for r in pub_roles %}
+          {% if r.open_to_new_volunteers %}
+          <div style="padding: 0.4rem 0; border-top: 1px solid rgba(0,0,0,0.1);">
+            <div style="display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap;">
+              <strong style="font-size: 0.875rem;">{{ r.title }}</strong>
+              {% if r.time_commitment %}<span style="font-size: 0.8rem; color: #555;">{{ r.time_commitment }}</span>{% endif %}
+              {% if r.needs_volunteers %}<span style="font-size: 0.72rem; background: #2d6a4f; color: #fff; padding: 0.1rem 0.4rem; border-radius: 3px;">looking for people</span>{% endif %}
+            </div>
+            {% if r.description %}<div style="font-size: 0.82rem; margin-top: 0.15rem;">{{ r.description }}</div>{% endif %}
+            {% if r.getting_started %}<div style="font-size: 0.82rem; margin-top: 0.1rem; font-style: italic;">First step: {{ r.getting_started }}</div>{% endif %}
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
         {% if collective.contact %}
         <p style="margin: 0; font-size: 0.875rem;"><strong>Contact:</strong> {{ collective.contact }}</p>
         {% endif %}

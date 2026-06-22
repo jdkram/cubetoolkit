@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.urls import reverse
 
 from toolkit.index.models import IndexLink, IndexCategory
-from toolkit.index.views import ToolkitIndexView, health, toolkit_access, mark_panopticon_reviewed
+from toolkit.index.views import ToolkitIndexView, health, toolkit_access, mark_panopticon_reviewed, dashboard_prefs, manage_favourite_links
 
 write_decorator = permission_required("toolkit.write")
 
@@ -23,6 +23,8 @@ root_urlpatterns = [
         mark_panopticon_reviewed,
         name="toolkit-access-review",
     ),
+    re_path(r"^toolkit/dashboard/prefs/$", dashboard_prefs, name="toolkit-dashboard-prefs"),
+    re_path(r"^toolkit/favourites/$", manage_favourite_links, name="manage-favourite-links"),
 ]
 
 urlpatterns = [

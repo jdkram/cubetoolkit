@@ -1,8 +1,8 @@
 {% load wagtailcore_tags %}
 {% wagtail_site as current_site %}
 <ul>
-    <li><a href="/">Home</a></li>
-    <li><a href="{% url "programme-view" %}" aria-haspopup="true">Programme <i class="fa fa-caret-down" aria-hidden="true"></i></a>
+    <li><a href="/" data-nav-key="h">Home</a></li>
+    <li><a href="{% url "programme-view" %}" aria-haspopup="true" data-nav-key="p">Programme <i class="fa fa-caret-down" aria-hidden="true"></i></a>
         <ul class="sub-menu">
             {% for tag in promoted_tags %}
             <li><a href="{% url "type-view" tag.slug %}"><span>{{ tag.name|title }}</span></a></li>
@@ -29,19 +29,21 @@
     <li><a href="{% pageurl top_level_child %}">{{ top_level_child.seo_title|default:top_level_child.title }}</a>
       {% endif %}
     {% endfor %}
-    <li><a href="{% url "labs-collectives-public" %}">Collectives</a></li>
+    <li><a href="{% url "labs-collectives-public" %}" data-nav-key="l">Collectives</a></li>
     {% if site_config.show_donations_in_public_nav %}
-    <li><a href="{% url "labs-donations" %}">Donations wishlist</a></li>
+    <li><a href="{% url "labs-donations" %}" data-nav-key="d">Donations wishlist</a></li>
     {% endif %}
     {% if user.is_authenticated %}
     <li class="nav-vol-divider" aria-hidden="true"></li>
-    <li><a href="{% url "toolkit-index" %}">Toolkit</a></li>
-    {% if perms.toolkit.write %}
-    <li><a href="{% url "default-edit" %}">Diary</a></li>
-    <li><a href="{% url "diary-edit-calendar" %}">Calendar</a></li>
+    <li><a href="{% url "toolkit-index" %}" data-nav-key="t">Toolkit</a></li>
+    {% if feature_perms.diary_read %}
+    <li><a href="{% url "default-edit" %}" data-nav-key="i">Diary</a></li>
     {% endif %}
-    <li><a href="{% url "rota-edit" %}">Rota</a></li>
-    <li><a href="#" aria-haspopup="true">Noticeboard <i class="fa fa-caret-down" aria-hidden="true"></i></a>
+    {% if feature_perms.diary_calendar %}
+    <li><a href="{% url "diary-edit-calendar" %}" data-nav-key="a">Calendar</a></li>
+    {% endif %}
+    <li><a href="{% url "rota-edit" %}" data-nav-key="r">Rota</a></li>
+    <li><a href="#" aria-haspopup="true" data-nav-key="n">Noticeboard <i class="fa fa-caret-down" aria-hidden="true"></i></a>
         <ul class="sub-menu">
             <li><a href="{% url "labs-bulletins" %}"><span>Bulletins</span></a></li>
             <li><a href="{% url "labs-collectives" %}"><span>Collectives</span></a></li>
@@ -56,35 +58,51 @@
             <li><a href="{% url "labs-found-items" %}"><span>Lost &amp; found</span></a></li>
         </ul>
     </li>
-    {% if perms.toolkit.write %}
-    <li><a href="#" aria-haspopup="true">Meta <i class="fa fa-caret-down" aria-hidden="true"></i></a>
-        <ul class="sub-menu">
-            <li><a href="{% url "edit_event_tags" %}"><span>Tags</span></a></li>
-            <li><a href="{% url "edit_event_templates" %}"><span>Templates</span></a></li>
-            <li><a href="{% url "edit_rooms" %}"><span>Rooms</span></a></li>
-            <li><a href="{% url "edit_roles" %}"><span>Roles</span></a></li>
-            {% if user.is_superuser %}
-            <li><a href="{% url "toolkit-access" %}"><span>Access levels</span></a></li>
-            <li><a href="{% url "edit-site-configuration" %}"><span>Site settings</span></a></li>
-            {% endif %}
-        </ul>
-    </li>
-    {% endif %}
     {% if user.is_superuser %}
-    <li><a href="#" aria-haspopup="true">People <i class="fa fa-caret-down" aria-hidden="true"></i></a>
+    <li><a href="#" aria-haspopup="true" data-nav-key="e">People <i class="fa fa-caret-down" aria-hidden="true"></i></a>
         <ul class="sub-menu">
-            <li><a href="{% url "view-volunteer-summary" %}"><span>Summary</span></a></li>
-            <li><a href="{% url "view-volunteer-list" %}"><span>Profiles</span></a></li>
+            <li><a href="{% url "view-volunteer-summary" %}"><span>Volunteer list</span></a></li>
+            <li><a href="{% url "view-volunteer-list" %}"><span>Volunteer profiles</span></a></li>
             <li><a href="{% url "add-volunteer" %}"><span>Add volunteer</span></a></li>
             <li><a href="{% url "view-volunteer-training-report" %}"><span>Training report</span></a></li>
             <li><a href="{% url "view-qualification-report" %}"><span>Qual report</span></a></li>
-            <li><a href="{% url "bulk-record" %}"><span>Bulk record</span></a></li>
+            <li><a href="{% url "bulk-record" %}"><span>Log training / quals</span></a></li>
+            {% if inductions_settings.inductions_enabled %}
+            <li><a href="{% url "inductions:manage_session_list" %}"><span>Inductions</span></a></li>
+            <li><a href="{% url "inductions:manage_access_needs_list" %}"><span>1:1 induction queue</span></a></li>
+            {% endif %}
             <li><a href="{% url "search-members" %}"><span>Search Members</span></a></li>
             <li><a href="{% url "add-member" %}"><span>Add Member</span></a></li>
             {% if MEMBERSHIP_EXPIRY_ENABLED %}<li><a href="{% url "member-expired" %}"><span>Expired</span></a></li>{% endif %}
             <li><a href="{% url "members-mailout" %}"><span>Send mailout</span></a></li>
         </ul>
     </li>
+    {% endif %}
+    {% if feature_perms.event_tags or feature_perms.event_templates or feature_perms.rooms or feature_perms.roles or user.is_superuser %}
+    <li><a href="#" aria-haspopup="true" data-nav-key="m">Meta <i class="fa fa-caret-down" aria-hidden="true"></i></a>
+        <ul class="sub-menu">
+            {% if feature_perms.event_tags %}
+            <li><a href="{% url "edit_event_tags" %}"><span>Tags</span></a></li>
+            {% endif %}
+            {% if feature_perms.event_templates %}
+            <li><a href="{% url "edit_event_templates" %}"><span>Templates</span></a></li>
+            {% endif %}
+            {% if feature_perms.rooms %}
+            <li><a href="{% url "edit_rooms" %}"><span>Rooms</span></a></li>
+            {% endif %}
+            {% if feature_perms.roles %}
+            <li><a href="{% url "edit_roles" %}"><span>Roles</span></a></li>
+            {% endif %}
+            {% if user.is_superuser %}
+            <li><a href="{% url "toolkit-access" %}"><span>Access levels</span></a></li>
+            <li><a href="{% url "edit-site-configuration" %}"><span>Site settings</span></a></li>
+            <li><a href="{% url "inductions:manage_settings" %}"><span>Induction settings</span></a></li>
+            {% endif %}
+        </ul>
+    </li>
+    {% endif %}
+    {% if user.volunteer.pk %}
+    <li><a href="{% url "volunteer-stats" %}" data-nav-key="y">Your history</a></li>
     {% endif %}
     <li>
         <form method="post" action="{% url 'logout' %}">

@@ -3,7 +3,8 @@ import json
 import datetime
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.decorators import login_required
+from toolkit.toolkit_auth.decorators import feature_required, write_required, write_required_strict
 from django.db import models
 from django.db.models import Case, When, Value, IntegerField
 from django.http import JsonResponse
@@ -210,20 +211,24 @@ def collective_edit(request, slug):
     if request.method == "POST":
         form = lab_forms.CollectiveForm(request.POST, instance=collective)
         links_formset = lab_forms.CollectiveLinkFormSet(request.POST, instance=collective)
-        if form.is_valid() and links_formset.is_valid():
+        roles_formset = lab_forms.CollectiveRoleFormSet(request.POST, instance=collective)
+        if form.is_valid() and links_formset.is_valid() and roles_formset.is_valid():
             obj = form.save(commit=False)
             obj.updated_by = request.user
             obj.save()
             links_formset.save()
+            roles_formset.save()
             messages.success(request, f"'{collective.name}' updated.")
             return redirect("labs-collectives")
     else:
         form = lab_forms.CollectiveForm(instance=collective)
         links_formset = lab_forms.CollectiveLinkFormSet(instance=collective)
+        roles_formset = lab_forms.CollectiveRoleFormSet(instance=collective)
     return render(request, "labs/collective_edit.html", {
         "collective": collective,
         "form": form,
         "links_formset": links_formset,
+        "roles_formset": roles_formset,
     })
 
 
@@ -315,8 +320,7 @@ def donation_list(request):
     })
 
 
-@login_required
-@permission_required("toolkit.write", raise_exception=True)
+@feature_required("donations_manage")
 def donation_manage(request):
     items = DonationItem.objects.select_related("last_edited_by").order_by("category", "display_order", "name")
     cfg = get_site_config()
@@ -415,7 +419,7 @@ def job_list(request):
 
 
 @login_required
-@permission_required("toolkit.write", raise_exception=True)
+@write_required_strict
 def job_add(request):
     if request.method == "POST":
         form = lab_forms.JobForm(request.POST)
@@ -431,7 +435,7 @@ def job_add(request):
 
 
 @login_required
-@permission_required("toolkit.write", raise_exception=True)
+@write_required_strict
 def job_edit(request, job_id):
     job = get_object_or_404(Job, pk=job_id)
     if request.method == "POST":
@@ -531,12 +535,16 @@ def loft_item_photo_upload(request, item_id):
     item = get_object_or_404(LoftItem, pk=item_id)
     if "image" not in request.FILES:
         return JsonResponse({"error": "No image file"}, status=400)
-    photo = LoftItemPhoto.objects.create(
-        item=item,
-        image=request.FILES["image"],
-        caption=request.POST.get("caption", "").strip(),
-        uploaded_by=request.user,
-    )
+    form = lab_forms.LoftItemPhotoForm(request.POST, request.FILES)
+    if not form.is_valid():
+        errors = "; ".join(
+            f"{field}: {', '.join(errs)}" for field, errs in form.errors.items()
+        )
+        return JsonResponse({"error": errors}, status=400)
+    photo = form.save(commit=False)
+    photo.item = item
+    photo.uploaded_by = request.user
+    photo.save()
     return JsonResponse({"id": photo.id, "url": photo.image.url, "caption": photo.caption}, status=201)
 
 
@@ -556,18 +564,22 @@ def loft_photo_delete(request, photo_id):
 def area_photo_upload(request, area_id):
     if "image" not in request.FILES:
         return JsonResponse({"error": "No image file"}, status=400)
+    form = lab_forms.AreaPhotoForm(request.POST, request.FILES)
+    if not form.is_valid():
+        errors = "; ".join(
+            f"{field}: {', '.join(errs)}" for field, errs in form.errors.items()
+        )
+        return JsonResponse({"error": errors}, status=400)
     try:
         existing = AreaPhoto.objects.get(area_id=area_id)
         existing.image.delete(save=False)
         existing.delete()
     except AreaPhoto.DoesNotExist:
         pass
-    photo = AreaPhoto.objects.create(
-        area_id=area_id,
-        image=request.FILES["image"],
-        caption=request.POST.get("caption", "").strip(),
-        uploaded_by=request.user,
-    )
+    photo = form.save(commit=False)
+    photo.area_id = area_id
+    photo.uploaded_by = request.user
+    photo.save()
     return JsonResponse({"url": photo.image.url, "uploaded_at": photo.uploaded_at.isoformat()}, status=201)
 
 
@@ -727,7 +739,7 @@ def bulletin_read(request, bulletin_id):
 
 
 @login_required
-@permission_required("toolkit.write", raise_exception=True)
+@write_required_strict
 @require_POST
 def bulletin_pin(request, bulletin_id):
     bulletin = get_object_or_404(Bulletin, pk=bulletin_id)
@@ -738,7 +750,7 @@ def bulletin_pin(request, bulletin_id):
 
 
 @login_required
-@permission_required("toolkit.write", raise_exception=True)
+@write_required_strict
 @require_http_methods(["GET", "POST"])
 def bulletin_expire(request, bulletin_id):
     bulletin = get_object_or_404(Bulletin, pk=bulletin_id)

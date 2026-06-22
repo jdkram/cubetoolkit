@@ -158,15 +158,6 @@
     </div>
   </div>
 
-  {% if messages %}
-  {% for message in messages %}
-  <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
-    {{ message }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-  </div>
-  {% endfor %}
-  {% endif %}
-
   <div class="help-box">
     <strong>Joining a collective here</strong> records your membership in the toolkit — it shows up in your profile,
     on the volunteer directory, and in rota context. It does <em>not</em> yet subscribe you to the collective's
@@ -217,10 +208,44 @@
           <dd>{{ c.get_involved }}</dd>
           {% endif %}
 
+          {% if c.sample_role %}
+          <dt>Example of what you might do</dt>
+          <dd>{{ c.sample_role }}</dd>
+          {% endif %}
+
           {% if c.volunteer_count %}
           <dt>Volunteer count</dt>
           <dd>{{ c.volunteer_count }}</dd>
           {% endif %}
+
+          {% with roles=c.defined_roles.all %}
+          {% if roles %}
+          <dt>Defined roles</dt>
+          <dd>
+            <details style="margin-top: 0.1rem;">
+              <summary style="cursor: pointer; font-size: 0.85rem; color: #495057; list-style: none; display: flex; align-items: center; gap: 0.35rem;">
+                <span style="font-size: 0.7rem;">&#9654;</span>
+                {{ roles.count }} role{{ roles|length|pluralize }} defined
+                {% for r in roles %}{% if r.needs_volunteers %}<span style="font-size: 0.72rem; background: #198754; color: #fff; padding: 0.1rem 0.4rem; border-radius: 3px; margin-left: 0.25rem;">recruiting</span>{% endif %}{% endfor %}
+              </summary>
+              <ul style="list-style: none; padding: 0.5rem 0 0; margin: 0;">
+                {% for r in roles %}
+                <li style="padding: 0.5rem 0; border-top: 1px solid #dee2e6; margin-top: 0.25rem;">
+                  <div style="display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap;">
+                    <strong style="font-size: 0.875rem;">{{ r.title }}</strong>
+                    {% if r.time_commitment %}<span class="text-muted" style="font-size: 0.78rem;">{{ r.time_commitment }}</span>{% endif %}
+                    {% if r.needs_volunteers %}<span style="font-size: 0.7rem; background: #198754; color: #fff; padding: 0.1rem 0.35rem; border-radius: 3px;">actively recruiting</span>{% endif %}
+                    {% if not r.open_to_new_volunteers %}<span style="font-size: 0.7rem; background: #6c757d; color: #fff; padding: 0.1rem 0.35rem; border-radius: 3px;">by invitation</span>{% endif %}
+                  </div>
+                  {% if r.description %}<div style="font-size: 0.82rem; margin-top: 0.2rem; color: #212529;">{{ r.description }}</div>{% endif %}
+                  {% if r.getting_started %}<div style="font-size: 0.82rem; margin-top: 0.2rem; color: #495057;"><em>To get started:</em> {{ r.getting_started }}</div>{% endif %}
+                </li>
+                {% endfor %}
+              </ul>
+            </details>
+          </dd>
+          {% endif %}
+          {% endwith %}
         </dl>
         {% if c.links.all %}
         <div class="collective-links">

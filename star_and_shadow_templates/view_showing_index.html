@@ -8,11 +8,83 @@
 {% block css %}
     {{ block.super }}
     <link rel="stylesheet" href="{{ STATIC_URL }}diary/css/programme.css" type="text/css">
+    <style>
+    .programme .showing.kb-current {
+        outline: 2px solid #0056b3;
+        outline-offset: 4px;
+        border-radius: 3px;
+    }
+    </style>
 {% endblock %}
 
 {% block script-page-setup %}
 <script>
 setup_page(true);
+</script>
+<script>
+(function ($) {
+    "use strict";
+
+    // ── Keyboard shortcuts for public programme ───────────────────────────
+    var currentIdx = -1;
+
+    function getShowings() { return $('.programme .showing:visible').toArray(); }
+
+    function setCurrentShowing(idx) {
+        var showings = getShowings();
+        if (!showings.length) { return; }
+        idx = Math.max(0, Math.min(idx, showings.length - 1));
+        $(showings).removeClass('kb-current');
+        $(showings[idx]).addClass('kb-current');
+        showings[idx].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        currentIdx = idx;
+    }
+
+    function openCurrentShowing() {
+        var showings = getShowings();
+        if (currentIdx < 0 || currentIdx >= showings.length) { return; }
+        var link = $(showings[currentIdx]).find('a[href]').first();
+        if (link.length) { window.location.href = link.attr('href'); }
+    }
+
+    $(document).on('keydown', function (e) {
+        if (e.ctrlKey || e.altKey || e.metaKey) { return; }
+        // Yield to public sidebar nav when it owns g-key badges
+        if ($('.pub-nav-key-badge').length) { return; }
+        var tag    = (document.activeElement || {}).tagName || "";
+        var inInput = /^(INPUT|TEXTAREA|SELECT)$/i.test(tag);
+
+        if (e.key === 'Escape') {
+            if (inInput) {
+                var search = document.getElementById('programme-search');
+                if (search) { $(search).val('').trigger('input'); search.blur(); }
+            }
+            return;
+        }
+
+        if (inInput) { return; }
+
+        switch (e.key) {
+            case '/':
+                e.preventDefault();
+                var s = document.getElementById('programme-search');
+                if (s) { s.focus(); s.select(); }
+                break;
+            case 'j':
+                e.preventDefault();
+                setCurrentShowing(currentIdx < 0 ? 0 : currentIdx + 1);
+                break;
+            case 'k':
+                e.preventDefault();
+                setCurrentShowing(currentIdx < 0 ? 0 : currentIdx - 1);
+                break;
+            case 'Enter':
+            case 'o':
+                if (currentIdx >= 0) { e.preventDefault(); openCurrentShowing(); }
+                break;
+        }
+    });
+}(jQuery));
 </script>
 {% endblock script-page-setup %}
 {% block script %}
@@ -96,7 +168,17 @@ setup_page(true);
     <div class="programme-filter-bar">
         <label for="programme-search" class="programme-search-label">Search:</label>
         <input type="search" id="programme-search" data-prog-search placeholder="Filter by title, tag…" autocomplete="off">
-        <button type="button" id="filter-reset" data-prog-reset class="filter-reset-btn" hidden>Clear</button>
+    </div>
+    <div class="programme-dow-filter-row" role="group" aria-label="Filter by day of week">
+        <button type="button" class="prog-filter-btn prog-filter-btn--active" data-dow-filter="">Any day</button>
+        <button type="button" class="prog-filter-btn" data-dow-filter="1">Mon</button>
+        <button type="button" class="prog-filter-btn" data-dow-filter="2">Tue</button>
+        <button type="button" class="prog-filter-btn" data-dow-filter="3">Wed</button>
+        <button type="button" class="prog-filter-btn" data-dow-filter="4">Thu</button>
+        <button type="button" class="prog-filter-btn" data-dow-filter="5">Fri</button>
+        <button type="button" class="prog-filter-btn" data-dow-filter="6">Sat</button>
+        <button type="button" class="prog-filter-btn" data-dow-filter="0">Sun</button>
+        <button type="button" data-prog-reset class="filter-reset-btn filter-reset-btn--inactive">Clear all</button>
     </div>
 </div>
 <div class="programme">
@@ -109,7 +191,8 @@ setup_page(true);
     {% endif %}
     <div class="showing{% if is_volunteer and event.private or is_volunteer and showing.hide_in_programme %} showing-internal{% endif %}{% if showing.cancelled %} showing--cancelled{% endif %}" id="showing_{{ showing.id }}"
          data-search-text="{{ event.pre_title }} {{ event.name }} {{ event.post_title }} {{ event.copy_summary|striptags|truncatewords:50 }}{% for tag in event.tags.all %} {{ tag.name }}{% endfor %}"
-         data-tags="{% for tag in event.tags.all %}{% if not forloop.first %} {% endif %}{{ tag.slug }}{% endfor %}">
+         data-tags="{% for tag in event.tags.all %}{% if not forloop.first %} {% endif %}{{ tag.slug }}{% endfor %}"
+         data-dow="{{ showing.start|date:"w" }}">
 
         {% if showing.cancelled %}<div class="cancelled-flag" role="alert">CANCELLED</div>{% endif %}
         <div class="event_image">
@@ -119,7 +202,7 @@ setup_page(true);
             {% if event.tags.all %}
                 <span class="tags">
                     {% for tag in event.tags.all %}
-                       <a href="{% url "type-view" tag.slug %}" class="tag_{{tag.name}}" data-slug="{{ tag.slug }}">{{tag.name}}</a>
+                       <a href="{% url "type-view" tag.slug %}" class="tag_{{tag.name}}" data-slug="{{ tag.slug }}"{% if tag.description %} title="{{ tag.description }}"{% endif %}>{{tag.name}}</a>
                     {% endfor %}
                 </span>
             {% endif %}

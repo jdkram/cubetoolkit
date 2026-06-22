@@ -178,11 +178,13 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
             }
         }
 
-        // Room filter: show event if at least one of its rooms is visible
+        // Room filter: show event if at least one of its rooms is visible.
+        // Events in the "unroomed" pseudo-resource are always shown.
         if (resources && resources.length > 0) {
             var eventResources = event.getResources ? event.getResources().filter(Boolean) : [];
             if (eventResources.length > 0) {
                 var anyVisible = eventResources.some(function(r) {
+                    if (r.id === 'unroomed') { return true; }
                     return filterState.visibleRooms.indexOf(parseInt(r.id, 10)) !== -1;
                 });
                 if (!anyVisible) { return false; }
@@ -590,6 +592,7 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
             },
 
             timeZone: false,
+            locale: 'en-GB',
 
             nowIndicator: true,
             dayMaxEvents: true,
@@ -730,6 +733,8 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
                 var visible = resources.filter(function(r) {
                     return filterState.visibleRooms.indexOf(parseInt(r.id, 10)) !== -1;
                 });
+                // Always show the virtual "no room" lane so unroomed events are visible.
+                visible = visible.concat([{ id: 'unroomed', title: 'No room assigned', order: 9999 }]);
                 successCallback(visible);
             };
             calendarOpts.resourceAreaWidth = '15%';
@@ -787,6 +792,57 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
                 calendar.render();
             }, 250);
         });
+
+        // ── Keyboard shortcuts ───────────────────────────────────────────────
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.altKey || e.metaKey) { return; }
+            if (window.AdminKeyboardNav && window.AdminKeyboardNav.isNavMode()) { return; }
+            var tag = (document.activeElement || {}).tagName || '';
+            var inInput = /^(INPUT|TEXTAREA|SELECT)$/i.test(tag);
+            if (inInput || (document.activeElement && document.activeElement.isContentEditable)) { return; }
+
+            switch (e.key) {
+                case '[': e.preventDefault(); calendar.prev(); break;
+                case ']': e.preventDefault(); calendar.next(); break;
+                case 't': calendar.today(); break;
+                case 'n':
+                    e.preventDefault();
+                    window.location.href = django_urls['add-event'];
+                    break;
+                case '/':
+                    e.preventDefault();
+                    var ni = document.getElementById('filter-name');
+                    if (ni) { ni.focus(); ni.select(); }
+                    break;
+                case 'm': e.preventDefault(); calendar.changeView('dayGridMonth'); break;
+                case 'w': e.preventDefault(); calendar.changeView('timeGridWeek'); break;
+                case '3': e.preventDefault(); calendar.changeView('threeDay'); break;
+                case 'R':
+                    e.preventDefault();
+                    if (hasResources) { calendar.changeView('resourceTimelineWeek'); }
+                    break;
+                case 'M':
+                    e.preventDefault();
+                    if (hasResources) { calendar.changeView('resourceTimelineMonth'); }
+                    break;
+            }
+        });
+
+        if (window.AdminKeyboardNav) {
+            var viewRows = [
+                ["[ / ]", "Previous / next period"],
+                ["t",     "Jump to today"],
+                ["m",     "Month view"],
+                ["w",     "Week view"],
+                ["3",     "3-day view"],
+                ["n",     "New event"],
+                ["/",     "Focus name search"]
+            ];
+            if (hasResources) {
+                viewRows.splice(5, 0, ["R", "Week (rooms) view"], ["M", "Month (rooms) view"]);
+            }
+            window.AdminKeyboardNav.registerHelp([{ heading: "Calendar", rows: viewRows }]);
+        }
     }
 
     if (document.readyState === 'loading') {

@@ -1,6 +1,12 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]; status: "#ai-written"
 from django.contrib import admin
-from .models import Bulletin, Collective, ConsumableItem, DonationItem, ExchangeItem, FoundItem, Job, NeedFlag, SupplierRecord
+from .models import Bulletin, Collective, CollectiveRole, ConsumableItem, DonationItem, ExchangeItem, FoundItem, Job, NeedFlag, SupplierRecord
+
+
+class CollectiveRoleInline(admin.TabularInline):
+    model = CollectiveRole
+    extra = 1
+    fields = ("title", "time_commitment", "needs_volunteers", "open_to_new_volunteers", "display_order")
 
 
 @admin.register(Collective)
@@ -14,6 +20,7 @@ class CollectiveAdmin(admin.ModelAdmin):
         (None, {"fields": ("name", "slug", "colour", "display_order", "active")}),
         ("Content", {"fields": ("volunteer_count", "about", "roles", "organising", "proud_of", "get_involved", "contact")}),
     )
+    inlines = [CollectiveRoleInline]
 
 
 @admin.register(DonationItem)

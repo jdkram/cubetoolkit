@@ -10,24 +10,56 @@ about = "Art Club is a relaxed, once-a-week social gathering where people can ta
 roles = "The main role of an Art Club volunteer is to help create a welcoming, inclusive, and supportive atmosphere — greeting new members, offering guidance or encouragement, keeping the space tidy, and helping uphold the values and ethos of the Star and Shadow."
 organising = "Art Club meets every Sunday for a four-hour session. Volunteers also communicate via a WhatsApp group."
 proud_of = ""
-get_involved = "Call in on a Sunday — it runs 12–4pm. New volunteers welcome."
+get_involved = "Call in on a Sunday, it runs 12–4pm. New volunteers welcome."
 contact = ""
+
+[[collectives.defined_roles]]
+title = "Art Club Host"
+description = "Help create a welcoming atmosphere for participants. Greeting people, tidying the space, knowing where things are, and keeping things running smoothly."
+time_commitment = "Sundays 12–4pm, as often as suits you"
+getting_started = "Drop in on a Sunday and introduce yourself."
+needs_volunteers = true
+open_to_new_volunteers = true
 
 [[collectives]]
 name = "Bar Collective"
 slug = "bar-collective"
 display_order = 20
 volunteer_count = ""
-about = "The Bar Collective pulls the pints — and makes sure there are pints to pull. It's a large Star and Shadow volunteer group, with a subgroup called Operations who take care of stock and supplies. The bar runs during regular programming (film nights on Thursdays and Sundays), plus most events."
-roles = "Bar shift tasks: serving drinks; collecting, washing, and correctly shelving glasses; cleaning and disinfecting surfaces; maintaining stock levels in the bar and the cellar; waste management. Other ongoing jobs include cleaning beer lines, ordering stock, doing stock-takes, and organising meetings."
+about = "The Bar Collective pulls the pints, and makes sure there are pints to pull. It's a large Star and Shadow volunteer group, with a subgroup called Operations who take care of stock and supplies. The bar runs during regular programming (film nights on Thursdays and Sundays), plus most events."
+roles = "Bar shift tasks: serving drinks; collecting, washing, and correctly shelving glasses; cleaning and disinfecting surfaces; maintaining stock levels in the bar; waste management. Other ongoing jobs include cleaning beer lines, ordering stock, doing stock-takes, and organising meetings."
 organising = "Meetings in person every couple of months, organised through the bar email list. All meeting agendas, minutes, and other documents are in the Bar folder in the Nextcloud."
 proud_of = ""
-get_involved = "As alcohol sales are licensed, you'll need to complete a bar induction before doing a shift. Once inducted, you'll be added to the bar mailing list and can sign up for any bar role on the rota. Please arrive 45–60 minutes before the listed time to set up."
+get_involved = "As alcohol sales are licensed, you'll need to complete a bar induction before doing a shift. Once inducted, you'll be added to the bar mailing list and can sign up for any bar role on the rota, ideally a shadowing slot if you haven't worked behind a bar before. Please arrive 45–60 minutes before the listed time to set up."
 contact = ""
 links = [
   {label = "Bar folder (Nextcloud)", url = "https://nextcloud.com/s/sns-bar-example"},
   {label = "WhatsApp group", url = "https://chat.whatsapp.com/snsbarexample"},
 ]
+
+[[collectives.defined_roles]]
+title = "Bar Shadow"
+description = "Your first bar shifts working alongside an experienced bar volunteer to learn the job before doing shifts independently."
+time_commitment = "One or two shadow shifts"
+getting_started = "Do your bar induction (listed on the rota once inducted as a general volunteer), then sign up for a Bar Shadow slot."
+needs_volunteers = true
+open_to_new_volunteers = true
+
+[[collectives.defined_roles]]
+title = "Bar Staff"
+description = "Serving drinks, collecting and washing glasses, keeping the bar stocked and clean, working the till. Arrive 45–60 minutes before the listed start time for films."
+time_commitment = "One shift per event (~3–4h for gigs, ~1h for filoms), as often as suits you"
+getting_started = "Complete a bar induction and one or two shadow shifts, then sign up for bar shifts on the rota."
+needs_volunteers = true
+open_to_new_volunteers = true
+
+[[collectives.defined_roles]]
+title = "Bar Operations"
+description = "The logistics side: ordering stock, doing stock-takes, cleaning beer lines, and coordinating with suppliers. A smaller sub-group within the Bar Collective."
+time_commitment = "A few hours per month, mostly ad hoc"
+getting_started = "Ask to join the Bar Ops mailing list."
+needs_volunteers = false
+open_to_new_volunteers = true
 
 [[collectives]]
 name = "Cafe Collective"
@@ -41,6 +73,30 @@ proud_of = ""
 get_involved = "A one-hour cafe induction is required before signing up for a shift — these are listed on the rota once a month. If you're interested in cooking or handling hot food, a kitchen induction is also available. A Level 2 Food Safety and Hygiene Certificate is required for kitchen roles."
 contact = ""
 
+[[collectives.defined_roles]]
+title = "Café Shadow (Level 1)"
+description = "Your first café shift — shadowing an experienced café volunteer, learning the setup and workflow. Requires a café induction first."
+time_commitment = "One shadow shift (~4h)"
+getting_started = "Sign up for a café induction on the rota (usually listed once a month), then sign up for a Café Shadowing slot."
+needs_volunteers = true
+open_to_new_volunteers = true
+
+[[collectives.defined_roles]]
+title = "Café Volunteer (Level 1)"
+description = "Running the café front of house — making drinks, serving cold food, collecting money, keeping the space clean and welcoming. Can work independently once you've done a shadow shift."
+time_commitment = "Sundays 12–4pm, or event shifts as needed"
+getting_started = "Do a café induction and one shadow shift, then sign up on the rota."
+needs_volunteers = true
+open_to_new_volunteers = true
+
+[[collectives.defined_roles]]
+title = "Café Volunteer (Level 2 — Kitchen)"
+description = "Kitchen shifts: preparing and serving hot food. Requires Level 2 Food Safety and Hygiene Certificate (S&S can reimburse the cost)."
+time_commitment = "Same shift patterns as Level 1, with food prep before service"
+getting_started = "Complete your Food Hygiene Level 2 course, then let the café collective know you're ready for kitchen shifts."
+needs_volunteers = true
+open_to_new_volunteers = true
+
 [[collectives]]
 name = "Caretaking & Operations Collective"
 slug = "caretaking-operations"
@@ -52,6 +108,22 @@ organising = "The Caretaking Meeting on the 3rd Monday of each month is where bu
 proud_of = ""
 get_involved = "Anyone can attend the Caretaking Meeting. New volunteers are always welcome. There is no rota; tasks are assigned at the meeting."
 contact = ""
+
+[[collectives.defined_roles]]
+title = "Caretaking Meeting Attendee"
+description = "Come to the monthly caretaking meeting (3rd Monday) to discuss and coordinate building tasks. No commitment beyond attending — tasks are assigned there."
+time_commitment = "~1h/month for the meeting"
+getting_started = "Show up to the next Caretaking Meeting — anyone is welcome."
+needs_volunteers = true
+open_to_new_volunteers = true
+
+[[collectives.defined_roles]]
+title = "Annual Jobs Volunteer"
+description = "Take on one of the annual building tasks documented on the Nextcloud — fire extinguisher checks, insurance renewals, H&S reviews, etc. The rule is one job per volunteer per year."
+time_commitment = "Varies by task — typically a few hours once a year"
+getting_started = "Come to a caretaking meeting and take on one of the unclaimed tasks from the annual jobs list."
+needs_volunteers = true
+open_to_new_volunteers = true
 
 [[collectives]]
 name = "Community Kitchen Collective"
@@ -65,6 +137,30 @@ proud_of = ""
 get_involved = "Get in touch via the community kitchen contact, come along to a meeting, or speak to someone at an event. Kitchen roles require a cafe induction and a Level 2 Food Safety and Hygiene Certificate, which S&S can reimburse."
 contact = ""
 
+[[collectives.defined_roles]]
+title = "General Helper"
+description = "Set up the venue, help with activities (fix-it cafe, crafts, kids' play area), greet people, wash up, clean. No food handling — general induction only needed."
+time_commitment = "Second Wednesday of each month, ~4–5h"
+getting_started = "Come to a Community Kitchen evening as a guest first to get a feel for it, then come back and help."
+needs_volunteers = true
+open_to_new_volunteers = true
+
+[[collectives.defined_roles]]
+title = "Café Volunteer (Community Kitchen)"
+description = "Run the café during Community Kitchen evenings — drinks and light food. Requires café induction and Food Hygiene Level 1."
+time_commitment = "Second Wednesday of each month, ~4–5h"
+getting_started = "Do a café induction and Level 1 food hygiene training, then sign up for a Community Kitchen café slot."
+needs_volunteers = true
+open_to_new_volunteers = true
+
+[[collectives.defined_roles]]
+title = "Cook / Head Cook"
+description = "Plan and prepare the meal — typically a large-batch vegan dish for around 180 people. Requires Food Hygiene Level 2 (S&S can reimburse the ~£14 course fee)."
+time_commitment = "Second Wednesday + some prep time beforehand"
+getting_started = "Complete Food Hygiene Level 2, then get in touch with the collective to talk about taking a cooking slot."
+needs_volunteers = true
+open_to_new_volunteers = true
+
 [[collectives]]
 name = "Facilitation Collective"
 slug = "facilitation"
@@ -76,6 +172,30 @@ organising = "In-person meetings roughly every three weeks. Knowledge and inform
 proud_of = ""
 get_involved = "Email the mailing list for info or come along to one of the meetings. There is no induction as yet, but the collective is looking to provide training."
 contact = ""
+
+[[collectives.defined_roles]]
+title = "Facilitation Shadow"
+description = "Observe an experienced facilitator running a meeting — either a collective meeting or a working group session. Low commitment, high learning."
+time_commitment = "One meeting to start — usually 1–2h"
+getting_started = "Come to one of the facilitation collective meetings and introduce yourself."
+needs_volunteers = true
+open_to_new_volunteers = true
+
+[[collectives.defined_roles]]
+title = "Facilitator"
+description = "Facilitate collective meetings or working group sessions — keeping the process fair, ensuring everyone can contribute, and helping the group reach decisions by consensus."
+time_commitment = "Varies — a few meetings per month plus prep"
+getting_started = "Shadow a few meetings first, then co-facilitate with someone experienced. The collective will let you know when you're ready to run one solo."
+needs_volunteers = true
+open_to_new_volunteers = true
+
+[[collectives.defined_roles]]
+title = "Minute Taker"
+description = "Take notes at meetings — capturing key decisions, actions, and discussion points — and circulate them afterwards."
+time_commitment = "Per meeting, usually 1–2h plus 30 mins to write up"
+getting_started = "Volunteer at any collective or working group meeting — just let the facilitator know at the start."
+needs_volunteers = true
+open_to_new_volunteers = true
 
 [[collectives]]
 name = "Film Programming Collective"
@@ -94,6 +214,14 @@ links = [
   {label = "WhatsApp group", url = "https://chat.whatsapp.com/snsfilmprogexample"},
 ]
 
+[[collectives.defined_roles]]
+title = "Film Programmer"
+description = "Propose films for the Thursday and Sunday programme, research distributors and licensing, write programme copy, and attend monthly programming meetings. You don't need to project the films you programme."
+time_commitment = "Monthly programming meeting + a few hours per season researching and writing"
+getting_started = "Join the mailing list or WhatsApp group and come to the next programming meeting — no induction needed."
+needs_volunteers = true
+open_to_new_volunteers = true
+
 [[collectives]]
 name = "Film Projection / Tech Collective"
 slug = "film-projection-tech"
@@ -106,6 +234,38 @@ proud_of = ""
 get_involved = "Look out for projection inductions listed on the rota. Training and shadowing are required before signing up for a projectionist role."
 contact = ""
 
+[[collectives.defined_roles]]
+title = "Projection Shadow"
+description = "Arrive 1 hour before a screening and observe an experienced projectionist setting up and running the show. Required before moving to independent projection."
+time_commitment = "1 session per film screened (arrive ~1hr before); duration varies by format"
+getting_started = "Sign up for a projection shadowing slot on the rota, or contact the Tech Collective to be paired with a projectionist."
+needs_volunteers = true
+open_to_new_volunteers = true
+
+[[collectives.defined_roles]]
+title = "Projectionist (MP4 / DVD)"
+description = "Run screenings independently using digital file or disc formats. Requires completing projection shadowing first."
+time_commitment = "~2–3hrs per screening (including setup and breakdown)"
+getting_started = "Complete at least one projection shadow shift, then arrange sign-off with an experienced projectionist before booking your first solo shift."
+needs_volunteers = true
+open_to_new_volunteers = true
+
+[[collectives.defined_roles]]
+title = "Projectionist (DCP)"
+description = "Run DCP (Digital Cinema Package) screenings — the format used for most new-release and archive 35mm-replacement prints. Requires MP4 sign-off first."
+time_commitment = "~2–3hrs per screening"
+getting_started = "Complete MP4/DVD projection and get signed off, then ask the Tech Collective about DCP training."
+needs_volunteers = true
+open_to_new_volunteers = true
+
+[[collectives.defined_roles]]
+title = "Projectionist (16mm / 35mm)"
+description = "Run screenings on film — 16mm and/or 35mm analogue formats. Specialist training required; relatively few screenings per year."
+time_commitment = "Varies; typically 2–4hrs per screening including setup"
+getting_started = "Express interest via the Tech Collective — training opportunities come up when screenings are being planned."
+needs_volunteers = false
+open_to_new_volunteers = true
+
 [[collectives]]
 name = "Finance Collective"
 slug = "finance"
@@ -117,6 +277,14 @@ organising = "Three meetings per year by Zoom. Quarterly reports and a 12-month 
 proud_of = ""
 get_involved = "Volunteers need to be available, reliable, methodical, honest, and skilled in Excel and Sage. Open information-sharing sessions are planned. Get in touch via the finance collective contact."
 contact = ""
+
+[[collectives.defined_roles]]
+title = "Finance Volunteer"
+description = "Help keep the financial records up to date, contribute to quarterly reports and the annual cash forecast, and attend Zoom meetings three times a year. Tasks are documented in 'The Finance Bible' on the Nextcloud."
+time_commitment = "~3 Zoom meetings/year + regular bookkeeping tasks (frequency depends on what you take on)"
+getting_started = "Get in touch with the Finance Collective. You'll need to be available, reliable, methodical, and comfortable with Excel and Sage."
+needs_volunteers = true
+open_to_new_volunteers = true
 
 [[collectives]]
 name = "Keyholder Collective"
@@ -135,6 +303,14 @@ links = [
   {label = "WhatsApp group", url = "https://chat.whatsapp.com/snskeyholderexample"},
 ]
 
+[[collectives.defined_roles]]
+title = "Keyholder"
+description = "First in, last out. Responsible for building security, safe access for volunteers, supervising the safe and tills, managing emergencies, and holding a registered set of keys. Prerequisites: at least one year of regular volunteering, bar induction, café induction, and familiarity with the building."
+time_commitment = "Varies — you sign up for individual shifts on the rota as needed"
+getting_started = "Nominate yourself at a Caretaking Meeting once you've been volunteering regularly for at least a year and feel familiar with the building."
+needs_volunteers = true
+open_to_new_volunteers = true
+
 [[collectives]]
 name = "Safer Spaces Collective"
 slug = "safer-spaces"
@@ -147,6 +323,22 @@ organising = "At least once a quarter, more if needed."
 proud_of = ""
 get_involved = "Volunteers in Safer Spaces must have been volunteering for at least a year to ensure they understand the cinema and its values. Anyone interested can get in touch by email."
 contact = ""
+
+[[collectives.defined_roles]]
+title = "Safer Spaces Volunteer"
+description = "Help create resources for navigating the S&S non-hierarchical structure, contribute to workshops like Listening Skills training, and support the embedding of the Safer Spaces & Anti-Oppression Policy. Requires at least one year of prior volunteering."
+time_commitment = "Collective meetings at least quarterly; additional time for workshops and resource creation as needed"
+getting_started = "Get in touch by email once you have been volunteering at S&S for at least a year."
+needs_volunteers = false
+open_to_new_volunteers = true
+
+[[collectives.defined_roles]]
+title = "Mediator"
+description = "Part of a smaller group within Safer Spaces that helps people talk when communication has broken down. Involves facilitated conversations and a high degree of trust, discretion, and care."
+time_commitment = "As needed; not a regular scheduled commitment"
+getting_started = "This role is filled by invitation within the Safer Spaces Collective."
+needs_volunteers = false
+open_to_new_volunteers = false
 
 [[collectives]]
 name = "The Canny Little Library Collective"
@@ -162,3 +354,11 @@ contact = ""
 links = [
   {label = "WhatsApp chat", url = "https://chat.whatsapp.com/snslibraryexample"},
 ]
+
+[[collectives.defined_roles]]
+title = "Library Volunteer"
+description = "Help keep the library running: sort and tidy shelves, categorise acquisitions, catalogue returns, decide on new books, write reviews, make posters, or run social media. New ideas for activities are welcome — it's a relaxed collective."
+time_commitment = "Irregular — meetings happen when people are free, usually on a Sunday"
+getting_started = "Email the library with a bit about why you'd like to get involved."
+needs_volunteers = true
+open_to_new_volunteers = true

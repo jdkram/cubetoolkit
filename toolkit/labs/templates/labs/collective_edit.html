@@ -27,6 +27,54 @@
     {% crispy form %}
 
     <hr style="margin: 2rem 0 1.5rem;">
+    <h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem;">Defined roles</h2>
+    <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1rem;">
+      Structured roles shown on the collective card to help volunteers understand what joining actually means.
+      "Needs volunteers" flags a role as actively recruiting — shown as a small badge.
+      Up to 12 roles.
+    </p>
+
+    {{ roles_formset.management_form }}
+    {% for role_form in roles_formset %}
+    <div class="role-card{% if role_form.instance.pk and role_form.DELETE.value %} role-card--deleted{% endif %}"
+         style="border: 1px solid #dee2e6; border-radius: 5px; padding: 0.85rem 1rem; margin-bottom: 0.75rem; background: #f8f9fa;">
+      {{ role_form.id }}
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem; margin-bottom: 0.5rem;">
+        <div>
+          <label class="form-label" style="font-size: 0.8rem; font-weight: 600; margin-bottom: 0.2rem;" for="{{ role_form.title.id_for_label }}">Title</label>
+          {{ role_form.title }}
+          {% if role_form.title.errors %}<div class="text-danger" style="font-size:0.8rem;">{{ role_form.title.errors }}</div>{% endif %}
+        </div>
+        <div>
+          <label class="form-label" style="font-size: 0.8rem; font-weight: 600; margin-bottom: 0.2rem;" for="{{ role_form.time_commitment.id_for_label }}">Time commitment</label>
+          {{ role_form.time_commitment }}
+        </div>
+      </div>
+      <div style="margin-bottom: 0.5rem;">
+        <label class="form-label" style="font-size: 0.8rem; font-weight: 600; margin-bottom: 0.2rem;" for="{{ role_form.description.id_for_label }}">Description <span class="text-muted fw-normal">(optional)</span></label>
+        {{ role_form.description }}
+      </div>
+      <div style="margin-bottom: 0.6rem;">
+        <label class="form-label" style="font-size: 0.8rem; font-weight: 600; margin-bottom: 0.2rem;" for="{{ role_form.getting_started.id_for_label }}">Getting started <span class="text-muted fw-normal">(optional)</span></label>
+        {{ role_form.getting_started }}
+      </div>
+      <div style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; font-size: 0.85rem;">
+        <label style="display:flex; align-items:center; gap:0.4rem; margin:0; cursor:pointer;">
+          {{ role_form.needs_volunteers }} Actively recruiting
+        </label>
+        <label style="display:flex; align-items:center; gap:0.4rem; margin:0; cursor:pointer;">
+          {{ role_form.open_to_new_volunteers }} Open to new volunteers
+        </label>
+        {% if role_form.instance.pk %}
+        <label style="display:flex; align-items:center; gap:0.4rem; margin:0; margin-left:auto; cursor:pointer; color:#dc3545;">
+          {{ role_form.DELETE }} Delete this role
+        </label>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+
+    <hr style="margin: 2rem 0 1.5rem;">
     <h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem;">Links</h2>
     <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1rem;">
       Up to 3 links shown on the collective's card — WhatsApp group, Linktree, shared pad, etc.

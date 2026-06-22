@@ -166,17 +166,81 @@ class CollectiveEditTests(LabsTestsMixin, TestCase):
             "organising": "Monthly meetings",
             "proud_of": "Great taste",
             "get_involved": "Come to a screening",
+            "sample_role": "",
             "contact": "film@test.example",
             "listed_publicly": "",
             "public_copy": "",
-            # CollectiveLinkFormSet management form (prefix comes from related_name="links")
+            # CollectiveLinkFormSet management form
             "links-TOTAL_FORMS": "3",
             "links-INITIAL_FORMS": "0",
             "links-MIN_NUM_FORMS": "0",
             "links-MAX_NUM_FORMS": "3",
+            # CollectiveRoleFormSet management form
+            "defined_roles-TOTAL_FORMS": "1",
+            "defined_roles-INITIAL_FORMS": "0",
+            "defined_roles-MIN_NUM_FORMS": "0",
+            "defined_roles-MAX_NUM_FORMS": "12",
         }
         response = self.client.post(self.url, data)
         self.assertRedirects(response, reverse("labs-collectives"))
         self.col_open.refresh_from_db()
         self.assertEqual(self.col_open.volunteer_count, "About 10")
         self.assertEqual(self.col_open.updated_by, self.user_vol)
+
+    def _base_post_data(self):
+        return {
+            "colour": "#0d2b45",
+            "volunteer_count": "",
+            "about": "",
+            "roles": "",
+            "organising": "",
+            "proud_of": "",
+            "get_involved": "",
+            "sample_role": "",
+            "contact": "",
+            "listed_publicly": "",
+            "public_copy": "",
+            "links-TOTAL_FORMS": "3",
+            "links-INITIAL_FORMS": "0",
+            "links-MIN_NUM_FORMS": "0",
+            "links-MAX_NUM_FORMS": "3",
+            "defined_roles-TOTAL_FORMS": "1",
+            "defined_roles-INITIAL_FORMS": "0",
+            "defined_roles-MIN_NUM_FORMS": "0",
+            "defined_roles-MAX_NUM_FORMS": "12",
+        }
+
+    def test_post_creates_defined_role(self):
+        data = self._base_post_data()
+        data.update({
+            "defined_roles-TOTAL_FORMS": "2",
+            "defined_roles-0-title": "Head Cook",
+            "defined_roles-0-time_commitment": "~3hrs/month",
+            "defined_roles-0-needs_volunteers": "on",
+            "defined_roles-0-open_to_new_volunteers": "on",
+            "defined_roles-0-description": "Plan and cook one meal per month.",
+            "defined_roles-0-getting_started": "Come to the next Community Kitchen evening.",
+        })
+        response = self.client.post(self.url, data)
+        self.assertRedirects(response, reverse("labs-collectives"))
+        self.col_open.refresh_from_db()
+        role = self.col_open.defined_roles.get()
+        self.assertEqual(role.title, "Head Cook")
+        self.assertEqual(role.time_commitment, "~3hrs/month")
+        self.assertTrue(role.needs_volunteers)
+        self.assertTrue(role.open_to_new_volunteers)
+
+    def test_collectives_list_shows_roles(self):
+        from toolkit.labs.models import CollectiveRole
+        CollectiveRole.objects.create(
+            collective=self.col_open,
+            title="Head Cook",
+            time_commitment="~3hrs/month",
+            needs_volunteers=True,
+            open_to_new_volunteers=True,
+        )
+        url = reverse("labs-collectives")
+        response = self.client.get(url)
+        self.assertContains(response, "Head Cook")
+        self.assertContains(response, "~3hrs/month")
+        self.assertContains(response, "actively recruiting")

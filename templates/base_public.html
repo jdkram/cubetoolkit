@@ -7,6 +7,22 @@
 <link rel="stylesheet" href="{{ STATIC_URL }}css/fontawesome/css/solid.css">
 <link rel="stylesheet" href="{{ STATIC_URL }}css/fontawesome/css/brands.css">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+.pub-nav-key-badge {
+    display: inline-block;
+    margin-left: 0.3em;
+    font-size: 0.72em;
+    font-family: monospace;
+    font-weight: bold;
+    background: #ffc107;
+    color: #000;
+    border: 1px solid rgba(0,0,0,0.25);
+    border-radius: 3px;
+    padding: 0.05em 0.3em;
+    line-height: 1.4;
+    vertical-align: middle;
+}
+</style>
 {% endblock css %}
 
 {% block script %}
@@ -16,6 +32,7 @@
     <script src="{{ STATIC_URL }}js/lib/imagesloaded.pkgd.min.js" ></script>
     <script src="{{ STATIC_URL }}js/lib/jquery.touchSwipe.min.js"></script>
     <script src="{{ STATIC_URL }}js/site-common.js"></script>
+    <script src="{{ STATIC_URL }}js/keyboard-nav-public.js"></script>
     {% block script-page-setup %}
     <script>
     setup_page(false);
