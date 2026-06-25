@@ -41,7 +41,7 @@
 {# Live count header #}
 <div class="d-flex gap-3 mb-3 align-items-center flex-wrap">
   <span class="fs-5">
-    <strong id="total-count">{{ session.total_count }}</strong> signed up &nbsp;·&nbsp;
+    <strong id="total-count">{{ session.total_count }}</strong> signed up{% if session.effective_capacity %} / <strong>{{ session.effective_capacity }}</strong> cap{% endif %} &nbsp;·&nbsp;
     <strong id="checkedin-count">{{ session.checked_in_count }}</strong> marked present &nbsp;·&nbsp;
     <strong id="accounts-count">{{ accounts_created }}</strong> accounts created
   </span>
@@ -77,11 +77,23 @@
 {% if signups %}
 <style>
 tr.kb-selected { outline: 2px solid #0d6efd; outline-offset: -2px; }
+th[data-sort] { cursor: pointer; user-select: none; white-space: nowrap; }
+th[data-sort]::after { content: " ⇅"; opacity: 0.35; font-size: 0.8em; }
+th[data-sort].sort-asc::after { content: " ↑"; opacity: 1; }
+th[data-sort].sort-desc::after { content: " ↓"; opacity: 1; }
+body.ots-mode td[id^="name-"],
+body.ots-mode td[id^="email-"],
+body.ots-mode td[id^="username-"] { filter: blur(5px); user-select: none; pointer-events: none; }
+body.ots-mode #ots-btn { background-color: #0d6efd; color: #fff; border-color: #0d6efd; }
 </style>
 <div class="mb-2 d-flex gap-2 align-items-center flex-wrap">
   <button type="button" class="btn btn-sm btn-outline-secondary" id="select-all-btn"
           title="Pre-tick all pending sign-ups as present. You can uncheck any who didn't attend before creating accounts.">
     Select all pending
+  </button>
+  <button type="button" class="btn btn-sm btn-outline-secondary" id="ots-btn"
+          title="Over the shoulder mode — blurs names and emails so the next person can enter their own details without seeing others'">
+    Over the shoulder
   </button>
   <span class="text-muted small ms-2">Tick the people who attended. Unticked people remain pending — no account is created for them.</span>
   <span class="text-muted small ms-2 border-start ps-2">Keys: <kbd>j</kbd>/<kbd>k</kbd> navigate · <kbd>c</kbd>/<kbd>space</kbd> check in · <kbd>n</kbd> no-show</span>
@@ -90,11 +102,11 @@ tr.kb-selected { outline: 2px solid #0d6efd; outline-offset: -2px; }
   <thead>
     <tr>
       <th style="width:2.5rem;">Present</th>
-      <th>Name</th>
-      <th>Email</th>
+      <th data-sort="name">Name</th>
+      <th data-sort="email">Email</th>
       <th>Username</th>
-      <th>Signed up</th>
-      <th>Status</th>
+      <th data-sort="signed_up">Signed up</th>
+      <th data-sort="status">Status</th>
       <th>Account</th>
     </tr>
   </thead>
@@ -132,9 +144,9 @@ tr.kb-selected { outline: 2px solid #0d6efd; outline-offset: -2px; }
         {% if s.volunteer_id %}
         <code>{{ s.volunteer.user.username }}</code>
         {% elif s.desired_username %}
-        <span class="text-muted small"><code>{{ s.desired_username }}</code><br><small>(pending)</small></span>
+        <span class="text-muted small"><code>{{ s.desired_username }}</code></span>
         {% else %}
-        <span class="text-muted small">(auto)</span>
+        <span class="text-muted small"><code>{{ s.preview_username }}</code></span>
         {% endif %}
       </td>
       <td class="align-middle text-nowrap">{{ s.signed_up_at|date:"j M H:i" }}</td>
@@ -152,8 +164,14 @@ tr.kb-selected { outline: 2px solid #0d6efd; outline-offset: -2px; }
         <button type="button" class="btn btn-link btn-sm text-muted p-0 no-show-btn" data-signup-id="{{ s.pk }}"
                 data-url="{% url 'inductions:manage_no_show' slug=session.slug signup_id=s.pk %}"
                 title="Mark as no-show — did not attend">No show</button>
+        {% if user.is_superuser %}
+        &nbsp;·&nbsp;
+        <button type="button" class="btn btn-link btn-sm text-danger p-0 remove-signup-btn" data-signup-id="{{ s.pk }}"
+                data-url="{% url 'inductions:manage_remove_signup' slug=session.slug signup_id=s.pk %}"
+                title="Remove this sign-up">×</button>
+        {% endif %}
         {% else %}
-        <button type="button" class="btn btn-link btn-sm text-warning p-0 undo-no-show-btn" data-signup-id="{{ s.pk }}"
+        <button type="button" class="btn btn-link btn-sm text-muted p-0 undo-no-show-btn" data-signup-id="{{ s.pk }}"
                 data-url="{% url 'inductions:manage_no_show' slug=session.slug signup_id=s.pk %}"
                 title="Undo no-show — return to pending">Undo</button>
         {% endif %}
@@ -162,6 +180,53 @@ tr.kb-selected { outline: 2px solid #0d6efd; outline-offset: -2px; }
     {% endfor %}
   </tbody>
 </table>
+
+{# Walk-in registration #}
+<details class="mb-3" id="walkin-details">
+  <summary class="text-muted" style="cursor:pointer;">Register a walk-in attendee</summary>
+  <div class="mt-2 p-3 border rounded bg-light" style="max-width:560px;">
+    <div class="row g-2 mb-2">
+      <div class="col">
+        <label class="form-label mb-1 small" for="walkin-first">First name <span aria-hidden="true">*</span></label>
+        <input type="text" class="form-control form-control-sm" id="walkin-first" maxlength="100">
+      </div>
+      <div class="col">
+        <label class="form-label mb-1 small" for="walkin-last">Last name</label>
+        <input type="text" class="form-control form-control-sm" id="walkin-last" maxlength="100">
+      </div>
+    </div>
+    <div class="row g-2 mb-2">
+      <div class="col">
+        <label class="form-label mb-1 small" for="walkin-email">Email <span aria-hidden="true">*</span></label>
+        <input type="email" class="form-control form-control-sm" id="walkin-email" maxlength="254" required>
+      </div>
+      <div class="col">
+        <label class="form-label mb-1 small" for="walkin-phone">Phone number</label>
+        <input type="tel" class="form-control form-control-sm" id="walkin-phone" maxlength="64">
+      </div>
+    </div>
+    <div class="row g-2 mb-2">
+      <div class="col">
+        <label class="form-label mb-1 small" for="walkin-address">Address</label>
+        <input type="text" class="form-control form-control-sm" id="walkin-address" maxlength="128">
+      </div>
+      <div class="col-auto">
+        <label class="form-label mb-1 small" for="walkin-postcode">Postcode</label>
+        <input type="text" class="form-control form-control-sm" id="walkin-postcode" maxlength="16" style="width:7rem;">
+      </div>
+    </div>
+    <div class="row g-2 align-items-center">
+      <div class="col-auto">
+        <button type="button" class="btn btn-primary btn-sm" id="walkin-add-btn"
+                data-url="{% url 'inductions:manage_add_walkin' slug=session.slug %}">Add</button>
+      </div>
+      <div class="col">
+        <span class="text-muted small">First name and email are required.</span>
+      </div>
+    </div>
+    <div id="walkin-error" class="text-danger small mt-1" style="display:none;"></div>
+  </div>
+</details>
 
 {# Create accounts — the irreversible step, clearly labelled #}
 {% with pending_count=signups|length %}
@@ -287,7 +352,8 @@ function updateRowStatus(signupId, status) {
 }
 
 /* ── Select all pending ── */
-document.getElementById('select-all-btn').addEventListener('click', function() {
+var selectAllBtn = document.getElementById('select-all-btn');
+if (selectAllBtn) selectAllBtn.addEventListener('click', function() {
   document.querySelectorAll('.attendance-cb:not(:checked):not([disabled])').forEach(function(cb) {
     cb.checked = true;
     cb.dispatchEvent(new Event('change'));
@@ -295,7 +361,8 @@ document.getElementById('select-all-btn').addEventListener('click', function() {
 });
 
 /* ── Create accounts ── */
-document.getElementById('create-accounts-btn').addEventListener('click', function() {
+var createAccountsBtn = document.getElementById('create-accounts-btn');
+if (createAccountsBtn) createAccountsBtn.addEventListener('click', function() {
   var btn = this;
   var pendingCreate = [];
   document.querySelectorAll('.attendance-cb[data-signup-id]:checked').forEach(function(cb) {
@@ -319,9 +386,12 @@ document.getElementById('create-accounts-btn').addEventListener('click', functio
   var resultEl = document.getElementById('create-accounts-result');
   resultEl.style.display = 'none';
 
-  fetch(btn.dataset.url, {
+  var createUrl = btn.dataset.url;
+  var forcedIds = [];
+  fetch(createUrl, {
     method: 'POST',
-    headers: {'X-CSRFToken': CSRF, 'Accept': 'application/json'},
+    headers: {'X-CSRFToken': CSRF, 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded'},
+    body: forcedIds.length ? 'force_signup_ids=' + forcedIds.join(',') : '',
   })
   .then(function(r) { return r.json(); })
   .then(function(data) {
@@ -347,11 +417,89 @@ document.getElementById('create-accounts-btn').addEventListener('click', functio
       msg += '<div class="alert alert-success py-2 mb-2">✓ Created accounts and sent welcome emails to ' + data.created.length + ' person(s).</div>';
     }
     if (data.errors && data.errors.length) {
-      msg += '<div class="alert alert-danger py-2 mb-0"><strong>Errors for ' + data.errors.length + ' person(s):</strong><ul class="mb-0 mt-1">';
+      msg += '<div class="alert alert-danger py-2 mb-2"><strong>Errors for ' + data.errors.length + ' person(s):</strong><ul class="mb-0 mt-1">';
       data.errors.forEach(function(e) { msg += '<li>' + e.name + ': ' + e.error + '</li>'; });
       msg += '</ul></div>';
     }
+    if (data.duplicates && data.duplicates.length) {
+      msg += '<div class="alert alert-warning py-2 mb-0"><strong>Possible duplicates — action required:</strong>';
+      data.duplicates.forEach(function(d) {
+        var matchDesc = d.match_type === 'email'
+          ? 'email match: ' + d.existing_email
+          : 'name match: ' + d.existing_username;
+        msg += '<div class="mt-2 border-top pt-2">';
+        msg += '<strong>' + d.name + '</strong> — existing account found (' + matchDesc + ', username: <code>' + d.existing_username + '</code>)<br>';
+        msg += '<button class="btn btn-sm btn-outline-secondary mt-1 me-1 link-existing-btn" '
+             + 'data-signup-id="' + d.signup_id + '" '
+             + 'data-volunteer-id="' + d.existing_volunteer_id + '" '
+             + 'data-link-url="/inductions/manage/{{ session.slug }}/signups/' + d.signup_id + '/link-existing/">'
+             + 'Send login link to existing account</button>';
+        msg += '<button class="btn btn-sm btn-outline-danger mt-1 force-create-btn" '
+             + 'data-signup-id="' + d.signup_id + '" '
+             + 'data-create-url="' + createUrl + '">'
+             + 'Create new account anyway</button>';
+        msg += '</div>';
+      });
+      msg += '</div>';
+    }
     if (msg) { resultEl.innerHTML = msg; resultEl.style.display = ''; }
+
+    /* Wire up link-existing buttons */
+    resultEl.querySelectorAll('.link-existing-btn').forEach(function(linkBtn) {
+      linkBtn.addEventListener('click', function() {
+        var lBtn = this;
+        lBtn.disabled = true;
+        lBtn.textContent = 'Sending…';
+        var formData = new FormData();
+        formData.append('existing_volunteer_id', lBtn.dataset.volunteerId);
+        fetch(lBtn.dataset.linkUrl, {
+          method: 'POST',
+          headers: {'X-CSRFToken': CSRF, 'Accept': 'application/json'},
+          body: formData,
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+          if (resp.ok) {
+            lBtn.closest('div.mt-2').innerHTML = '<span class="text-success">✓ Login link sent to existing account.</span>';
+          } else {
+            lBtn.disabled = false; lBtn.textContent = 'Send login link to existing account';
+            alert('Error: ' + (resp.error || 'Unknown error'));
+          }
+        })
+        .catch(function() { lBtn.disabled = false; lBtn.textContent = 'Send login link to existing account'; });
+      });
+    });
+
+    /* Wire up force-create buttons */
+    resultEl.querySelectorAll('.force-create-btn').forEach(function(forceBtn) {
+      forceBtn.addEventListener('click', function() {
+        var signupId = this.dataset.signupId;
+        var fBtn = this;
+        fBtn.disabled = true;
+        fBtn.textContent = 'Creating…';
+        fetch(createUrl, {
+          method: 'POST',
+          headers: {'X-CSRFToken': CSRF, 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded'},
+          body: 'force_signup_ids=' + signupId,
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+          if (resp.created && resp.created.length) {
+            var item = resp.created[0];
+            var cb = document.querySelector('.attendance-cb[data-signup-id="' + signupId + '"]');
+            if (cb) { cb.disabled = true; }
+            var accountCell = document.getElementById('account-' + signupId);
+            if (accountCell) accountCell.innerHTML = '<span class="badge bg-success">Account created</span>';
+            fBtn.closest('div.mt-2').innerHTML = '<span class="text-success">✓ New account created: <code>' + item.username + '</code>.</span>';
+          } else {
+            fBtn.disabled = false; fBtn.textContent = 'Create new account anyway';
+            var errMsg = (resp.errors && resp.errors.length) ? resp.errors[0].error : 'Unknown error';
+            alert('Error: ' + errMsg);
+          }
+        })
+        .catch(function() { fBtn.disabled = false; fBtn.textContent = 'Create new account anyway'; });
+      });
+    });
   })
   .catch(function() {
     btn.disabled = false;
@@ -362,13 +510,13 @@ document.getElementById('create-accounts-btn').addEventListener('click', functio
 });
 
 /* ── No-show / undo — event delegation handles dynamically added buttons ── */
-document.getElementById('signup-table').addEventListener('click', function(e) {
+var signupTableEl = document.getElementById('signup-table');
+if (signupTableEl) signupTableEl.addEventListener('click', function(e) {
   var btn = e.target.closest('.no-show-btn, .undo-no-show-btn');
   if (!btn) return;
   var signupId = btn.dataset.signupId;
   var url = btn.dataset.url;
   var isUndo = btn.classList.contains('undo-no-show-btn');
-  if (!isUndo && !confirm('Mark this person as a no-show?')) return;
 
   fetch(url, { method: 'POST', headers: {'X-CSRFToken': CSRF, 'Accept': 'application/json'} })
   .then(function(r) { return r.json(); })
@@ -382,7 +530,7 @@ document.getElementById('signup-table').addEventListener('click', function(e) {
       row.classList.add('table-secondary');
       statusEl.innerHTML = '<span class="badge bg-secondary">No show</span>';
       if (cb) { cb.checked = false; cb.disabled = true; }
-      accountEl.innerHTML = '<button type="button" class="btn btn-link btn-sm text-warning p-0 undo-no-show-btn"' +
+      accountEl.innerHTML = '<button type="button" class="btn btn-link btn-sm text-muted p-0 undo-no-show-btn"' +
         ' data-signup-id="' + signupId + '" data-url="' + url + '" title="Undo no-show — return to pending">Undo</button>';
     } else {
       row.classList.remove('table-secondary');
@@ -396,16 +544,18 @@ document.getElementById('signup-table').addEventListener('click', function(e) {
 
 /* ── Inline edit (panopticon) ── */
 {% if user.is_superuser %}
-var editModal = new bootstrap.Modal(document.getElementById('edit-modal'));
+var _editModalEl = document.getElementById('edit-modal');
+var editModal = bootstrap.Modal.getInstance(_editModalEl) || new bootstrap.Modal(_editModalEl);
 
 function _slugPreview(name) {
-  return name.toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)
-    || '(enter name)';
+  var parts = name.trim().split(/\s+/);
+  if (!parts[0]) return '(enter name)';
+  var first = parts[0];
+  var last = parts.length > 1 ? parts[parts.length - 1] : '';
+  return (first + last).slice(0, 40) || '(enter name)';
 }
 
-document.getElementById('signup-table').addEventListener('click', function(e) {
+if (signupTableEl) signupTableEl.addEventListener('click', function(e) {
   var btn = e.target.closest('.edit-btn');
   if (!btn) return;
   var signupId = btn.dataset.signupId;
@@ -460,7 +610,8 @@ document.getElementById('edit-save-btn').addEventListener('click', function() {
         if (data.desired_username) {
           uCell.innerHTML = '<span class="text-muted small"><code>' + data.desired_username + '</code><br><small>(pending)</small></span>';
         } else {
-          uCell.innerHTML = '<span class="text-muted small">(auto)</span>';
+          var previewName = document.getElementById('name-' + signupId).childNodes[0].textContent.trim();
+          uCell.innerHTML = '<span class="text-muted small"><code>' + _slugPreview(previewName) + '</code><br><small>(preview)</small></span>';
         }
       }
       editModal.hide();
@@ -545,6 +696,219 @@ document.addEventListener('keydown', function(e) {
       if (cb && !cb.disabled) { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change')); }
     }
   }
+});
+
+/* ── Walk-in registration ── */
+var walkinAddBtn = document.getElementById('walkin-add-btn');
+if (walkinAddBtn) {
+  walkinAddBtn.addEventListener('click', function() {
+    var first = document.getElementById('walkin-first').value.trim();
+    var last = document.getElementById('walkin-last').value.trim();
+    var email = document.getElementById('walkin-email').value.trim();
+    var phone = document.getElementById('walkin-phone').value.trim();
+    var address = document.getElementById('walkin-address').value.trim();
+    var postcode = document.getElementById('walkin-postcode').value.trim();
+    var errEl = document.getElementById('walkin-error');
+    errEl.style.display = 'none';
+
+    if (!first) {
+      errEl.textContent = 'First name is required.';
+      errEl.style.display = '';
+      return;
+    }
+    if (!email) {
+      errEl.textContent = 'Email address is required.';
+      errEl.style.display = '';
+      return;
+    }
+
+    var btn = this;
+    btn.disabled = true;
+    var formData = new FormData();
+    formData.append('csrfmiddlewaretoken', CSRF);
+    formData.append('first_name', first);
+    formData.append('last_name', last);
+    formData.append('email', email);
+    formData.append('phone', phone);
+    formData.append('address', address);
+    formData.append('postcode', postcode);
+
+    fetch(btn.dataset.url, {method: 'POST', body: formData, headers: {'Accept': 'application/json'}})
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      btn.disabled = false;
+      if (!data.ok) {
+        errEl.textContent = data.error;
+        errEl.style.display = '';
+        return;
+      }
+      // Clear inputs
+      document.getElementById('walkin-first').value = '';
+      document.getElementById('walkin-last').value = '';
+      document.getElementById('walkin-email').value = '';
+      document.getElementById('walkin-phone').value = '';
+      document.getElementById('walkin-address').value = '';
+      document.getElementById('walkin-postcode').value = '';
+
+      // Build and insert a new table row
+      var noShowUrl = NO_SHOW_URL_PATTERN.replace('/0/', '/' + data.signup_id + '/');
+      var markUrl = '{% url "inductions:manage_mark_attendance" slug=session.slug signup_id=0 %}'.replace('/0/', '/' + data.signup_id + '/');
+      var editUrl = EDIT_URL_PATTERN.replace('/0/', '/' + data.signup_id + '/');
+      var newRow = document.createElement('tr');
+      newRow.id = 'row-' + data.signup_id;
+      newRow.innerHTML =
+        '<td class="text-center align-middle">' +
+          '<input type="checkbox" class="form-check-input attendance-cb"' +
+          ' id="cb-' + data.signup_id + '" data-signup-id="' + data.signup_id + '"' +
+          ' data-mark-url="' + markUrl + '">' +
+        '</td>' +
+        '<td id="name-' + data.signup_id + '" class="align-middle">' + data.name +
+          '{% if user.is_superuser %}<button type="button" class="btn btn-link btn-sm p-0 ms-1 edit-btn"' +
+          ' data-signup-id="' + data.signup_id + '" data-desired-username=""' +
+          ' title="Edit name/email/username" style="color:#6c757d;">✏</button>{% endif %}</td>' +
+        '<td id="email-' + data.signup_id + '" class="align-middle">' + (data.email || '—') + '</td>' +
+        '<td id="username-' + data.signup_id + '" class="align-middle">' +
+          '<span class="text-muted small"><code>' + data.preview_username + '</code></span></td>' +
+        '<td class="align-middle text-nowrap">' + data.signed_up_at + '</td>' +
+        '<td id="status-' + data.signup_id + '" class="align-middle">' +
+          '<span class="badge bg-warning text-dark">Pending</span></td>' +
+        '<td id="account-' + data.signup_id + '" class="align-middle">' +
+          '<button type="button" class="btn btn-link btn-sm text-muted p-0 no-show-btn"' +
+          ' data-signup-id="' + data.signup_id + '" data-url="' + noShowUrl + '"' +
+          ' title="Mark as no-show — did not attend">No show</button>' +
+          '{% if user.is_superuser %} &nbsp;·&nbsp; <button type="button" class="btn btn-link btn-sm text-danger p-0 remove-signup-btn"' +
+          ' data-signup-id="' + data.signup_id + '" data-url="/inductions/manage/{{ session.slug }}/signups/' + data.signup_id + '/remove/"' +
+          ' title="Remove this sign-up">×</button>{% endif %}</td>';
+
+      var tbody = document.querySelector('#signup-table tbody');
+      if (tbody) {
+        tbody.appendChild(newRow);
+        // Wire up attendance checkbox
+        var cb = newRow.querySelector('.attendance-cb[data-mark-url]');
+        if (cb) {
+          cb.addEventListener('change', function() {
+            var sid = this.dataset.signupId;
+            var url = this.dataset.markUrl;
+            var cbEl = this;
+            cbEl.disabled = true;
+            fetch(url, {method: 'POST', headers: {'X-CSRFToken': CSRF, 'Accept': 'application/json'}})
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+              cbEl.disabled = false;
+              if (d.ok) { updateRowStatus(sid, d.status); }
+              else { cbEl.checked = !cbEl.checked; alert('Error: ' + d.error); }
+            });
+          });
+        }
+      }
+
+      // Update total count
+      var tc = document.getElementById('total-count');
+      if (tc) tc.textContent = parseInt(tc.textContent, 10) + 1;
+
+      // Show the table if it was hidden (no signups case)
+      var table = document.getElementById('signup-table');
+      if (table) table.style.display = '';
+    })
+    .catch(function() {
+      btn.disabled = false;
+      errEl.textContent = 'Network error. Please try again.';
+      errEl.style.display = '';
+    });
+  });
+}
+
+/* ── Over the shoulder mode ── */
+var otsBtn = document.getElementById('ots-btn');
+if (otsBtn) otsBtn.addEventListener('click', function() {
+  document.body.classList.toggle('ots-mode');
+  var on = document.body.classList.contains('ots-mode');
+  otsBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  // Auto-open walk-in form when mode activates so the new person sees it immediately
+  var walkinDetails = document.getElementById('walkin-details');
+  if (on && walkinDetails) walkinDetails.open = true;
+});
+
+/* ── Table sorting ── */
+(function() {
+  var table = document.getElementById('signup-table');
+  if (!table) return;
+  var thead = table.querySelector('thead tr');
+  var tbody = table.querySelector('tbody');
+  var sortKey = null;
+  var sortAsc = true;
+
+  function colIndex(th) {
+    return Array.from(thead.children).indexOf(th);
+  }
+
+  function cellText(row, idx) {
+    var cell = row.cells[idx];
+    return cell ? cell.textContent.trim() : '';
+  }
+
+  thead.addEventListener('click', function(e) {
+    var th = e.target.closest('th[data-sort]');
+    if (!th) return;
+
+    var key = th.dataset.sort;
+    if (sortKey === key) {
+      sortAsc = !sortAsc;
+    } else {
+      sortKey = key;
+      sortAsc = true;
+    }
+
+    // Update header indicators
+    thead.querySelectorAll('th[data-sort]').forEach(function(h) {
+      h.classList.remove('sort-asc', 'sort-desc');
+    });
+    th.classList.add(sortAsc ? 'sort-asc' : 'sort-desc');
+
+    var idx = colIndex(th);
+    var rows = Array.from(tbody.querySelectorAll('tr'));
+    rows.sort(function(a, b) {
+      var va = cellText(a, idx);
+      var vb = cellText(b, idx);
+      // For "Signed up" column, parse dates (format "j M H:i" e.g. "5 Jul 14:30")
+      if (key === 'signed_up') {
+        var da = a.dataset.signedUpTs || 0;
+        var db = b.dataset.signedUpTs || 0;
+        return sortAsc ? da - db : db - da;
+      }
+      return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    });
+    rows.forEach(function(r) { tbody.appendChild(r); });
+  });
+
+  // Stamp numeric sort keys on rows for date sorting
+  tbody.querySelectorAll('tr').forEach(function(row, i) {
+    row.dataset.signedUpTs = i; // rows already in chronological order from server
+  });
+})();
+
+/* ── Remove pending signup ── */
+document.addEventListener('click', function(e) {
+  var btn = e.target.closest('.remove-signup-btn');
+  if (!btn) return;
+  if (!confirm('Remove this sign-up? This cannot be undone.')) return;
+  var signupId = btn.dataset.signupId;
+  var url = btn.dataset.url;
+  btn.disabled = true;
+  fetch(url, {method: 'POST', headers: {'X-CSRFToken': CSRF, 'Accept': 'application/json'}})
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      var row = document.getElementById('row-' + signupId);
+      if (row) row.remove();
+      var tc = document.getElementById('total-count');
+      if (tc) tc.textContent = Math.max(0, parseInt(tc.textContent, 10) - 1);
+    } else {
+      btn.disabled = false;
+      alert('Error: ' + (data.error || 'Unknown error'));
+    }
+  })
+  .catch(function() { btn.disabled = false; alert('Network error. Please try again.'); });
 });
 </script>
 {% endblock %}

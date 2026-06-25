@@ -12,11 +12,16 @@ from django.contrib.auth.views import (
     PasswordResetCompleteView,
 )
 
+from toolkit.toolkit_auth.forms import EmailOrUsernameAuthForm
+
 
 urlpatterns = [
     re_path(
         r"^login/$",
-        LoginView.as_view(template_name="login.html"),
+        LoginView.as_view(
+            template_name="login.html",
+            authentication_form=EmailOrUsernameAuthForm,
+        ),
         name="login",
     ),
     re_path(

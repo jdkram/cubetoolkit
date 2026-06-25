@@ -13,7 +13,14 @@ logger = logging.getLogger(__name__)
 class Command(BaseCommand):
     help = "Send 3-day reminder emails for upcoming induction sessions."
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--dry-run", action="store_true",
+            help="Show what would be sent without actually sending emails or updating reminder_sent_at.",
+        )
+
     def handle(self, *args, **options):
+        dry_run = options["dry_run"]
         now = timezone.now()
         window_start = now
         window_end = now + timezone.timedelta(hours=72)
@@ -25,6 +32,9 @@ class Command(BaseCommand):
             reminder_sent_at__isnull=True,
         )
 
+        if dry_run:
+            self.stdout.write("[dry-run] No emails will be sent.")
+
         for session in sessions:
             pending = session.signups.filter(
                 status=InductionSignup.STATUS_PENDING,
@@ -33,6 +43,10 @@ class Command(BaseCommand):
             sent = 0
             failed = 0
             for signup in pending:
+                if dry_run:
+                    self.stdout.write(f"  [dry-run] Would send reminder to {signup.email} ({signup.name})")
+                    sent += 1
+                    continue
                 try:
                     # send_reminder needs a request for building the absolute URL.
                     # Management commands have no request, so we build the ICS URL
@@ -43,10 +57,11 @@ class Command(BaseCommand):
                     logger.exception(f"Failed to send reminder for signup #{signup.pk}")
                     failed += 1
 
-            session.reminder_sent_at = now
-            session.save(update_fields=["reminder_sent_at"])
+            if not dry_run:
+                session.reminder_sent_at = now
+                session.save(update_fields=["reminder_sent_at"])
             self.stdout.write(
-                f"Session '{session.title}': {sent} reminders sent"
+                f"Session '{session.title}': {sent} reminder(s) {'would be ' if dry_run else ''}sent"
                 + (f", {failed} failed" if failed else "")
             )
 

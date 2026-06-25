@@ -2392,6 +2392,7 @@ def edit_site_configuration(request):
         (
             "Last-gasp re-engagement email",
             [
+                "last_gasp_email_enabled",
                 "last_gasp_email_subject",
                 "last_gasp_email_body",
                 "last_gasp_cooldown_days",

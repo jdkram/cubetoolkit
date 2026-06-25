@@ -526,6 +526,25 @@ $(document).ready(function() {
 
 </div><!-- #vol-page-grid -->
 
+<!-- ── Retention override (panopticon, inside main form) -->
+{% if request.user.is_superuser %}
+<div class="vol-section" id="vol-retention" style="margin-top:1rem;">
+  <h4>Data retention override</h4>
+  <p style="font-size:0.88em; color:#555; margin:0 0 0.5rem;">
+    When ticked, this volunteer is excluded from the pool health purge candidates list regardless of their status or last-activity date.
+  </p>
+  <div style="display:flex; align-items:baseline; gap:0.4rem; margin-bottom:0.4rem;">
+    {{ vol_form.retention_exempt }}
+    <label for="{{ vol_form.retention_exempt.id_for_label }}">Exempt from automatic purge candidates</label>
+  </div>
+  <div>
+    <label for="{{ vol_form.retention_exempt_reason.id_for_label }}" style="font-size:0.88em; color:#555; display:block; margin-bottom:0.2rem;">Reason (optional)</label>
+    {{ vol_form.retention_exempt_reason }}
+    {{ vol_form.retention_exempt_reason.errors }}
+  </div>
+</div>
+{% endif %}
+
 <p><input type="submit" value="Save changes"> <a href="{% url "view-volunteer-list" %}">Cancel</a></p>
 </form>
 
@@ -645,25 +664,6 @@ $(document).ready(function() {
     </div>
     <button type="submit" class="btn btn-sm btn-outline-primary">Add qualification</button>
   </form>
-</div>
-{% endif %}
-
-<!-- ── Retention override (panopticon, inside main form) -->
-{% if request.user.is_superuser %}
-<div class="vol-section" id="vol-retention" style="margin-top:1rem;">
-  <h4>Data retention override</h4>
-  <p style="font-size:0.88em; color:#555; margin:0 0 0.5rem;">
-    When ticked, this volunteer is excluded from the pool health purge candidates list regardless of their status or last-activity date.
-  </p>
-  <div style="display:flex; align-items:baseline; gap:0.4rem; margin-bottom:0.4rem;">
-    {{ vol_form.retention_exempt }}
-    <label for="{{ vol_form.retention_exempt.id_for_label }}">Exempt from automatic purge candidates</label>
-  </div>
-  <div>
-    <label for="{{ vol_form.retention_exempt_reason.id_for_label }}" style="font-size:0.88em; color:#555; display:block; margin-bottom:0.2rem;">Reason (optional)</label>
-    {{ vol_form.retention_exempt_reason }}
-    {{ vol_form.retention_exempt_reason.errors }}
-  </div>
 </div>
 {% endif %}
 

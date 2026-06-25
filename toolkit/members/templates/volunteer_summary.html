@@ -29,19 +29,14 @@
     #volunteer-table td.check-col {
         text-align: center;
     }
+    #volunteer-table tbody tr.kb-row-current { outline: 2px solid #0056b3; outline-offset: -1px; }
 </style>
 {% endblock %}
 
 {% block body %}
 <h2>Volunteer list</h2>
 
-<p>
-<a href="{% url "view-volunteer-list" %}" title="volunteers profiles">volunteers profiles</a> &#xb7;
-<a href="{% url "add-volunteer" %}" title="add new volunteer">add volunteer</a> &#xb7;
-<a href="{% url "view-volunteer-role-report" %}" title="volunteer role report">volunteer role report</a> &#xb7;
-<a href="{% url "view-volunteer-training-report" %}" title="volunteer training report">volunteer training report</a>
-<br>
-Active {{ VENUE.name }} volunteers: {{ active_count }}{% if dormant_count %} &nbsp;·&nbsp; Dormant: {{ dormant_count }}{% endif %}
+<p>Active {{ VENUE.name }} volunteers: {{ active_count }}{% if dormant_count %} &nbsp;·&nbsp; Dormant: {{ dormant_count }}{% endif %}
 <br>Logged in last 30 days: {{ logged_in_last_30_days }} &nbsp;·&nbsp; Last 365 days: {{ logged_in_last_365_days }}</p>
 
 <table id="volunteer-table" class="table table-sm table-striped">
@@ -122,12 +117,6 @@ Active {{ VENUE.name }} volunteers: {{ active_count }}{% if dormant_count %} &nb
 
 {% endblock %}
 
-{% block css %}
-{{ block.super }}
-<style>
-  #volunteer-table tbody tr.kb-row-current { outline: 2px solid #0056b3; outline-offset: -1px; }
-</style>
-{% endblock %}
 {% block script %}
 {{ block.super }}
 <script>

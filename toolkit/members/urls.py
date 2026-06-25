@@ -5,6 +5,7 @@ from toolkit.members.volunteer_views import (
     view_volunteer_summary,
     view_volunteer_pool_health,
     bulk_anonymise_volunteers,
+    bulk_delete_never_onboarded,
     view_volunteer_role_report,
     edit_volunteer,
     export_volunteers_as_csv,
@@ -33,6 +34,7 @@ from toolkit.members.volunteer_views import (
     auto_dormancy_preview,
     auto_dormancy_apply,
     last_gasp_email,
+    bulk_last_gasp_email,
 )
 
 from toolkit.members.member_views import (
@@ -92,6 +94,11 @@ volunteer_urls = [
         name="bulk-anonymise-volunteers",
     ),
     re_path(
+        r"^bulk-delete-never-onboarded/$",
+        bulk_delete_never_onboarded,
+        name="bulk-delete-never-onboarded",
+    ),
+    re_path(
         r"^view/pool-health/restore/(?P<volunteer_id>[0-9]+)/$",
         admin_restore_volunteer,
         name="admin-restore-volunteer",
@@ -105,6 +112,11 @@ volunteer_urls = [
         r"^view/pool-health/auto-dormancy/apply/$",
         auto_dormancy_apply,
         name="auto-dormancy-apply",
+    ),
+    re_path(
+        r"^view/pool-health/last-gasp/bulk/$",
+        bulk_last_gasp_email,
+        name="bulk-last-gasp-email",
     ),
     re_path(
         r"^view/pool-health/last-gasp/(?P<volunteer_id>[0-9]+)/$",
@@ -198,7 +210,6 @@ volunteer_urls = [
     re_path(r"^directory/$", view_volunteer_directory, name="volunteer-directory"),
     re_path(r"^digest/unsubscribe/$", volunteer_digest_unsubscribe, name="volunteer-digest-unsubscribe"),
     re_path(r"^stats/$", volunteer_stats, name="volunteer-stats"),
-    re_path(r"^(?P<volunteer_id>\d+)/stats/$", volunteer_stats, name="volunteer-stats-as"),
 ]
 
 # Members:

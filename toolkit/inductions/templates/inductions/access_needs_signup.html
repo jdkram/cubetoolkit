@@ -1,36 +1,208 @@
 {% extends "base_public.html" %}
-{% block title %}1:1 Induction Request{% endblock %}
+{% block title %}Request a 1:1 Induction{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+.signup-wrap {
+  max-width: 520px;
+  margin: 2rem auto 2rem;
+  padding: 0 1rem;
+}
+.signup-card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.10);
+  padding: 2rem 2rem 1.5rem;
+  margin-bottom: 1rem;
+}
+.signup-card h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.3rem;
+}
+.signup-intro {
+  margin: 0 0 1.5rem;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  opacity: 0.85;
+}
+.signup-field {
+  margin-bottom: 1rem;
+}
+.signup-field label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+.signup-field input[type="text"],
+.signup-field input[type="email"],
+.signup-field textarea {
+  display: block;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  font-size: 1rem;
+  font-family: inherit;
+  border: 1px solid #aaa;
+  background: #fff;
+  color: #082080;
+  border-radius: 0;
+}
+.signup-field input:focus,
+.signup-field textarea:focus {
+  outline: 2px solid #082080;
+  outline-offset: 1px;
+  border-color: #082080;
+}
+.signup-field input.field-error-input,
+.signup-field textarea.field-error-input {
+  border-color: #c00;
+}
+.signup-field .error-text {
+  color: #c00;
+  font-size: 0.85rem;
+  margin: 0.2rem 0 0;
+}
+.signup-field .help-text {
+  font-size: 0.85rem;
+  opacity: 0.7;
+  margin: 0.25rem 0 0;
+  line-height: 1.5;
+}
+.signup-divider {
+  border: 0;
+  border-top: 1px solid #e0d0e0;
+  margin: 1.25rem 0;
+}
+.signup-consent {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  margin: 1.25rem 0 1.5rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.signup-consent input[type="checkbox"] {
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+  width: 1rem;
+  height: 1rem;
+  accent-color: #082080;
+}
+.signup-consent label {
+  font-weight: 400;
+  margin: 0;
+}
+.signup-consent .error-text {
+  color: #c00;
+  font-size: 0.85rem;
+}
+.signup-submit {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 1rem;
+  background: #082080;
+  color: #fff;
+  font-size: 1rem;
+  font-family: inherit;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+}
+.signup-submit:hover,
+.signup-submit:focus {
+  background: #0a2ea0;
+  outline: 2px solid #082080;
+  outline-offset: 2px;
+}
+.signup-alt {
+  text-align: center;
+  font-size: 0.85rem;
+  padding: 0 1rem;
+}
+.signup-alt a {
+  color: #082080;
+  text-decoration: underline;
+}
+.non-field-errors {
+  background: #fff0f0;
+  border: 1px solid #c00;
+  color: #c00;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+</style>
+{% endblock %}
 
 {% block body %}
-<div style="max-width: 600px; margin: 2rem auto;">
-  <h2>Request a 1:1 induction</h2>
-  <p>
-    If you'd like an induction tailored to your access requirements, fill in the form below.
-    Someone will be in touch to arrange a time that works for you.
+<div class="signup-wrap">
+  <div class="signup-card">
+    <h2>Request a 1:1 induction</h2>
+
+    <div class="signup-intro">
+      {% if intro_text %}
+      <p>{{ intro_text }}</p>
+      {% else %}
+      <p>We're a volunteer-run organisation and will do our best to accommodate your needs.
+      We may not always be able to provide specialist support such as BSL interpretation,
+      but we'll always try to find a solution that works for you.</p>
+      {% endif %}
+      <p>Fill in the form below and someone will be in touch to arrange a time that suits you.</p>
+    </div>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+      <div class="non-field-errors">
+        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="signup-field{% if form.name.errors %} field-error{% endif %}">
+        <label for="{{ form.name.id_for_label }}">Your name <span aria-hidden="true">*</span></label>
+        {{ form.name }}
+        {% for error in form.name.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+      </div>
+
+      <div class="signup-field{% if form.email.errors %} field-error{% endif %}">
+        <label for="{{ form.email.id_for_label }}">Email address <span aria-hidden="true">*</span></label>
+        {{ form.email }}
+        {% for error in form.email.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+      </div>
+
+      <div class="signup-field{% if form.access_needs.errors %} field-error{% endif %}">
+        <label for="{{ form.access_needs.id_for_label }}">Access needs or requirements <span aria-hidden="true">*</span></label>
+        {{ form.access_needs }}
+        <p class="help-text">{{ form.access_needs.help_text }}</p>
+        {% for error in form.access_needs.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+      </div>
+
+      <div class="signup-field{% if form.rough_availability.errors %} field-error{% endif %}">
+        <label for="{{ form.rough_availability.id_for_label }}">Rough availability</label>
+        {{ form.rough_availability }}
+        <p class="help-text">{{ form.rough_availability.help_text }}</p>
+        {% for error in form.rough_availability.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+      </div>
+
+      <hr class="signup-divider">
+
+      <div class="signup-consent{% if form.age_confirm.errors %} field-error{% endif %}">
+        {{ form.age_confirm }}
+        <div>
+          <label for="{{ form.age_confirm.id_for_label }}">{{ form.age_confirm.label }}</label>
+          {% for error in form.age_confirm.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+        </div>
+      </div>
+
+      <button type="submit" class="signup-submit">Send request</button>
+    </form>
+  </div>
+
+  <p class="signup-alt">
+    Looking for a group induction instead?
+    <a href="{% url "inductions:session_list_public" %}">See upcoming sessions.</a>
   </p>
-
-  <form method="post" novalidate>
-    {% csrf_token %}
-    {% if form.non_field_errors %}
-    <div class="error-list">
-      {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
-    </div>
-    {% endif %}
-
-    {% for field in form %}
-    <div class="form-field{% if field.errors %} field-error{% endif %}">
-      <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-hidden="true">*</span>{% endif %}</label>
-      {{ field }}
-      {% if field.help_text %}<p class="help-text">{{ field.help_text }}</p>{% endif %}
-      {% for error in field.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
-    </div>
-    {% endfor %}
-
-    <p><button type="submit">Send request</button></p>
-  </form>
-
-  <p><small>
-    Looking for a group induction instead? <a href="{% url "inductions:manage_session_list" %}">See upcoming sessions.</a>
-  </small></p>
 </div>
 {% endblock %}

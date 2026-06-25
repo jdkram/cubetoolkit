@@ -306,6 +306,9 @@ body {
               <a class="dropdown-item" href="{% url "toolkit-access" %}">Access levels <span class="labs-tag">labs</span></a>
               <div class="dropdown-divider"></div>
               <a class="dropdown-item" href="{% url "edit-site-configuration" %}">Site settings <span class="labs-tag">labs</span></a>
+              {% if inductions_settings.inductions_enabled %}
+              <a class="dropdown-item" href="{% url "inductions:manage_settings" %}">Inductions settings <span class="labs-tag">labs</span></a>
+              {% endif %}
               {% if VENUE.show_user_management %}
               <a class="dropdown-item" href="/toolkit/admin/">Admin backend</a>
               {% endif %}

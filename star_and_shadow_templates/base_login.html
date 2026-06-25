@@ -3,7 +3,7 @@
 {# No navigation — just the site logo and a centred content area. #}
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
 <meta charset="utf-8">
 <title>{% block title %}{% endblock %} — {{ VENUE.name }}</title>
@@ -39,7 +39,7 @@
             <img src="{{ STATIC_URL }}{{ VENUE.nav_menu_img }}" alt="{{ VENUE.name }}">
         </a>
     </div>
-    {% block body %}{% endblock %}
+    <main>{% block body %}{% endblock %}</main>
 </div>
 </body>
 </html>

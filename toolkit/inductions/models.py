@@ -31,11 +31,12 @@ DEFAULT_WELCOME_BODY = (
     "Hi {name},\n\n"
     "Welcome to {venue}! You've been checked in to the {session_title} and "
     "your volunteer account is ready.\n\n"
-    "Set your password and log in using this link (valid for {validity}):\n\n"
+    "Your username is: {username}\n\n"
+    "Set your password using this link (valid for {validity}):\n\n"
     "{password_url}\n\n"
-    "{welcome_pack_section}"
-    "If you weren't expecting this email, you can ignore it — no account "
-    "will be activated unless you follow the link."
+    "If the link has expired, you can request a new one by entering your email "
+    "at: {password_reset_url}\n\n"
+    "If you weren't expecting this email, you can safely ignore it."
 )
 
 DEFAULT_ACCESS_NEEDS_ACK_SUBJECT = "[{venue}] We've received your induction request"
@@ -58,9 +59,17 @@ class InductionsSettings(models.Model):
         default=7,
         help_text="Days after a session date before pending/no-show sign-ups are automatically purged.",
     )
+    default_max_signups = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text=(
+            "Default maximum sign-ups for group induction sessions. "
+            "Leave blank for no site-wide cap. "
+            "Individual sessions can override this with their own limit."
+        ),
+    )
 
     # Email templates — use {name}, {venue}, {session_title}, {session_date},
-    # {session_location}, {calendar_url}, {password_url}, {welcome_pack_section}, {validity}
+    # {session_location}, {calendar_url}, {password_url}, {welcome_pack_url}, {validity}
     confirmation_email_subject = models.CharField(
         max_length=200, blank=True,
         help_text="Leave blank to use the default. Variables: {name} {venue} {session_title}",
@@ -77,12 +86,12 @@ class InductionsSettings(models.Model):
 
     welcome_email_subject = models.CharField(
         max_length=200, blank=True,
-        help_text="Leave blank to use the default. Variables: {name} {venue} {session_title} {validity} {password_url}",
+        help_text="Leave blank to use the default. Variables: {name} {username} {venue} {session_title} {validity} {password_url} {password_reset_url}",
     )
     welcome_email_body = models.TextField(blank=True)
 
-    access_needs_ack_subject = models.CharField(max_length=200, blank=True)
-    access_needs_ack_body = models.TextField(blank=True)
+    access_needs_ack_subject = models.CharField(max_length=200, blank=True, verbose_name="Access needs acknowledgement subject")
+    access_needs_ack_body = models.TextField(blank=True, verbose_name="Access needs acknowledgement body")
 
     welcome_pack_url = models.CharField(
         max_length=500, blank=True,
@@ -93,9 +102,38 @@ class InductionsSettings(models.Model):
         help_text="Link text for the welcome pack URL.",
     )
 
-    organiser_notification_email = models.EmailField(
+    privacy_policy_url = models.CharField(
+        max_length=500, blank=True,
+        help_text="URL to your GDPR/privacy policy. Linked from the sign-up consent checkbox. Leave blank to omit the link.",
+    )
+    access_needs_enabled = models.BooleanField(
+        default=True,
+        help_text=(
+            "Enable the 1:1 induction request page. "
+            "Uncheck to hide it — useful if you don't currently offer 1:1 inductions."
+        ),
+    )
+    access_needs_intro_text = models.TextField(
         blank=True,
-        help_text="Email address that receives a notification when a new access needs request is submitted.",
+        help_text=(
+            "Introductory paragraph on the 1:1 induction request form. "
+            "Leave blank to use the default text."
+        ),
+    )
+
+    organiser_notification_email = models.EmailField(
+        default="inductions@example.com",
+        help_text=(
+            "Email address that receives organiser notifications (new 1:1 request, "
+            "session full, etc.). Set this to a real address before going live."
+        ),
+    )
+    notify_on_each_signup = models.BooleanField(
+        default=False,
+        help_text=(
+            "Also send a notification for every new sign-up, not just when a session reaches capacity. "
+            "Useful for small or closely-watched sessions."
+        ),
     )
 
     _CACHE_KEY = "inductions.settings.v1"
@@ -172,8 +210,8 @@ class InductionSession(models.Model):
     TYPE_SMALL_GROUP = "small_group"
     TYPE_ONE_TO_ONE = "one_to_one"
     TYPE_CHOICES = [
-        (TYPE_REGULAR, "Regular (cinema)"),
-        (TYPE_SMALL_GROUP, "Small group (meeting room / venue)"),
+        (TYPE_REGULAR, "Regular"),
+        (TYPE_SMALL_GROUP, "Small group"),
         (TYPE_ONE_TO_ONE, "1:1 (access needs)"),
     ]
 
@@ -187,17 +225,18 @@ class InductionSession(models.Model):
     ]
 
     title = models.CharField(max_length=200)
+    max_signups = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text=(
+            "Maximum sign-ups for this session. Leave blank to use the site default "
+            "(set in Inductions settings), or leave both blank for no cap."
+        ),
+    )
     session_type = models.CharField(
         max_length=20, choices=TYPE_CHOICES, default=TYPE_REGULAR,
     )
     date = models.DateTimeField()
     location = models.CharField(max_length=200, blank=True)
-    linked_event = models.ForeignKey(
-        "diary.Event",
-        null=True, blank=True,
-        on_delete=models.SET_NULL,
-        related_name="induction_sessions",
-    )
     # JSON list of {"label": "...", "type": "text|checkbox|select", "required": bool, "options": [...]}
     custom_questions = models.JSONField(default=list, blank=True)
     status = models.CharField(
@@ -223,12 +262,31 @@ class InductionSession(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            base = slugify(f"{self.title} {self.date:%Y %m %d}")[:90] or "induction"
+            base = slugify(f"{self.title} {self.date:%m %d}")[:90] or "induction"
             self.slug = _unique_slug(base)
         if not self.purge_after:
             cfg = InductionsSettings.load()
             self.purge_after = self.date + timezone.timedelta(days=cfg.induction_purge_days)
         super().save(*args, **kwargs)
+
+    def effective_capacity(self):
+        """Return the applicable signup cap, or None if unlimited.
+
+        Session-level max_signups takes precedence. If not set, falls back to
+        the site default (which may also be None = no cap).
+        """
+        if self.max_signups is not None:
+            return self.max_signups
+        return InductionsSettings.load().default_max_signups
+
+    @property
+    def is_full(self):
+        if not self.pk:
+            return False
+        cap = self.effective_capacity()
+        if cap is None:
+            return False
+        return self.signups.count() >= cap
 
     @property
     def checked_in_count(self):
@@ -273,6 +331,9 @@ class InductionSignup(models.Model):
         blank=True,
         help_text="If set, used as the volunteer's login username instead of auto-generating from name.",
     )
+    phone = models.CharField(max_length=64, blank=True)
+    address = models.CharField(max_length=128, blank=True)
+    postcode = models.CharField(max_length=16, blank=True)
     signed_up_at = models.DateTimeField(auto_now_add=True)
     checked_in_at = models.DateTimeField(null=True, blank=True)
     checked_in_by = models.ForeignKey(
@@ -297,6 +358,16 @@ class InductionSignup(models.Model):
     def last_name(self):
         parts = (self.name or "").split(None, 1)
         return parts[1] if len(parts) > 1 else ""
+
+    @property
+    def preview_username(self):
+        """Best-guess username for display before account creation. Not collision-checked."""
+        if self.desired_username:
+            return self.desired_username
+        parts = (self.name or "").split()
+        first = parts[0] if parts else "volunteer"
+        last = parts[-1] if len(parts) > 1 else ""
+        return f"{first}{last}"
 
 
 class InductionRequest(models.Model):

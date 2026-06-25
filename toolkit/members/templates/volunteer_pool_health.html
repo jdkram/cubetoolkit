@@ -1,4 +1,5 @@
 {% extends 'base_admin.html' %}
+{% load days_to_human %}
 {% block title %}Volunteer pool maintenance{% endblock %}
 {% block css %}
 {{ block.super }}
@@ -21,6 +22,8 @@
     .tier-safest  { background: #d1e7dd; color: #0f5132; }
     .tier-safe    { background: #fff3cd; color: #664d03; }
     .tier-dormant { background: #e2e3e5; color: #383d41; }
+    .status-ok  { background-color: #d1e7dd; }
+    .status-off { background-color: #f8d7da; }
     .bulk-actions {
         margin-top: 0.75rem;
         display: flex;
@@ -44,51 +47,113 @@
   <a href="{% url "view-volunteer-summary" %}">volunteer summary</a>
 </p>
 
+{# ── Status explainer ───────────────────────────────────────────────── #}
+<section class="pool-section" style="border: 1px solid #dee2e6; border-radius:0.375rem; padding:0.75rem 1rem; margin-bottom:1.5rem;">
+  <h3 style="margin-top:0;">Volunteer statuses</h3>
+  <p class="pool-meta">Every volunteer has one status. Status controls login access, rota visibility, and data-retention eligibility.</p>
+  <table class="table table-sm" style="max-width:60rem;">
+    <thead>
+      <tr><th>Status</th><th>Count</th><th>Login</th><th>How they get here</th><th>How they leave</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Active</strong></td>
+        <td class="pool-meta">{{ status_counts.active|default:"0" }}</td>
+        <td class="status-ok"><i class="fa-solid fa-circle-check"></i> On rota, mailouts</td>
+        <td>Default for new volunteers. Restored by a panopticon or via self-service.</td>
+        <td>Auto-dormancy (no login for {{ dormancy_days|days_to_human|default:"N/A" }}{% if never_logged_in_grace_days %}, or {{ never_logged_in_grace_days|days_to_human }} if never logged in{% endif %}); or panopticon sets Dormant / Retired / Suspended.</td>
+      </tr>
+      <tr>
+        <td><strong>Dormant</strong></td>
+        <td class="pool-meta">{{ status_counts.dormant|default:"0" }}</td>
+        <td class="status-ok"><i class="fa-solid fa-circle-check"></i> Login still works</td>
+        <td>Auto-dormancy, or panopticon.</td>
+        <td><strong>Volunteer self-service:</strong> dashboard shows a &ldquo;I&rsquo;m back&rdquo; button that restores Active in one click. Panopticon can also restore. Eligible for anonymisation once past retention window.</td>
+      </tr>
+      <tr>
+        <td><strong>Retired</strong></td>
+        <td class="pool-meta">{{ status_counts.retired|default:"0" }}</td>
+        <td class="status-ok"><i class="fa-solid fa-circle-check"></i> Login still works</td>
+        <td>Panopticon only.</td>
+        <td>Panopticon only (→ Active / Dormant). Eligible for anonymisation once past retention window. <em>No self-service &mdash; retirement is a deliberate admin decision.</em></td>
+      </tr>
+      <tr>
+        <td><strong>Suspended</strong></td>
+        <td class="pool-meta">{{ status_counts.suspended|default:"0" }}</td>
+        <td class="status-off"><i class="fa-solid fa-circle-xmark"></i> Login disabled. Future rota slots released.</td>
+        <td>Panopticon only (reason required). Used for access-control or welfare situations requiring immediate login removal.</td>
+        <td>Panopticon only (→ Active / Dormant / Retired). Note: cleared rota slots are not restored. <em>No self-service.</em></td>
+      </tr>
+      <tr>
+        <td><strong>Anonymised</strong></td>
+        <td class="pool-meta">{{ status_counts.anonymised|default:"0" }}</td>
+        <td class="status-off"><i class="fa-solid fa-circle-xmark"></i> Login disabled. PII erased.</td>
+        <td>Panopticon action (individual or bulk) once past the {{ purge_days|days_to_human }} retention window.</td>
+        <td><strong>Irreversible.</strong> This is effectively our &ldquo;delete&rdquo; &mdash; it wipes all personal data while keeping rota history under a placeholder name, for accountability.</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="pool-meta" style="margin-bottom:0;">
+    Self-service reactivation applies to <strong>Dormant only</strong>. Retired and Suspended require a panopticon to reverse.
+  </p>
+</section>
+
 {# ── Auto-dormancy ──────────────────────────────────────────────────────── #}
 <section class="pool-section" style="border: 1px solid #dee2e6; border-radius:0.375rem; padding:0.75rem 1rem; margin-bottom:1.5rem;">
   <h3 style="margin-top:0;">Auto-dormancy</h3>
   <p class="pool-meta" style="margin-bottom:0.5rem;">
     Marks active volunteers as Dormant when they have been quiet too long.
-    {% if dormancy_days %}Dormancy threshold: {{ dormancy_days }} days without login.{% endif %}
-    {% if never_logged_in_grace_days %}Never-logged-in grace period: {{ never_logged_in_grace_days }} days.{% endif %}
+    {% if dormancy_days %}Dormancy threshold: {{ dormancy_days|days_to_human }} without login.{% endif %}
+    {% if never_logged_in_grace_days %}Never-logged-in grace period: {{ never_logged_in_grace_days|days_to_human }}.{% endif %}
     {% if not dormancy_days and not never_logged_in_grace_days %}<strong>Disabled</strong> — configure thresholds in Site settings.{% endif %}
   </p>
   <a href="{% url "auto-dormancy-preview" %}" class="btn btn-sm btn-outline-secondary">Preview auto-dormancy &rarr;</a>
 </section>
 
-<form method="post" action="{% url "bulk-anonymise-volunteers" %}" id="bulk-anonymise-form">
-{% csrf_token %}
-<input type="hidden" name="action" value="select">
-
-{# ── Tier 1: Never onboarded ────────────────────────────────────────────── #}
+{# ── Tier 1: Never logged in ─────────────────────────────────────────────── #}
 <section class="pool-section">
   <h3>
-    Never onboarded
+    Never logged in
     <span class="pool-tier-label tier-safest">safest to remove</span>
     <span class="pool-meta">({{ never_onboarded_count }})</span>
   </h3>
   <p class="pool-meta">
-    Inducted but never logged in, and the account is older than {{ purge_days }} days.
-    No engagement history. These are the clearest candidates for anonymisation under
-    data-minimisation.
+    Inducted but never logged in, and the account is older than {{ purge_days|days_to_human }}.
+    No engagement history. These accounts can be <strong>deleted entirely</strong> &mdash; no
+    rota history to preserve. Any rare exceptions with rota entries will fall back to
+    anonymisation automatically.
   </p>
+
+  <form method="post" action="{% url "bulk-delete-never-onboarded" %}" id="bulk-delete-form">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="select">
 
   {% if never_onboarded %}
   <table class="table table-sm table-striped">
     <thead>
       <tr>
-        <th style="width:2rem"><input type="checkbox" class="tier-select-all" data-tier="never-onboarded" title="Select all in this group"></th>
-        <th>Name</th><th>Inducted</th><th></th>
+        <th style="width:2rem"><input type="checkbox" class="delete-select-all" title="Select all in this group"></th>
+        <th>Name</th><th>Inducted</th><th>Last-gasp email</th><th></th>
       </tr>
     </thead>
     <tbody>
       {% for v in never_onboarded %}
       <tr>
-        <td><input type="checkbox" name="volunteer_ids" value="{{ v.pk }}" class="purge-checkbox" data-tier="never-onboarded"></td>
+        <td><input type="checkbox" name="volunteer_ids" value="{{ v.pk }}"
+            class="delete-checkbox"
+            data-email="{{ v.member.email }}"
+            {% if v.last_gasp_sent_at %}data-gasp="1"{% endif %}></td>
         <td><a href="{% url "edit-volunteer" v.pk %}">{{ v.member.name }}</a></td>
         <td>{{ v.created_at|date:"d/m/Y" }}</td>
+        <td class="pool-meta">
+          {% if v.last_gasp_sent_at %}
+            {{ v.last_gasp_sent_at|date:"d/m/Y" }}
+          {% else %}
+            &mdash;
+          {% endif %}
+        </td>
         <td style="white-space:nowrap;">
-          {% if last_gasp_body_configured %}
+          {% if last_gasp_email_enabled %}
           <a href="{% url "last-gasp-email" v.pk %}" class="me-2">Email&hellip;</a>
           {% endif %}
           <a href="{% url "anonymise-volunteer" v.pk %}">Anonymise&hellip;</a>
@@ -97,9 +162,32 @@
       {% endfor %}
     </tbody>
   </table>
+  <div class="bulk-actions" style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="select-emailed-btn">
+      Select emailed
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="export-emails-btn" disabled>
+      Export emails&hellip;
+    </button>
+    {% if last_gasp_email_enabled %}
+    <button type="submit" formaction="{% url 'bulk-last-gasp-email' %}" class="btn btn-sm btn-outline-primary" id="bulk-gasp-never-submit" disabled>
+      Send last-gasp email&hellip;
+    </button>
+    {% endif %}
+    <span style="flex:1"></span>
+    <button type="submit" formaction="{% url 'bulk-anonymise-volunteers' %}" class="btn btn-sm btn-outline-secondary" id="bulk-anonymise-never-submit" disabled>
+      Anonymise selected&hellip;
+    </button>
+    <button type="submit" class="btn btn-sm btn-danger" id="bulk-delete-submit" disabled>
+      Delete selected&hellip;
+    </button>
+    <span class="pool-meta" id="delete-selected-count"></span>
+  </div>
   {% else %}
   <p class="pool-empty">None.</p>
   {% endif %}
+
+  </form>
 </section>
 
 {# ── Tier 2: Long inactive ──────────────────────────────────────────────── #}
@@ -112,12 +200,16 @@
   <p class="pool-meta">
     {% if purge_days %}
       Dormant or retired volunteers who previously logged in but whose last activity
-      is more than {{ purge_days }} days ago.
+      is more than {{ purge_days|days_to_human }} ago.
     {% else %}
       Retention flagging is disabled (purge window set to 0).
     {% endif %}
     Still clearly eligible under data-minimisation, but they were once active.
   </p>
+
+  <form method="post" action="{% url "bulk-anonymise-volunteers" %}" id="bulk-anonymise-form">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="select">
 
   {% if long_inactive %}
   <table class="table table-sm table-striped">
@@ -135,7 +227,7 @@
         <td>{{ v.get_status_display }}</td>
         <td>{{ v.user.last_login|date:"d/m/Y" }}</td>
         <td style="white-space:nowrap;">
-          {% if last_gasp_body_configured %}
+          {% if last_gasp_email_enabled %}
           <a href="{% url "last-gasp-email" v.pk %}" class="me-2">Email&hellip;</a>
           {% endif %}
           <a href="{% url "anonymise-volunteer" v.pk %}">Anonymise&hellip;</a>
@@ -144,20 +236,24 @@
       {% endfor %}
     </tbody>
   </table>
+  <div class="bulk-actions" style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+    {% if last_gasp_email_enabled %}
+    <button type="submit" formaction="{% url 'bulk-last-gasp-email' %}" class="btn btn-sm btn-outline-primary" id="bulk-gasp-inactive-submit" disabled>
+      Send last-gasp email&hellip;
+    </button>
+    {% endif %}
+    <span style="flex:1"></span>
+    <button type="submit" class="btn btn-sm btn-danger" id="bulk-submit" disabled>
+      Anonymise selected&hellip;
+    </button>
+    <span class="pool-meta" id="selected-count"></span>
+  </div>
   {% else %}
   <p class="pool-empty">None.</p>
   {% endif %}
+
+  </form>
 </section>
-
-{# ── Bulk submit ────────────────────────────────────────────────────────── #}
-<div class="bulk-actions">
-  <button type="submit" class="btn btn-sm btn-danger" id="bulk-submit" disabled>
-    Anonymise selected&hellip;
-  </button>
-  <span class="pool-meta" id="selected-count"></span>
-</div>
-
-</form>
 
 {# ── Tier 3: Recently dormant (informational — no bulk action) ─────────── #}
 <section class="pool-section" style="margin-top:2rem;">
@@ -167,8 +263,8 @@
     <span class="pool-meta">({{ recently_dormant_count }})</span>
   </h3>
   <p class="pool-meta">
-    Marked dormant but last active within the {{ purge_days }}-day retention window.
-    {% if dormancy_days %}Auto-dormancy triggers after {{ dormancy_days }} days without login{% if never_logged_in_grace_days %}, or {{ never_logged_in_grace_days }} days for accounts that have never logged in{% endif %}.{% endif %}
+    Marked dormant but last active within the {{ purge_days|days_to_human }} retention window.
+    {% if dormancy_days %}Auto-dormancy triggers after {{ dormancy_days|days_to_human }} without login{% if never_logged_in_grace_days %}, or {{ never_logged_in_grace_days|days_to_human }} for accounts that have never logged in{% endif %}.{% endif %}
     These volunteers may still return. No bulk action is available here; use
     <a href="{% url "view-volunteer-list" %}">Volunteer profiles</a> to act on individual records.
   </p>
@@ -235,16 +331,165 @@
   {% endif %}
 </section>
 
+{# ── Suspended volunteers ───────────────────────────────────────────────── #}
+<section class="pool-section" style="margin-top:2rem; border: 1px solid #f5c2c7; border-radius:0.375rem; padding:0.75rem 1rem;">
+  <h3 style="margin-top:0;">
+    Suspended volunteers
+    <span class="pool-tier-label" style="background:#f8d7da; color:#842029;">Login disabled</span>
+    <span class="pool-meta">({{ suspended_count }})</span>
+  </h3>
+  <p class="pool-meta">
+    Suspended volunteers cannot log in and have had future rota slots cleared. Suspension is a panopticon-only action requiring a reason.
+    To reinstate, edit their profile and set the status to Active, Dormant, or Retired.
+  </p>
+
+  {% if suspended %}
+  <table class="table table-sm table-striped">
+    <thead>
+      <tr><th>Name</th><th>Last login</th><th>Suspension reason</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for v in suspended %}
+      <tr>
+        <td><a href="{% url "edit-volunteer" v.pk %}">{{ v.member.name }}</a></td>
+        <td>{{ v.user.last_login|date:"d/m/Y"|default:"Never" }}</td>
+        <td class="pool-meta">{{ v.suspension_reason|default:"—" }}</td>
+        <td><a href="{% url "edit-volunteer" v.pk %}">edit</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="pool-empty">None currently suspended.</p>
+  {% endif %}
+</section>
+
+<div class="modal fade" id="bcc-warning-modal" tabindex="-1" aria-labelledby="bcc-warning-label" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="bcc-warning-label">Before you copy these addresses</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p><strong>Always use BCC, not To or CC.</strong></p>
+        <p>These are personal email addresses. Sending to multiple people in the To or CC field reveals everyone's address to everyone else — a privacy breach. Put the addresses in BCC, and use a placeholder in the To field (such as your own address).</p>
+        <p>If you are not sure how to use BCC in your email client, please check before sending.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
+        <button type="button" class="btn btn-primary" id="bcc-confirmed-btn">I understand — show me the addresses</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="email-export-modal" tabindex="-1" aria-labelledby="email-export-label" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="email-export-label">Email addresses (selected volunteers)</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="pool-meta">Copy into the <strong>BCC</strong> field of your email client.</p>
+        <textarea id="email-export-text" class="form-control" rows="5" readonly style="font-family:monospace; font-size:0.9em;"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-outline-primary" id="copy-emails-btn">Copy to clipboard</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 (function () {
-    var checkboxes = document.querySelectorAll('.purge-checkbox');
+    // ── Delete form (never-logged-in tier) ──────────────────────────────
+    var deleteBoxes = document.querySelectorAll('.delete-checkbox');
+    var deleteBtn = document.getElementById('bulk-delete-submit');
+    var anonymiseNeverBtn = document.getElementById('bulk-anonymise-never-submit');
+    var gaspNeverBtn = document.getElementById('bulk-gasp-never-submit');
+    var exportEmailsBtn = document.getElementById('export-emails-btn');
+    var deleteCount = document.getElementById('delete-selected-count');
+    var deleteSelectAll = document.querySelector('.delete-select-all');
+
+    function updateDeleteState() {
+        var checked = document.querySelectorAll('.delete-checkbox:checked').length;
+        if (deleteBtn) deleteBtn.disabled = checked === 0;
+        if (anonymiseNeverBtn) anonymiseNeverBtn.disabled = checked === 0;
+        if (gaspNeverBtn) gaspNeverBtn.disabled = checked === 0;
+        if (exportEmailsBtn) exportEmailsBtn.disabled = checked === 0;
+        if (deleteCount) deleteCount.textContent = checked > 0 ? checked + ' selected' : '';
+        if (deleteSelectAll) {
+            deleteSelectAll.indeterminate = checked > 0 && checked < deleteBoxes.length;
+            deleteSelectAll.checked = deleteBoxes.length > 0 && checked === deleteBoxes.length;
+        }
+    }
+
+    if (deleteSelectAll) {
+        deleteSelectAll.addEventListener('change', function () {
+            deleteBoxes.forEach(function (cb) { cb.checked = deleteSelectAll.checked; });
+            updateDeleteState();
+        });
+    }
+    deleteBoxes.forEach(function (cb) { cb.addEventListener('change', updateDeleteState); });
+
+    // ── Select emailed ───────────────────────────────────────────────────
+    var selectEmailedBtn = document.getElementById('select-emailed-btn');
+    if (selectEmailedBtn) {
+        selectEmailedBtn.addEventListener('click', function () {
+            deleteBoxes.forEach(function (cb) { cb.checked = !!cb.dataset.gasp; });
+            updateDeleteState();
+        });
+    }
+
+    // ── Email export with BCC warning ────────────────────────────────────
+    var bccModal = document.getElementById('bcc-warning-modal');
+    var exportModal = document.getElementById('email-export-modal');
+
+    if (exportEmailsBtn && bccModal) {
+        exportEmailsBtn.addEventListener('click', function () {
+            new bootstrap.Modal(bccModal).show();
+        });
+    }
+
+    var bccConfirmedBtn = document.getElementById('bcc-confirmed-btn');
+    if (bccConfirmedBtn) {
+        bccConfirmedBtn.addEventListener('click', function () {
+            bootstrap.Modal.getInstance(bccModal).hide();
+            var emails = [];
+            document.querySelectorAll('.delete-checkbox:checked').forEach(function (cb) {
+                if (cb.dataset.email) emails.push(cb.dataset.email);
+            });
+            document.getElementById('email-export-text').value = emails.join(', ');
+            new bootstrap.Modal(exportModal).show();
+        });
+    }
+
+    var copyEmailsBtn = document.getElementById('copy-emails-btn');
+    if (copyEmailsBtn) {
+        copyEmailsBtn.addEventListener('click', function () {
+            var textarea = document.getElementById('email-export-text');
+            navigator.clipboard.writeText(textarea.value).then(function () {
+                copyEmailsBtn.textContent = 'Copied!';
+                setTimeout(function () { copyEmailsBtn.textContent = 'Copy to clipboard'; }, 2000);
+            });
+        });
+    }
+
+    // ── Anonymise form (long-inactive tier) ─────────────────────────────
+    var purgeBoxes = document.querySelectorAll('.purge-checkbox');
     var submitBtn = document.getElementById('bulk-submit');
     var countLabel = document.getElementById('selected-count');
 
-    function updateState() {
+    var gaspInactiveBtn = document.getElementById('bulk-gasp-inactive-submit');
+
+    function updateAnonymiseState() {
         var checked = document.querySelectorAll('.purge-checkbox:checked').length;
-        submitBtn.disabled = checked === 0;
-        countLabel.textContent = checked > 0 ? checked + ' selected' : '';
+        if (submitBtn) submitBtn.disabled = checked === 0;
+        if (gaspInactiveBtn) gaspInactiveBtn.disabled = checked === 0;
+        if (countLabel) countLabel.textContent = checked > 0 ? checked + ' selected' : '';
 
         document.querySelectorAll('.tier-select-all').forEach(function (hdr) {
             var tier = hdr.dataset.tier;
@@ -261,13 +506,10 @@
             document.querySelectorAll('.purge-checkbox[data-tier="' + tier + '"]').forEach(function (cb) {
                 cb.checked = hdr.checked;
             });
-            updateState();
+            updateAnonymiseState();
         });
     });
-
-    checkboxes.forEach(function (cb) {
-        cb.addEventListener('change', updateState);
-    });
+    purgeBoxes.forEach(function (cb) { cb.addEventListener('change', updateAnonymiseState); });
 })();
 </script>
 {% endblock %}

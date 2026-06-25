@@ -226,14 +226,32 @@ ADMINS = (
 )
 
 # Authorisation related settings:
+AUTHENTICATION_BACKENDS = [
+    # Must be first: rejects locked-out IPs/usernames before any auth attempt
+    "axes.backends.AxesStandaloneBackend",
+    "toolkit.toolkit_auth.backends.EmailOrUsernameBackend",
+]
+
 LOGIN_URL = django.urls.reverse_lazy("login")
 LOGIN_REDIRECT_URL = django.urls.reverse_lazy("toolkit-index")
+
+# django-axes brute-force protection
+AXES_FAILURE_LIMIT = 5          # lock out after 5 consecutive failures
+AXES_COOLOFF_TIME = 1           # unlock after 1 hour
+AXES_RESET_ON_SUCCESS = True    # reset failure count on successful login
+# Lock by IP+username combination — tighter than IP-only, looser than username-only.
+# IP-only risks locking out shared NATs; username-only lets an attacker rotate IPs freely.
+AXES_LOCKOUT_PARAMETERS = [["ip_address", "username"]]
 
 PASSWORD_HASHERS = (
     "django.contrib.auth.hashers.PBKDF2PasswordHasher",
     "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
     "django.contrib.auth.hashers.BCryptPasswordHasher",
 )
+
+# How long password-set / password-reset links remain valid (seconds).
+# 7 days gives new volunteers enough time to set their password.
+PASSWORD_RESET_TIMEOUT = 604800
 
 # Ref; https://docs.djangoproject.com/en/3.2/releases/3.2/#customizing-type-of-auto-created-primary-keys
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
@@ -308,6 +326,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "wagtail.contrib.redirects.middleware.RedirectMiddleware",
+    # Must be last: intercepts failed-login responses to record attempt counts
+    "axes.middleware.AxesMiddleware",
 ]
 
 SECURE_CONTENT_TYPE_NOSNIFF = True
@@ -356,6 +376,7 @@ TEMPLATES = [
 ROOT_URLCONF = "toolkit.urls"
 
 INSTALLED_APPS = (
+    "axes",
     "toolkit.diary",
     "toolkit.members",
     "toolkit.inductions",

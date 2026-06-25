@@ -1,133 +1,329 @@
 {% extends "base_admin.html" %}
 {% block title %}{{ title }}{% endblock %}
 
+{% block css %}
+{{ block.super }}
+<style>
+.session-form-wrap {
+  max-width: 680px;
+}
+.sf-card {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  margin-bottom: 1.25rem;
+}
+.sf-card-header {
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid #dee2e6;
+  background: #f8f9fa;
+  border-radius: 6px 6px 0 0;
+}
+.sf-card-body {
+  padding: 1rem 1rem 0.25rem;
+}
+.sf-field {
+  margin-bottom: 0.9rem;
+}
+.sf-field label {
+  display: block;
+  font-weight: 500;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+.sf-card-body input[type="text"],
+.sf-card-body input[type="number"],
+.sf-card-body input[type="datetime-local"],
+.sf-card-body select,
+.sf-card-body textarea {
+  display: block;
+  width: 100%;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background: #fff;
+  color: #212529;
+  transition: border-color 0.15s;
+}
+.sf-card-body input:focus,
+.sf-card-body select:focus,
+.sf-card-body textarea:focus {
+  outline: none;
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+}
+.sf-card-body input[type="number"] {
+  max-width: 8rem;
+}
+.sf-card-body input[type="datetime-local"] {
+  max-width: 18rem;
+}
+.sf-help {
+  color: #6c757d;
+  font-size: 0.8rem;
+  margin: 0.2rem 0 0;
+}
+.sf-error {
+  color: #dc3545;
+  font-size: 0.82rem;
+  margin: 0.2rem 0 0;
+}
+/* ── Custom questions ── */
+.q-list {
+  min-height: 2rem;
+}
+.q-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 0.6rem;
+  margin-bottom: 0.5rem;
+  cursor: grab;
+}
+.q-row:active { cursor: grabbing; }
+.q-drag-handle {
+  padding-top: 0.3rem;
+  color: #aaa;
+  flex-shrink: 0;
+  user-select: none;
+}
+.q-fields {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+.q-fields input[type="text"],
+.q-fields select {
+  padding: 0.28rem 0.45rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background: #fff;
+  color: #212529;
+}
+.q-fields .q-label-input { flex: 2; min-width: 140px; }
+.q-fields .q-type-select { flex: 1; min-width: 110px; }
+.q-fields .q-required-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+.q-fields .q-required-wrap input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+}
+.q-options-row {
+  width: 100%;
+  flex-basis: 100%;
+}
+.q-options-row input[type="text"] {
+  width: 100%;
+}
+.q-remove {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  color: #888;
+  cursor: pointer;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+.q-remove:hover { border-color: #dc3545; color: #dc3545; }
+.q-empty-hint {
+  color: #aaa;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+</style>
+{% endblock %}
+
 {% block body %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h2>{{ title }}</h2>
-  <a href="{% url "inductions:manage_session_list" %}" class="btn btn-outline-secondary btn-sm">Back to sessions</a>
+  <a href="{% url "inductions:manage_session_list" %}" class="btn btn-outline-secondary btn-sm">← All sessions</a>
 </div>
 
-<form method="post" id="session-form">
+<form method="post" id="session-form" class="session-form-wrap">
   {% csrf_token %}
   <input type="hidden" name="custom_questions_raw" id="custom-questions-raw" value="{{ custom_questions_json }}">
 
-  <div style="max-width: 700px;">
-    {% for field in form %}
-    <div class="mb-3{% if field.errors %} has-validation{% endif %}">
-      <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-      {{ field }}
-      {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-      {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+  <div class="sf-card">
+    <div class="sf-card-header">Session details</div>
+    <div class="sf-card-body">
+      <div class="sf-field">
+        <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
+        {{ form.title }}
+        {% for error in form.title.errors %}<p class="sf-error">{{ error }}</p>{% endfor %}
+      </div>
+      <div class="sf-field">
+        <label for="{{ form.session_type.id_for_label }}">{{ form.session_type.label }}</label>
+        {{ form.session_type }}
+        {% for error in form.session_type.errors %}<p class="sf-error">{{ error }}</p>{% endfor %}
+      </div>
+      <div class="sf-field">
+        <label for="{{ form.date.id_for_label }}">{{ form.date.label }}</label>
+        {{ form.date }}
+        {% for error in form.date.errors %}<p class="sf-error">{{ error }}</p>{% endfor %}
+      </div>
+      <div class="sf-field">
+        <label for="{{ form.location.id_for_label }}">{{ form.location.label }}</label>
+        {{ form.location }}
+        {% if form.location.help_text %}<p class="sf-help">{{ form.location.help_text }}</p>{% endif %}
+        {% for error in form.location.errors %}<p class="sf-error">{{ error }}</p>{% endfor %}
+      </div>
     </div>
-    {% endfor %}
-
-    <hr>
-    <h5>Custom questions</h5>
-    <p class="text-muted small">
-      These appear on the sign-up form in addition to Name and Email.
-      Drag to reorder.
-    </p>
-
-    <div id="questions-list" style="min-height: 40px;"></div>
-
-    <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="add-question">Add question</button>
-
-    <hr>
-    <button type="submit" class="btn btn-primary">Save session</button>
   </div>
+
+  <div class="sf-card">
+    <div class="sf-card-header">Capacity &amp; lifecycle</div>
+    <div class="sf-card-body">
+      <div class="sf-field">
+        <label for="{{ form.max_signups.id_for_label }}">{{ form.max_signups.label }}</label>
+        {{ form.max_signups }}
+        {% if form.max_signups.help_text %}<p class="sf-help">{{ form.max_signups.help_text }}</p>{% endif %}
+        {% for error in form.max_signups.errors %}<p class="sf-error">{{ error }}</p>{% endfor %}
+      </div>
+      <div class="sf-field">
+        <label for="{{ form.status.id_for_label }}">{{ form.status.label }}</label>
+        {{ form.status }}
+        {% for error in form.status.errors %}<p class="sf-error">{{ error }}</p>{% endfor %}
+      </div>
+      <div class="sf-field">
+        <label for="{{ form.purge_after.id_for_label }}">{{ form.purge_after.label }}</label>
+        {{ form.purge_after }}
+        {% if form.purge_after.help_text %}<p class="sf-help">{{ form.purge_after.help_text }}</p>{% endif %}
+        {% for error in form.purge_after.errors %}<p class="sf-error">{{ error }}</p>{% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="sf-card">
+    <div class="sf-card-header">Custom questions</div>
+    <div class="sf-card-body">
+      <p class="sf-help mb-2">These appear on the sign-up form in addition to Name and Email. Drag to reorder.</p>
+      <div class="q-list" id="questions-list"></div>
+      <p class="q-empty-hint" id="questions-empty" style="display:none;">No custom questions yet.</p>
+      <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="add-question">+ Add question</button>
+    </div>
+  </div>
+
+  <button type="submit" class="btn btn-primary">Save session</button>
 </form>
 
 {# Question row template (cloned by JS) #}
 <template id="question-template">
-  <div class="question-row border rounded p-2 mb-2 d-flex gap-2 align-items-start" draggable="true">
-    <span class="drag-handle text-muted" style="cursor:grab; padding-top:4px;">&#9776;</span>
-    <div class="flex-grow-1">
-      <div class="row g-2">
-        <div class="col-12 col-md-5">
-          <input type="text" class="form-control form-control-sm q-label" placeholder="Question label" required>
-        </div>
-        <div class="col-6 col-md-3">
-          <select class="form-select form-select-sm q-type">
-            <option value="text">Text</option>
-            <option value="checkbox">Yes/No checkbox</option>
-            <option value="select">Dropdown</option>
-          </select>
-        </div>
-        <div class="col-6 col-md-2">
-          <div class="form-check mt-1">
-            <input class="form-check-input q-required" type="checkbox">
-            <label class="form-check-label small">Required</label>
-          </div>
-        </div>
-        <div class="col-12 q-options-row" style="display:none;">
-          <input type="text" class="form-control form-control-sm q-options" placeholder="Options, one per line">
-          <div class="form-text">One option per line.</div>
-        </div>
+  <div class="q-row" draggable="true">
+    <span class="q-drag-handle" aria-hidden="true">&#9776;</span>
+    <div class="q-fields">
+      <input type="text" class="q-label-input" placeholder="Question label" required>
+      <select class="q-type-select">
+        <option value="text">Text</option>
+        <option value="checkbox">Yes/No checkbox</option>
+        <option value="select">Dropdown</option>
+      </select>
+      <label class="q-required-wrap">
+        <input type="checkbox" class="q-required"> Required
+      </label>
+      <div class="q-options-row" style="display:none;">
+        <input type="text" class="q-options" placeholder="Options, comma-separated">
+        <p class="sf-help">Separate options with commas.</p>
       </div>
     </div>
-    <button type="button" class="btn btn-outline-danger btn-sm remove-question">✕</button>
+    <button type="button" class="q-remove" aria-label="Remove question">✕</button>
   </div>
 </template>
-{% endblock %}{# body #}
+{% endblock %}
 
 {% block script %}
 {{ block.super }}
 <script>
-(function() {
-  const list = document.getElementById('questions-list');
-  const raw  = document.getElementById('custom-questions-raw');
-  const tmpl = document.getElementById('question-template');
+document.addEventListener('DOMContentLoaded', function() {
+  var list = document.getElementById('questions-list');
+  var raw  = document.getElementById('custom-questions-raw');
+  var tmpl = document.getElementById('question-template');
+  var emptyHint = document.getElementById('questions-empty');
+
+  function updateEmpty() {
+    emptyHint.style.display = list.children.length === 0 ? '' : 'none';
+  }
 
   function makeRow(q) {
-    const row = tmpl.content.cloneNode(true).querySelector('.question-row');
-    row.querySelector('.q-label').value    = q.label    || '';
-    row.querySelector('.q-type').value     = q.type     || 'text';
-    row.querySelector('.q-required').checked = !!q.required;
-    const opts = q.options || [];
-    row.querySelector('.q-options').value  = opts.join('\n');
+    var row = tmpl.content.cloneNode(true).querySelector('.q-row');
+    row.querySelector('.q-label-input').value = q.label || '';
+    row.querySelector('.q-type-select').value = q.type || 'text';
+    row.querySelector('.q-required').checked  = !!q.required;
+    row.querySelector('.q-options').value      = (q.options || []).join(', ');
     toggleOptions(row);
     wire(row);
     return row;
   }
 
   function toggleOptions(row) {
-    const type = row.querySelector('.q-type').value;
+    var type = row.querySelector('.q-type-select').value;
     row.querySelector('.q-options-row').style.display = type === 'select' ? '' : 'none';
   }
 
   function wire(row) {
-    row.querySelector('.q-type').addEventListener('change', () => toggleOptions(row));
-    row.querySelector('.remove-question').addEventListener('click', () => row.remove());
-
-    row.addEventListener('dragstart', e => { e.dataTransfer.effectAllowed = 'move'; dragSrc = row; });
-    row.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
-    row.addEventListener('drop', e => {
+    row.querySelector('.q-type-select').addEventListener('change', function() { toggleOptions(row); });
+    row.querySelector('.q-remove').addEventListener('click', function() {
+      row.remove();
+      updateEmpty();
+    });
+    row.addEventListener('dragstart', function(e) {
+      e.dataTransfer.effectAllowed = 'move';
+      dragSrc = row;
+    });
+    row.addEventListener('dragover', function(e) {
       e.preventDefault();
-      if (dragSrc !== row) list.insertBefore(dragSrc, row);
+      e.dataTransfer.dropEffect = 'move';
+    });
+    row.addEventListener('drop', function(e) {
+      e.preventDefault();
+      if (dragSrc && dragSrc !== row) {
+        list.insertBefore(dragSrc, row);
+      }
     });
   }
 
-  let dragSrc = null;
+  var dragSrc = null;
 
-  // Parse existing questions
-  let existing = [];
+  var existing = [];
   try { existing = JSON.parse(raw.value) || []; } catch(e) {}
-  existing.forEach(q => list.appendChild(makeRow(q)));
+  existing.forEach(function(q) { list.appendChild(makeRow(q)); });
+  updateEmpty();
 
-  document.getElementById('add-question').addEventListener('click', () => {
-    list.appendChild(makeRow({label:'', type:'text', required:false, options:[]}));
+  document.getElementById('add-question').addEventListener('click', function() {
+    list.appendChild(makeRow({label: '', type: 'text', required: false, options: []}));
+    updateEmpty();
   });
 
-  // Serialise before submit
-  document.getElementById('session-form').addEventListener('submit', () => {
-    const questions = Array.from(list.querySelectorAll('.question-row')).map(row => ({
-      label:    row.querySelector('.q-label').value.trim(),
-      type:     row.querySelector('.q-type').value,
-      required: row.querySelector('.q-required').checked,
-      options:  row.querySelector('.q-options').value.split('\n').map(s=>s.trim()).filter(Boolean),
-    }));
+  document.getElementById('session-form').addEventListener('submit', function() {
+    var questions = Array.from(list.querySelectorAll('.q-row')).map(function(row) {
+      return {
+        label:    row.querySelector('.q-label-input').value.trim(),
+        type:     row.querySelector('.q-type-select').value,
+        required: row.querySelector('.q-required').checked,
+        options:  row.querySelector('.q-options').value
+                    .split(',').map(function(s) { return s.trim(); }).filter(Boolean),
+      };
+    });
     raw.value = JSON.stringify(questions);
   });
-})();
+});
 </script>
 {% endblock %}

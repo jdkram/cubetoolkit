@@ -255,7 +255,7 @@ $(document).ready(function () {
         'id_pre_title':                  'Optional text shown above/before the main title in public listings, e.g. \u201cCube Microplex presents\u201d.',
         'id_name':                       'The main event title shown in the public programme and all listings.',
         'id_post_title':                 'Optional text shown below/after the main title in public listings, e.g. \u201cwith support from A Band\u201d.',
-        'id_tags':                       'Categories for this event. Affects which sections of the programme it appears in, and may exempt it from requiring terms.',
+        'id_tags':                       'Categories for this event. Affects which sections of the programme it appears in, and may exempt it from requiring terms. Bold tags are the most frequently used across all events.',
         'id_duration':                   'Running time of the event. Shown in public listings if set.',
         'id_pricing':                    'Pricing text shown to the public, e.g. \u201c\u00a35 Full / \u00a33 Concession\u201d. Leave blank if the event is free.',
         'id_ticket_link':                'URL for online ticket booking. Appears as a booking button in the public programme.',
@@ -415,6 +415,11 @@ $(document).ready(function () {
 
     $.each(FIELD_TIPS, function (fieldId, tipText) {
         var $label = $('label[for="' + fieldId + '"]');
+        if (!$label.length) {
+            // Some widgets (e.g. CheckboxSelectMultiple) don't set for= on their label;
+            // fall back to the first label inside the crispy wrapper div.
+            $label = $('#div_' + fieldId + ' > label').first();
+        }
         if ($label.length) {
             $label.append(
                 $('<span>').addClass('field-tip')
@@ -460,57 +465,22 @@ $(document).ready(function () {
                 label.setAttribute('data-bs-toggle', 'tooltip');
                 label.setAttribute('data-bs-placement', 'top');
                 label.setAttribute('title', desc);
-                new bootstrap.Tooltip(label);
+                var tip = new bootstrap.Tooltip(label, { trigger: 'hover' });
+                label.addEventListener('click', function() { tip.hide(); });
             }
         });
     }());
     {% endif %}
 
     {% if top_5_tag_pks_json %}
-    {# Split tag pills into "Common tags" (top 5 by usage) and "All tags" (every tag) groups. #}
-    {# Common tags are clones that delegate clicks to the real inputs in "All tags", so the #}
-    {# form always submits from one canonical set of checkboxes. #}
+    {# Bold the top-5 most-used tags in the pill list. #}
     (function() {
         var top5 = {{ top_5_tag_pks_json }};
-        var container = document.querySelector('.tag-pill-select');
-        if (!container || top5.length === 0) return;
-        var pills = Array.from(container.querySelectorAll('label.tag-pill'));
-        var topPills = pills.filter(function(l) { return top5.indexOf(parseInt(l.querySelector('input').value, 10)) !== -1; });
-        if (topPills.length === 0) return;
-
-        var commonHeading = document.createElement('span');
-        commonHeading.className = 'tag-pill-group-heading';
-        commonHeading.textContent = 'Common tags';
-
-        var allHeading = document.createElement('span');
-        allHeading.className = 'tag-pill-group-heading tag-pill-group-heading--all';
-        allHeading.textContent = 'All tags';
-
-        container.innerHTML = '';
-        container.appendChild(commonHeading);
-
-        topPills.forEach(function(originalLabel) {
-            var originalInput = originalLabel.querySelector('input');
-            var clone = originalLabel.cloneNode(true);
-            var cloneInput = clone.querySelector('input');
-
-            cloneInput.name = '';  /* exclude clone from form submission */
-            cloneInput.checked = originalInput.checked;
-
-            clone.addEventListener('click', function(e) {
-                e.preventDefault();
-                originalInput.click();
-                cloneInput.checked = originalInput.checked;
-            });
-            originalInput.addEventListener('change', function() {
-                cloneInput.checked = originalInput.checked;
-            });
-
-            container.appendChild(clone);
+        if (!top5.length) return;
+        document.querySelectorAll('.tag-pill-select label.tag-pill').forEach(function(label) {
+            var pk = parseInt(label.querySelector('input').value, 10);
+            if (top5.indexOf(pk) !== -1) { label.classList.add('tag-pill--common'); }
         });
-
-        container.appendChild(allHeading);
-        pills.forEach(function(p) { container.appendChild(p); });
     }());
     {% endif %}
 

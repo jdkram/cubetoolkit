@@ -3,6 +3,7 @@ import json
 
 from django import forms
 from django.utils import timezone
+from django.utils.safestring import mark_safe
 
 from .models import InductionRequest, InductionSession, InductionsSettings
 
@@ -10,12 +11,43 @@ from .models import InductionRequest, InductionSession, InductionsSettings
 class SignupForm(forms.Form):
     """Public sign-up form for an induction session."""
 
-    name = forms.CharField(max_length=200, label="Your name")
+    first_name = forms.CharField(max_length=100, label="First name")
+    last_name = forms.CharField(max_length=100, label="Last name")
     email = forms.EmailField(label="Email address")
+    phone = forms.CharField(max_length=64, required=False, label="Phone number")
+    address = forms.CharField(max_length=128, required=False, label="Address")
+    postcode = forms.CharField(max_length=16, required=False, label="Postcode")
+
+    def get_name(self):
+        return f"{self.cleaned_data['first_name']} {self.cleaned_data['last_name']}"
 
     def __init__(self, *args, session=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.session = session
+
+        # GDPR consent — build label with optional privacy policy link
+        cfg = InductionsSettings.load()
+        purge_days = cfg.induction_purge_days
+        if cfg.privacy_policy_url:
+            policy_link = mark_safe(
+                f' <a href="{cfg.privacy_policy_url}" target="_blank" rel="noopener">Privacy policy</a>.'
+            )
+        else:
+            policy_link = mark_safe("")
+        self.fields["age_confirm"] = forms.BooleanField(
+            required=True,
+            label="I confirm that I am 18 years of age or over.",
+        )
+        self.fields["consent"] = forms.BooleanField(
+            required=True,
+            label=mark_safe(
+                f"I consent to my name, email address, and any contact details I provide being stored "
+                f"to process my induction sign-up. "
+                f"If I attend and become a volunteer, they'll be kept as part of my volunteer record. "
+                f"If I don't attend, they'll be deleted within {purge_days} days.{policy_link}"
+            ),
+        )
+
         if session:
             for q in session.custom_questions:
                 label = q.get("label", "")
@@ -69,6 +101,10 @@ class AccessNeedsForm(forms.Form):
         help_text="When would generally suit you? e.g. weekday evenings, weekend afternoons.",
         required=False,
     )
+    age_confirm = forms.BooleanField(
+        required=True,
+        label="I confirm that I am 18 years of age or over.",
+    )
 
 
 class InductionSessionForm(forms.ModelForm):
@@ -78,7 +114,7 @@ class InductionSessionForm(forms.ModelForm):
         model = InductionSession
         fields = [
             "title", "session_type", "date", "location",
-            "linked_event", "status", "purge_after",
+            "max_signups", "status", "purge_after",
         ]
         widgets = {
             "date": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
@@ -89,7 +125,6 @@ class InductionSessionForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["date"].input_formats = ["%Y-%m-%dT%H:%M"]
         self.fields["purge_after"].input_formats = ["%Y-%m-%dT%H:%M"]
-        self.fields["linked_event"].required = False
         self.fields["location"].required = False
 
         # Pre-fill purge_after default for new sessions
@@ -106,9 +141,14 @@ class InductionsSettingsForm(forms.ModelForm):
         fields = [
             "inductions_enabled",
             "induction_purge_days",
+            "default_max_signups",
+            "privacy_policy_url",
             "organiser_notification_email",
+            "notify_on_each_signup",
             "welcome_pack_url",
             "welcome_pack_label",
+            "access_needs_enabled",
+            "access_needs_intro_text",
             "confirmation_email_subject",
             "confirmation_email_body",
             "reminder_email_subject",
@@ -119,11 +159,21 @@ class InductionsSettingsForm(forms.ModelForm):
             "access_needs_ack_body",
         ]
         widgets = {
-            "confirmation_email_body": forms.Textarea(attrs={"rows": 8}),
-            "reminder_email_body": forms.Textarea(attrs={"rows": 8}),
-            "welcome_email_body": forms.Textarea(attrs={"rows": 10}),
-            "access_needs_ack_body": forms.Textarea(attrs={"rows": 8}),
+            "access_needs_intro_text": forms.Textarea(attrs={"rows": 5, "class": "form-control"}),
+            "confirmation_email_body": forms.Textarea(attrs={"rows": 8, "class": "form-control"}),
+            "reminder_email_body": forms.Textarea(attrs={"rows": 8, "class": "form-control"}),
+            "welcome_email_body": forms.Textarea(attrs={"rows": 10, "class": "form-control"}),
+            "access_needs_ack_body": forms.Textarea(attrs={"rows": 8, "class": "form-control"}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            widget = field.widget
+            if isinstance(widget, forms.CheckboxInput):
+                widget.attrs.setdefault("class", "form-check-input")
+            elif "class" not in widget.attrs:
+                widget.attrs["class"] = "form-control"
 
 
 class InductionRequestAdminForm(forms.ModelForm):

@@ -9,6 +9,7 @@ urlpatterns = [
     # Panopticon management — must come before <slug:slug> wildcard patterns
     path("manage/", views.manage_session_list, name="manage_session_list"),
     path("manage/settings/", views.manage_settings, name="manage_settings"),
+    path("manage/settings/test-email/", views.manage_send_test_email, name="manage_send_test_email"),
     path("manage/new/", views.manage_session_new, name="manage_session_new"),
     path("manage/access-needs/", views.manage_access_needs_list, name="manage_access_needs_list"),
     path("manage/access-needs/<int:request_id>/", views.manage_access_needs_detail, name="manage_access_needs_detail"),
@@ -22,6 +23,9 @@ urlpatterns = [
     path("manage/<slug:slug>/create-accounts/", views.manage_create_accounts, name="manage_create_accounts"),
     path("manage/<slug:slug>/edit-signup/<int:signup_id>/", views.manage_edit_signup, name="manage_edit_signup"),
     path("manage/<slug:slug>/no-show/<int:signup_id>/", views.manage_no_show, name="manage_no_show"),
+    path("manage/<slug:slug>/add-walkin/", views.manage_add_walkin, name="manage_add_walkin"),
+    path("manage/<slug:slug>/signups/<int:signup_id>/link-existing/", views.manage_link_existing, name="manage_link_existing"),
+    path("manage/<slug:slug>/signups/<int:signup_id>/remove/", views.manage_remove_signup, name="manage_remove_signup"),
 
     # Public listing of open sessions
     path("", views.session_list_public, name="session_list_public"),

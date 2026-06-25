@@ -1304,6 +1304,7 @@ class SiteConfigurationForm(forms.ModelForm):
             "age_rating_choices",
             "structured_cost_terms_enabled",
             "structured_cost_required",
+            "last_gasp_email_enabled",
             "last_gasp_email_subject",
             "last_gasp_email_body",
             "last_gasp_cooldown_days",

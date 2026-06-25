@@ -30,6 +30,9 @@ PASSWORD_HASHERS = (
     "django.contrib.auth.hashers.MD5PasswordHasher",
 )
 
+# Disable axes in tests — it interferes with auth tests and requires DB setup
+AXES_ENABLED = False
+
 # Minimal logging configuration, that should eat almost everything
 LOGGING = {
     "version": 1,

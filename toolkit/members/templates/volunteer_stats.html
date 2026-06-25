@@ -1,6 +1,6 @@
 {% extends "base_admin.html" %}
 
-{% block title %}{% if is_own %}Your history{% else %}{{ volunteer.member.name }}'s history{% endif %}{% endblock %}
+{% block title %}Your history{% endblock %}
 
 {% block css %}
 {{ block.super }}
@@ -221,15 +221,6 @@
   }
   .gate-met { color: #2d6a4f; }
 
-  .stats-viewing-as {
-    font-family: monospace;
-    font-size: 0.82rem;
-    background: #fff3cd;
-    border: 1px solid #ffc107;
-    padding: 0.4rem 0.8rem;
-    border-radius: 2px;
-    margin-bottom: 1.5rem;
-  }
   .stats-empty {
     font-family: monospace;
     font-size: 0.9rem;
@@ -325,23 +316,13 @@
 {% block body %}
 <div class="stats-page">
 
-  {% if not is_own %}
-  <div class="stats-viewing-as">
-    Panopticon view &mdash; you are viewing {{ volunteer.member.name }}'s history.
-    &nbsp;&middot;&nbsp;
-    <a href="{% url "edit-volunteer" volunteer.pk %}">edit profile</a>
-  </div>
-  {% endif %}
-
   <h2 style="font-family: monospace; font-size: 1.3rem; font-weight: bold; margin-bottom: 0.25rem;">
-    {% if is_own %}Your history at Star and Shadow{% else %}{{ volunteer.member.name }}'s history{% endif %}
+    Your history at Star and Shadow
   </h2>
   {% if volunteer.member.personal_pronouns %}
   <div class="stats-pronouns">{{ volunteer.member.personal_pronouns }}</div>
   {% endif %}
-  {% if is_own %}
-  <p class="stats-privacy-note">This page is only visible to you. Nobody else can see your history here (though people may be able to infer some of it from the public rota).</p>
-  {% endif %}
+  <p class="stats-privacy-note">This page is only visible to you.</p>
 
   {# ── Section 1: Headline ── #}
   {% if total_shifts > 0 %}
@@ -554,6 +535,51 @@
       {% endfor %}
     </ul>
     {% endif %}
+  </div>
+  {% endif %}
+
+  {# ── Section 5b: Keyholding ── #}
+  {% if keyholder_shifts %}
+  <div class="stats-section">
+    <div class="stats-section-header">Keyholding</div>
+    <div class="stats-headline">
+      <div><span class="stat-key">first keyholder shift</span> <span class="stat-val">{{ keyholder_first.showing.start|date:"j F Y" }}</span></div>
+      <div><span class="stat-key">total keyholder shifts</span> <span class="stat-val">{{ keyholder_shifts|length }}</span></div>
+      <div><span class="stat-key">last 12 months</span> <span class="stat-val">{{ keyholder_last_12m }}</span></div>
+    </div>
+
+    {% if keyholder_by_year %}
+    <div class="year-bars" style="margin-top:1rem;">
+      {% for r in keyholder_by_year %}
+      <div class="year-bar-row">
+        <span class="year-bar-label">{{ r.year }}</span>
+        <div class="year-bar-track" role="presentation">
+          <div class="year-bar-fill" style="width:{{ r.pct }}%"></div>
+        </div>
+        <span class="year-bar-count">{{ r.count }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <table class="shift-log" style="margin-top:1rem;">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Event</th>
+          <th>Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in keyholder_shifts %}
+        <tr>
+          <td class="shift-date">{{ entry.showing.start|date:"j M Y" }}</td>
+          <td><a href="{% url "single-event-view" entry.showing.event.pk %}">{{ entry.showing.event.name }}</a></td>
+          <td class="shift-role">{{ entry.role.name }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
   {% endif %}
 

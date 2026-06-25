@@ -86,23 +86,19 @@ def send_welcome_email(request, signup, user):
     password_url = request.build_absolute_uri(
         reverse("password_reset_confirm", kwargs={"uidb64": uid_b64, "token": token})
     )
+    password_reset_url = request.build_absolute_uri(reverse("password_reset"))
     timeout_days = max(1, getattr(settings, "PASSWORD_RESET_TIMEOUT", 259200) // 86400)
     validity = f"{timeout_days} day" if timeout_days == 1 else f"{timeout_days} days"
 
-    if cfg.welcome_pack_url:
-        welcome_pack_section = (
-            f"{cfg.welcome_pack_label}: {cfg.welcome_pack_url}\n\n"
-        )
-    else:
-        welcome_pack_section = ""
-
     vars = {
         "name": signup.name,
+        "username": user.username,
         "venue": _venue(),
         "session_title": session.title,
         "password_url": password_url,
+        "password_reset_url": password_reset_url,
         "validity": validity,
-        "welcome_pack_section": welcome_pack_section,
+        "welcome_pack_url": cfg.welcome_pack_url,
     }
     subject = _format(cfg.get_welcome_subject(), **vars)
     body = _format(cfg.get_welcome_body(), **vars)
@@ -154,4 +150,69 @@ def send_organiser_notification(induction_request):
         from_email=_from_email(),
         recipient_list=[cfg.organiser_notification_email],
         fail_silently=True,
+    )
+
+
+def send_new_signup_notification(session, signup):
+    """Notify organisers of each new sign-up (only if notify_on_each_signup is enabled)."""
+    cfg = get_inductions_settings()
+    if not cfg.organiser_notification_email or not cfg.notify_on_each_signup:
+        return
+    venue = _venue()
+    count = session.signups.count()
+    capacity = f"{count}/{session.max_signups}" if session.max_signups else str(count)
+    subject = f"[{venue}] New sign-up: {session.title} ({capacity})"
+    body = (
+        f"Someone has signed up for {session.title}.\n\n"
+        f"Name: {signup.name}\n"
+        f"Email: {signup.email}\n"
+        f"Sign-ups so far: {capacity}\n\n"
+        f"Log in to the toolkit to see the full list."
+    )
+    send_mail(
+        subject=subject,
+        message=body,
+        from_email=_from_email(),
+        recipient_list=[cfg.organiser_notification_email],
+        fail_silently=True,
+    )
+
+
+def send_session_full_notification(session):
+    """Notify organisers when a session reaches its maximum sign-up capacity."""
+    cfg = get_inductions_settings()
+    if not cfg.organiser_notification_email:
+        return
+    venue = _venue()
+    subject = f"[{venue}] Session full: {session.title}"
+    body = (
+        f"{session.title} has reached its maximum capacity of {session.effective_capacity()} sign-up(s).\n\n"
+        f"Date: {session.date.strftime('%A %-d %B %Y at %H:%M')}\n\n"
+        f"The session sign-up page will now show as full. "
+        f"Log in to the toolkit to manage the session or increase capacity."
+    )
+    send_mail(
+        subject=subject,
+        message=body,
+        from_email=_from_email(),
+        recipient_list=[cfg.organiser_notification_email],
+        fail_silently=True,
+    )
+
+
+def send_test_notification_email(recipient_email):
+    """Send a test notification to confirm email delivery is working."""
+    venue = _venue()
+    subject = f"[{venue}] Test notification — inductions email check"
+    body = (
+        f"This is a test notification from the {venue} toolkit.\n\n"
+        f"If you're reading this, organiser notification emails are working correctly.\n\n"
+        f"You can safely ignore this message."
+    )
+    send_mail(
+        subject=subject,
+        message=body,
+        from_email=_from_email(),
+        recipient_list=[recipient_email],
+        fail_silently=False,
     )

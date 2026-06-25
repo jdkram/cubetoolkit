@@ -77,19 +77,6 @@
     color: #fff;
 }
 
-.tag-pill-group-heading {
-    width: 100%;
-    flex-basis: 100%;
-    font-size: .75em;
+.tag-pill--common span {
     font-weight: 600;
-    color: #6c757d;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    margin-top: .25rem;
-}
-
-.tag-pill-group-heading--all {
-    margin-top: .6rem;
-    padding-top: .5rem;
-    border-top: 1px solid #dee2e6;
 }

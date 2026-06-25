@@ -1,42 +1,177 @@
-{% extends "base.html" %}
+{% extends "base_public.html" %}
 {% load static %}
 
 {% block title %}Volunteer inductions — {{ VENUE.name }}{% endblock %}
 
+{% block css %}
+{{ block.super }}
+<style>
+.inductions-wrap {
+  max-width: 600px;
+  margin: 2rem auto 3rem;
+  padding: 0 1rem;
+}
+.inductions-wrap h1 {
+  margin: 0 0 0.4rem;
+  font-size: 1.8rem;
+}
+.inductions-intro {
+  margin: 0 0 2rem;
+  opacity: 0.75;
+}
+.session-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 2px solid #111;
+}
+.session-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid #ddd;
+}
+.session-date-col {
+  flex: 0 0 9rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  line-height: 1.4;
+}
+.session-date-col .session-time {
+  display: block;
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: 1;
+  color: #111;
+}
+.session-body {
+  flex: 1;
+}
+.session-title {
+  font-weight: 600;
+  font-size: 1rem;
+  margin: 0 0 0.2rem;
+  line-height: 1.3;
+}
+.session-location {
+  font-size: 0.85rem;
+  opacity: 0.65;
+  margin: 0;
+}
+.session-capacity {
+  font-size: 0.78rem;
+  opacity: 0.6;
+  margin: 0.25rem 0 0;
+}
+.session-full-label {
+  flex-shrink: 0;
+  display: inline-block;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid #999;
+  color: #666;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.session-signup-link {
+  flex-shrink: 0;
+  display: inline-block;
+  padding: 0.35rem 0.8rem;
+  background: #082080;
+  color: #fff;
+  font-size: 0.85rem;
+  font-family: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+.session-signup-link:hover,
+.session-signup-link:focus {
+  background: #0a2ea0;
+  color: #fff;
+  outline: 2px solid #082080;
+  outline-offset: 2px;
+}
+.inductions-empty {
+  padding: 1.5rem 0;
+  opacity: 0.65;
+  border-top: 2px solid #111;
+}
+.access-needs-box {
+  margin-top: 2.5rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid #ccc;
+  background: #fafafa;
+}
+.access-needs-box p {
+  margin: 0.5rem 0 1rem;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+.access-needs-link {
+  display: inline-block;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid #082080;
+  color: #082080;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+.access-needs-link:hover,
+.access-needs-link:focus {
+  background: #082080;
+  color: #fff;
+}
+</style>
+{% endblock %}
+
 {% block body %}
-<div class="container mt-4 mb-5" style="max-width:680px;">
-  <h1 class="mb-1">Volunteer inductions</h1>
-  <p class="text-muted mb-4">Sign up for an induction session to join the {{ VENUE.name }} volunteer community.</p>
+<div class="inductions-wrap">
+  <h1>Volunteer inductions</h1>
+  <p class="inductions-intro">Sign up for an induction session to join the {{ VENUE.name }} volunteer community.</p>
 
   {% if sessions %}
-  <div class="list-group">
+  <ul class="session-list">
     {% for session in sessions %}
-    <div class="list-group-item list-group-item-action p-3">
-      <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
-        <div>
-          <strong>{{ session.title }}</strong>
-          {% if session.session_type == "small_group" %}
-          <span class="badge bg-info text-dark ms-1" title="This session is for a specific small group, not open to all volunteers.">Small group</span>
-          {% elif session.session_type == "one_to_one" %}
-          <span class="badge bg-warning text-dark ms-1" title="1:1 session for volunteers with specific access requirements.">Access needs 1:1</span>
-          {% endif %}
-          <br>
-          <span class="text-muted">{{ session.date|date:"l j F Y" }} at {{ session.date|time:"H:i" }}</span>
-          {% if session.location %}<br><span class="text-muted small">{{ session.location }}</span>{% endif %}
-        </div>
-        <a href="{% url 'inductions:signup' slug=session.slug %}" class="btn btn-success btn-sm flex-shrink-0">Sign up →</a>
+    <li class="session-item">
+      <div class="session-date-col">
+        {{ session.date|date:"j M Y" }}
+        <span class="session-time">{{ session.date|time:"H:i" }}</span>
       </div>
-    </div>
+      <div class="session-body">
+        <p class="session-title">{{ session.title }}</p>
+        {% if session.location %}<p class="session-location">{{ session.location }}</p>{% endif %}
+        {% with cap=session.effective_capacity %}
+        {% if cap %}
+        <p class="session-capacity">{{ session.total_count }}/{{ cap }} places taken{% if session.is_full %} — full{% endif %}</p>
+        {% endif %}
+        {% endwith %}
+      </div>
+      {% if session.is_full %}
+      <span class="session-full-label">Full</span>
+      {% else %}
+      <a href="{% url 'inductions:signup' slug=session.slug %}" class="session-signup-link">Sign up</a>
+      {% endif %}
+    </li>
     {% endfor %}
-  </div>
+  </ul>
   {% else %}
-  <p class="text-muted">No induction sessions are currently open for sign-up. Check back soon, or contact us if you'd like to find out more about volunteering.</p>
+  <p class="inductions-empty">No induction sessions are currently open for sign-up. Check back soon, or contact us if you'd like to find out more about volunteering.</p>
   {% endif %}
 
-  <div class="mt-4 p-3 bg-light rounded border">
+  {% if cfg.access_needs_enabled %}
+  <div class="access-needs-box">
     <strong>Have specific access requirements?</strong>
-    <p class="mb-2 mt-1 text-muted small">If you need a 1:1 session or have any accessibility needs we can support, please use our access needs form rather than signing up above.</p>
-    <a href="{% url 'inductions:access_needs_signup' %}" class="btn btn-outline-secondary btn-sm">Access needs form →</a>
+    <p>If you need a 1:1 session or have any accessibility needs we can support, please use our access needs form rather than signing up above.</p>
+    <a href="{% url 'inductions:access_needs_signup' %}" class="access-needs-link">Access needs form</a>
   </div>
+  {% endif %}
 </div>
 {% endblock %}

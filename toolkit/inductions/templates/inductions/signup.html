@@ -1,39 +1,283 @@
 {% extends "base_public.html" %}
 {% block title %}{{ session.title }} — Sign up{% endblock %}
 
+{% block css %}
+{{ block.super }}
+<style>
+.signup-wrap {
+  max-width: 520px;
+  margin: 2rem auto 2rem;
+  padding: 0 1rem;
+}
+.signup-card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.10);
+  padding: 2rem 2rem 1.5rem;
+  margin-bottom: 1rem;
+}
+.signup-card h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.3rem;
+}
+.signup-meta {
+  margin: 0 0 1.75rem;
+  opacity: 0.8;
+  font-size: 0.95rem;
+}
+.signup-field {
+  margin-bottom: 1rem;
+  flex: 1;
+}
+.signup-field label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+.signup-field input[type="text"],
+.signup-field input[type="email"],
+.signup-field input[type="tel"],
+.signup-field select,
+.signup-field textarea {
+  display: block;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  font-size: 1rem;
+  font-family: inherit;
+  border: 1px solid #aaa;
+  background: #fff;
+  color: #082080;
+  border-radius: 0;
+}
+.signup-field input:focus,
+.signup-field select:focus,
+.signup-field textarea:focus {
+  outline: 2px solid #082080;
+  outline-offset: 1px;
+  border-color: #082080;
+}
+.signup-field input.field-error-input {
+  border-color: #c00;
+}
+.signup-field .error-text {
+  color: #c00;
+  font-size: 0.85rem;
+  margin: 0.2rem 0 0;
+}
+.signup-field .help-text {
+  font-size: 0.85rem;
+  opacity: 0.7;
+  margin: 0.2rem 0 0;
+}
+.signup-row {
+  display: flex;
+  gap: 0.75rem;
+}
+.signup-row .signup-field {
+  flex: 1;
+}
+.signup-row .signup-field.narrow {
+  flex: 0 0 8.5rem;
+}
+.signup-divider {
+  border: 0;
+  border-top: 1px solid #e0d0e0;
+  margin: 1.25rem 0;
+}
+.signup-consent {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  margin: 1.25rem 0 1.5rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.signup-consent input[type="checkbox"] {
+  flex-shrink: 0;
+  margin-top: 0.3rem;
+  width: 1rem;
+  height: 1rem;
+  accent-color: #082080;
+}
+.signup-consent label {
+  font-weight: 400;
+  margin: 0;
+}
+.signup-consent .error-text {
+  color: #c00;
+  font-size: 0.85rem;
+}
+.signup-submit {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 1rem;
+  background: #082080;
+  color: #fff;
+  font-size: 1rem;
+  font-family: inherit;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+}
+.signup-submit:hover,
+.signup-submit:focus {
+  background: #0a2ea0;
+  outline: 2px solid #082080;
+  outline-offset: 2px;
+}
+.signup-alt {
+  text-align: center;
+  font-size: 0.85rem;
+  padding: 0 1rem;
+}
+.signup-alt a {
+  color: #082080;
+  text-decoration: underline;
+}
+.rota-preview {
+  font-size: 0.85rem;
+  margin: 0.2rem 0 0;
+  opacity: 0.75;
+}
+.non-field-errors {
+  background: #fff0f0;
+  border: 1px solid #c00;
+  color: #c00;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+</style>
+{% endblock %}
+
 {% block body %}
-<div style="max-width: 600px; margin: 2rem auto;">
-  <h2>{{ session.title }}</h2>
-  <p>
-    <strong>{{ session.date|date:"l j F Y" }}</strong> at {{ session.date|time:"H:i" }}
-    {% if session.location %} &mdash; {{ session.location }}{% endif %}
-  </p>
+<div class="signup-wrap">
+  <div class="signup-card">
+    <h2>{{ session.title }}</h2>
+    <p class="signup-meta">
+      <strong>{{ session.date|date:"l j F Y" }}</strong> at {{ session.date|time:"H:i" }}{% if session.location %} &mdash; {{ session.location }}{% endif %}
+    </p>
 
-  <form method="post" novalidate>
-    {% csrf_token %}
-    {% if form.non_field_errors %}
-    <div class="error-list">
-      {% for error in form.non_field_errors %}
-      <p>{{ error }}</p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+      <div class="non-field-errors">
+        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="signup-row">
+        <div class="signup-field">
+          <label for="{{ form.first_name.id_for_label }}">First name <span aria-hidden="true">*</span></label>
+          {{ form.first_name }}
+          {% for error in form.first_name.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+          <p class="rota-preview" id="rota-name-preview" style="display:none;">
+            Rota name: <strong id="rota-name-display"></strong>
+          </p>
+        </div>
+        <div class="signup-field">
+          <label for="{{ form.last_name.id_for_label }}">Last name <span aria-hidden="true">*</span></label>
+          {{ form.last_name }}
+          {% for error in form.last_name.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+        </div>
+      </div>
+
+      <div class="signup-field">
+        <label for="{{ form.email.id_for_label }}">Email address <span aria-hidden="true">*</span></label>
+        {{ form.email }}
+        {% for error in form.email.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+      </div>
+
+      <div class="signup-field">
+        <label for="{{ form.phone.id_for_label }}">Phone number</label>
+        {{ form.phone }}
+        {% for error in form.phone.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+      </div>
+
+      <div class="signup-row">
+        <div class="signup-field">
+          <label for="{{ form.address.id_for_label }}">Address</label>
+          {{ form.address }}
+          {% for error in form.address.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="signup-field narrow">
+          <label for="{{ form.postcode.id_for_label }}">Postcode</label>
+          {{ form.postcode }}
+          {% for error in form.postcode.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+        </div>
+      </div>
+
+      {# Custom questions from session config #}
+      {% for field in form %}
+        {% if field.name != "first_name" and field.name != "last_name" and field.name != "email" and field.name != "phone" and field.name != "address" and field.name != "postcode" and field.name != "age_confirm" and field.name != "consent" %}
+        <div class="signup-field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-hidden="true">*</span>{% endif %}</label>
+          {{ field }}
+          {% if field.help_text %}<p class="help-text">{{ field.help_text }}</p>{% endif %}
+          {% for error in field.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+        </div>
+        {% endif %}
       {% endfor %}
-    </div>
-    {% endif %}
 
-    {% for field in form %}
-    <div class="form-field{% if field.errors %} field-error{% endif %}">
-      <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-hidden="true">*</span>{% endif %}</label>
-      {{ field }}
-      {% if field.help_text %}<p class="help-text">{{ field.help_text }}</p>{% endif %}
-      {% for error in field.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
-    </div>
-    {% endfor %}
+      <hr class="signup-divider">
 
-    <p><button type="submit">Sign up</button></p>
-  </form>
+      <div class="signup-consent{% if form.age_confirm.errors %} field-error{% endif %}">
+        {{ form.age_confirm }}
+        <div>
+          <label for="{{ form.age_confirm.id_for_label }}">{{ form.age_confirm.label }}</label>
+          {% for error in form.age_confirm.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+        </div>
+      </div>
 
-  <p><small>
+      <div class="signup-consent{% if form.consent.errors %} field-error{% endif %}">
+        {{ form.consent }}
+        <div>
+          <label for="{{ form.consent.id_for_label }}">{{ form.consent.label }}</label>
+          {% for error in form.consent.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+        </div>
+      </div>
+
+      <button type="submit" class="signup-submit">Sign up</button>
+    </form>
+  </div>
+
+  <p class="signup-alt">
     Need a 1:1 induction instead?
     <a href="{% url "inductions:access_needs_signup" %}">Let us know your access requirements here.</a>
-  </small></p>
+  </p>
 </div>
+
+{% block script %}
+{{ block.super }}
+<script>
+(function () {
+  var firstEl = document.getElementById('id_first_name');
+  var lastEl = document.getElementById('id_last_name');
+  var preview = document.getElementById('rota-name-preview');
+  var display = document.getElementById('rota-name-display');
+  if (!firstEl || !lastEl || !preview || !display) return;
+
+  function updatePreview() {
+    var first = firstEl.value.trim();
+    var last = lastEl.value.trim();
+    if (!first && !last) { preview.style.display = 'none'; return; }
+    display.textContent = first + (last ? ' ' + last : '');
+    preview.style.display = '';
+  }
+
+  firstEl.addEventListener('input', updatePreview);
+  lastEl.addEventListener('input', updatePreview);
+  updatePreview();
+
+  // Style error fields
+  document.querySelectorAll('.signup-field').forEach(function(wrapper) {
+    var errors = wrapper.querySelectorAll('.error-text');
+    var input = wrapper.querySelector('input');
+    if (errors.length && input) input.classList.add('field-error-input');
+  });
+})();
+</script>
+{% endblock %}
 {% endblock %}

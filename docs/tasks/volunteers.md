@@ -1124,6 +1124,8 @@ Display the filter type and event names in the audit log table.
 
 ### 9.142 — Induction session: attendee cap + signup removal 🔵 S (6–10h)
 
+**Partial implementation: ✅ 2026-06-23** — cap display in session detail header and × remove button on pending signups shipped as part of the inductions feedback pass (9.4 / B-induction-tracking-94.md). The `max_signups` field and `effective_capacity()` helper already existed from 9.4. Remaining: over-cap warning banner when total > cap, public signup page "session full" behaviour. These are still to do.
+
 **Problem.** Group induction sessions have a natural physical cap (cinema only fits so many people), but there is no way to enforce or communicate it in the system. Inductors also have no way to remove a pending signup when someone emails to say they can't make it.
 
 **Goal.**
@@ -1196,4 +1198,285 @@ POST /inductions/manage/<slug>/signups/<signup_id>/remove/
 - Whether the "full" message on the public page should be "session full" (blunt, accurate) or "sign-ups temporarily closed" (softer). The former is recommended — it helps people understand why and self-route to the 1:1 pathway.
 - Whether to notify the inductor when a removal happens (probably not necessary given they initiated it via email).
 
+**Session type and capacity — needs speccing.**
+
+Currently `InductionSession.session_type` has three values (Regular, Small group, 1:1) but capacity works the same way for all of them: session-level `max_signups` overrides site `default_max_signups`, or no cap if both are blank. The "1:1" type is nominal — a 1:1 session can still have any number of sign-ups (e.g. a small group of 5 with access needs). This is probably fine for now, but the session type field is currently doing very little. Before adding more logic that branches on `session_type`, decide:
+
+- Should `session_type` drive different defaults (e.g. Regular inherits site default, Small group defaults to 8, 1:1 defaults to 1)?
+- Should `session_type` affect what's shown on the public listing or the sign-up form?
+- Should the 1:1 pathway (`InductionRequest` queue) eventually link to a `session_type=ONE_TO_ONE` session, or stay as a separate model?
+
+Spec this before implementing any capacity logic that special-cases session type.
+
 **Related:** 9.4 (volunteer induction workflow), 9.99 (volunteer stats)
+
+---
+
+### 9.143 — Login with email or username 🔵 S (3–5h)
+
+**Problem.** The toolkit currently only accepts username at the login prompt. New volunteers receive their username in the welcome email, but if they lose that email or forget their username, they can't log in and can't use "Reset password" either (which requires username — Django's default — wait, actually Django's default `PasswordResetView` accepts *email* to find the account, but the login form requires username). This creates a dead end: someone who doesn't know their username and has lost the welcome email can't log in or reset their password independently.
+
+**Goal.** Allow volunteers to log in using either their username or their email address.
+
+**Implementation.**
+
+1. Create `toolkit/toolkit_auth/backends.py` with an `EmailOrUsernameBackend`:
+
+```python
+from django.contrib.auth.backends import ModelBackend
+from django.contrib.auth.models import User
+
+class EmailOrUsernameBackend(ModelBackend):
+    def authenticate(self, request, username=None, password=None, **kwargs):
+        # Try username first (exact, case-sensitive — matches Django default)
+        user = super().authenticate(request, username=username, password=password, **kwargs)
+        if user:
+            return user
+        # Fall back to email lookup (case-insensitive)
+        try:
+            user = User.objects.get(email__iexact=username)
+        except (User.DoesNotExist, User.MultipleObjectsReturned):
+            return None
+        if user.check_password(password) and self.user_can_authenticate(user):
+            return user
+        return None
+```
+
+2. Add to `settings_common.py`:
+```python
+AUTHENTICATION_BACKENDS = [
+    "toolkit.toolkit_auth.backends.EmailOrUsernameBackend",
+]
+```
+
+3. Update the login template label from "Username:" to "Username or email:". The field itself doesn't change — Django's `AuthenticationForm` calls the field `username` internally regardless; only the label needs updating. Either subclass `AuthenticationForm` or update the template to override the label.
+
+**Edge cases.**
+- `MultipleObjectsReturned`: if two accounts share an email, fall back gracefully (return `None`, let the user try their username). Warn admins in the Django admin if duplicate emails exist.
+- Case sensitivity: usernames remain case-sensitive (Django default); email lookup is `iexact`.
+- No new dependencies needed.
+
+**Scope.**
+- Does not change the password reset flow (already uses email).
+- Does not add OAuth / social login.
+- Does not enforce email uniqueness on existing accounts (that's a separate, potentially breaking migration).
+
+**Related:** 9.46 (login page styling)
+
+---
+
+### 9.144 — Configurable signup form fields via Inductions Settings 🔵 S (4–8h)
+
+**Problem.** The induction signup form now collects last name, phone number, address, and postcode. These fields are hardcoded as always-shown with fixed required/optional status. Different sessions or future induction contexts may need to collect different combinations — e.g. a 1:1 session might only need name and email; a session with an access-needs focus might want phone but not address. There is currently no way to tune this without editing code.
+
+**Feature.** Add a "Sign-up form fields" section to Inductions Settings. Each configurable field has three states: **Hidden** (not shown, not collected), **Optional** (shown, not required), **Required** (shown, must be filled). Changes take effect immediately for all subsequent sign-ups.
+
+---
+
+**Fixed fields (non-configurable — always present):**
+
+| Field | Reason |
+|---|---|
+| First name | Minimum identifier; required for account creation |
+| Email address | Required for account creation and all email comms |
+| GDPR consent checkbox | Required by law |
+
+These are never hidden and are always required. Trying to make them configurable would break account creation.
+
+---
+
+**Configurable fields:**
+
+| Field | Default state | Notes |
+|---|---|---|
+| Last name | Required | Some people go by one name; hidden removes it from `get_name()` output |
+| Phone number | Optional | Stored on `InductionSignup` and copied to `Member.phone` on account creation |
+| Address | Optional | Stored on `InductionSignup` and copied to `Member.address` |
+| Postcode | Optional | Independent of address — you might want postcode for area data without collecting street address |
+
+Custom questions (configured per-session via `InductionSession.custom_questions`) are out of scope — they have their own required flag already.
+
+---
+
+**Data model — `InductionsSettings`:**
+
+Add a shared constant and four new fields:
+
+```python
+FIELD_HIDDEN = "hidden"
+FIELD_OPTIONAL = "optional"
+FIELD_REQUIRED = "required"
+FIELD_VISIBILITY_CHOICES = [
+    (FIELD_HIDDEN, "Hidden"),
+    (FIELD_OPTIONAL, "Optional"),
+    (FIELD_REQUIRED, "Required"),
+]
+
+last_name_field = models.CharField(
+    max_length=10, choices=FIELD_VISIBILITY_CHOICES, default=FIELD_REQUIRED,
+    help_text="Whether the Last name field is shown on the public sign-up form.",
+)
+phone_field = models.CharField(
+    max_length=10, choices=FIELD_VISIBILITY_CHOICES, default=FIELD_OPTIONAL,
+    help_text="Whether the Phone number field is shown.",
+)
+address_field = models.CharField(
+    max_length=10, choices=FIELD_VISIBILITY_CHOICES, default=FIELD_OPTIONAL,
+    help_text="Whether the Address field is shown.",
+)
+postcode_field = models.CharField(
+    max_length=10, choices=FIELD_VISIBILITY_CHOICES, default=FIELD_OPTIONAL,
+    help_text="Whether the Postcode field is shown.",
+)
+```
+
+Migration: four `AddField` operations, all with `default` set, so no data backfill needed.
+
+---
+
+**`SignupForm` changes:**
+
+In `__init__`, after the field declarations, load settings and adjust:
+
+```python
+cfg = InductionsSettings.load()
+for field_name, visibility in [
+    ("last_name", cfg.last_name_field),
+    ("phone",     cfg.phone_field),
+    ("address",   cfg.address_field),
+    ("postcode",  cfg.postcode_field),
+]:
+    if visibility == InductionsSettings.FIELD_HIDDEN:
+        del self.fields[field_name]
+    elif visibility == InductionsSettings.FIELD_REQUIRED:
+        self.fields[field_name].required = True
+    # FIELD_OPTIONAL: already default for phone/address/postcode;
+    # for last_name (default=required), set required=False
+    elif visibility == InductionsSettings.FIELD_OPTIONAL:
+        self.fields[field_name].required = False
+```
+
+Also update `get_name()` to handle missing last name:
+
+```python
+def get_name(self):
+    first = self.cleaned_data.get("first_name", "").strip()
+    last = self.cleaned_data.get("last_name", "").strip()
+    return f"{first} {last}".strip()
+```
+
+---
+
+**`signup.html` changes:**
+
+Each configurable field block already wraps in a `<div class="signup-field">`. Wrap in `{% if form.field_name %}` — Django templates return an empty string (falsy) when a field doesn't exist in the form, so this works without extra context:
+
+```django
+{% if form.phone %}
+<div class="signup-field">
+  <label for="{{ form.phone.id_for_label }}">
+    Phone number{% if form.phone.field.required %} <span aria-hidden="true">*</span>{% endif %}
+  </label>
+  {{ form.phone }}
+  ...
+</div>
+{% endif %}
+```
+
+Apply the same pattern to `last_name`, `address`, and `postcode`.
+
+The address/postcode two-column row needs extra care: if one is hidden and the other isn't, the row should collapse to single-column. Handle with nested `{% if %}` blocks:
+
+```django
+{% if form.address or form.postcode %}
+<div class="{% if form.address and form.postcode %}signup-row{% endif %}">
+  {% if form.address %}...<div class="signup-field">address</div>...{% endif %}
+  {% if form.postcode %}...<div class="signup-field narrow">postcode</div>...{% endif %}
+</div>
+{% endif %}
+```
+
+---
+
+**Walk-in form (`session_detail.html`) changes:**
+
+The walk-in form on the manage page is admin-only, so visibility matters less — inductors won't be confused by seeing a phone field that the public form hides. Two options:
+
+- **Option A (simple):** Walk-in form always shows all fields regardless of settings. Accept the minor inconsistency.
+- **Option B (consistent):** Pass `inductions_cfg` to the `manage_session_detail` template context; use `{% if inductions_cfg.phone_field != "hidden" %}` in the walk-in HTML.
+
+Recommend **Option B** — it's a one-line view change and a few template conditionals, and it avoids inductors collecting data that the collective has decided not to collect. Also update `manage_add_walkin` to skip validation for hidden fields.
+
+---
+
+**Settings UI (`manage/settings.html`):**
+
+Add a "Sign-up form fields" section. Use a small table with radio buttons — three columns (Hidden / Optional / Required) and one row per configurable field:
+
+```
+Sign-up form fields
+┌──────────────┬────────┬──────────┬──────────┐
+│ Field        │ Hidden │ Optional │ Required │
+├──────────────┼────────┼──────────┼──────────┤
+│ Last name    │   ○    │    ○     │    ●     │
+│ Phone number │   ○    │    ●     │    ○     │
+│ Address      │   ○    │    ●     │    ○     │
+│ Postcode     │   ○    │    ●     │    ○     │
+└──────────────┴────────┴──────────┴──────────┘
+```
+
+These are ModelForm fields — use `RadioSelect` widgets in `InductionsSettingsForm.Meta.widgets`.
+
+---
+
+**Edge cases:**
+
+- Last name hidden → `get_name()` returns just first name. Account username derived from first name only (already handled by the `parts[-1]` logic, which returns `''` for a single-word name).
+- Address hidden but postcode shown (or vice versa) → independent, fine.
+- All contact fields hidden → form just asks first name, last name (if shown), email, consent. Minimal collection, which is a valid configuration.
+- Settings cache → `InductionsSettings.save()` already invalidates `_CACHE_KEY`; changes propagate to the form on the next request.
+
+**Out of scope:** Per-session field configuration (site-wide setting only). Custom questions are already per-session via `InductionSession.custom_questions`.
+
+**Related:** 9.4 (induction workflow), 9.142 (session capacity)
+
+---
+
+### 9.145 — Induction public pages: information quality pass 🟢 XS (2–4h)
+
+**Background.** The old S&S induction info page (a static Google Doc / website page) told prospective volunteers several things the new signup flow doesn't communicate: how long the session is, that there's a building tour, that they need to be 18+, and who to contact. The 18+ requirement is now enforced via a checkbox on both signup forms (shipped 2026-06-25). The remaining items are small, independent improvements.
+
+---
+
+**a) Per-session notes field shown on the signup page**
+
+Add `notes = models.TextField(blank=True)` to `InductionSession`. Show it on the public signup page, between the date/location line and the form, if non-empty. No special rendering — plain paragraph(s).
+
+Inductors can use this for anything session-specific: "This session runs for about 90 minutes and includes a short building tour." Or capacity warnings, parking notes, etc. Keep it freeform — don't try to structure duration/tour as separate fields.
+
+- Migration: one `AddField`.
+- `InductionSessionForm`: add `notes` to `Meta.fields` with a `Textarea` widget.
+- `signup.html`: `{% if session.notes %}<div class="signup-intro">{{ session.notes|linebreaksbr }}</div>{% endif %}` after the date/location line.
+
+**b) Public contact email on signup and thanks pages**
+
+Add `public_contact_email = models.EmailField(blank=True)` to `InductionsSettings`. Distinct from `organiser_notification_email` (which is internal, for new-signup alerts) — this one is shown to the public.
+
+When set, show it at the foot of:
+- The signup page (below the form, above the 1:1 link): "Questions? Email [inductions@starandshadow.org.uk](mailto:...)"
+- The signup thanks page: same line, so people know who to contact if they need to cancel.
+- The access-needs thanks page: same.
+
+If blank, show nothing. No default — forces an explicit decision.
+
+- Migration: one `AddField`.
+- `InductionsSettingsForm`: add field (renders as `<input type="email">`).
+- Pass `public_contact_email` (or the full `cfg`) in the context for `signup`, `signup_thanks`, `access_needs_thanks` views — all already have `session` or `cfg` available.
+
+**c) "Session full" page already links to other sessions** — no action needed. `signup_full.html` already has "View other upcoming induction sessions" → `/inductions/`. Confirmed present, nothing to do.
+
+---
+
+**Out of scope here:** Facebook/programme links (external, S&S-specific, better handled via the `notes` field in (a) than hardcoded). Session duration as a structured model field (overkill — freeform notes covers it).
+
+**Related:** 9.4 (induction workflow), 9.144 (configurable form fields)

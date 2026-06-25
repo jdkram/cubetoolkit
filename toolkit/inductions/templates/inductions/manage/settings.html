@@ -1,80 +1,472 @@
 {% extends "base_admin.html" %}
 {% block title %}Inductions settings{% endblock %}
 
+{% block css %}
+{{ block.super }}
+<style>
+  .config-layout {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+  }
+  .config-nav {
+    flex: 0 0 13rem;
+    position: sticky;
+    top: 5rem;
+    max-height: calc(100vh - 6rem);
+    overflow-y: auto;
+  }
+  .config-nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .config-nav li + li {
+    border-top: 1px solid #dee2e6;
+  }
+  .config-nav a {
+    display: block;
+    padding: 0.45rem 0.75rem;
+    font-size: 0.83rem;
+    color: #495057;
+    text-decoration: none;
+    border-radius: 4px;
+  }
+  .config-nav a:hover {
+    background: #f0f4f8;
+    color: #212529;
+  }
+  .config-nav-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #6c757d;
+    padding: 0.5rem 0.75rem 0.3rem;
+  }
+  .config-content {
+    flex: 1;
+    min-width: 0;
+  }
+  .config-section {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+    scroll-margin-top: 5rem;
+  }
+  .config-section-header {
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 0.65rem 1rem;
+    border-bottom: 1px solid #dee2e6;
+    background: #f8f9fa;
+    border-radius: 6px 6px 0 0;
+  }
+  .config-section-body {
+    padding: 1rem 1rem 0.25rem;
+  }
+  .config-section .form-text {
+    color: #666;
+    font-size: 0.83em;
+    margin-top: 0.2rem;
+  }
+  .config-section input[type="text"],
+  .config-section input[type="url"],
+  .config-section input[type="email"],
+  .config-section input[type="number"],
+  .config-section textarea {
+    max-width: 38rem;
+    width: 100%;
+  }
+  .config-section input[type="number"] {
+    max-width: 8rem;
+    width: auto;
+  }
+  .email-section-footer {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid #dee2e6;
+    background: #f8f9fa;
+    border-radius: 0 0 6px 6px;
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .var-pill {
+    cursor: pointer;
+    text-decoration: underline dotted;
+    font-size: 0.82em;
+  }
+  .var-pill:hover {
+    background: #e9ecef;
+    border-radius: 3px;
+  }
+  .preview-status {
+    font-size: 0.82rem;
+    color: #6c757d;
+  }
+  .preview-status.ok { color: #198754; }
+  .preview-status.err { color: #dc3545; }
+  @media (max-width: 767px) {
+    .config-layout { flex-direction: column; }
+    .config-nav { position: static; max-height: none; flex: none; width: 100%; }
+  }
+</style>
+{% endblock %}
+
+{% block script %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // Bootstrap tooltip initialisation for variable pills
+  var tooltipEls = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+  tooltipEls.forEach(function (el) {
+    new bootstrap.Tooltip(el, { placement: 'top', trigger: 'hover focus' });
+  });
+
+  // Variable pill insertion.
+  // mousedown + preventDefault keeps focus (and cursor position) on the active textarea,
+  // so selectionStart/selectionEnd are still valid when we read them.
+  document.addEventListener('mousedown', function (e) {
+    var pill = e.target.closest('.var-pill');
+    if (!pill) return;
+
+    var active = document.activeElement;
+    var section = pill.closest('.config-section');
+    if (!section || !section.contains(active)) return;
+    if (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA') return;
+
+    e.preventDefault(); // keep focus on the field
+
+    var text = pill.textContent;
+    var start = active.selectionStart;
+    var end   = active.selectionEnd;
+    active.value = active.value.substring(0, start) + text + active.value.substring(end);
+    active.selectionStart = active.selectionEnd = start + text.length;
+    active.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
+  // AJAX handler for the organiser notification test button
+  var notifBtn = document.getElementById('send-notification-test-btn');
+  if (notifBtn) {
+    notifBtn.addEventListener('click', function () {
+      var statusEl = document.getElementById('notification-test-status');
+      notifBtn.disabled = true;
+      if (statusEl) { statusEl.textContent = 'Sending…'; statusEl.className = 'preview-status'; }
+      var formData = new FormData();
+      formData.append('template_type', 'notification');
+      formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+      fetch('{{ test_email_url }}', { method: 'POST', body: formData })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          notifBtn.disabled = false;
+          if (statusEl) {
+            statusEl.textContent = data.ok ? ('✓ Sent to ' + data.recipient) : ('✗ ' + (data.error || 'Failed'));
+            statusEl.className = 'preview-status ' + (data.ok ? 'ok' : 'err');
+          }
+        })
+        .catch(function () {
+          notifBtn.disabled = false;
+          if (statusEl) { statusEl.textContent = '✗ Request failed'; statusEl.className = 'preview-status err'; }
+        });
+    });
+  }
+
+  // AJAX handler for "Send preview to my email" buttons
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.send-preview-btn');
+    if (!btn) return;
+    var templateType = btn.dataset.templateType;
+    var statusEl = btn.closest('.email-section-footer').querySelector('.preview-status');
+
+    btn.disabled = true;
+    if (statusEl) { statusEl.textContent = 'Sending…'; statusEl.className = 'preview-status'; }
+
+    var formData = new FormData();
+    formData.append('template_type', templateType);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+    fetch('{{ test_email_url }}', { method: 'POST', body: formData })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        btn.disabled = false;
+        if (data.ok) {
+          if (statusEl) {
+            statusEl.textContent = '✓ Sent to ' + data.recipient;
+            statusEl.className = 'preview-status ok';
+          }
+        } else {
+          if (statusEl) {
+            statusEl.textContent = '✗ ' + (data.error || 'Failed');
+            statusEl.className = 'preview-status err';
+          }
+        }
+      })
+      .catch(function () {
+        btn.disabled = false;
+        if (statusEl) {
+          statusEl.textContent = '✗ Request failed';
+          statusEl.className = 'preview-status err';
+        }
+      });
+  });
+});
+</script>
+{% endblock %}
+
 {% block body %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h2>Inductions settings</h2>
   <a href="{% url "inductions:manage_session_list" %}" class="btn btn-outline-secondary btn-sm">Back to sessions</a>
 </div>
 
-<form method="post" style="max-width: 700px;">
+{# Main settings form — must not contain any nested <form> tags. #}
+{# See feedback_nested_forms memory: nesting forms causes the browser to close the outer #}
+{# form at the inner </form>, silently discarding all fields below it. #}
+<form method="post" id="settings-form" novalidate>
   {% csrf_token %}
 
-  <h5>General</h5>
-  {% for field in form %}{% if field.name in "inductions_enabled,induction_purge_days,organiser_notification_email" %}
-  <div class="mb-3">
-    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-    {{ field }}
-    {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-    {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-  </div>
-  {% endif %}{% endfor %}
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+  {% endif %}
 
-  <h5 class="mt-4">Welcome pack</h5>
-  <p class="text-muted small">Linked in the welcome email sent to attendees when they're checked in.</p>
-  {% for field in form %}{% if field.name in "welcome_pack_url,welcome_pack_label" %}
-  <div class="mb-3">
-    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-    {{ field }}
-    {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-    {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-  </div>
-  {% endif %}{% endfor %}
+  <div class="config-layout">
 
-  <hr>
-  <p class="text-muted small">
-    Email templates. Leave blank to use the built-in defaults.<br>
-    Available variables: <code>{name}</code> <code>{venue}</code> <code>{session_title}</code>
-    <code>{session_date}</code> <code>{session_location}</code> <code>{calendar_url}</code>
-    <code>{password_url}</code> <code>{validity}</code> <code>{welcome_pack_section}</code>
-  </p>
+    <nav class="config-nav" aria-label="Jump to section">
+      <div class="config-nav-label">Jump to</div>
+      <ul>
+        <li><a href="#section-general">General</a></li>
+        <li><a href="#section-notifications">Notifications</a></li>
+        <li><a href="#section-access">1:1 requests</a></li>
+        <li><a href="#section-welcome-pack">Welcome pack</a></li>
+        <li><a href="#section-email-confirmation">Confirmation email</a></li>
+        <li><a href="#section-email-reminder">Reminder email</a></li>
+        <li><a href="#section-email-welcome">Welcome email</a></li>
+        <li><a href="#section-email-access">Access needs email</a></li>
+      </ul>
+    </nav>
 
-  <h5>Sign-up confirmation email</h5>
-  {% for field in form %}{% if field.name in "confirmation_email_subject,confirmation_email_body" %}
-  <div class="mb-3">
-    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-    {{ field }}
-    {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-  </div>
-  {% endif %}{% endfor %}
+    <div class="config-content">
 
-  <h5>Reminder email (3 days before)</h5>
-  {% for field in form %}{% if field.name in "reminder_email_subject,reminder_email_body" %}
-  <div class="mb-3">
-    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-    {{ field }}
-    {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-  </div>
-  {% endif %}{% endfor %}
+      <div class="config-section" id="section-general">
+        <div class="config-section-header">General</div>
+        <div class="config-section-body">
+          {% for field in form %}{% if field.name in "inductions_enabled,induction_purge_days,default_max_signups,privacy_policy_url" %}
+          <div class="mb-3">
+            {% if field.field.widget.input_type == "checkbox" %}
+              <div class="form-check">
+                {{ field }}
+                <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              </div>
+            {% else %}
+              <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+            {% endif %}
+            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+            {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+          </div>
+          {% endif %}{% endfor %}
+        </div>
+      </div>
 
-  <h5>Welcome email (on check-in)</h5>
-  {% for field in form %}{% if field.name in "welcome_email_subject,welcome_email_body" %}
-  <div class="mb-3">
-    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-    {{ field }}
-    {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-  </div>
-  {% endif %}{% endfor %}
+      <div class="config-section" id="section-notifications">
+        <div class="config-section-header">Organiser notifications</div>
+        <div class="config-section-body">
+          <p class="text-muted small mt-1">Notifications are sent when someone submits a 1:1 induction request, when a session reaches capacity, and optionally on every new sign-up.</p>
+          {% for field in form %}{% if field.name in "organiser_notification_email,notify_on_each_signup" %}
+          <div class="mb-3">
+            {% if field.field.widget.input_type == "checkbox" %}
+              <div class="form-check">
+                {{ field }}
+                <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              </div>
+            {% else %}
+              <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+            {% endif %}
+            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+            {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+          </div>
+          {% endif %}{% endfor %}
+        </div>
+        <div class="email-section-footer">
+          <span class="text-muted small">Sends a test to the organiser address above to confirm delivery is working.</span>
+          <span class="ms-auto d-flex align-items-center gap-2">
+            <span class="preview-status" id="notification-test-status"></span>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="send-notification-test-btn">Send test notification</button>
+          </span>
+        </div>
+      </div>
 
-  <h5>Access needs acknowledgement email</h5>
-  {% for field in form %}{% if field.name in "access_needs_ack_subject,access_needs_ack_body" %}
-  <div class="mb-3">
-    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-    {{ field }}
-    {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-  </div>
-  {% endif %}{% endfor %}
+      <div class="config-section" id="section-access">
+        <div class="config-section-header">1:1 induction request page</div>
+        <div class="config-section-body">
+          <p class="text-muted small mt-1">Controls the public 1:1 induction request form. Disable if you don't currently offer 1:1 inductions.</p>
+          {% for field in form %}{% if field.name in "access_needs_enabled,access_needs_intro_text" %}
+          <div class="mb-3">
+            {% if field.field.widget.input_type == "checkbox" %}
+              <div class="form-check">
+                {{ field }}
+                <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              </div>
+            {% else %}
+              <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+            {% endif %}
+            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+            {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+          </div>
+          {% endif %}{% endfor %}
+        </div>
+      </div>
 
-  <button type="submit" class="btn btn-primary">Save settings</button>
+      <div class="config-section" id="section-welcome-pack">
+        <div class="config-section-header">Welcome pack</div>
+        <div class="config-section-body">
+          <p class="text-muted small mt-1">Linked in the welcome email sent to attendees when they're checked in.</p>
+          {% for field in form %}{% if field.name in "welcome_pack_url,welcome_pack_label" %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+            {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+          </div>
+          {% endif %}{% endfor %}
+        </div>
+      </div>
+
+      {# ── Email templates ─────────────────────────────────────── #}
+
+      <div class="config-section" id="section-email-confirmation">
+        <div class="config-section-header">Sign-up confirmation email</div>
+        <div class="config-section-body">
+          <p class="text-muted small mt-1">Sent immediately when someone completes the public sign-up form. Leave subject/body blank to use the built-in defaults.</p>
+          {% for field in form %}{% if field.name in "confirmation_email_subject,confirmation_email_body" %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+          </div>
+          {% endif %}{% endfor %}
+        </div>
+        <div class="email-section-footer">
+          <span class="text-muted small me-1">Variables (click to insert):</span>
+          <code class="var-pill" data-bs-toggle="tooltip" data-bs-title="e.g. {{ sample_vars.name }}">{name}</code>
+          <code class="var-pill" data-bs-toggle="tooltip" data-bs-title="e.g. {{ sample_vars.venue }}">{venue}</code>
+          <code class="var-pill" data-bs-toggle="tooltip" data-bs-title="e.g. {{ sample_vars.session_title }}">{session_title}</code>
+          <code class="var-pill" data-bs-toggle="tooltip" data-bs-title="e.g. {{ sample_vars.session_date }}">{session_date}</code>
+          <code class="var-pill" data-bs-toggle="tooltip" data-bs-title="e.g. {{ sample_vars.session_location }}">{session_location}</code>
+          <code class="var-pill" data-bs-toggle="tooltip" data-bs-title="e.g. {{ sample_vars.calendar_url }}">{calendar_url}</code>
+          <span class="ms-auto d-flex align-items-center gap-2">
+            <span class="preview-status"></span>
+            {% if user_email %}
+            <button type="button" class="btn btn-outline-secondary btn-sm send-preview-btn" data-template-type="confirmation">Send preview to my email</button>
+            {% else %}
+            <span class="text-muted small">(add an email to your account to use preview)</span>
+            {% endif %}
+          </span>
+        </div>
+      </div>
+
+      <div class="config-section" id="section-email-reminder">
+        <div class="config-section-header">Reminder email (sent ~3 days before the session)</div>
+        <div class="config-section-body">
+          <p class="text-muted small mt-1">Sent automatically when the <code>send_induction_reminders</code> management command runs. Leave blank for the built-in default.</p>
+          {% for field in form %}{% if field.name in "reminder_email_subject,reminder_email_body" %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+          </div>
+          {% endif %}{% endfor %}
+        </div>
+        <div class="email-section-footer">
+          <span class="text-muted small me-1">Variables (click to insert):</span>
+          <code class="var-pill" data-bs-toggle="tooltip" data-bs-title="e.g. {{ sample_vars.name }}">{name}</code>
+          <code class="var-pill" data-bs-toggle="tooltip" data-bs-title="e.g. {{ sample_vars.venue }}">{venue}</code>
+          <code class="var-pill" data-bs-toggle="tooltip" data-bs-title="e.g. {{ sample_vars.session_title }}">{session_title}</code>
+          <code class="var-pill" data-bs-toggle="tooltip" data-bs-title="e.g. {{ sample_vars.session_date }}">{session_date}</code>
+          <code class="var-pill" data-bs-toggle="tooltip" data-bs-title="e.g. {{ sample_vars.session_location }}">{session_location}</code>
+          <code class="var-pill" data-bs-toggle="tooltip" data-bs-title="e.g. {{ sample_vars.calendar_url }}">{calendar_url}</code>
+          <span class="ms-auto d-flex align-items-center gap-2">
+            <span class="preview-status"></span>
+            {% if user_email %}
+            <button type="button" class="btn btn-outline-secondary btn-sm send-preview-btn" data-template-type="reminder">Send preview to my email</button>
+            {% else %}
+            <span class="text-muted small">(add an email to your account to use preview)</span>
+            {% endif %}
+          </span>
+        </div>
+      </div>
+
+      <div class="config-section" id="section-email-welcome">
+        <div class="config-section-header">Welcome email (sent when accounts are created)</div>
+        <div class="config-section-body">
+          <p class="text-muted small mt-1">Sent to each attendee when their volunteer account is created from the session detail page. The <code>{password_url}</code> link lets them set their password. Leave blank for the built-in default.</p>
+          {% for field in form %}{% if field.name in "welcome_email_subject,welcome_email_body" %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+          </div>
+          {% endif %}{% endfor %}
+        </div>
+        <div class="email-section-footer">
+          <span class="text-muted small me-1">Variables (click to insert):</span>
+          <code class="var-pill" data-bs-toggle="tooltip" data-bs-title="e.g. {{ sample_vars.name }}">{name}</code>
+          <code class="var-pill" data-bs-toggle="tooltip" data-bs-title="e.g. {{ sample_vars.username }}">{username}</code>
+          <code class="var-pill" data-bs-toggle="tooltip" data-bs-title="e.g. {{ sample_vars.venue }}">{venue}</code>
+          <code class="var-pill" data-bs-toggle="tooltip" data-bs-title="e.g. {{ sample_vars.session_title }}">{session_title}</code>
+          <code class="var-pill" data-bs-toggle="tooltip" data-bs-title="Link expires after: {{ sample_vars.validity }}">{password_url}</code>
+          <code class="var-pill" data-bs-toggle="tooltip" data-bs-title="e.g. {{ sample_vars.validity }}">{validity}</code>
+          <code class="var-pill" data-bs-toggle="tooltip" data-bs-title="Link to the password reset form">{password_reset_url}</code>
+          <code class="var-pill" data-bs-toggle="tooltip" data-bs-title="e.g. {{ sample_vars.welcome_pack_url }}">{welcome_pack_url}</code>
+          <span class="ms-auto d-flex align-items-center gap-2">
+            <span class="preview-status"></span>
+            {% if user_email %}
+            <button type="button" class="btn btn-outline-secondary btn-sm send-preview-btn" data-template-type="welcome">Send preview to my email</button>
+            {% else %}
+            <span class="text-muted small">(add an email to your account to use preview)</span>
+            {% endif %}
+          </span>
+        </div>
+      </div>
+
+      <div class="config-section" id="section-email-access">
+        <div class="config-section-header">Access needs acknowledgement email</div>
+        <div class="config-section-body">
+          <p class="text-muted small mt-1">Sent to someone after they submit a 1:1 induction request. Leave blank for the built-in default.</p>
+          {% for field in form %}{% if field.name in "access_needs_ack_subject,access_needs_ack_body" %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+          </div>
+          {% endif %}{% endfor %}
+        </div>
+        <div class="email-section-footer">
+          <span class="text-muted small me-1">Variables (click to insert):</span>
+          <code class="var-pill" data-bs-toggle="tooltip" data-bs-title="e.g. {{ sample_vars.name }}">{name}</code>
+          <code class="var-pill" data-bs-toggle="tooltip" data-bs-title="e.g. {{ sample_vars.venue }}">{venue}</code>
+          <span class="ms-auto d-flex align-items-center gap-2">
+            <span class="preview-status"></span>
+            {% if user_email %}
+            <button type="button" class="btn btn-outline-secondary btn-sm send-preview-btn" data-template-type="access_needs_ack">Send preview to my email</button>
+            {% else %}
+            <span class="text-muted small">(add an email to your account to use preview)</span>
+            {% endif %}
+          </span>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <button type="submit" class="btn btn-primary">Save settings</button>
+      </div>
+
+    </div>{# end .config-content #}
+  </div>{# end .config-layout #}
+
 </form>
+
 {% endblock %}

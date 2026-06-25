@@ -272,7 +272,7 @@ class TestWelcomeCardAndDashboard(PoolManagementBase):
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, "volunteer_pool_health.html")
         # Three-tier sections are present.
-        self.assertContains(resp, "Never onboarded")
+        self.assertContains(resp, "Never logged in")
         self.assertContains(resp, "Long inactive")
         self.assertContains(resp, "Recently dormant")
 
@@ -436,6 +436,7 @@ class TestLastGaspEmail(PoolManagementBase):
     def setUp(self):
         super().setUp()
         config = get_site_config()
+        config.last_gasp_email_enabled = True
         config.last_gasp_email_subject = "Still with us, {name}?"
         config.last_gasp_email_body = "Hi {name}, we miss you at {venue}."
         config.last_gasp_cooldown_days = 30

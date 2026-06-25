@@ -1,0 +1,128 @@
+{% extends 'base_admin.html' %}
+{% block title %}Confirm bulk deletion{% endblock %}
+{% block css %}
+{{ block.super }}
+<style>
+    .danger-box {
+        border: 2px solid #dc3545;
+        border-radius: 0.375rem;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.5rem;
+        background: #fff5f5;
+    }
+    .warning-box {
+        border: 2px solid #ffc107;
+        border-radius: 0.375rem;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.5rem;
+        background: #fffdf0;
+    }
+    .confirm-phrase {
+        font-family: monospace;
+        font-size: 1.05em;
+        background: #f8f9fa;
+        padding: 0.2em 0.5em;
+        border-radius: 0.25rem;
+        border: 1px solid #dee2e6;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<h2>Confirm bulk deletion</h2>
+
+{% if to_delete %}
+<div class="danger-box">
+  <strong>This cannot be undone.</strong>
+  The following {{ delete_count }} account{{ delete_count|pluralize }} will be
+  <strong>permanently deleted</strong> — name, email, member record, login account, and
+  all associated data removed entirely. These volunteers never logged in and have no
+  rota history.
+</div>
+
+<h3>To be deleted ({{ delete_count }})</h3>
+<table class="table table-sm table-striped" style="margin-bottom: 1.5rem; max-width: 40rem;">
+  <thead>
+    <tr><th>Name</th><th>Inducted</th></tr>
+  </thead>
+  <tbody>
+    {% for v in to_delete %}
+    <tr>
+      <td>{{ v.member.name }}</td>
+      <td>{{ v.created_at|date:"d/m/Y" }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if to_anonymise %}
+<div class="warning-box">
+  <strong>{{ anonymise_count }} account{{ anonymise_count|pluralize }} cannot be deleted</strong>
+  — they either have rota entries, or a last-gasp re-engagement email was sent to them (so they
+  had a chance to respond and the contact is on record). These will be
+  <strong>anonymised instead</strong>: personal data erased, rota history preserved.
+</div>
+
+<h3>To be anonymised instead ({{ anonymise_count }})</h3>
+<table class="table table-sm table-striped" style="margin-bottom: 1.5rem; max-width: 40rem;">
+  <thead>
+    <tr><th>Name</th><th>Rota entries</th><th>Last-gasp emails</th></tr>
+  </thead>
+  <tbody>
+    {% for v in to_anonymise %}
+    <tr>
+      <td>{{ v.member.name }}</td>
+      <td>{% if v.rota_count %}{{ v.rota_count }}{% else %}&mdash;{% endif %}</td>
+      <td>{% if v.gasp_count %}{{ v.gasp_count }}{% else %}&mdash;{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if not to_delete %}
+<p>There are no accounts eligible for deletion (all have rota history). Cancelling.</p>
+<a href="{% url "view-volunteer-pool-health" %}" class="btn btn-secondary">Back</a>
+{% else %}
+<form method="post" action="{% url "bulk-delete-never-onboarded" %}">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="confirm">
+  {% for v in to_delete %}
+  <input type="hidden" name="volunteer_ids" value="{{ v.pk }}">
+  {% endfor %}
+  {% for v in to_anonymise %}
+  <input type="hidden" name="volunteer_ids" value="{{ v.pk }}">
+  {% endfor %}
+
+  <div class="mb-3">
+    <label for="confirm_phrase" class="form-label">
+      To confirm, type exactly: <span class="confirm-phrase">{{ expected_phrase }}</span>
+    </label>
+    <input type="text" id="confirm_phrase" name="confirm_phrase"
+           class="form-control" style="max-width: 24rem;"
+           autocomplete="off" spellcheck="false">
+  </div>
+
+  <div style="display:flex; gap:0.75rem; align-items:center;">
+    <button type="submit" class="btn btn-danger" id="confirm-btn" disabled>
+      Delete {{ delete_count }} volunteer{{ delete_count|pluralize }}{% if anonymise_count %} (+ anonymise {{ anonymise_count }}){% endif %}
+    </button>
+    <a href="{% url "view-volunteer-pool-health" %}" class="btn btn-secondary">Cancel</a>
+  </div>
+</form>
+
+{{ expected_phrase|json_script:"expected-phrase" }}
+<script>
+(function () {
+    var input = document.getElementById('confirm_phrase');
+    var btn = document.getElementById('confirm-btn');
+    var expected = JSON.parse(document.getElementById('expected-phrase').textContent);
+
+    input.addEventListener('input', function () {
+        btn.disabled = input.value.trim() !== expected;
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

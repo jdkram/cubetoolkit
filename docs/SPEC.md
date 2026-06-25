@@ -536,12 +536,25 @@ Use this for:
 
 #### Volunteer status, login access and suspension
 
-A volunteer's lifecycle is a **status** change made on their profile page; `status` is the single canonical control. There are four values:
+A volunteer's lifecycle is a **status** change made on their profile page; `status` is the single canonical control. There are five statuses:
 
 - **Active** — on the rota, receives mailouts, can log in. The normal state.
 - **Dormant** — taking a break, or gone quiet: off the rota and mailouts, but **can still log in and sign up for shifts** (it is a soft label, not a restriction). Reversible. Set by hand, or applied automatically by the `auto_dormancy` command (see below).
 - **Retired** — has left the team: off the rota and mailouts, but **can still log in** to view their own record. The `User` is retained for rota history and audit purposes; it is never deleted by a status change.
 - **Suspended** — a **safeguarding hold**. Setting this immediately disables the linked Django `User` account (`user.is_active = False`, which drops any live session on the next request), removes the volunteer from every **future** rota entry, and takes them off the rota and mailouts. Reversible.
+- **Anonymised** — GDPR erasure applied. All PII on the Member, Volunteer, and User records is overwritten with placeholders; rota history is kept (with name replaced) for accountability; `User.is_active` is set False. Effectively the "delete" for a volunteer — prefer this over hard deletion when rota history matters (see §[GDPR anonymisation](#gdpr-anonymisation-account-wiping)). **Irreversible.**
+
+Quick reference:
+
+| Status | Login | Rota & mailouts | How you get there | How you leave |
+|---|---|---|---|---|
+| **Active** | ✅ | ✅ | Default for new volunteers; restored by panopticon or self-service | Auto-dormancy (→ Dormant); panopticon (→ Dormant / Retired / Suspended) |
+| **Dormant** | ✅ | ❌ | Auto-dormancy; panopticon | **Volunteer self-service** via dashboard "I'm back" button (→ Active); panopticon restore (→ Active); anonymise once past retention window |
+| **Retired** | ✅ | ❌ | Panopticon only | Panopticon only (→ Active / Dormant); anonymise once past retention window |
+| **Suspended** | ❌ | ❌ | Panopticon only (reason required) | Panopticon only (→ Active / Dormant / Retired); note: future rota slots are **not** restored |
+| **Anonymised** | ❌ | ❌ | Panopticon, after retention window | Irreversible |
+
+Self-service reactivation is intentionally limited to **Dormant only** — Retired and Suspended reflect deliberate admin decisions and require a panopticon to reverse.
 
 Login access is driven by `status` and `Volunteer.save()` keeps `user.is_active` in step: it forces it off on suspension and restores it when a suspended volunteer is moved back to any other status. It only ever *restores* login on the suspend→other transition, so it never silently re-enables an account disabled for another reason (e.g. GDPR anonymisation). There is no separate manual "login enabled" toggle on the profile — it was removed so the two could not drift apart. The Django admin remains as a last-resort manual override.
 
@@ -1132,6 +1145,43 @@ this space unescorted during events
 | **Loft space** | Includes access via corridors with ladders. **Safety note:** dangerous when the public are present. |
 | **Tech storage cupboard** | Off the main Venue. Keycode doors. |
 | **Bar** | Physically part of the Venue but bookable as a separate resource. Can be shared between concurrent events (e.g. a gig and a film running simultaneously). |
+
+#### InductionSession
+A sign-up session (group induction or 1:1). Has a public slug-based sign-up URL.
+
+- `title`, `date`, `location`, `session_type` (regular / small_group / one_to_one), `status` (open / closed / purged)
+- `max_signups` — per-session cap; falls back to `InductionsSettings.default_max_signups`; `None` = no cap
+- `custom_questions` — JSON array of extra questions rendered on the public sign-up form
+- `slug` — auto-generated from title + `{month day}` (not including year, since titles already include it)
+- `purge_after` — date after which pending/no-show PII is nulled by `purge_induction_signups`
+
+#### InductionSignup
+A sign-up record created when someone registers for a session.
+
+- `name`, `email`, `status` (pending / checked_in / no_show), `custom_responses` (JSON)
+- `volunteer` — FK to `Volunteer` (null until account created); once set, status is irreversible
+- `desired_username` — optional preferred login name; auto-generated as `FirstLast` if blank
+- `preview_username` — `@property`: returns `desired_username` or auto-generated `FirstLast` preview
+- `signed_up_at`, `checked_in_at`, `checked_in_by`
+- GDPR: `signed_up_at` timestamp serves as consent record; PII nulled on purge
+
+#### InductionRequest
+A 1:1 access-needs request (separate from group sessions).
+
+- `name`, `email`, `access_needs`, `rough_availability`
+- `status` (pending / contacted / scheduled / completed / declined / purged)
+- `linked_session`, `volunteer`, `notes`, `purge_after`
+
+#### InductionsSettings
+Singleton (pk=1) configuration for the inductions feature.
+
+- `inductions_enabled` — feature toggle; all public induction URLs return 404 when off
+- `induction_purge_days` — days after session date before pending/no-show records are purged
+- `default_max_signups` — site-wide cap fallback (nullable = no cap)
+- `privacy_policy_url` — linked from the GDPR consent checkbox on the sign-up form
+- `access_needs_intro_text` — configurable intro paragraph on the 1:1 request form
+- `organiser_notification_email` — receives new sign-up notifications and 1:1 request acknowledgements
+- Email template fields for confirmation, reminder, welcome, and access-needs acknowledgement emails
 
 ---
 

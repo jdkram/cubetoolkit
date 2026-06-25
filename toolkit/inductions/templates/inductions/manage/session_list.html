@@ -5,10 +5,17 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h2>Induction sessions</h2>
   <div>
+    <a href="{% url "inductions:session_list_public" %}" class="btn btn-outline-secondary btn-sm me-2" target="_blank" rel="noopener">Public listing ↗</a>
     <a href="{% url "inductions:manage_access_needs_list" %}" class="btn btn-outline-secondary btn-sm me-2">Access needs queue</a>
     <a href="{% url "inductions:manage_settings" %}" class="btn btn-outline-secondary btn-sm me-2">Settings</a>
     <a href="{% url "inductions:manage_session_new" %}" class="btn btn-primary btn-sm">New session</a>
   </div>
+</div>
+
+<div class="alert alert-info py-2 mb-3 small">
+  <strong>Linking inductions to the diary</strong> &mdash;
+  For events with multiple induction dates, paste the public listing URL (<code>{% url "inductions:session_list_public" %}</code>) into the event copy and let volunteers pick their date.
+  If you want each diary event to link directly to one session, create a separate event per induction date (not multiple showings of the same event) &mdash; the <em>Volunteer Induction</em> event template makes this quick.
 </div>
 
 {% if sessions %}

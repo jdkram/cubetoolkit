@@ -2271,7 +2271,7 @@ class Command(BaseCommand):
         # 1:1 induction sessions and requests — access needs pathway
         _one_to_one_data = [
             {
-                "title": "1:1 Induction — Alex",
+                "title": "1:1 Induction",
                 "date_offset_weeks": 3,
                 "hour": 14,
                 "location": "Meeting room, Star and Shadow",
@@ -2289,7 +2289,7 @@ class Command(BaseCommand):
                 },
             },
             {
-                "title": "1:1 Induction — Sam",
+                "title": "1:1 Induction (2)",
                 "date_offset_weeks": 5,
                 "hour": 11,
                 "location": "Café area, Star and Shadow",

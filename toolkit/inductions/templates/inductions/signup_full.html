@@ -1,0 +1,15 @@
+{% extends "base_public.html" %}
+{% block title %}Session full — {{ session.title }}{% endblock %}
+
+{% block body %}
+<div style="max-width: 600px; margin: 2rem auto;">
+  <h2>This session is full</h2>
+  <p>
+    Sorry, <strong>{{ session.title }}</strong> on
+    <strong>{{ session.date|date:"l j F Y" }}</strong> has reached its capacity.
+  </p>
+  <p>
+    <a href="{% url "inductions:session_list_public" %}">View other upcoming induction sessions</a>
+  </p>
+</div>
+{% endblock %}

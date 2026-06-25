@@ -1,0 +1,95 @@
+{% extends 'base_admin.html' %}
+{% block title %}Bulk last-gasp email{% endblock %}
+{% block css %}
+{{ block.super }}
+<style>
+  .recipient-table td, .recipient-table th { vertical-align: middle; }
+  .cooldown-row td { color: #6c757d; }
+  .compose-field { max-width: 48rem; }
+  .preview-hint { font-size: 0.85em; color: #6c757d; margin-top: 0.25rem; }
+</style>
+{% endblock %}
+
+{% block body %}
+<h2>Bulk last-gasp email</h2>
+<p><a href="{% url "view-volunteer-pool-health" %}">← Back to pool maintenance</a></p>
+
+<p style="color:#555; font-size:0.9em;">
+  This email gives volunteers a chance to re-engage before their records are anonymised.
+  A {{ cooldown_days }}-day cooldown applies per recipient — anyone already within that window will be skipped automatically.
+  <br>Use <code>{name}</code> and <code>{venue}</code> as placeholders; they are filled in per recipient at send time.
+</p>
+
+{% if cooldown_count %}
+<div class="alert alert-warning" style="max-width:48rem;">
+  <strong>{{ cooldown_count }} recipient{{ cooldown_count|pluralize }} in cooldown</strong> —
+  a last-gasp email was sent to them within the last {{ cooldown_days }} days.
+  They will be skipped when you send; only the {{ ready_count }} shown as ready will receive the email.
+</div>
+{% endif %}
+
+{% if not ready_count %}
+<div class="alert alert-secondary" style="max-width:48rem;">
+  All selected volunteers are within the cooldown window. There is nobody to email right now.
+  <p><a href="{% url "view-volunteer-pool-health" %}" class="btn btn-sm btn-secondary" style="margin-top:0.5rem;">Back to pool maintenance</a></p>
+</div>
+{% else %}
+
+<form method="post" action="{% url "bulk-last-gasp-email" %}">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="send">
+  {% for vid in volunteer_ids %}
+  <input type="hidden" name="volunteer_ids" value="{{ vid }}">
+  {% endfor %}
+
+  <div class="mb-3 compose-field">
+    <label for="id_subject" class="form-label">Subject</label>
+    <input type="text" id="id_subject" name="subject" class="form-control"
+           value="{{ default_subject }}" required>
+  </div>
+
+  <div class="mb-3 compose-field">
+    <label for="id_body" class="form-label">Body</label>
+    <textarea id="id_body" name="body" class="form-control" rows="10"
+              required>{{ default_body }}</textarea>
+    <p class="preview-hint">
+      Preview for first ready recipient:
+      <strong id="preview-name">{{ recipients.0.volunteer.member.name }}</strong> at
+      <strong>{{ venue }}</strong>.
+    </p>
+  </div>
+
+  <h3 style="margin-top:1.5rem;">Recipients ({{ recipients|length }})</h3>
+  <table class="table table-sm table-striped recipient-table" style="max-width:48rem; margin-bottom:1.5rem;">
+    <thead>
+      <tr><th>Name</th><th>Email</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      {% for r in recipients %}
+      <tr {% if r.in_cooldown %}class="cooldown-row"{% endif %}>
+        <td>
+          <a href="{% url "edit-volunteer" r.volunteer.pk %}">{{ r.volunteer.member.name }}</a>
+        </td>
+        <td>{{ r.volunteer.member.email }}</td>
+        <td>
+          {% if r.in_cooldown %}
+            <span class="text-muted">Skipped — emailed {{ r.recent_log.sent_at|timesince }} ago</span>
+          {% else %}
+            <span class="text-success">Ready</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div style="display:flex; gap:0.75rem; align-items:center;">
+    <button type="submit" class="btn btn-primary">
+      Send to {{ ready_count }} volunteer{{ ready_count|pluralize }}&hellip;
+    </button>
+    <a href="{% url "view-volunteer-pool-health" %}" class="btn btn-secondary">Cancel</a>
+  </div>
+</form>
+{% endif %}
+
+{% endblock %}

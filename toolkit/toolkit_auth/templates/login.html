@@ -2,19 +2,25 @@
 {% block title %}Volunteer sign in{% endblock %}
 
 {% block body %}
-<div class="login-card" style="max-width: 400px; margin: 0 auto; padding: 32px 24px; background: #fff; border-radius: 8px; box-shadow: 0 2px 16px rgba(0,0,0,0.08); text-align: center;">
-  <h2 style="margin-bottom: 24px;">Volunteer sign in</h2>
-  {{ form.name_of_field.errors }}
-  {% if message %} <p id="message">{{ message }}</p>{% endif %}
-  <form class="login-form" action="{% url 'login' %}" method="post" style="margin-bottom: 16px;">
+<div class="login-card">
+  <h1>Volunteer sign in</h1>
+  {% if message %}<p id="message">{{ message }}</p>{% endif %}
+  <form class="login-form" action="{% url 'login' %}" method="post">
       {% csrf_token %}
-      {{ form.as_p }}
-      <input type="submit" value="Continue" style="margin-top: 12px;" />
+      {% for field in form %}
+        <div class="login-field">
+          {{ field.label_tag }}
+          {{ field }}
+          <div class="login-error" id="{{ field.html_name }}_error"{% if not field.errors %} aria-hidden="true"{% endif %}>
+            {% if field.errors %}{{ field.errors }}{% endif %}
+          </div>
+        </div>
+      {% endfor %}
+      <input type="submit" value="Continue" class="login-submit" />
       <input type="hidden" name="next" value="{{ next }}" />
   </form>
   {% if VENUE.show_user_management %}
-      <p style="margin-top: 12px; font-size: 0.95em;">Forgot your password?
-      <a href="{% url "password_reset" %}">Reset password</a></p>
+      <p class="login-reset"><a href="{% url "password_reset" %}">Forgot your password?</a></p>
   {% endif %}
 </div>
 {% endblock %}

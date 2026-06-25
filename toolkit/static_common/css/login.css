@@ -1,12 +1,74 @@
-@media screen and (max-width: 500px) {
-    #id_username, #id_password {
-        width: 100%;
-        max-width: 500px;
-        font-size: 32px;
-    }
+.login-card {
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
+}
 
-    .login-form p {
-        font-size: 32px;
-        line-height: 1.48;
+.login-card h1 {
+    margin: 0 0 1.5rem;
+    text-align: center;
+}
+
+.login-field {
+    margin-bottom: 1rem;
+}
+
+.login-field label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+}
+
+.login-field input {
+    display: block;
+    width: 100%;
+    padding: 0.4rem 0.5rem;
+    font-size: 1rem;
+    border: 1px solid #999;
+}
+
+.login-field input:focus {
+    outline: 2px solid #082080;
+    outline-offset: 1px;
+}
+
+.login-submit {
+    display: block;
+    width: 100%;
+    margin-top: 1.25rem;
+    padding: 0.5rem 1rem;
+    background: #082080;
+    color: #fff;
+    font-size: 1rem;
+    border: none;
+    cursor: pointer;
+}
+
+.login-submit:hover,
+.login-submit:focus {
+    background: #0a2ea0;
+    outline: 2px solid #082080;
+    outline-offset: 2px;
+}
+
+.login-reset {
+    margin-top: 1rem;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+.login-error {
+    color: #c00;
+    font-size: 0.875rem;
+    margin: 0.25rem 0 0;
+}
+
+@media screen and (max-width: 500px) {
+    .login-field input,
+    .login-field label {
+        font-size: 1.5rem;
     }
 }

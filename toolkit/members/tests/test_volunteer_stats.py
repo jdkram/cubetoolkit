@@ -32,7 +32,6 @@ class VolunteerStatsViewTests(MembersTestsMixin, TestCase):
         super().setUp()
         cache.delete(SiteConfiguration._CACHE_KEY)
         self.url_own = reverse("volunteer-stats")
-        self.url_as = reverse("volunteer-stats-as", kwargs={"volunteer_id": self.vol_1.pk})
         self.role = Role.objects.create(name="Test Role", standard=True)
         self.event = Event.objects.create(name="Test Event")
 
@@ -55,16 +54,8 @@ class VolunteerStatsViewTests(MembersTestsMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "history")
 
-    def test_panopticon_can_view_other_volunteer(self):
-        self.client.login(username="admin", password="T3stPassword!")
-        response = self.client.get(self.url_as)
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Panopticon view")
-
-    def test_non_panopticon_cannot_view_other_volunteer(self):
-        self.client.login(username="vol2", password="testpass")
-        response = self.client.get(self.url_as)
-        self.assertEqual(response.status_code, 403)
+    # Stats are individual-only: the panopticon "view-as" override was removed
+    # (privacy decision), so there is deliberately no per-volunteer stats URL.
 
     # ── Zero shifts ───────────────────────────────────────────────────────────
 

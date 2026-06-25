@@ -2281,14 +2281,29 @@ class SiteConfiguration(models.Model):
     )
 
     # --- Last-gasp re-engagement email ---
+    last_gasp_email_enabled = models.BooleanField(
+        default=False,
+        verbose_name="Enable last-gasp email features",
+        help_text=(
+            "A last-gasp email is a final, optional re-engagement message sent to a volunteer "
+            "before their account is anonymised or deleted under data-retention rules — a courtesy "
+            "“we’re about to remove your data, here’s a chance to come back” note. "
+            "When enabled, the pool health page shows a button to send one to each purge candidate. "
+            "(The email-address export, for sending outside the toolkit, is always available regardless of this setting.)"
+        ),
+    )
     last_gasp_email_subject = models.CharField(
         max_length=200,
         blank=True,
-        help_text="Subject line for the last-gasp re-engagement email. Use {name} for the volunteer's name and {venue} for the venue name.",
+        help_text="Subject line. Use {name} for the volunteer's name and {venue} for the venue name.",
     )
     last_gasp_email_body = models.TextField(
         blank=True,
-        help_text="Body of the last-gasp email. Use {name} for the volunteer's name and {venue} for the venue name. Leave blank to disable sending.",
+        help_text=(
+            "Body text. Use {name} for the volunteer's name and {venue} for the venue name. "
+            "Can be left blank even when the feature is enabled — the compose page will still open "
+            "so you can write a message from scratch each time."
+        ),
     )
     last_gasp_cooldown_days = models.PositiveSmallIntegerField(
         default=30,

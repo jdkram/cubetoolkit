@@ -671,9 +671,9 @@ $(document).ready(function() {
             case 'n':
                 window.location.href = '{% url "add-event" %}';
                 break;
-            case '{':
+            case '[':
                 e.preventDefault(); navigateMonths(-1); break;
-            case '}':
+            case ']':
                 e.preventDefault(); navigateMonths(1); break;
             case 'j':
                 e.preventDefault();
@@ -696,7 +696,7 @@ $(document).ready(function() {
             ["j / k", "Navigate events (respects filter)"],
             ["o / Enter", "Open selected event"],
             ["n",     "New event"],
-            ["{ / }", "Previous / next month"],
+            ["[ / ]", "Previous / next month"],
             ["F",     "Toggle fullscreen"]
         ]}]);
     }
