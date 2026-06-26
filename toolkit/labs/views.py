@@ -1374,7 +1374,14 @@ def exchange_item(request, item_id):
         and hasattr(request.user, "volunteer")
         and item.owner_volunteer == request.user.volunteer
     )
-    return render(request, "labs/exchange_item.html", {"item": item, "can_edit": can_edit})
+    can_see_contact = request.user.is_superuser or (
+        item.added_by_id and item.added_by_id == request.user.pk
+    )
+    return render(request, "labs/exchange_item.html", {
+        "item": item,
+        "can_edit": can_edit,
+        "can_see_contact": can_see_contact,
+    })
 
 
 @login_required
@@ -1470,9 +1477,18 @@ def exchange_mark_on_loan(request, item_id):
     if item.status != ExchangeItem.STATUS_AVAILABLE:
         messages.warning(request, f"'{item.name}' isn't available to borrow right now.")
         return redirect("labs-exchange-item", item_id=item.pk)
+    borrowed_by_name = request.POST.get("borrowed_by_name", "").strip()
+    borrowed_by_contact = request.POST.get("borrowed_by_contact", "").strip()
+    if not borrowed_by_name:
+        messages.error(request, "Please enter your name so the owner knows who has the item.")
+        return redirect("labs-exchange-item", item_id=item.pk)
+    if not borrowed_by_contact:
+        messages.error(request, "Please enter a phone number or email so the owner can reach you if needed.")
+        return redirect("labs-exchange-item", item_id=item.pk)
     item.status = ExchangeItem.STATUS_ON_LOAN
     item.borrowed_by = request.user
-    item.borrowed_by_name = request.POST.get("borrowed_by_name", "").strip()
+    item.borrowed_by_name = borrowed_by_name
+    item.borrowed_by_contact = borrowed_by_contact
     item.save()
     messages.success(request, f"'{item.name}' marked as on loan.")
     return redirect("labs-exchange-item", item_id=item.pk)
@@ -1496,6 +1512,7 @@ def exchange_mark_returned(request, item_id):
     item.status = ExchangeItem.STATUS_AVAILABLE
     item.borrowed_by = None
     item.borrowed_by_name = ""
+    item.borrowed_by_contact = ""
     item.save()
     if was_missing:
         messages.success(request, f"'{item.name}' marked as found — available to borrow again.")

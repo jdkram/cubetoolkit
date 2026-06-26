@@ -544,6 +544,11 @@ class ProcurementPledge(models.Model):
     eta_date = models.DateField(null=True, blank=True)
     eta_notes = models.CharField(max_length=200, blank=True, default="", help_text="e.g. 'Friday cleaning club'")
     fulfilled_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_PLEDGED)
+    intended_supplier = models.ForeignKey(
+        Supplier, null=True, blank=True, on_delete=models.SET_NULL, related_name="pledges"
+    )
+    status_notes = models.CharField(max_length=300, blank=True, default="")
 
     class Meta:
         db_table = "labs_procurement_pledges"
@@ -771,6 +776,12 @@ class ExchangeItem(models.Model):
         blank=True,
         default="",
         help_text="Free-text name for verbal/in-person loans. Shown instead of username if set.",
+    )
+    borrowed_by_contact = models.CharField(
+        max_length=256,
+        blank=True,
+        default="",
+        help_text="Contact details provided by the borrower — visible only to the person who posted the listing.",
     )
     added_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
