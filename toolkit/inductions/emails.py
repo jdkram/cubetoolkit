@@ -1,20 +1,26 @@
-# human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]; status: "#ai-written"
-from django.conf import settings
-from django.contrib.auth.tokens import default_token_generator
+# human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]; status: "#ai-input"
+"""
+Outbound induction sign-up / reminder / welcome / acknowledgement emails.
+
+Subject + body templates are stored in InductionsSettings (admin-configurable)
+and rendered via _format with the vars dict assembled per Email type. The
+password-set URL is built via toolkit.toolkit_auth.password_emails so the
+token + venue lookup is shared with members' volunteer password flow and
+the post-check-in reset flow in inductions/views.
+"""
 from django.core.mail import send_mail
 from django.urls import reverse
-from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode
 
+from toolkit.toolkit_auth import password_emails
 from .models import get_inductions_settings
 
 
 def _venue():
-    return settings.VENUE.get("longname", settings.VENUE.get("name", ""))
+    return password_emails.venue_name()
 
 
 def _from_email():
-    return settings.VENUE.get("mailout_from_address") or settings.DEFAULT_FROM_EMAIL
+    return password_emails.from_email()
 
 
 def _format(template: str, **kwargs) -> str:
@@ -77,18 +83,18 @@ def send_reminder(request, signup):
 
 
 def send_welcome_email(request, signup, user):
-    """Welcome + password-set email sent when someone is checked in."""
+    """Welcome + password-set email sent when someone is checked in.
+
+    Subject + body are admin-configured templates (InductionsSettings); the
+    password-set URL itself is built via password_emails.build_password_reset_url
+    so the token + venue lookup are shared with the members reset flow.
+    """
     cfg = get_inductions_settings()
     session = signup.session
 
-    token = default_token_generator.make_token(user)
-    uid_b64 = urlsafe_base64_encode(force_bytes(user.pk))
-    password_url = request.build_absolute_uri(
-        reverse("password_reset_confirm", kwargs={"uidb64": uid_b64, "token": token})
-    )
+    password_url = password_emails.build_password_reset_url(request, user)
     password_reset_url = request.build_absolute_uri(reverse("password_reset"))
-    timeout_days = max(1, getattr(settings, "PASSWORD_RESET_TIMEOUT", 259200) // 86400)
-    validity = f"{timeout_days} day" if timeout_days == 1 else f"{timeout_days} days"
+    validity = password_emails.password_reset_validity()
 
     vars = {
         "name": signup.name,

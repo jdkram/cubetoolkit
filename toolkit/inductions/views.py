@@ -7,15 +7,13 @@ from datetime import datetime
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import User
-from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode
 from django.utils.text import slugify
+from toolkit.toolkit_auth import password_emails
 from django.views.decorators.http import require_POST
 
 from toolkit.toolkit_auth.decorators import panopticon_required
@@ -724,16 +722,16 @@ def _find_existing_volunteer(signup: InductionSignup):
 
 
 def _send_password_reset_email(request, user):
-    """Send a password-reset link to an existing volunteer account."""
-    token = default_token_generator.make_token(user)
-    uid_b64 = urlsafe_base64_encode(force_bytes(user.pk))
-    reset_url = request.build_absolute_uri(
-        reverse("password_reset_confirm", kwargs={"uidb64": uid_b64, "token": token})
-    )
-    timeout_days = max(1, getattr(settings, "PASSWORD_RESET_TIMEOUT", 259200) // 86400)
-    validity = f"{timeout_days} day" if timeout_days == 1 else f"{timeout_days} days"
-    venue = settings.VENUE.get("longname", settings.VENUE.get("name", ""))
-    from_email = settings.VENUE.get("mailout_from_address") or settings.DEFAULT_FROM_EMAIL
+    """Send a password-reset link to an existing volunteer account.
+
+    Inductions-specific copy (refers to inductor confirmation) — the shared
+    password_emails.send_password_set_email covers the members welcome/reset
+    flow with different wording; this Email keeps its own subject/body and
+    only reuses the token-building + venue lookup from password_emails.
+    """
+    reset_url = password_emails.build_password_reset_url(request, user)
+    validity = password_emails.password_reset_validity()
+    venue = password_emails.venue_name()
     name = user.first_name or user.username
     send_mail(
         subject=f"[{venue}] Log in to the toolkit",
@@ -744,7 +742,7 @@ def _send_password_reset_email(request, user):
             f"{reset_url}\n\n"
             f"If you weren't expecting this email, please contact us."
         ),
-        from_email=from_email,
+        from_email=password_emails.from_email(),
         recipient_list=[user.email],
         fail_silently=False,
     )
@@ -752,11 +750,10 @@ def _send_password_reset_email(request, user):
 
 def _test_template_vars(request, cfg: InductionsSettings) -> dict:
     """Sample variable values used when sending template preview emails and rendering tooltips."""
-    timeout_days = max(1, getattr(settings, "PASSWORD_RESET_TIMEOUT", 259200) // 86400)
-    validity = f"{timeout_days} day" if timeout_days == 1 else f"{timeout_days} days"
+    validity = password_emails.password_reset_validity()
     sample_date = (timezone.now().replace(hour=18, minute=30, second=0, microsecond=0)
                    + timezone.timedelta(days=7))
-    venue = settings.VENUE.get("longname", settings.VENUE.get("name", ""))
+    venue = password_emails.venue_name()
     requester_name = request.user.get_full_name() or request.user.username
     return {
         "name": requester_name,

@@ -95,14 +95,19 @@ Commit: `fix: latent bugs found in code review — legacy redirect, calendar sum
 
 ### Chunk 4: Extract shared helpers — PENDING
 
-### Chunk 4: Extract shared helpers — PENDING
+### Chunk 4: Extract shared helpers — IN PROGRESS (commit A done 2026-06-26)
 
-Low-moderate. Net negative LOC. Tests stay green.
+Low-moderate. Net negative LOC. Tests stay green (959 pass).
 
-- [ ] `toolkit.toolkit_auth.password_emails` — single helper for build-reset-token + send welcome/set-password email. Replaces 3 duplicate paths in `inductions/emails.py:79-111`, `inductions/views.py:727-751`, `members/volunteer_views.py:1356-1404`.
-- [ ] `members.render_email_template(template, name, venue)` — replaces 4 `.replace("{name}", ...).replace("{venue}", ...)` sites at `volunteer_views.py:696-697, 832-833, 1070-1075, 1875-1880`.
-- [ ] `labs._get_volunteer(user)` — replaces 11 bare `except Exception:` blocks at `labs/views.py:163, 185, 197, 819, 844, 861, 879, 901, 1088, 1174, 1211`. Use `hasattr(request.user, "volunteer")`.
-- [ ] `toolkit.test_common.ToolkitAuthMixin` — replaces the per-app "create admin/read_only/no_perm users + dummy ContentType + toolkit.write/read permissions" boilerplate copy-pasted across `diary/tests/common.py:450-504`, `members/tests/common.py:142-175`, `labs/tests/common.py:15-49`, `inductions/tests/common.py:19-44`.
+- [x] **Commit A** `toolkit.toolkit_auth.password_emails` — single module for build-password-reset-token + send/welcome/reset email + venue/from-address lookup. Replaces 3 duplicate paths:
+  - `members/volunteer_views._send_password_set_email` → thin delegate (also drops `default_token_generator`/`force_bytes`/`urlsafe_base64_encode` imports)
+  - `inductions/views._send_password_reset_email` → reuses `build_password_reset_url` + `password_reset_validity` + `venue_name` + `from_email` from helper (inductor-confirmation copy stays inductions-specific)
+  - `inductions/emails.send_welcome_email` → reuses `build_password_reset_url` + `password_reset_validity` (template-driven subject/body via InductionsSettings preserved)
+  - Bonus: `inductions/views._test_template_vars` and `inductions/emails._venue/_from_email` now delegate to the helper
+  - Note: behavioural change — members' version read `settings.VENUE["longname"]` strictly (KeyError if unset); now uses the same lenient `.get("longname", .get("name", ""))` fallback used by inductions. Stricly more robust; S+S deploys set longname.
+- [ ] **Commit B** `members.render_email_template(template, name, venue)` — replaces 4 `.replace("{name}", ...).replace("{venue}", ...)` sites at `volunteer_views.py:696-697, 832-833, 1070-1075, 1875-1880`.
+- [ ] **Commit B** `labs._get_volunteer(user)` — replaces 11 bare `except Exception:` blocks at `labs/views.py:163, 185, 197, 819, 844, 861, 879, 901, 1088, 1174, 1211`. Use `hasattr(request.user, "volunteer")`.
+- [ ] **Commit C** `toolkit.test_common.ToolkitAuthMixin` — replaces the per-app "create admin/read_only/no_perm users + dummy ContentType + toolkit.write/read permissions" boilerplate copy-pasted across `diary/tests/common.py:450-504`, `members/tests/common.py:142-175`, `labs/tests/common.py:15-49`, `inductions/tests/common.py:19-44`.
 
 Commit guidance (one per helper or split per app): `refactor(auth): extract password-email and template-render helpers` etc.
 

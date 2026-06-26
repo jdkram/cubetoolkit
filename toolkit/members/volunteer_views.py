@@ -4,15 +4,13 @@ from datetime import datetime, timedelta
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import SetPasswordForm
 from django.db import transaction
-from django.contrib.auth.tokens import default_token_generator
 from django.core.signing import BadSignature, Signer
-from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.conf import settings
 from django.core.mail import send_mail
+from toolkit.toolkit_auth import password_emails
 from django.contrib.auth.decorators import login_required, permission_required
 from toolkit.toolkit_auth.decorators import panopticon_required
 from django.core.exceptions import PermissionDenied
@@ -1356,51 +1354,11 @@ def set_volunteer_password(request, volunteer_id):
 def _send_password_set_email(request, user, welcome=False):
     """Send a password-set link to a volunteer user.
 
-    welcome=True sends a first-time welcome message; False sends the
-    standard "password reset requested" message used for manual resets.
-    The link uses Django's password-reset token mechanism and is valid
-    for PASSWORD_RESET_TIMEOUT seconds (default 3 days).
+    Thin delegate over toolkit.toolkit_auth.password_emails.send_password_set_email
+    so the token-building + venue lookup + welcome/reset copy live in one place
+    shared with the inductions check-in flow.
     """
-    token = default_token_generator.make_token(user)
-    uid_b64 = urlsafe_base64_encode(force_bytes(user.pk))
-    reset_url = request.build_absolute_uri(
-        reverse("password_reset_confirm", kwargs={"uidb64": uid_b64, "token": token})
-    )
-    timeout_days = max(1, getattr(settings, "PASSWORD_RESET_TIMEOUT", 259200) // 86400)
-    validity = f"{timeout_days} day" if timeout_days == 1 else f"{timeout_days} days"
-
-    name = user.first_name or user.username
-    venue = settings.VENUE["longname"]
-    from_email = settings.VENUE.get("mailout_from_address") or settings.DEFAULT_FROM_EMAIL
-
-    if welcome:
-        subject = f"[{venue}] Welcome — set your toolkit password"
-        message = (
-            f"Hi {name},\n\n"
-            f"You've been added as a volunteer at {venue}.\n\n"
-            f"Click the link below to set your password and log in to the toolkit "
-            f"(valid for {validity}):\n\n"
-            f"{reset_url}\n\n"
-            f"If you weren't expecting this email, you can ignore it — no account "
-            f"will be activated unless you follow the link."
-        )
-    else:
-        subject = f"[{venue}] Set your toolkit password"
-        message = (
-            f"Hi {name},\n\n"
-            f"A password reset has been requested for your toolkit account.\n\n"
-            f"Click the link below to set a new password (valid for {validity}):\n\n"
-            f"{reset_url}\n\n"
-            f"If you weren't expecting this, you can ignore this email."
-        )
-
-    send_mail(
-        subject=subject,
-        message=message,
-        from_email=from_email,
-        recipient_list=[user.email],
-        fail_silently=False,
-    )
+    password_emails.send_password_set_email(request, user, welcome=welcome)
 
 
 def send_volunteer_password_reset(request, volunteer_id):
