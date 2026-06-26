@@ -117,7 +117,7 @@ Low-moderate. Net negative LOC. Tests stay green (959 pass).
 
 Commit guidance (one per helper or split per app): `refactor(auth): extract password-email and template-render helpers` etc.
 
-### Chunk 5: Split `volunteer_views.py` into `members/views/` subpackage — PENDING
+### Chunk 5: Split `volunteer_views.py` into `members/views/` subpackage — IN PROGRESS (move commit done 2026-06-26)
 
 Moderate risk. URL paths preserved; view predicates unchanged.
 

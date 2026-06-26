@@ -1,6 +1,6 @@
 from django.urls import re_path
 
-from toolkit.members.volunteer_views import (
+from toolkit.members.views import (
     view_volunteer_list,
     view_volunteer_summary,
     view_volunteer_pool_health,
