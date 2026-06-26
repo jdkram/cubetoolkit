@@ -29,7 +29,7 @@ LOGGING["root"] = {
 }
 
 # Override setting in settings_common
-VENUE["email_unsubcribe_host"] = "localhost:8000"
+VENUE["email_unsubscribe_host"] = "localhost:8000"
 
 # Enable Debug mode, add in Django toolbar:
 DEBUG = True

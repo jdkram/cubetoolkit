@@ -1249,7 +1249,7 @@ def add_volunteer_training_group_record(request):
                 messages.add_message(
                     request,
                     messages.SUCCESS,
-                    "Added {len(form.cleaned_data['volunteers'])} {TrainingRecord.GENERAL_TRAINING_DESC} records",
+                    f"Added {len(form.cleaned_data['volunteers'])} {TrainingRecord.GENERAL_TRAINING_DESC} records",
                 )
             return HttpResponseRedirect(
                 reverse("add-volunteer-training-group-record")

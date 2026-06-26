@@ -594,7 +594,7 @@ def confirm_all_showings(request, event_id):
 def clone_event(request, event_id):
     """Clone an existing event as a brand-new event.
 
-    Copies all text/config fields (copy, copy_summary, terms, notes,
+    Copies all text/config fields (copy, copy_summary, terms,
     film_information, pricing, pre_title, post_title, outside_hire, private,
     duration, template) and all tags to the new event.  The first showing's
     rota is cloned from the source event's latest showing.  Media (images)
@@ -2874,7 +2874,6 @@ def _film_json(film) -> dict:
         "countries": film.countries,
         "languages": film.languages,
         "overview": film.overview,
-        "poster_url_sm": film.poster_url,
-        "poster_url_md": film.poster_url,
+        "poster_url": film.poster_url,
         "imdb_url": f"https://www.imdb.com/title/{film.imdb_id}/" if film.imdb_id else "",
     }

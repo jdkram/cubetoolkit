@@ -53,7 +53,7 @@ def _venue_location():
 
 def _summary(showing):
     parts = [showing.event.name]
-    room = getattr(showing, "room", None)
+    room = showing.primary_room
     if getattr(settings, "MULTIROOM_ENABLED", False) and room:
         parts.append(f"({room.name})")
     return " ".join(p for p in parts if p)

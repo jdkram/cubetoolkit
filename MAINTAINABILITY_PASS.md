@@ -32,38 +32,45 @@ Two legacy import commands ship hardcoded DB passwords (`ye2EUsSUCYY8ALx7`, `kq9
 
 Each chunk = one or more commits, independently reviewable, ordered by risk.
 
-### Chunk 1: Delete the attic — IN PROGRESS
+### Chunk 1: Delete the attic — DONE 2026-06-26
 
-Very low risk. ~800 LOC removed. No behaviour change. No tests affected (no live importers).
+Very low risk. ~800 LOC removed. No behaviour change. No tests affected (no live importers). 959 tests pass.
 
-Delete:
-- [ ] `toolkit/util/management/commands/mailman-subscriber.py` (Python 2 only, no BaseCommand)
-- [ ] `toolkit/util/management/commands/delete_all_members.py` (`django.utils.six` removed in Django 3)
-- [ ] `toolkit/util/management/commands/delete_members_who_dont_get_the_mailout.py` (destructive, only doc ref)
-- [ ] `toolkit/util/management/commands/delete_non_members_who_dont_get_the_mailout.py` (destructive one-off)
-- [ ] `toolkit/util/management/commands/keep_vols_from_csv_retire_everyone_else.py` (destructive, retire workflow removed)
-- [ ] `toolkit/util/management/commands/backfill_qualifications_from_training.py` (self-described one-off)
-- [ ] `toolkit/util/management/commands/import_members_from_csv.py` (hardcoded `upcoming.csv`, 0 refs)
-- [ ] `toolkit/util/management/commands/check_vols_against_mailman.py` (Cube-specific, Mailman 2 EOL, paired with mailman-subscriber)
-- [ ] `toolkit/util/management/commands/mysqldump_database.py` (0 refs, obsolete flags, "production has own backup")
-- [ ] `toolkit/util/management/commands/show_active_vols.py` (0 refs, trivial)
-- [ ] `toolkit/util/management/commands/show_email_duplicates.py` (0 refs, commented-out delete, unfinished)
+Deleted:
+- [x] `toolkit/util/management/commands/mailman-subscriber.py` (Python 2 only, no BaseCommand)
+- [x] `toolkit/util/management/commands/delete_all_members.py` (`django.utils.six` removed in Django 3)
+- [x] `toolkit/util/management/commands/delete_members_who_dont_get_the_mailout.py` (destructive, only doc ref)
+- [x] `toolkit/util/management/commands/delete_non_members_who_dont_get_the_mailout.py` (destructive one-off)
+- [x] `toolkit/util/management/commands/keep_vols_from_csv_retire_everyone_else.py` (destructive, retire workflow removed)
+- [x] `toolkit/util/management/commands/backfill_qualifications_from_training.py` (self-described one-off)
+- [x] `toolkit/util/management/commands/import_members_from_csv.py` (hardcoded `upcoming.csv`, 0 refs)
+- [x] `toolkit/util/management/commands/check_vols_against_mailman.py` (Cube-specific, Mailman 2 EOL, paired with mailman-subscriber)
+- [x] `toolkit/util/management/commands/mysqldump_database.py` (0 refs, obsolete flags, "production has own backup")
+- [x] `toolkit/util/management/commands/show_active_vols.py` (0 refs, trivial)
+- [x] `toolkit/util/management/commands/show_email_duplicates.py` (0 refs, commented-out delete, unfinished)
 - [x] NOT deleted: `strip_lines.py` is live (used in `mailout_body.txt`, not `.html` — initial grep scope was too narrow). Restored after test failure.
 - [x] `toolkit/diary/templatetags/tk_crispy_filter.py` (zero usages)
-- [ ] `scripts/fix_orphaned_showings.py` (one-off, migration done per CURRENT_WORK:253)
-- [ ] `scripts/fix_rooms_after_migration.py` (one-off, duplicates rooms.toml)
+- [x] `scripts/fix_orphaned_showings.py` (one-off, migration done per CURRENT_WORK:253)
+- [x] `scripts/fix_rooms_after_migration.py` (one-off, duplicates rooms.toml)
 
 In-place edits:
-- [ ] Remove `_adjust_colour_historic` from `diary/edit_views.py:271-276` (no callers)
-- [ ] Remove `EDIT_INDEX_DEFAULT_USE_POPUPS` setting from `settings_common.py:82` (no refs)
-- [ ] Remove commented-out block in `Event.clear_main_mediaitem` at `diary/models.py:745-748`
-- [ ] Remove commented `created_at = ...` in `RotaEntry` at `diary/models.py:1453`
-- [ ] Remove dead `from django.core.exceptions import PermissionDenied` import in `inductions/views.py:11`
-- [ ] Remove unreachable line in `labs/forms.py:414` (after `return`)
+- [x] Remove `_adjust_colour_historic` from `diary/edit_views.py:271-276` (no callers)
+- [x] Remove `EDIT_INDEX_DEFAULT_USE_POPUPS` setting from `settings_common.py:82` (no refs)
+- [x] Remove commented-out block in `Event.clear_main_mediaitem` at `diary/models.py:745-748`
+- [x] Remove commented `created_at = ...` in `RotaEntry` at `diary/models.py:1453`
+- [x] Remove dead `from django.core.exceptions import PermissionDenied` import in `inductions/views.py:11`
+- [x] Remove unreachable line in `labs/forms.py:414` (after `return`)
 
-Commit guidance: `chore: delete dead attic — broken one-offs, unused templatetags, dead helpers`
+Commit: `chore: delete dead attic — broken one-offs, unused templatetags, dead helpers`
 
-### Chunk 2: Remove committed credentials — PENDING
+### Chunk 2: Remove committed credentials — DONE 2026-06-26
+
+Very low risk. ~700 LOC removed.
+
+- [x] Delete `toolkit/util/management/commands/import_legacy_events.py` (hardcoded `ye2EUsSUCYY8ALx7`)
+- [x] Delete `toolkit/util/management/commands/import_legacy_documents.py` (hardcoded `kq9LaMpgf4czGQ9v`)
+
+Commit: `chore(security): delete legacy import scripts that shipped hardcoded DB passwords`
 
 Very low risk. ~450 LOC removed.
 
@@ -72,19 +79,21 @@ Very low risk. ~450 LOC removed.
 
 Commit guidance: `chore(security): delete legacy import scripts that shipped hardcoded DB passwords`
 
-### Chunk 3: Fix 5 latent bugs — PENDING
+### Chunk 3: Fix 5 latent bugs — DONE 2026-06-26
 
-Low risk, small.
+Low risk, small. 959 tests pass (no new failures; note: legacy-redirect and calendar-summary paths had no test coverage before or after, so the fixes are unverified by the suite).
 
-- [ ] `diary/public_views.py:372` `redirect_legacy_event` references removed `Event.notes` (FieldError on hit) — repoint to `programming_notes` or remove the view + URL route
-- [ ] `diary/calendar_links.py:56` reads `showing.room` (no longer exists; `getattr` hides it) — use `showing.primary_room` or delete the dead branch
-- [ ] `toolkit/devserver_settings.py:32` typo `email_unsubcribe_host` — fix to `email_unsubscribe_host`
-- [ ] `labs/forms.py:414` unreachable line after `return` — already deleted in chunk 1 if reached; verify
-- [ ] `members/volunteer_views.py:1252` plain string not f-string in success message — fix
-- [ ] Bonus: `diary/edit_views.py:605` `clone_event` docstring references removed `notes` field — update to `programming_notes`
-- [ ] Bonus: `diary/edit_views.py:2885-2886` `_film_json` emits identical `poster_url_sm`/`poster_url_md` keys — collapse or comment
+- [x] `diary/public_views.py:372` `redirect_legacy_event` referenced removed `Event.notes` (would raise FieldError) — repointed to `programming_notes__contains` (migration 0067 copied the substring content across)
+- [x] `diary/calendar_links.py:56` read `showing.room` (no longer exists; `getattr` default silently hid the bug) — now uses `showing.primary_room`; room names will now actually appear in calendar summaries when MULTIROOM_ENABLED
+- [x] `toolkit/devserver_settings.py:32` typo `email_unsubcribe_host` → `email_unsubscribe_host` (was silently no-oping the override)
+- [x] `labs/forms.py:414` unreachable line after `return` — already deleted in chunk 1
+- [x] `members/volunteer_views.py:1252` success message was a plain string, not an f-string — added `f` prefix (function slated for deletion in chunk 5; fix is moot but harmless)
+- [x] Bonus: `diary/edit_views.py:596` `clone_event` docstring referenced removed `notes` field — updated to `programming_notes`
+- [x] Bonus: `diary/edit_views.py:_film_json` emitted identical `poster_url_sm`/`poster_url_md` keys (dead vestige of TMDB's w92/w185 sizes) — collapsed to single canonical `poster_url` key (matches OMDb search response shape and the `form_event.html` JS preference)
 
-Commit guidance: `fix: latent bugs found in code review — legacy redirect, calendar summary, dev settings typo, success msg`
+Commit: `fix: latent bugs found in code review — legacy redirect, calendar summary, dev settings typo, success msg`
+
+### Chunk 4: Extract shared helpers — PENDING
 
 ### Chunk 4: Extract shared helpers — PENDING
 

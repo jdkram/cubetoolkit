@@ -369,7 +369,7 @@ def redirect_legacy_event(request, event_type=None, legacy_id=None):
     legacy_table = f"programming_{event_type}"
     try:
         events = Event.objects.filter(
-            legacy_id=legacy_id, notes__contains=legacy_table
+            legacy_id=legacy_id, programming_notes__contains=legacy_table
         )
         event = events.first()  # Only expecting one event
         if event:
