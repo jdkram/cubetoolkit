@@ -117,7 +117,18 @@ Low-moderate. Net negative LOC. Tests stay green (959 pass).
 
 Commit guidance (one per helper or split per app): `refactor(auth): extract password-email and template-render helpers` etc.
 
-### Chunk 5: Split `volunteer_views.py` into `members/views/` subpackage — IN PROGRESS (move commit done 2026-06-26)
+### Chunk 5: Split `volunteer_views.py` into `members/views/` subpackage — DONE 2026-06-26
+
+Moderate risk. URL paths preserved; view predicates unchanged. 959 tests pass.
+
+- [x] Move commit: split into `members/views/` package with 8 submodules + `_common.py` + `__init__.py` re-export shim. `urls.py` imports unchanged (toolkit.members.views import ..., same names).
+- [x] **Refactor-after decision:** the three superseded-duplicate candidates (`add_volunteer_training_group_record`, `bulk_award_qualification`, `view_volunteer_role_report`) are **kept** because they have live test coverage (`test_security.py` panopticon_required matrix + `test_volunteers.py` template-used assertions). Deleting them would either require deleting tests (feels louder than the "tidying for its own sake" remit) or weaken the security contract (a bare RedirectView on `view-volunteer-role-report` would let unauthenticated users hit it). Instead: `view_volunteer_role_report` kept as a one-line `panopticon_required` redirect with an expanded comment explaining WHY it's not a bare RedirectView (so a future maintainer doesn't "simplify" it into a security regression). The two bulk views are left untouched; the f-string bug in `add_volunteer_training_group_record` was already fixed in chunk 3.
+- [x] Helper `_render_admin_email` moved to `_common.py` (was a module-level function; now shared across `volunteer_pool_admin` and `volunteer_suspension`).
+- [x] Helper `_notify_vols_admin_status_change` moved to `_common.py`.
+- [x] Helper `_send_password_set_email` (thin delegate to `password_emails`) moved to `volunteer_edit.py`.
+- [x] Initial extraction script missed the `members.forms` import (VolunteerForm etc.); added to `_common.py.__all__` after first test-run failure, suite green.
+
+Commit: `refactor(members): split volunteer_views.py into views/ subpackage` + follow-up comment-polish commit.
 
 Moderate risk. URL paths preserved; view predicates unchanged.
 

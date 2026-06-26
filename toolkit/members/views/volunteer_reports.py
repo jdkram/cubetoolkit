@@ -213,10 +213,13 @@ def view_volunteer_directory(request):
     )
 
 
+
+
 @panopticon_required
 @require_safe
 def view_volunteer_role_report(request):
     # Role assignment was removed; redirect to the qualification report which replaced it.
+    # Kept as a panopticon_required view (not a bare RedirectView) so the security
+    # contract is preserved: unauthenticated users get a login redirect, non-superuser
+    # volunteers get 403 — see test_security.py and test_volunteers.py.
     return HttpResponseRedirect(reverse("view-qualification-report"))
-
-
