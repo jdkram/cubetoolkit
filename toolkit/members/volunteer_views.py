@@ -44,6 +44,16 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
+def _render_admin_email(template, name, venue):
+    """Substitute {name} and {venue} placeholders in an admin-configured email template.
+
+    Used for last-gasp and suspension emails whose subject/body are editable
+    in Site settings. Plain .replace (not str.format) so stray { } chars in
+    admin text don't crash rendering.
+    """
+    return template.replace("{name}", name).replace("{venue}", venue)
+
+
 @panopticon_required
 @require_safe
 def view_volunteer_list(request):
@@ -691,8 +701,8 @@ def last_gasp_email(request, volunteer_id):
 
     name = volunteer.member.name
     venue = settings.VENUE.get("longname", settings.VENUE.get("name", "the venue"))
-    subject = subject_template.replace("{name}", name).replace("{venue}", venue)
-    body = body_template.replace("{name}", name).replace("{venue}", venue)
+    subject = _render_admin_email(subject_template, name, venue)
+    body = _render_admin_email(body_template, name, venue)
 
     # Check cooldown
     cooldown_cutoff = timezone.now() - timedelta(days=cooldown_days)
@@ -827,8 +837,8 @@ def bulk_last_gasp_email(request):
                 skipped += 1
                 continue
             name = vol.member.name
-            subject = subject_template.replace("{name}", name).replace("{venue}", venue)
-            body = body_template.replace("{name}", name).replace("{venue}", venue)
+            subject = _render_admin_email(subject_template, name, venue)
+            body = _render_admin_email(body_template, name, venue)
             send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [vol.member.email])
             LastGaspEmailLog.objects.create(volunteer=vol, sent_by=request.user)
             logger.info(
@@ -1065,12 +1075,8 @@ def edit_volunteer(request, volunteer_id, create_new=False):
         vol_name = volunteer.member.name or ""
         suspension_email_preview = {
             "to": volunteer.member.email or "",
-            "subject": site_config.suspension_email_subject.replace(
-                "{name}", vol_name
-            ).replace("{venue}", venue_name),
-            "body": site_config.suspension_email_body.replace(
-                "{name}", vol_name
-            ).replace("{venue}", venue_name),
+            "subject": _render_admin_email(site_config.suspension_email_subject, vol_name, venue_name),
+            "body": _render_admin_email(site_config.suspension_email_body, vol_name, venue_name),
         }
         request.session[session_key] = True
 
@@ -1830,12 +1836,8 @@ def send_suspension_email(request, volunteer_id):
     venue_name = settings.VENUE.get("longname", settings.VENUE.get("name", ""))
     vol_name = member.name or ""
 
-    subject = site_config.suspension_email_subject.replace(
-        "{name}", vol_name
-    ).replace("{venue}", venue_name)
-    body = site_config.suspension_email_body.replace(
-        "{name}", vol_name
-    ).replace("{venue}", venue_name)
+    subject = _render_admin_email(site_config.suspension_email_subject, vol_name, venue_name)
+    body = _render_admin_email(site_config.suspension_email_body, vol_name, venue_name)
 
     send_mail(
         subject,

@@ -15,6 +15,18 @@ from django.http import HttpResponse, HttpResponseForbidden
 from django.utils import timezone
 from django.db.models import Exists, OuterRef
 
+
+def _user_volunteer(user):
+    """Return user.volunteer if the user has an associated Volunteer row, else None.
+
+    Uses hasattr (the canonical Django pattern) rather than try/except, which
+    would silently swallow real errors — e.g. a corrupt Volunteer row raising
+    a database error would read as "no volunteer" and hide the bug.
+    Replaces 11 bare `except Exception:` blocks across collectives + shopping
+    views that had drifted to swallow all errors.
+    """
+    return user.volunteer if hasattr(user, "volunteer") else None
+
 from .models import (
     AreaPhoto,
     Bulletin,
@@ -155,12 +167,13 @@ def collectives_public(request):
 @login_required
 def collectives(request):
     items = Collective.objects.filter(active=True).select_related("updated_by").prefetch_related("links")
-    try:
+    current_volunteer = _user_volunteer(request.user)
+    if current_volunteer is not None:
         user_collective_slugs = frozenset(
-            request.user.volunteer.collectives.values_list("slug", flat=True)
+            current_volunteer.collectives.values_list("slug", flat=True)
         )
         user_is_volunteer = True
-    except Exception:
+    else:
         user_collective_slugs = frozenset()
         user_is_volunteer = False
     config = get_site_config()
@@ -179,10 +192,10 @@ def collective_join(request, slug):
     if collective.invite_only:
         messages.error(request, f"{collective.name} is invite-only — membership is managed by admins.")
         return redirect("labs-collectives")
-    try:
+    if hasattr(request.user, "volunteer"):
         request.user.volunteer.collectives.add(collective)
         messages.success(request, f"You've joined {collective.name}.")
-    except Exception:
+    else:
         messages.error(request, "You need a volunteer profile to join a collective.")
     return redirect("labs-collectives")
 
@@ -191,10 +204,10 @@ def collective_join(request, slug):
 @require_POST
 def collective_leave(request, slug):
     collective = get_object_or_404(Collective, slug=slug, active=True)
-    try:
+    if hasattr(request.user, "volunteer"):
         request.user.volunteer.collectives.remove(collective)
         messages.success(request, f"You've left {collective.name}.")
-    except Exception:
+    else:
         messages.error(request, "You need a volunteer profile to leave a collective.")
     return redirect("labs-collectives")
 
@@ -814,10 +827,7 @@ def shopping_list(request):
         .prefetch_related("pledge")
         .order_by("-resolved_at")[:30]
     )
-    try:
-        current_volunteer = request.user.volunteer
-    except Exception:
-        current_volunteer = None
+    current_volunteer = _user_volunteer(request.user)
     return render(request, "labs/shopping.html", {
         "items": items,
         "recently_resolved": recently_resolved,
@@ -839,10 +849,7 @@ def shopping_item(request, item_id):
         .prefetch_related("pledge__pledged_by__member")
         .order_by("-resolved_at")[:20]
     )
-    try:
-        current_volunteer = request.user.volunteer
-    except Exception:
-        current_volunteer = None
+    current_volunteer = _user_volunteer(request.user)
     return render(request, "labs/shopping_item.html", {
         "item": item,
         "suppliers": suppliers,
@@ -856,10 +863,7 @@ def shopping_item(request, item_id):
 @require_POST
 def shopping_flag(request, item_id):
     item = get_object_or_404(ConsumableItem, pk=item_id, active=True)
-    try:
-        volunteer = request.user.volunteer
-    except Exception:
-        volunteer = None
+    volunteer = _user_volunteer(request.user)
     existing = NeedFlag.objects.filter(item=item, resolved_at__isnull=True).first()
     if existing:
         messages.info(request, f"'{item.name}' is already flagged as needed.")
@@ -874,10 +878,7 @@ def shopping_flag(request, item_id):
 @require_POST
 def shopping_resolve(request, flag_id):
     flag = get_object_or_404(NeedFlag, pk=flag_id, resolved_at__isnull=True)
-    try:
-        volunteer = request.user.volunteer
-    except Exception:
-        volunteer = None
+    volunteer = _user_volunteer(request.user)
     flag.resolved_at = timezone.now()
     flag.resolved_by = volunteer
     flag.save()
@@ -896,10 +897,7 @@ def shopping_resolve(request, flag_id):
 @require_POST
 def shopping_pledge(request, flag_id):
     flag = get_object_or_404(NeedFlag, pk=flag_id, resolved_at__isnull=True)
-    try:
-        volunteer = request.user.volunteer
-    except Exception:
-        volunteer = None
+    volunteer = _user_volunteer(request.user)
     existing = getattr(flag, "pledge", None)
     if existing and existing.fulfilled_at is None:
         messages.info(request, f"Someone has already pledged to get '{flag.item.name}'.")
@@ -1083,10 +1081,7 @@ def shopping_buy_supplier(request, supplier_id):
             "other_suppliers": other_suppliers,
         })
 
-    try:
-        current_volunteer = request.user.volunteer
-    except Exception:
-        current_volunteer = None
+    current_volunteer = _user_volunteer(request.user)
 
     return render(request, "labs/shopping_buy_supplier.html", {
         "supplier": supplier,
@@ -1169,10 +1164,7 @@ def shopping_buy_add(request, flag_id):
     supplier_id = request.POST.get("supplier_id")
     supplier = get_object_or_404(Supplier, pk=supplier_id) if supplier_id else None
 
-    try:
-        volunteer = request.user.volunteer
-    except Exception:
-        volunteer = None
+    volunteer = _user_volunteer(request.user)
 
     existing = getattr(flag, "pledge", None)
     try:
@@ -1206,10 +1198,7 @@ def shopping_out_of_stock(request, flag_id):
     supplier_id = request.POST.get("supplier_id")
     supplier = get_object_or_404(Supplier, pk=supplier_id) if supplier_id else None
 
-    try:
-        volunteer = request.user.volunteer
-    except Exception:
-        volunteer = None
+    volunteer = _user_volunteer(request.user)
 
     note = f"Out of stock at {supplier.name}" if supplier else "Out of stock"
 

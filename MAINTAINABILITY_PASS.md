@@ -105,8 +105,8 @@ Low-moderate. Net negative LOC. Tests stay green (959 pass).
   - `inductions/emails.send_welcome_email` → reuses `build_password_reset_url` + `password_reset_validity` (template-driven subject/body via InductionsSettings preserved)
   - Bonus: `inductions/views._test_template_vars` and `inductions/emails._venue/_from_email` now delegate to the helper
   - Note: behavioural change — members' version read `settings.VENUE["longname"]` strictly (KeyError if unset); now uses the same lenient `.get("longname", .get("name", ""))` fallback used by inductions. Stricly more robust; S+S deploys set longname.
-- [ ] **Commit B** `members.render_email_template(template, name, venue)` — replaces 4 `.replace("{name}", ...).replace("{venue}", ...)` sites at `volunteer_views.py:696-697, 832-833, 1070-1075, 1875-1880`.
-- [ ] **Commit B** `labs._get_volunteer(user)` — replaces 11 bare `except Exception:` blocks at `labs/views.py:163, 185, 197, 819, 844, 861, 879, 901, 1088, 1174, 1211`. Use `hasattr(request.user, "volunteer")`.
+- [x] **Commit B** `members._render_admin_email(template, name, venue)` — replaces 4 `.replace("{name}", ...).replace("{venue}", ...)` sites at `volunteer_views.py` (last-gasp single + bulk, suspension preview, suspension send). Plain `.replace` (not `str.format`) so stray `{` chars in admin text don't crash.
+- [x] **Commit B** `labs._user_volunteer(user)` — replaces 11 bare `except Exception:` blocks across collectives + shopping views. Uses `hasattr(user, "volunteer")` (canonical Django pattern); the try/except variant was silently swallowing real errors (e.g. a corrupt Volunteer row would read as "no volunteer" and hide the bug).
 - [ ] **Commit C** `toolkit.test_common.ToolkitAuthMixin` — replaces the per-app "create admin/read_only/no_perm users + dummy ContentType + toolkit.write/read permissions" boilerplate copy-pasted across `diary/tests/common.py:450-504`, `members/tests/common.py:142-175`, `labs/tests/common.py:15-49`, `inductions/tests/common.py:19-44`.
 
 Commit guidance (one per helper or split per app): `refactor(auth): extract password-email and template-render helpers` etc.
