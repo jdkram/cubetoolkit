@@ -268,14 +268,6 @@ def edit_diary_list(request, year=None, day=None, month=None):
     return render(request, "edit_event_index.html", context)
 
 
-def _adjust_colour_historic(colour):
-    return adjust_colour(
-        colour,
-        settings.CALENDAR_HISTORIC_LIGHTER,
-        settings.CALENDAR_HISTORIC_SHADIER,
-    )
-
-
 def _is_light_colour(hex_colour):
     """Return True if the hex colour is perceptually light (needs dark text)."""
     h = hex_colour.lstrip("#")

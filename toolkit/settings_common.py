@@ -79,7 +79,6 @@ TAGS_WITHOUT_TERMS = {"meeting", "training"}
 
 
 EDIT_INDEX_DEFAULT_DAYS_AHEAD = 365
-EDIT_INDEX_DEFAULT_USE_POPUPS = False
 
 # A soft limit on the max length of copy summary. The hard limit is the size of
 # the database field (at time of writing, 4096 characters.) This is (currently)

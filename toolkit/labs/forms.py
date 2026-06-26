@@ -411,4 +411,3 @@ class AreaPhotoForm(forms.ModelForm):
                     f"Image must be {max_mb} MB or less (uploaded file is {size_mb:.2f} MB)"
                 )
         return image
-        self.fields["owner_volunteer"].required = False
