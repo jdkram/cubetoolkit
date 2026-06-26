@@ -1,6 +1,5 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]; status: "#ai-written"
 import django.contrib.auth.models as auth_models
-import django.contrib.contenttypes.models as ct_models
 
 from toolkit.members.models import Member, Volunteer
 from toolkit.labs.models import Bulletin, Collective, DonationItem, Job, RoomNote
@@ -13,31 +12,21 @@ class LabsTestsMixin:
         return super().setUp()
 
     def _setup_test_users(self):
-        ct = ct_models.ContentType.objects.get_or_create(model="", app_label="toolkit")[0]
-        write_perm = auth_models.Permission.objects.get_or_create(
-            name="Write access to all toolkit content",
-            content_type=ct,
-            codename="write",
-        )[0]
-        read_perm = auth_models.Permission.objects.get_or_create(
-            name="Read access to all toolkit content",
-            content_type=ct,
-            codename="read",
-        )[0]
-
-        self.user_admin = auth_models.User.objects.create_user(
-            "admin", "admin@test.example", "T3stPassword!"
-        )
-        self.user_admin.user_permissions.add(write_perm, read_perm)
-
-        self.user_ro = auth_models.User.objects.create_user(
-            "read_only", "ro@test.example", "T3stPassword!1"
-        )
-        self.user_ro.user_permissions.add(read_perm)
-
-        self.user_none = auth_models.User.objects.create_user(
-            "no_perm", "none@test.example", "T3stPassword!2"
-        )
+        # Standard admin/read_only/no_perm + toolkit.write/read perms.
+        # See toolkit/test_common.py for rationale; tests reference
+        # self.user_admin / self.user_ro / self.user_none directly (e.g. as
+        # Bulletin.author / Job.posted_by), so we expose them on self.
+        #
+        # labs deliberately keeps 'admin' as a non-superuser write-perm user
+        # (Programmer-tier equivalent) so the panopticon-only tests in
+        # test_bulletins / test_security exercise the write-but-not-superuser
+        # rejection path. diary and members do mark their admin as superuser
+        # (Panopticon tier); the helper defaults to True, labs overrides.
+        from toolkit.test_common import create_toolkit_test_users
+        users = create_toolkit_test_users(is_admin_superuser=False)
+        self.user_admin = users.admin
+        self.user_ro = users.read_only
+        self.user_none = users.no_perm
 
         # A user with a linked Volunteer profile — needed for join/leave tests
         self.mem_vol = Member.objects.create(

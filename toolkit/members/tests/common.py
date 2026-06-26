@@ -1,6 +1,5 @@
 from datetime import date
 from django.conf import settings
-import django.contrib.contenttypes as contenttypes
 import django.contrib.auth.models as auth_models
 
 from toolkit.members.models import Member, Volunteer
@@ -140,36 +139,8 @@ class MembersTestsMixin:
         self.vol_4.save()
 
     def _setup_test_users(self):
-        # Panopticon (superuser) — full access including volunteer/member PII:
-        user_rw = auth_models.User.objects.create_user(
-            "admin", "toolkit_admin@localhost", "T3stPassword!", is_superuser=True
-        )
-        # read only user:
-        user_r = auth_models.User.objects.create_user(
-            "read_only", "toolkit_admin@localhost", "T3stPassword!1"
-        )
-        # no permission user:
-        auth_models.User.objects.create_user(
-            "no_perm", "toolkit_admin@localhost", "T3stPassword!2"
-        )
-        # Create dummy ContentType:
-        ct = contenttypes.models.ContentType.objects.get_or_create(
-            model="", app_label="toolkit"
-        )[0]
-        # Create 'read' and 'write' permissions:
-        write_permission = auth_models.Permission.objects.get_or_create(
-            name="Write access to all toolkit content",
-            content_type=ct,
-            codename="write",
-        )[0]
-
-        read_permission = auth_models.Permission.objects.get_or_create(
-            name="Read access to all toolkit content",
-            content_type=ct,
-            codename="read",
-        )[0]
-        # Set user permissions, r/w:
-        user_rw.user_permissions.add(write_permission)
-        user_rw.user_permissions.add(read_permission)
-        # read only:
-        user_r.user_permissions.add(read_permission)
+        # Standard admin/read_only/no_perm users + toolkit.write/read perms.
+        # See toolkit/test_common.py for rationale; tests log in by username
+        # via self.client.login(...), so no Users are exposed on self.
+        from toolkit.test_common import create_toolkit_test_users
+        create_toolkit_test_users()

@@ -95,7 +95,7 @@ Commit: `fix: latent bugs found in code review — legacy redirect, calendar sum
 
 ### Chunk 4: Extract shared helpers — PENDING
 
-### Chunk 4: Extract shared helpers — IN PROGRESS (commit A done 2026-06-26)
+### Chunk 4: Extract shared helpers — DONE 2026-06-26
 
 Low-moderate. Net negative LOC. Tests stay green (959 pass).
 
@@ -107,7 +107,13 @@ Low-moderate. Net negative LOC. Tests stay green (959 pass).
   - Note: behavioural change — members' version read `settings.VENUE["longname"]` strictly (KeyError if unset); now uses the same lenient `.get("longname", .get("name", ""))` fallback used by inductions. Stricly more robust; S+S deploys set longname.
 - [x] **Commit B** `members._render_admin_email(template, name, venue)` — replaces 4 `.replace("{name}", ...).replace("{venue}", ...)` sites at `volunteer_views.py` (last-gasp single + bulk, suspension preview, suspension send). Plain `.replace` (not `str.format`) so stray `{` chars in admin text don't crash.
 - [x] **Commit B** `labs._user_volunteer(user)` — replaces 11 bare `except Exception:` blocks across collectives + shopping views. Uses `hasattr(user, "volunteer")` (canonical Django pattern); the try/except variant was silently swallowing real errors (e.g. a corrupt Volunteer row would read as "no volunteer" and hide the bug).
-- [ ] **Commit C** `toolkit.test_common.ToolkitAuthMixin` — replaces the per-app "create admin/read_only/no_perm users + dummy ContentType + toolkit.write/read permissions" boilerplate copy-pasted across `diary/tests/common.py:450-504`, `members/tests/common.py:142-175`, `labs/tests/common.py:15-49`, `inductions/tests/common.py:19-44`.
+- [x] **Commit C** `toolkit.test_common.create_toolkit_test_users()` — replaces the per-app "create admin/read_only/no_perm users + dummy ContentType + toolkit.write/read permissions" boilerplate copy-pasted across three test commons:
+  - `diary/tests/common.py:ToolkitUsersFixture` (Fixture variant — uses `fixtures.Fixture._setUp`)
+  - `members/tests/common.py:_setup_test_users` (TestCase setUp variant)
+  - `labs/tests/common.py:_setup_test_users` (TestCase variant; exposes users on self for tests that pass them as Bulletin.author / Job.posted_by)
+  - **Skipped:** `inductions/tests/common.py` — uses a different shape (no toolkit.write/read perms at all, superuser-only access + its own InductionsSettings fixture). Refactoring it would distort the test intent.
+  - **Per-app superuser policy preserved:** diary + members keep `admin` as superuser (Panopticon tier); labs keeps `admin` as non-superuser write-perm user (Programmer tier) because labs panopticon-only tests (`test_bulletin_post_panopticon_blocks_write_user`, `test_non_superuser_gets_403`, `test_non_superuser_cannot_delete_bulletin`) deliberately exercise the "has write but not super" rejection path. Helper takes `is_admin_superuser` (default True); labs passes False.
+  - Drops the now-unused `contenttypes` import from all three commons.
 
 Commit guidance (one per helper or split per app): `refactor(auth): extract password-email and template-render helpers` etc.
 

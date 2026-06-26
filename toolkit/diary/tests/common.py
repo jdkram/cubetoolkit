@@ -4,7 +4,6 @@ import zoneinfo
 
 from unittest.mock import patch
 import django.contrib.auth.models as auth_models
-import django.contrib.contenttypes as contenttypes
 from django.urls import reverse
 
 from toolkit.diary.models import (
@@ -449,56 +448,11 @@ class DiaryTestsMixin(fixtures.TestWithFixtures):
 
 class ToolkitUsersFixture(fixtures.Fixture):
     def _setUp(self):
-        # Read/write superuser (Panopticon tier — is_superuser required for edit_roles):
-        user_rw = auth_models.User.objects.create_user(
-            "admin", "toolkit_admin@localhost", "T3stPassword!"
-        )
-        user_rw.is_superuser = True
-        user_rw.save()
-        # read only user:
-        user_r = auth_models.User.objects.create_user(
-            "read_only", "toolkit_admin@localhost", "T3stPassword!1"
-        )
-        # no permission user:
-        auth_models.User.objects.create_user(
-            "no_perm", "toolkit_admin@localhost", "T3stPassword!2"
-        )
-        # rota edit only user:
-        user_rota = auth_models.User.objects.create_user(
-            "rota_editor", "toolkit_admin@localhost", "T3stPassword!3"
-        )
-
-        # Create dummy ContentType:
-        ct = contenttypes.models.ContentType.objects.get_or_create(
-            model="", app_label="toolkit"
-        )[0]
-        # Create 'read' and 'write' permissions:
-        write_permission = auth_models.Permission.objects.get_or_create(
-            name="Write access to all toolkit content",
-            content_type=ct,
-            codename="write",
-        )[0]
-
-        read_permission = auth_models.Permission.objects.get_or_create(
-            name="Read access to all toolkit content",
-            content_type=ct,
-            codename="read",
-        )[0]
-
-        # retrieve permission for editing diary.models.RotaEntry rows:
-        diary_content_type = contenttypes.models.ContentType.objects.get(
-            app_label="diary",
-            model="rotaentry",
-        )
-
-        edit_rota_permission = auth_models.Permission.objects.get(
-            codename="change_rotaentry", content_type=diary_content_type
-        )
-
-        # Set user permissions, r/w:
-        user_rw.user_permissions.add(write_permission)
-        user_rw.user_permissions.add(read_permission)
-        # read only:
-        user_r.user_permissions.add(read_permission)
-        # rota_editor:
-        user_rota.user_permissions.add(edit_rota_permission)
+        # Standard admin/read_only/no_perm/rota_editor users + toolkit.write/read
+        # permissions. See toolkit/test_common.py for the rationale; this thin
+        # Fixture wrapper lets diary tests use self.useFixture(ToolkitUsersFixture())
+        # matching the `fixtures` library's lifecycle. Tests log in by username
+        # via self.client.login(...), so the Fixture doesn't expose the User
+        # objects on self.
+        from toolkit.test_common import create_toolkit_test_users
+        create_toolkit_test_users(include_rota_editor=True)
