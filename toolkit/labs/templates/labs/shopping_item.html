@@ -49,11 +49,33 @@
   }
   .text-muted-sm { font-size: 0.8rem; color: #6c757d; }
   .flag-actions { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.5rem; }
+  .status-box {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 1rem 1.1rem;
+    margin-bottom: 1.5rem;
+  }
+  .status-divider {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin: 0.75rem 0 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .status-divider::before,
+  .status-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #dee2e6;
+  }
   .pledge-form {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.4rem;
-    align-items: center;
+    gap: 0.5rem;
+    align-items: flex-end;
   }
   .pledge-form input[type="date"],
   .pledge-form input[type="text"] {
@@ -67,7 +89,7 @@
   .pledge-field {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 0.2rem;
   }
   .pledge-field label {
     font-size: 0.75rem;
@@ -123,14 +145,21 @@
 
 <h3>Current status</h3>
 {% if open_flag %}
-  <p>
+<div class="status-box">
+  <p class="mb-2">
     <span class="needed-pill">Needed</span>
     flagged by {% if open_flag.flagged_by %}{{ open_flag.flagged_by.member.name }}{% else %}someone{% endif %}
     on {{ open_flag.flagged_at|date:"j M Y, H:i" }}.{% if open_flag.notes %}<br><em>{{ open_flag.notes }}</em>{% endif %}
   </p>
 
+  <form method="post" action="{% url "labs-shopping-resolve" open_flag.pk %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-sm btn-success">Mark as restocked ✓</button>
+  </form>
+
   {% if open_flag.pledge and not open_flag.pledge.fulfilled_at %}
-    <p>
+    <div class="status-divider">pledge</div>
+    <p class="mb-1">
       <span class="pledged-pill">Pledged</span>
       {% if open_flag.pledge.pledged_by %}{{ open_flag.pledge.pledged_by.member.name }}{% else %}Someone{% endif %}
       is getting this (pledged {{ open_flag.pledge.pledged_at|date:"j M Y" }}).
@@ -142,6 +171,7 @@
       <button type="submit" class="btn btn-sm btn-outline-secondary">Cancel pledge</button>
     </form>
   {% else %}
+    <div class="status-divider">or, if you're planning to get it</div>
     <form method="post" action="{% url "labs-shopping-pledge" open_flag.pk %}" class="pledge-form">
       {% csrf_token %}
       <div class="pledge-field">
@@ -154,18 +184,13 @@
                placeholder="e.g. ordered online, arrives Friday morning during cleaning club"
                maxlength="200">
       </div>
-      <button type="submit" class="btn btn-sm btn-outline-primary" style="align-self: flex-end;">I'll get it</button>
+      <button type="submit" class="btn btn-sm btn-outline-primary">I'll get it</button>
     </form>
   {% endif %}
-
-  <div class="flag-actions">
-    <form method="post" action="{% url "labs-shopping-resolve" open_flag.pk %}">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-sm btn-success">Mark as restocked ✓</button>
-    </form>
-  </div>
+</div>
 {% else %}
-  <p class="text-muted">Not currently flagged as needed.</p>
+<div class="status-box">
+  <p class="text-muted mb-2">Not currently flagged as needed.</p>
   <form method="post" action="{% url "labs-shopping-flag" item.pk %}">
     {% csrf_token %}
     <div class="d-flex gap-2 align-items-center flex-wrap">
@@ -174,6 +199,7 @@
       <button type="submit" class="btn btn-sm btn-outline-danger">Flag as needed</button>
     </div>
   </form>
+</div>
 {% endif %}
 
 <h3 class="mt-4">Where to get it</h3>
@@ -187,7 +213,7 @@
   {% if s.product_url %}<div class="supplier-field"><a href="{{ s.product_url }}" target="_blank" rel="noopener">Product page</a></div>{% endif %}
   {% if s.ordering_notes %}<div class="supplier-field"><label>Notes:</label> {{ s.ordering_notes }}</div>{% endif %}
   {% if s.account_holder %}<div class="supplier-field"><label>Account held by:</label> {{ s.account_holder.member.name }}</div>{% endif %}
-  {% if s.account_notes %}<div class="supplier-field text-muted-sm">{{ s.account_notes }}</div>{% endif %}
+  {% if s.account_notes %}<div class="supplier-field"><label>Additional info:</label> {{ s.account_notes|linebreaksbr }}</div>{% endif %}
   <form method="post" action="{% url "labs-shopping-supplier-delete" s.pk %}" style="margin-top: 0.5rem;"
         onsubmit="return confirm('Remove {{ s.supplier_name }} from this item?')">
     {% csrf_token %}
@@ -227,11 +253,17 @@
         <input type="url" id="id_product_url" name="product_url" placeholder="https://..." style="width: 100%;">
       </div>
     </div>
-    <div class="field-group" style="margin-bottom: 0.65rem;">
+    <div class="field-group" style="margin-bottom: 0.5rem;">
       <label for="id_ordering_notes">Ordering notes</label>
       <textarea id="id_ordering_notes" name="ordering_notes" rows="2"
                 style="width: 100%; max-width: 36rem;"
                 placeholder="e.g. Hard water formula. Use the trade account. Don't order the concentrated version."></textarea>
+    </div>
+    <div class="field-group" style="margin-bottom: 0.65rem;">
+      <label for="id_account_notes">Additional info</label>
+      <textarea id="id_account_notes" name="account_notes" rows="3"
+                style="width: 100%; max-width: 36rem;"
+                placeholder="e.g. Physical address, online portal URL, who to contact to access the S&amp;S account, login instructions..."></textarea>
     </div>
     <button type="submit" class="btn btn-sm btn-primary">Save supplier</button>
   </form>

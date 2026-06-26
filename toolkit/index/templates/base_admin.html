@@ -115,6 +115,7 @@ body {
       {label:"Jobs board",         category:"Community",                        href:"{% url 'labs-jobs' %}",          keywords:"tasks help wanted labs"},
       {label:"Building map",       category:"Community",                        href:"{% url 'labs-floorplan' %}",     keywords:"rooms floor plan layout labs"},
       {label:"Shopping list",      category:"Community",                        href:"{% url 'labs-shopping' %}",      keywords:"buy stock supplies labs"},
+      {label:"Do a shop",          category:"Community",                        href:"{% url 'labs-shopping-buy' %}",  keywords:"buy order supplier shop labs"},
       {label:"Lost and found",     category:"Community",                        href:"{% url 'labs-found-items' %}",   keywords:"lost found items log labs"},
       {% if user.is_superuser %}
       {label:"Volunteer profiles", category:"People",                           href:"{% url 'view-volunteer-list' %}", keywords:"list all volunteers"},
@@ -238,6 +239,7 @@ body {
               <div class="dropdown-divider"></div>
               <a class="dropdown-item" href="{% url "labs-floorplan" %}">Building Map <span class="labs-tag">labs</span></a>
               <a class="dropdown-item" href="{% url "labs-shopping" %}">Shopping list <span class="labs-tag">labs</span></a>
+              <a class="dropdown-item" href="{% url "labs-shopping-buy" %}">Do a shop <span class="labs-tag">labs</span></a>
               <a class="dropdown-item" href="{% url "labs-found-item-log" %}">Log found item <span class="labs-tag">labs</span></a>
               <a class="dropdown-item" href="{% url "labs-found-items" %}">Lost &amp; found list <span class="labs-tag">labs</span></a>
             </div>

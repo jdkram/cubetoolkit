@@ -1183,6 +1183,48 @@ Singleton (pk=1) configuration for the inductions feature.
 - `organiser_notification_email` — receives new sign-up notifications and 1:1 request acknowledgements
 - Email template fields for confirmation, reminder, welcome, and access-needs acknowledgement emails
 
+#### Supplier (labs)
+First-class supplier record. Created once per real-world supplier so grouping and delivery/pickup information are reliable rather than fragile string matches.
+
+- `name` — unique supplier name (e.g. "SUMA", "Bookers")
+- `fulfilment_type` — `delivery`, `pickup`, or `either`
+- `ordering_url` — optional link to the supplier's ordering site
+- `ordering_notes` — free-text notes about the ordering process
+- `account_holder` — optional FK to `Volunteer` who holds the login
+- `active` — hidden from the buyer view when false
+
+#### ConsumableItem (labs)
+A venue consumable (cleaning supplies, snacks, stationery, etc.).
+
+- `name`, `category`, `notes`, `active`
+- Linked to `NeedFlag` (open need), `SupplierRecord` (where to buy it)
+
+#### SupplierRecord (labs)
+Links a `ConsumableItem` to a `Supplier` with product-level metadata.
+
+- `item` — FK to `ConsumableItem`
+- `supplier` — FK to `Supplier` (nullable; populated by data migration from `supplier_name`)
+- `supplier_name` — legacy free-text name (still present; kept for backwards compatibility)
+- `product_code`, `product_url`, `unit_desc`, `approx_price`, `ordering_notes`
+- `account_holder` — per-record account holder FK (legacy; `Supplier.account_holder` is now preferred)
+
+#### NeedFlag (labs)
+Records that an item needs restocking. One open flag per item at a time.
+
+- `item` — FK to `ConsumableItem`
+- `flagged_by`, `flagged_at`, `notes`
+- `resolved_at`, `resolved_by` — set when the item arrives; null = still open
+
+#### ProcurementPledge (labs)
+Records that someone intends to get an item. One-to-one with `NeedFlag`.
+
+- `need_flag` — OneToOne FK
+- `pledged_by`, `pledged_at`, `eta_date`, `eta_notes`
+- `fulfilled_at` — set by `shopping_resolve`; authoritative "arrived" timestamp
+- `status` — `pledged`, `ordered`, `oos` (out of stock), `fulfilled`
+- `intended_supplier` — nullable FK to `Supplier`; identifies which supplier's order this is part of
+- `status_notes` — free-text note (used for out-of-stock supplier name etc.)
+
 ---
 
 
@@ -1248,6 +1290,13 @@ Singleton (pk=1) configuration for the inductions feature.
 | `/volunteers/training/group/add/` | Bulk-add training records |
 | `/volunteers/export/` | CSV export |
 | `/cms/` | Wagtail CMS admin |
+| `/labs/shopping/` | Shopping list (needs + pledges) |
+| `/labs/shopping/buy/` | Buyer view — supplier picker |
+| `/labs/shopping/buy/unsorted/` | Enrichment workbench — items with no supplier |
+| `/labs/shopping/buy/<supplier_id>/` | Per-supplier shop sheet |
+| `/labs/shopping/<item_id>/enrich/` | POST — attach supplier to item |
+| `/labs/shopping/buy/add/<flag_id>/` | POST — add item to a supplier's order |
+| `/labs/shopping/oos/<flag_id>/` | POST — mark item out of stock at supplier |
 
 ---
 

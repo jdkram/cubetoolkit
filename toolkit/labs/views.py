@@ -25,6 +25,7 @@ from .models import (
     FoundItem,
     NeedFlag,
     ProcurementPledge,
+    Supplier,
     SupplierRecord,
     RoomNote,
     DonationItem,
@@ -965,6 +966,7 @@ def shopping_supplier_add(request, item_id):
         item=item,
         supplier_name=supplier_name,
         ordering_notes=request.POST.get("ordering_notes", "").strip(),
+        account_notes=request.POST.get("account_notes", "").strip(),
         product_url=request.POST.get("product_url", "").strip(),
         product_code=request.POST.get("product_code", "").strip(),
         unit_desc=request.POST.get("unit_desc", "").strip(),
@@ -995,6 +997,245 @@ def shopping_pledge_cancel(request, flag_id):
     pledge.delete()
     messages.success(request, f"Pledge for '{flag.item.name}' cancelled.")
     return redirect("labs-shopping")
+
+
+# ── Buyer views ────────────────────────────────────────────────────────────────
+
+@login_required
+def shopping_buy(request):
+    """Supplier picker — entry point for someone about to do a shop."""
+    open_flags_qs = NeedFlag.objects.filter(resolved_at__isnull=True)
+
+    suppliers = Supplier.objects.filter(active=True).prefetch_related("records__item")
+
+    supplier_cards = []
+    for supplier in suppliers:
+        item_ids = supplier.records.values_list("item_id", flat=True)
+        needed_total = open_flags_qs.filter(item_id__in=item_ids).count()
+        covered = open_flags_qs.filter(
+            item_id__in=item_ids,
+            pledge__intended_supplier=supplier,
+        ).exclude(pledge__status=ProcurementPledge.STATUS_OUT_OF_STOCK).count()
+        supplier_cards.append({
+            "supplier": supplier,
+            "needed_total": needed_total,
+            "covered": covered,
+        })
+
+    # "Needs sorting" bucket — open flags with no SupplierRecord at all
+    items_with_suppliers = SupplierRecord.objects.values_list("item_id", flat=True)
+    unsorted_count = open_flags_qs.exclude(item_id__in=items_with_suppliers).count()
+
+    return render(request, "labs/shopping_buy.html", {
+        "supplier_cards": supplier_cards,
+        "unsorted_count": unsorted_count,
+    })
+
+
+@login_required
+def shopping_buy_supplier(request, supplier_id):
+    """The core buyer sheet for a given supplier."""
+    supplier = get_object_or_404(Supplier, pk=supplier_id, active=True)
+    open_flags_qs = NeedFlag.objects.filter(resolved_at__isnull=True)
+
+    # All records for this supplier with their items
+    records = (
+        supplier.records
+        .select_related("item")
+        .prefetch_related(
+            models.Prefetch(
+                "item__need_flags",
+                queryset=open_flags_qs.select_related(
+                    "flagged_by__member",
+                    "pledge__pledged_by__member",
+                    "pledge__intended_supplier",
+                ),
+                to_attr="open_flags",
+            ),
+            "item__suppliers__supplier",
+        )
+    )
+
+    rows = []
+    for record in records:
+        item = record.item
+        open_flags = item.open_flags
+        if not open_flags:
+            continue
+        flag = open_flags[0]
+        pledge = getattr(flag, "pledge", None) if hasattr(flag, "pledge") else None
+        try:
+            pledge = flag.pledge
+        except ProcurementPledge.DoesNotExist:
+            pledge = None
+
+        # Other suppliers that stock this item (excluding the current one)
+        other_suppliers = [
+            sr.supplier for sr in item.suppliers.all()
+            if sr.supplier_id and sr.supplier_id != supplier.pk
+        ]
+
+        rows.append({
+            "item": item,
+            "record": record,
+            "flag": flag,
+            "pledge": pledge,
+            "other_suppliers": other_suppliers,
+        })
+
+    try:
+        current_volunteer = request.user.volunteer
+    except Exception:
+        current_volunteer = None
+
+    return render(request, "labs/shopping_buy_supplier.html", {
+        "supplier": supplier,
+        "rows": rows,
+        "current_volunteer": current_volunteer,
+        "STATUS_ORDERED": ProcurementPledge.STATUS_ORDERED,
+        "STATUS_OUT_OF_STOCK": ProcurementPledge.STATUS_OUT_OF_STOCK,
+        "STATUS_FULFILLED": ProcurementPledge.STATUS_FULFILLED,
+    })
+
+
+@login_required
+def shopping_buy_unsorted(request):
+    """Enrichment workbench — open needs with no supplier attached yet."""
+    items_with_suppliers = SupplierRecord.objects.values_list("item_id", flat=True)
+    open_flags = (
+        NeedFlag.objects.filter(resolved_at__isnull=True)
+        .exclude(item_id__in=items_with_suppliers)
+        .select_related("item", "flagged_by__member")
+        .prefetch_related("item__suppliers")
+        .order_by("item__category", "item__name")
+    )
+    active_suppliers = Supplier.objects.filter(active=True)
+    return render(request, "labs/shopping_buy_unsorted.html", {
+        "open_flags": open_flags,
+        "active_suppliers": active_suppliers,
+        "CATEGORY_CHOICES": ConsumableItem.CATEGORY_CHOICES,
+    })
+
+
+@login_required
+@require_POST
+def shopping_item_enrich(request, item_id):
+    """Attach a supplier (existing or new) to an item from the unsorted workbench."""
+    item = get_object_or_404(ConsumableItem, pk=item_id, active=True)
+    supplier_name = request.POST.get("supplier_name", "").strip()
+    supplier_id = request.POST.get("supplier_id", "").strip()
+
+    supplier = None
+    if supplier_id:
+        try:
+            supplier = Supplier.objects.get(pk=int(supplier_id), active=True)
+        except (Supplier.DoesNotExist, ValueError):
+            pass
+
+    if supplier is None and supplier_name:
+        supplier, _ = Supplier.objects.get_or_create(
+            name__iexact=supplier_name,
+            defaults={"name": supplier_name},
+        )
+    elif supplier is None:
+        messages.error(request, "Choose or type a supplier name.")
+        return redirect("labs-shopping-buy-unsorted")
+
+    try:
+        approx_price = request.POST.get("approx_price", "").strip() or None
+        if approx_price:
+            approx_price = float(approx_price)
+    except ValueError:
+        approx_price = None
+
+    SupplierRecord.objects.create(
+        item=item,
+        supplier=supplier,
+        supplier_name=supplier.name,
+        product_code=request.POST.get("product_code", "").strip(),
+        unit_desc=request.POST.get("unit_desc", "").strip(),
+        approx_price=approx_price,
+        ordering_notes=request.POST.get("ordering_notes", "").strip(),
+    )
+    messages.success(request, f"'{item.name}' linked to {supplier.name}.")
+    return redirect("labs-shopping-buy-unsorted")
+
+
+@login_required
+@require_POST
+def shopping_buy_add(request, flag_id):
+    """Add an item to a supplier's order (create/update pledge with supplier + status=ordered)."""
+    flag = get_object_or_404(NeedFlag, pk=flag_id, resolved_at__isnull=True)
+    supplier_id = request.POST.get("supplier_id")
+    supplier = get_object_or_404(Supplier, pk=supplier_id) if supplier_id else None
+
+    try:
+        volunteer = request.user.volunteer
+    except Exception:
+        volunteer = None
+
+    existing = getattr(flag, "pledge", None)
+    try:
+        existing = flag.pledge
+    except ProcurementPledge.DoesNotExist:
+        existing = None
+
+    if existing and existing.fulfilled_at is None:
+        existing.intended_supplier = supplier
+        existing.status = ProcurementPledge.STATUS_ORDERED
+        existing.pledged_by = volunteer
+        existing.save()
+    else:
+        ProcurementPledge.objects.create(
+            need_flag=flag,
+            pledged_by=volunteer,
+            intended_supplier=supplier,
+            status=ProcurementPledge.STATUS_ORDERED,
+        )
+    messages.success(request, f"'{flag.item.name}' added to order.")
+    if supplier_id:
+        return redirect("labs-shopping-buy-supplier", supplier_id=supplier_id)
+    return redirect("labs-shopping-buy")
+
+
+@login_required
+@require_POST
+def shopping_out_of_stock(request, flag_id):
+    """Mark an item as out of stock at a supplier — keeps the need open."""
+    flag = get_object_or_404(NeedFlag, pk=flag_id, resolved_at__isnull=True)
+    supplier_id = request.POST.get("supplier_id")
+    supplier = get_object_or_404(Supplier, pk=supplier_id) if supplier_id else None
+
+    try:
+        volunteer = request.user.volunteer
+    except Exception:
+        volunteer = None
+
+    note = f"Out of stock at {supplier.name}" if supplier else "Out of stock"
+
+    existing = None
+    try:
+        existing = flag.pledge
+    except ProcurementPledge.DoesNotExist:
+        pass
+
+    if existing and existing.fulfilled_at is None:
+        existing.status = ProcurementPledge.STATUS_OUT_OF_STOCK
+        existing.intended_supplier = supplier
+        existing.status_notes = note
+        existing.save()
+    else:
+        ProcurementPledge.objects.create(
+            need_flag=flag,
+            pledged_by=volunteer,
+            intended_supplier=supplier,
+            status=ProcurementPledge.STATUS_OUT_OF_STOCK,
+            status_notes=note,
+        )
+    messages.warning(request, f"'{flag.item.name}' marked out of stock at {supplier.name if supplier else 'supplier'}.")
+    if supplier_id:
+        return redirect("labs-shopping-buy-supplier", supplier_id=supplier_id)
+    return redirect("labs-shopping-buy")
 
 
 # ── Lost & found ──────────────────────────────────────────────────────────────

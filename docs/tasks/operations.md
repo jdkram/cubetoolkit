@@ -816,3 +816,33 @@ class CollectiveRoleLink(Model):
 
 ---
 
+### ~~9.146~~ — ~~Shopping list: buyer-oriented view + first-class suppliers~~ ✅ 2026-06-26
+
+Extends the shared shopping list (9.88). The existing list is built around *adding* needs quickly. This adds a parallel **buyer-oriented view** for the person about to place an order (e.g. a Suma delivery or a Bookers run), answering: what does everyone need that I can get from *this* supplier, what's already being handled, and what can I skip? Additive — the existing quick-add list (`labs/shopping.html`) is untouched.
+
+**Governing principle — progressive enrichment, never gate fast entry.** The real process is barely a system: people email sporadically, requests cross collectives (bar *and* cafe both order from Bookers), thoroughness varies. The dominant failure mode is friction killing capture. So the design follows a three-stage lifecycle, and every stage must work even if the later ones never happen:
+
+1. **Fast, poor data** — anyone flags "we need X" in seconds; no supplier, category, or anything required (the existing quick-add; must not regress).
+2. **Enrichment by people who know** — a *different*, knowledgeable volunteer later attaches supplier(s), delivery/pickup, category. Separate, optional act.
+3. **Encoded for future orders** — that metadata persists on `Supplier` / `SupplierRecord` so the next order is informed automatically.
+
+Hard constraints: **no new required field** (supplier on items and on pledges is always nullable — "I'll sort this" is a valid pledge); the un-enriched pile is **first-classed** as a "needs sorting" bucket with low-friction inline enrichment, not buried as admin; grouping is **by supplier**, deliberately cutting across category/collective.
+
+**The four buyer facts:** (a) all needed items for a given supplier; (b) whether an item is already in someone's basket/order (and whether for *this* supplier — "in this order" — or another — "being got from X", so the buyer skips it); (c) "also at X, Y" for items stocked by multiple suppliers; (d) delivery (booked, confirmed on order) vs in-person pickup (availability not guaranteed) — a property of the supplier.
+
+**Edge case — out of stock.** A supplier accepts an order then says an item is out of stock: mark that pledge out-of-stock, record *which* supplier failed, and leave the `NeedFlag` open so the item resurfaces under alternative suppliers' buyer views. Nobody retries the dead end.
+
+**Data model.** New first-class `Supplier` (name, `fulfilment_type` delivery/pickup/either, ordering URL/notes, account holder, active). `SupplierRecord` gains a nullable FK to `Supplier`; a reversible data migration folds existing `supplier_name` strings into `Supplier` rows. `ProcurementPledge` gains nullable `intended_supplier` FK and a `status` (pledged → ordered → out-of-stock → fulfilled); `fulfilled_at` stays the authoritative "arrived" timestamp so existing flows keep working.
+
+**Views/URLs** (name prefix `labs-shopping-*`): `shopping_buy` (supplier picker + prominent "needs sorting (N)" entry), `shopping_buy_supplier` (the per-supplier shop sheet), `shopping_buy_unsorted` (enrichment workbench — attach supplier inline, `get_or_create` on new names), `shopping_item_enrich` (POST), `shopping_out_of_stock` (POST). Reuses existing pledge/resolve handlers.
+
+**Integration.** Nav entries beside the existing Shopping links in `base_admin.html`; register `Supplier` in `labs/admin.py`; seed a couple of suppliers (one delivery, one pickup) and link existing records. Optional stretch: dashboard widget for "out of stock, needs re-sourcing".
+
+**Note on the `__init__` caching trap.** Any query touching `Volunteer`/`Member` for these views must use `.values()` / `select_related`, never `.only()` (infinite recursion — see known-issues + CLAUDE.md).
+
+**Files.** `labs/models.py`, `labs/views.py`, `labs/urls.py`, `labs/admin.py`, new `labs/templates/labs/shopping_buy*.html`, migration + data migration, `base_admin.html`, seed data, `labs/tests/test_shopping.py`. Update `docs/SPEC.md` §4/§8.
+
+**Size estimate:** 🟠 L (40–80h). Full design rationale: approved plan at `~/.claude/plans/i-d-like-to-spec-sparkling-salamander.md`.
+
+---
+

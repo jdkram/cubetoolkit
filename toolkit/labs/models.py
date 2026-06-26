@@ -405,6 +405,37 @@ class BulletinRead(models.Model):
 
 # ── Shopping list (consumables) ───────────────────────────────────────────────
 
+class Supplier(models.Model):
+    FULFILMENT_DELIVERY = "delivery"
+    FULFILMENT_PICKUP = "pickup"
+    FULFILMENT_EITHER = "either"
+    FULFILMENT_CHOICES = [
+        (FULFILMENT_DELIVERY, "Online order / delivery"),
+        (FULFILMENT_PICKUP, "Pick up in person"),
+        (FULFILMENT_EITHER, "Either"),
+    ]
+    name = models.CharField(max_length=100, unique=True)
+    fulfilment_type = models.CharField(
+        max_length=20, choices=FULFILMENT_CHOICES, default=FULFILMENT_EITHER
+    )
+    ordering_url = models.URLField(blank=True, default="")
+    ordering_notes = models.TextField(blank=True, default="")
+    account_holder = models.ForeignKey(
+        "members.Volunteer",
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="supplier_logins",
+    )
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "labs_suppliers"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class ConsumableItem(models.Model):
     CATEGORY_CLEANING = "cleaning"
     CATEGORY_STATIONERY = "stationery"
@@ -438,6 +469,9 @@ class ConsumableItem(models.Model):
 
 class SupplierRecord(models.Model):
     item = models.ForeignKey(ConsumableItem, on_delete=models.CASCADE, related_name="suppliers")
+    supplier = models.ForeignKey(
+        Supplier, null=True, blank=True, on_delete=models.CASCADE, related_name="records"
+    )
     supplier_name = models.CharField(max_length=100)
     product_code = models.CharField(max_length=100, blank=True, default="")
     product_url = models.URLField(blank=True, default="")
@@ -491,6 +525,17 @@ class NeedFlag(models.Model):
 
 
 class ProcurementPledge(models.Model):
+    STATUS_PLEDGED = "pledged"
+    STATUS_ORDERED = "ordered"
+    STATUS_OUT_OF_STOCK = "oos"
+    STATUS_FULFILLED = "fulfilled"
+    STATUS_CHOICES = [
+        (STATUS_PLEDGED, "Pledged"),
+        (STATUS_ORDERED, "Ordered / in basket"),
+        (STATUS_OUT_OF_STOCK, "Out of stock"),
+        (STATUS_FULFILLED, "Fulfilled"),
+    ]
+
     need_flag = models.OneToOneField(NeedFlag, on_delete=models.CASCADE, related_name="pledge")
     pledged_by = models.ForeignKey(
         "members.Volunteer", null=True, blank=True, on_delete=models.SET_NULL, related_name="pledges"

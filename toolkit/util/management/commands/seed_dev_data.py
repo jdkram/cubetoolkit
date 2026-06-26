@@ -785,6 +785,7 @@ class Command(BaseCommand):
         CONSUMABLE_ITEMS = [
             ("Hand soap", ConsumableItem.CATEGORY_CLEANING),
             ("Bin bags", ConsumableItem.CATEGORY_CLEANING),
+            ("Multi-surface spray", ConsumableItem.CATEGORY_CLEANING),
             ("Washing detergent", ConsumableItem.CATEGORY_CLEANING),
             ("Dishwasher detergent", ConsumableItem.CATEGORY_CLEANING),
             ("Dishwasher rinse aid", ConsumableItem.CATEGORY_CLEANING),
@@ -811,6 +812,85 @@ class Command(BaseCommand):
             )
             if created:
                 counts["shopping_items"] += 1
+
+        # Suppliers (9.146) — a couple of first-class Supplier rows + link SupplierRecords
+        from toolkit.labs.models import Supplier, SupplierRecord
+
+        SEED_SUPPLIERS = [
+            {
+                "name": "SUMA",
+                "fulfilment_type": Supplier.FULFILMENT_DELIVERY,
+                "ordering_url": "",
+                "ordering_notes": "Wholesale wholefoods cooperative. Ethical/environmental preference for cleaning supplies — not just a cost choice. Place orders online.",
+                "link_items": [
+                    {"name": "Washing detergent", "code": "ECO001", "unit": "5L", "price": "3.50"},
+                    {"name": "Dishwasher detergent", "code": "ECO002", "unit": "5L", "price": "3.80"},
+                    {"name": "Hand soap", "code": "ECO003", "unit": "5L", "price": "4.20"},
+                ],
+            },
+            {
+                "name": "Bookers",
+                "fulfilment_type": Supplier.FULFILMENT_PICKUP,
+                "ordering_url": "",
+                "ordering_notes": "Cash & carry — in person only. Cheaper than Nisbets. Check stock on arrival.",
+                "link_items": [
+                    {"name": "Bin bags", "code": "BB001", "unit": "200-pack", "price": "8.99"},
+                    {"name": "Cling film", "code": "KT001", "unit": "6-pack", "price": "5.50"},
+                    {"name": "Washing up sponges", "code": "", "unit": "10-pack", "price": ""},
+                    {"name": "Steel scrubbers", "code": "", "unit": "10-pack", "price": ""},
+                    {"name": "Multi-surface spray", "code": "", "unit": "each", "price": ""},
+                    {"name": "Sesame Snaps", "code": "SN001", "unit": "24-pack", "price": "12.00"},
+                    {"name": "Sesame Snaps (Chocolate)", "code": "SN002", "unit": "24-pack", "price": "13.00"},
+                    {"name": "Dino Gummies", "code": "SN003", "unit": "12-pack", "price": "9.60"},
+                    {"name": "Crisps (Lightly Salted)", "code": "CR001", "unit": "48-pack", "price": "14.40"},
+                    {"name": "Crisps (Sea Salt & Malt Vinegar)", "code": "CR002", "unit": "48-pack", "price": "14.40"},
+                    {"name": "Crisps (Rosemary & Sea Salt)", "code": "CR003", "unit": "48-pack", "price": "15.60"},
+                ],
+            },
+            {
+                "name": "Nisbets",
+                "fulfilment_type": Supplier.FULFILMENT_DELIVERY,
+                "ordering_url": "https://www.nisbets.co.uk",
+                "ordering_notes": "Catering supplies — broader range than Bookers, more expensive. Online ordering with delivery.",
+                "link_items": [
+                    {
+                        "name": "Dishwasher detergent",
+                        "code": "GM981",
+                        "unit": "5L",
+                        "price": "",
+                        "product_url": "https://www.nisbets.co.uk/jantex-pro-dishwasher-detergent-5-litre/gm981",
+                        "ordering_notes": "Hard water formula — use this version to reduce descaling.",
+                    },
+                    {"name": "Multi-surface spray", "code": "", "unit": "each", "price": ""},
+                ],
+            },
+        ]
+        for sup_data in SEED_SUPPLIERS:
+            supplier, _ = Supplier.objects.get_or_create(
+                name=sup_data["name"],
+                defaults={
+                    "fulfilment_type": sup_data["fulfilment_type"],
+                    "ordering_url": sup_data.get("ordering_url", ""),
+                    "ordering_notes": sup_data.get("ordering_notes", ""),
+                },
+            )
+            for link in sup_data.get("link_items", []):
+                try:
+                    item = ConsumableItem.objects.get(name=link["name"])
+                except ConsumableItem.DoesNotExist:
+                    continue
+                if not SupplierRecord.objects.filter(item=item, supplier=supplier).exists():
+                    _price = link.get("price") or None
+                    SupplierRecord.objects.create(
+                        item=item,
+                        supplier=supplier,
+                        supplier_name=supplier.name,
+                        product_code=link.get("code", ""),
+                        unit_desc=link.get("unit", ""),
+                        approx_price=_price,
+                        product_url=link.get("product_url", ""),
+                        ordering_notes=link.get("ordering_notes", ""),
+                    )
 
         # Shopping need flags (9.88) — layered on top of ConsumableItem catalogue
         from toolkit.labs.models import NeedFlag, ProcurementPledge

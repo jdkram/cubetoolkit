@@ -1,0 +1,171 @@
+{% extends "base_admin.html" %}
+
+{% block title %}{{ supplier.name }} — shop sheet{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+  .shop-banner {
+    border-radius: 5px;
+    padding: 0.6rem 1rem;
+    font-size: 0.88rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .shop-banner--delivery { background: #e8f4fd; color: #0d4f8a; border: 1px solid #b6d9f7; }
+  .shop-banner--pickup   { background: #edf7f0; color: #0a5233; border: 1px solid #b2dfca; }
+  .shop-banner--either   { background: #f8f9fa; color: #495057; border: 1px solid #dee2e6; }
+
+  .buy-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  .buy-table th {
+    background: #343a40; color: #fff;
+    padding: 0.45rem 0.65rem; font-size: 0.8rem; font-weight: 600; text-align: left;
+  }
+  .buy-table td { padding: 0.55rem 0.65rem; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+  .buy-table tr:hover td { background: #f8f9fa; }
+
+  .item-name { font-weight: 600; }
+  .item-meta { font-size: 0.78rem; color: #6c757d; margin-top: 0.15rem; }
+
+  .status-col { min-width: 8rem; }
+  .pledge-this  { border-left: 3px solid #0d6efd; }
+  .pledge-other { border-left: 3px solid #adb5bd; opacity: 0.8; }
+  .pledge-oos   { border-left: 3px solid #dc3545; opacity: 0.75; }
+
+  .status-pill {
+    display: inline-block; padding: 0.1rem 0.45rem; border-radius: 3px;
+    font-size: 0.73rem; font-weight: 600;
+  }
+  .status-pill--ordered   { background: #0d6efd; color: #fff; }
+  .status-pill--pledged   { background: #f59e0b; color: #fff; }
+  .status-pill--oos       { background: #dc3545; color: #fff; }
+
+  .also-at { font-size: 0.76rem; color: #6c757d; margin-top: 0.15rem; }
+
+  .action-cell { white-space: nowrap; }
+  .action-cell form { display: inline; margin-right: 0.3rem; }
+
+  .empty-state { color: #6c757d; font-size: 0.9rem; margin-top: 1.5rem; }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="d-flex justify-content-between align-items-baseline mb-2">
+  <h1 class="mb-0">{{ supplier.name }}</h1>
+  <a href="{% url "labs-shopping-buy" %}" class="text-muted" style="font-size:0.85rem;">← All suppliers</a>
+</div>
+
+{% if supplier.fulfilment_type == "delivery" %}
+<div class="shop-banner shop-banner--delivery">
+  📦 Online order / delivery — items confirmed when you place the order.
+  {% if supplier.ordering_url %}<a href="{{ supplier.ordering_url }}" target="_blank" rel="noopener">Open ordering site →</a>{% endif %}
+</div>
+{% elif supplier.fulfilment_type == "pickup" %}
+<div class="shop-banner shop-banner--pickup">
+  🛒 In person — availability not guaranteed until you're there.
+</div>
+{% else %}
+<div class="shop-banner shop-banner--either">
+  Delivery or pickup — check the order below.
+  {% if supplier.ordering_url %}<a href="{{ supplier.ordering_url }}" target="_blank" rel="noopener">Open ordering site →</a>{% endif %}
+</div>
+{% endif %}
+
+{% if supplier.ordering_notes %}
+<p class="text-muted" style="font-size:0.85rem; margin-bottom:1rem;">{{ supplier.ordering_notes }}</p>
+{% endif %}
+
+{% if rows %}
+<div style="overflow-x:auto;">
+<table class="buy-table">
+  <thead>
+    <tr>
+      <th>Item</th>
+      <th>Product info</th>
+      <th class="status-col">Status</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr class="{% if row.pledge and row.pledge.status == STATUS_OUT_OF_STOCK %}pledge-oos{% elif row.pledge and row.pledge.intended_supplier_id == supplier.pk and row.pledge.status == STATUS_ORDERED %}pledge-this{% elif row.pledge and row.pledge.intended_supplier_id and row.pledge.intended_supplier_id != supplier.pk %}pledge-other{% endif %}">
+      <td>
+        <div class="item-name">
+          <a href="{% url "labs-shopping-item" row.item.pk %}">{{ row.item.name }}</a>
+        </div>
+        {% if row.flag.notes %}
+        <div class="item-meta">Note: {{ row.flag.notes }}</div>
+        {% endif %}
+        {% if row.other_suppliers %}
+        <div class="also-at">Also at: {% for s in row.other_suppliers %}{{ s.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>
+        {% endif %}
+      </td>
+      <td>
+        <div style="font-size:0.82rem;">
+          {% if row.record.product_code %}<span style="font-family:monospace;">{{ row.record.product_code }}</span> · {% endif %}
+          {% if row.record.unit_desc %}{{ row.record.unit_desc }}{% endif %}
+          {% if row.record.approx_price %} · ~£{{ row.record.approx_price }}{% endif %}
+        </div>
+        {% if row.record.ordering_notes %}
+        <div class="item-meta">{{ row.record.ordering_notes }}</div>
+        {% endif %}
+        {% if row.record.product_url %}
+        <div class="item-meta"><a href="{{ row.record.product_url }}" target="_blank" rel="noopener">Product link →</a></div>
+        {% endif %}
+      </td>
+      <td class="status-col">
+        {% if row.pledge %}
+          {% if row.pledge.status == STATUS_OUT_OF_STOCK %}
+            <span class="status-pill status-pill--oos">Out of stock</span>
+            {% if row.pledge.status_notes %}<div class="item-meta">{{ row.pledge.status_notes }}</div>{% endif %}
+          {% elif row.pledge.intended_supplier_id == supplier.pk and row.pledge.status == STATUS_ORDERED %}
+            <span class="status-pill status-pill--ordered">In this order</span>
+            {% if row.pledge.pledged_by %}<div class="item-meta">{{ row.pledge.pledged_by.member.name }}</div>{% endif %}
+          {% elif row.pledge.intended_supplier_id and row.pledge.intended_supplier_id != supplier.pk %}
+            <span class="status-pill status-pill--pledged">Being got from {{ row.pledge.intended_supplier.name }}</span>
+          {% else %}
+            <span class="status-pill status-pill--pledged">Pledged</span>
+            {% if row.pledge.pledged_by %}<div class="item-meta">{{ row.pledge.pledged_by.member.name }}</div>{% endif %}
+          {% endif %}
+        {% else %}
+          <span style="color:#dc3545; font-size:0.82rem; font-weight:600;">Needed</span>
+          {% if row.flag.flagged_by %}<div class="item-meta">{{ row.flag.flagged_by.member.name }} · {{ row.flag.flagged_at|date:"j M" }}</div>{% endif %}
+        {% endif %}
+      </td>
+      <td class="action-cell">
+        {% if row.pledge and row.pledge.status == STATUS_FULFILLED %}
+          {# already done #}
+        {% else %}
+          {% if not row.pledge or row.pledge.status == STATUS_OUT_OF_STOCK or row.pledge.intended_supplier_id != supplier.pk %}
+          <form method="post" action="{% url "labs-shopping-buy-add" row.flag.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="supplier_id" value="{{ supplier.pk }}">
+            <button type="submit" class="btn btn-sm btn-primary">Add to order</button>
+          </form>
+          {% endif %}
+          {% if row.pledge and row.pledge.status == STATUS_ORDERED and row.pledge.intended_supplier_id == supplier.pk %}
+          <form method="post" action="{% url "labs-shopping-resolve" row.flag.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-success">Got it ✓</button>
+          </form>
+          {% endif %}
+          {% if not row.pledge or row.pledge.status != STATUS_OUT_OF_STOCK %}
+          <form method="post" action="{% url "labs-shopping-oos" row.flag.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="supplier_id" value="{{ supplier.pk }}">
+            <button type="submit" class="btn btn-sm btn-outline-danger" title="Out of stock — keeps the need open">OOS</button>
+          </form>
+          {% endif %}
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="empty-state">No open needs for items stocked by {{ supplier.name }} right now.</p>
+{% endif %}
+{% endblock %}

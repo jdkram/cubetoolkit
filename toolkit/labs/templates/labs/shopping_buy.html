@@ -1,0 +1,119 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Do a shop{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+  .supplier-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(22rem, 100%), 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  .supplier-card {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 1rem 1.1rem;
+    background: #fff;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    transition: box-shadow 0.15s;
+  }
+  .supplier-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-decoration: none; color: inherit; }
+  .supplier-card__name { font-weight: 700; font-size: 1.05rem; }
+  .supplier-card__meta { font-size: 0.82rem; color: #6c757d; }
+  .supplier-card__counts { font-size: 0.88rem; margin-top: 0.2rem; }
+  .count-badge {
+    display: inline-block;
+    padding: 0.1rem 0.45rem;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-right: 0.3rem;
+  }
+  .count-badge--need { background: #dc3545; color: #fff; }
+  .count-badge--covered { background: #28a745; color: #fff; }
+  .count-badge--zero { background: #e9ecef; color: #6c757d; }
+  .fulfilment-badge {
+    font-size: 0.72rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    border: 1px solid currentColor;
+  }
+  .fulfilment-badge--delivery { color: #0d6efd; border-color: #0d6efd; }
+  .fulfilment-badge--pickup   { color: #198754; border-color: #198754; }
+  .fulfilment-badge--either   { color: #6c757d; border-color: #6c757d; }
+
+  .unsorted-card {
+    border: 2px solid #f59e0b;
+    border-radius: 6px;
+    padding: 0.85rem 1.1rem;
+    background: #fffbeb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .unsorted-card__label { font-size: 0.92rem; font-weight: 600; color: #92400e; }
+  .unsorted-card__sub   { font-size: 0.82rem; color: #78350f; margin-top: 0.15rem; }
+</style>
+{% endblock %}
+
+{% block body %}
+<h1 class="mb-1">Do a shop</h1>
+<p class="text-muted" style="font-size:0.9rem;">Pick a supplier to see what's needed from them, add items to your order, and mark things as got.</p>
+
+{% if unsorted_count %}
+<div class="unsorted-card">
+  <div>
+    <div class="unsorted-card__label">Needs sorting — {{ unsorted_count }} item{{ unsorted_count|pluralize }} with no supplier yet</div>
+    <div class="unsorted-card__sub">Help out: attach these to a supplier so they appear on the right shop sheet.</div>
+  </div>
+  <a href="{% url "labs-shopping-buy-unsorted" %}" class="btn btn-sm btn-warning">Sort them →</a>
+</div>
+{% endif %}
+
+{% if supplier_cards %}
+<div class="supplier-grid">
+  {% for card in supplier_cards %}
+  <a href="{% url "labs-shopping-buy-supplier" card.supplier.pk %}" class="supplier-card">
+    <div>
+      <span class="supplier-card__name">{{ card.supplier.name }}</span>
+      {% if card.supplier.fulfilment_type == "delivery" %}
+        <span class="fulfilment-badge fulfilment-badge--delivery ms-1">delivery</span>
+      {% elif card.supplier.fulfilment_type == "pickup" %}
+        <span class="fulfilment-badge fulfilment-badge--pickup ms-1">pickup</span>
+      {% else %}
+        <span class="fulfilment-badge fulfilment-badge--either ms-1">delivery or pickup</span>
+      {% endif %}
+    </div>
+    <div class="supplier-card__counts">
+      {% if card.needed_total %}
+        <span class="count-badge count-badge--need">{{ card.needed_total }} needed</span>
+        {% if card.covered %}
+          <span class="count-badge count-badge--covered">{{ card.covered }} covered</span>
+        {% endif %}
+      {% else %}
+        <span class="count-badge count-badge--zero">nothing needed right now</span>
+      {% endif %}
+    </div>
+    {% if card.supplier.ordering_notes %}
+    <div class="supplier-card__meta">{{ card.supplier.ordering_notes|truncatechars:80 }}</div>
+    {% endif %}
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<p class="text-muted mt-3">No active suppliers set up yet.</p>
+{% endif %}
+
+<div class="mt-4">
+  <a href="{% url "labs-shopping" %}" class="text-muted" style="font-size:0.85rem;">← Back to shopping list</a>
+</div>
+{% endblock %}

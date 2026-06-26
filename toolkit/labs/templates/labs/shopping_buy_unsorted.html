@@ -1,0 +1,113 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Needs sorting{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+  .unsorted-intro {
+    background: #fffbeb; border: 1px solid #f59e0b; border-radius: 5px;
+    padding: 0.7rem 1rem; font-size: 0.88rem; color: #78350f; margin-bottom: 1.25rem;
+  }
+
+  .sort-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  .sort-table th {
+    background: #343a40; color: #fff;
+    padding: 0.45rem 0.65rem; font-size: 0.8rem; font-weight: 600; text-align: left;
+  }
+  .sort-table td { padding: 0.55rem 0.65rem; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+  .sort-table tr:hover td { background: #f8f9fa; }
+
+  .item-name-cell { font-weight: 600; }
+  .item-meta { font-size: 0.78rem; color: #6c757d; margin-top: 0.1rem; }
+
+  .enrich-form { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: flex-start; }
+  .enrich-form select,
+  .enrich-form input[type="text"],
+  .enrich-form input[type="number"] {
+    font-size: 0.82rem; padding: 0.25rem 0.4rem;
+    border: 1px solid #ced4da; border-radius: 3px;
+  }
+  .enrich-form select { max-width: 13rem; }
+  .enrich-form .new-supplier-input { max-width: 12rem; }
+  .enrich-form .price-input { width: 5.5rem; }
+  .enrich-form .code-input { width: 7rem; }
+  .enrich-form .unit-input { width: 7rem; }
+  #new-supplier-row { display: none; }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="d-flex justify-content-between align-items-baseline mb-2">
+  <h1 class="mb-0">Needs sorting</h1>
+  <a href="{% url "labs-shopping-buy" %}" class="text-muted" style="font-size:0.85rem;">← Supplier picker</a>
+</div>
+
+<div class="unsorted-intro">
+  These items have been flagged as needed but no supplier has been attached yet.
+  Attaching a supplier means they'll show up on the right shop sheet next time someone does a run.
+</div>
+
+{% if open_flags %}
+<div style="overflow-x:auto;">
+<table class="sort-table">
+  <thead>
+    <tr>
+      <th>Item</th>
+      <th>Attach a supplier</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for flag in open_flags %}
+    <tr>
+      <td class="item-name-cell">
+        <a href="{% url "labs-shopping-item" flag.item.pk %}">{{ flag.item.name }}</a>
+        <div class="item-meta">
+          {{ flag.item.get_category_display }}
+          {% if flag.flagged_by %} · flagged by {{ flag.flagged_by.member.name }}{% endif %}
+          {% if flag.notes %} · "{{ flag.notes }}"{% endif %}
+        </div>
+      </td>
+      <td>
+        <form method="post" action="{% url "labs-shopping-enrich" flag.item.pk %}" class="enrich-form">
+          {% csrf_token %}
+          <select name="supplier_id" class="supplier-select" aria-label="Choose existing supplier">
+            <option value="">— pick supplier —</option>
+            {% for s in active_suppliers %}
+            <option value="{{ s.pk }}">{{ s.name }}</option>
+            {% endfor %}
+            <option value="new">+ New supplier…</option>
+          </select>
+          <input type="text" name="supplier_name" class="new-supplier-input" placeholder="Supplier name" style="display:none;">
+          <input type="text" name="product_code" class="code-input" placeholder="Code" title="Product code">
+          <input type="text" name="unit_desc" class="unit-input" placeholder="Unit" title="e.g. 6-pack, 5L">
+          <input type="number" name="approx_price" class="price-input" placeholder="£ price" step="0.01" min="0" title="Approximate price">
+          <button type="submit" class="btn btn-sm btn-warning">Attach</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="text-muted mt-3">No unsorted items — everything flagged as needed has a supplier attached.</p>
+{% endif %}
+
+<script>
+(function () {
+  document.querySelectorAll('.supplier-select').forEach(function (sel) {
+    sel.addEventListener('change', function () {
+      var nameInput = sel.closest('form').querySelector('.new-supplier-input');
+      if (sel.value === 'new') {
+        nameInput.style.display = '';
+        nameInput.focus();
+      } else {
+        nameInput.style.display = 'none';
+        nameInput.value = '';
+      }
+    });
+  });
+}());
+</script>
+{% endblock %}

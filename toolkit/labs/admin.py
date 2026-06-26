@@ -1,6 +1,6 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]; status: "#ai-written"
 from django.contrib import admin
-from .models import Bulletin, Collective, CollectiveRole, ConsumableItem, DonationItem, ExchangeItem, FoundItem, Job, NeedFlag, SupplierRecord
+from .models import Bulletin, Collective, CollectiveRole, ConsumableItem, DonationItem, ExchangeItem, FoundItem, Job, NeedFlag, Supplier, SupplierRecord
 
 
 class CollectiveRoleInline(admin.TabularInline):
@@ -39,10 +39,20 @@ class BulletinAdmin(admin.ModelAdmin):
     ordering = ("-pinned", "-created_at")
 
 
+@admin.register(Supplier)
+class SupplierAdmin(admin.ModelAdmin):
+    list_display = ("name", "fulfilment_type", "active", "account_holder")
+    list_filter = ("fulfilment_type", "active")
+    list_editable = ("active",)
+    search_fields = ("name",)
+    raw_id_fields = ("account_holder",)
+    ordering = ("name",)
+
+
 class SupplierRecordInline(admin.TabularInline):
     model = SupplierRecord
     extra = 1
-    fields = ("supplier_name", "product_code", "unit_desc", "approx_price", "product_url", "ordering_notes", "account_holder", "account_notes")
+    fields = ("supplier", "supplier_name", "product_code", "unit_desc", "approx_price", "product_url", "ordering_notes", "account_holder", "account_notes")
 
 
 @admin.register(ConsumableItem)
