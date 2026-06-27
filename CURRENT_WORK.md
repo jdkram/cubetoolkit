@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-06-25 (verification + wrap-up pass: confirmed the post-v2026.06.3 feedback work was already implemented across pool management, volunteer stats, keyboard shortcuts, cost terms and quick wins; added the first inductions test suite — 30 tests covering auth boundaries + core flows; generated the missing inductions migration; fixed stale tests in pool management and volunteer stats; clarified last-gasp Site Settings copy; made diary-list month nav use `[`/`]` for consistency with the calendar. Full suite green at 959. Manual testing notes consolidated into a single `testing/README.md` and removed from git tracking.)
+**Last updated:** 2026-06-27 (maintainability pass chunk 7 — split `diary/models.py` (2,432 lines) into a `models/` package: `site_config`, `event`, `showing`, `rota`, `misc`. Cross-module FKs use string refs; `__init__.py` re-exports every public name for back-compat. No schema change. Suite green at 959; black clean. Edit-views split pending.)
 
 **Current phase:** Phase 4 ongoing
 **See also:** [ROADMAP.md](docs/ROADMAP.md) (wave-by-wave sequencing) · [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -26,6 +26,24 @@
 | ~~**Bug AA**~~ | ~~**Sidebar clips programme/event content on wide screens**~~ | ✅ 2026-05-08 — `layout.css` widened sidebar from 170px → 192px at the 1600px breakpoint, but `site_custom.css`'s `.grid { margin-left: 170px }` content-offset was hard-coded with no matching breakpoint. Fixed by promoting sidebar width to a CSS custom property (`--sidebar-width`) defined once on `:root` with breakpoint overrides; sidebar geometry and `.grid` margin-left now both consume it, so they cannot drift. |
 | ~~**Bug AB**~~ | ~~**Event detail page: poster image hidden behind sidebar**~~ | ✅ 2026-05-08 — `event.css`'s 1000px breakpoint had `.grid { margin: 0px 5px 48px }` — a 4-arg shorthand that silently reset `margin-left` to 5px, clobbering layout.css's `var(--sidebar-width)` offset. Content sat at viewport-left + 5px and the left ~50% of the poster was painted over by the fixed nav. Fixed by splitting the shorthand into `margin-top` / `margin-bottom` so layout.css's margin-left wins. Same shorthand trap also lurked in `static_pages.css` (article pages); fixed there too. |
 | ~~**Bug AC**~~ | ~~**Event detail page: white card background instead of pink**~~ | ✅ 2026-05-08 — Latent regression from commit `d6310ff5` (Feb 2026): the SnS pink override on `.grid-item` lived in `event_custom.css` (which used to load *after* `event.css` and win), but that commit moved it into `site_custom.css` which loads *before* event.css, so event.css's `background-color: #fff` started winning. Unnoticed for months because the event detail page is rarely viewed in dev. Fixed at source: `event.css` now sets `.grid-item { background-color: transparent }` to match the rest of SnS. |
+
+---
+
+## Maintainability pass (`chore/maintainability-pass`)
+
+Tracking file: [MAINTAINABILITY_PASS.md](MAINTAINABILITY_PASS.md). Chunks 1-5 done 2026-06-26.
+
+| Chunk | Status | Notes |
+|---|---|---|
+| 1 Delete attic | ✅ 2026-06-26 | ~800 LOC removed. |
+| 2 Delete committed creds | ✅ 2026-06-26 | ~700 LOC removed. |
+| 3 Latent bugs | ✅ 2026-06-26 | 5 fixes (legacy redirect, calendar summary, dev settings typo, etc.). |
+| 4 Shared helpers | ✅ 2026-06-26 | `password_emails`, `_render_admin_email`, `_user_volunteer`, shared test fixture. |
+| 5 Split `volunteer_views.py` | ✅ 2026-06-26 | `members/views/` subpackage (8 modules). |
+| 7 Split `diary/models.py` | ✅ 2026-06-27 (models split; edit_views pending) | `models/` package: `site_config`, `event`, `showing`, `rota`, `misc`. Cross-module FKs use string refs `"diary.X"`; `__init__.py` re-exports for back-compat. No schema change; migrations unaffected. Suite green at 959; black clean. `docs/SPEC.md` §8 notes the new layout. |
+| 6 Split `labs/views.py` + admin | pending | After chunk 7's edit_views split. |
+| 7 Split `diary/edit_views.py` | pending | Second half of chunk 7. |
+| 8-11 | pending | SiteConfig auto-form, feature-flag reconciliation, migration squash, docs cleanup. |
 
 ---
 

@@ -9,6 +9,12 @@
 
 Lens: maintainability for a future maintainer WITHOUT AI assistance. Scope: full pass — attic, latent bugs, shared helpers, god-module splits, SiteConfiguration tax, feature-flag reconciliation, migration squashing, docs cleanup. Motivation: tidying for its own sake (no external deadline), so each commit should independently improve the repo and the sequence is safe to stop at any chunk.
 
+## Standing notes for the executing model
+
+- **Docs sync (CLAUDE.md hard rule):** code changes update the relevant docs in the same commit. Behaviour-neutral refactors mostly leave `docs/SPEC.md` alone, but: deleted management commands (chunks 1-2) and the data-model split (chunk 7) need a note; status goes in `CURRENT_WORK.md` **only**, not `docs/TASKS.md`.
+- **Authorship tags:** use the *actual* contributing model name in `ai-contributors`, not a generic "Claude". (`toolkit/toolkit_auth/password_emails.py` is currently mis-tagged — fix when next touched.)
+- **Verify before each commit:** full test suite green (959 baseline as of 2026-06-27) + `black --line-length 79 --check`. See the Verification section at the foot of this file.
+
 ## Squashing baseline
 
 Merge-base with `master`: `afe1117e` ("Add onboarding documentation for new developers"). Migrations added on `sns_2026_overhaul` since that commit are squash-candidate (no live DB is on the S+S branch). Pre-baseline migrations stay untouched:
@@ -72,13 +78,6 @@ Very low risk. ~700 LOC removed.
 
 Commit: `chore(security): delete legacy import scripts that shipped hardcoded DB passwords`
 
-Very low risk. ~450 LOC removed.
-
-- [ ] Delete `toolkit/util/management/commands/import_legacy_events.py` (hardcoded `ye2EUsSUCYY8ALx7`)
-- [ ] Delete `toolkit/util/management/commands/import_legacy_documents.py` (hardcoded `kq9LaMpgf4czGQ9v`)
-
-Commit guidance: `chore(security): delete legacy import scripts that shipped hardcoded DB passwords`
-
 ### Chunk 3: Fix 5 latent bugs — DONE 2026-06-26
 
 Low risk, small. 959 tests pass (no new failures; note: legacy-redirect and calendar-summary paths had no test coverage before or after, so the fixes are unverified by the suite).
@@ -92,8 +91,6 @@ Low risk, small. 959 tests pass (no new failures; note: legacy-redirect and cale
 - [x] Bonus: `diary/edit_views.py:_film_json` emitted identical `poster_url_sm`/`poster_url_md` keys (dead vestige of TMDB's w92/w185 sizes) — collapsed to single canonical `poster_url` key (matches OMDb search response shape and the `form_event.html` JS preference)
 
 Commit: `fix: latent bugs found in code review — legacy redirect, calendar summary, dev settings typo, success msg`
-
-### Chunk 4: Extract shared helpers — PENDING
 
 ### Chunk 4: Extract shared helpers — DONE 2026-06-26
 
@@ -130,27 +127,9 @@ Moderate risk. URL paths preserved; view predicates unchanged. 959 tests pass.
 
 Commit: `refactor(members): split volunteer_views.py into views/ subpackage` + follow-up comment-polish commit.
 
-Moderate risk. URL paths preserved; view predicates unchanged.
-
-- [ ] Create `members/views/` package with submodules:
-  - `volunteer_reports.py` — `view_volunteer_list`, `view_volunteer_summary`, `view_volunteer_directory`, `view_volunteer_training_records`, `view_qualification_report`
-  - `volunteer_stats.py` — `volunteer_stats` (the 246-line method) + its local helpers
-  - `volunteer_edit.py` — `edit_volunteer`, training-record add/delete, qualification add/remove, `save_volunteer_permissions`, `set_volunteer_password`, `send_volunteer_password_reset`
-  - `volunteer_pool_admin.py` — pool health, bulk anonymise, bulk delete never-onboarded, auto-dormancy, last-gasp (single + bulk)
-  - `volunteer_bulk_record.py` — `bulk_record` + helpers
-  - `volunteer_suspension.py` — `toggle_volunteer_suspension`, `send_suspension_email`, `skip_suspension_email`
-  - `volunteer_self_service.py` — `reactivate_self`, `volunteer_digest_unsubscribe`
-  - `volunteer_export.py` — `export_volunteers_as_csv`, `export_audit_log`, `_EXPORT_FIELD_GROUPS`
-- [ ] Update `members/urls.py` imports to point at the new modules
-- [ ] Drop superseded duplicates: `add_volunteer_training_group_record` (`volunteer_views.py:1217`), `bulk_award_qualification` (`volunteer_views.py:1508`) — both replaced by unified `bulk_record`; remove their URL routes and tests; note the f-string bug at `:1252` goes with them
-- [ ] Drop the bare shim `view_volunteer_role_report` (`volunteer_views.py:853-855`, only redirects) — or convert to `RedirectView` in `urls.py`; remove its own test
-- [ ] Keep `volunteer_views.py` as a thin re-export shim temporarily if needed for any external imports, then delete once grep confirms no consumers
-
-Structure: "move first, refactor after" — one commit for the moves (clean renames in `git log --stat`), one for the deletions.
-
 ### Chunk 6: Split `labs/views.py` + register unregistered models — PENDING
 
-Moderate. URL paths preserved.
+Moderate. URL paths preserved. **Lower maintainability value than chunk 7's `models.py` split — do chunk 7 first** (see reprioritisation note at the head of chunk 7).
 
 - [ ] Split `labs/views.py` (1,567 lines) into `labs/views/` per feature:
   - `collectives.py` (140-233), `floorplan.py` (237-305), `donations.py` (308-387), `jobs.py` (399-483), `loft.py` (488-558), `area_photos.py` (563-591), `bulletins.py` (587-791), `shopping.py` (794-1238), `lost_found.py` (1243-1326), `exchange.py` (1331-1567)
@@ -164,41 +143,55 @@ Move-first, refactor-after. Commit guidance: `refactor(labs): split views per-fe
 
 Moderate. Import paths preserved via `models/__init__.py` re-exports.
 
-- [ ] Split `diary/edit_views.py` (2,888 lines) into `diary/views/` subpackage — natural split: rota views (2041-2267), event CRUD (470-763, 1208-1383), showing CRUD (1107-1198, 1439-1473), templates (1563-1753), tag/role/room admin (1755-1938, 2574-2621), site config (2320-2536), film/OMDb (2724-2888), reports (1474-1560)
-- [ ] Split `diary/models.py` (2,437 lines) into `models/` package:
-  - `models/site_config.py` — `SiteConfiguration` (775 lines)
+**Do this chunk before chunk 6.** `diary/models.py` (2,432 lines) is the single biggest maintainability liability in the repo — it holds the models with the `__init__`/`refresh_from_db` recursion footgun (see CLAUDE.md "Never use `.only()`"), so making it navigable helps a future human far more than splitting `labs/views.py`. Within this chunk, split `models.py` **first**, then `edit_views.py`.
+
+Migration safety: Django migrations reference models by `app_label.ModelName`, not import path, so moving model classes between files does not break the migration history. The re-export `__init__.py` keeps `from toolkit.diary.models import X` working for the rest of the codebase.
+
+**Boundaries below are provisional.** The real work is the circular FKs between `event` / `showing` / `rota` (they reference each other in both directions). Expect to adjust the split — or co-locate a tightly-coupled cluster — to avoid import cycles. Decide the cycle-break strategy (string FK refs `"diary.Showing"` are already used by Django and sidestep import order) before committing to the file boundaries.
+
+- [x] Split `diary/models.py` (2,432 lines) into `models/` package — DONE 2026-06-27:
+  - `models/site_config.py` — `SiteConfiguration` (775 lines), `get_site_config`, `DEFAULT_FILMS_START_BANNER_TEXT`
   - `models/event.py` — `Event`, `EventLink`, `EventTemplateLink`, `EventTermsRevision`, `Film`
-  - `models/showing.py` — `Showing`, `RoomBooking`, `Room`
+  - `models/showing.py` — `Showing`, `RoomBooking`, `Room`, `FutureDateTimeField`
   - `models/rota.py` — `Role`, `EventTemplate`, `EventTemplateRole`, `EventTemplateRoom`, `RotaEntry`
   - `models/misc.py` — `MediaItem`, `EventTag`, `DiaryIdea`, `PrintedProgramme`, `VolunteerEventMark`
   - `models/__init__.py` re-exports everything to preserve `from toolkit.diary.models import X`
+  - **Cycle-break strategy used:** all cross-module ForeignKey/M2M `to` and `through` args use string references (`"diary.ModelName"`), resolved by Django's app registry — so submodules can be imported in any order with no Python-level import cycles. The one module-level cross-import is `rota.py` → `from .event import Event` (for `Event.COST_TYPE_CHOICES` / `Event.SOUND_ENGINEER_PAID_BY_CHOICES` used at EventTemplate class-def time); acyclic since `event.py` has no module-level rota import. `showing.py` module-level imports `Role, RotaEntry` from `rota.py` for use in Showing method bodies. `misc.py` module-level imports `Event` for `EventTag.delete()`.
+  - No schema change; migrations unaffected (they reference models by `app_label.ModelName`). `docs/SPEC.md` §8 notes the new layout. Suite green at 959; black clean.
+- [ ] Then split `diary/edit_views.py` (2,879 lines) into `diary/views/` subpackage — natural split: rota views (2041-2267), event CRUD (470-763, 1208-1383), showing CRUD (1107-1198, 1439-1473), templates (1563-1753), tag/role/room admin (1755-1938, 2574-2621), site config (2320-2536), film/OMDb (2724-2888), reports (1474-1560). Line numbers are pre-split estimates; re-derive after the models move.
 - [ ] Move `_safe_json` duplicate (`public_views.py:9` + `edit_views.py:64`) into `diary/utils.py` or `daterange.py` (already the shared module)
 
-Move-first.
+Move-first. The models split (above) is committable on its own; the edit-views split is a follow-up commit in this same chunk.
 
 ### Chunk 8: SiteConfiguration auto-form — PENDING
 
 Moderate-high. Closes the 4-place sync tax.
 
-- [ ] Add a `group` attribute (or `meta`) on each `SiteConfiguration` field naming its form-section
-- [ ] Derive `SiteConfigurationForm.Meta.fields` from the model `_meta`
-- [ ] Derive `edit_site_configuration`'s `field_groups` list (`edit_views.py:2325-2467`) from the model metadata
-- [ ] Add a test asserting form `Meta.fields` parity with model fields so future drift fails loudly
+**Commit A (do first — cheap guardrail, ship independently of the rest):**
+- [ ] Add a test asserting `SiteConfigurationForm.Meta.fields` parity with the model's editable fields, so future drift between model and form fails loudly *today* — before any of the riskier auto-derivation below. This is the highest-value single item in the plan; it stands alone even if the rest of chunk 8 is never done.
 
-Commit guidance: `refactor(diary): auto-derive SiteConfiguration form fields from model metadata`
+**Commit B (the auto-derivation):**
+- [ ] Add a `group` attribute (or `meta`) on each `SiteConfiguration` field naming its form-section. Note `field_groups` currently drives both section *labels* and display *order*, so the per-field metadata must capture order too (not just group membership).
+- [ ] Derive `SiteConfigurationForm.Meta.fields` from the model `_meta`
+- [ ] Derive `edit_site_configuration`'s `field_groups` list (`edit_views.py:2317` / `:2473`) from the model metadata
+
+Commit guidance: `test(diary): assert SiteConfiguration form/model field parity` (A), then `refactor(diary): auto-derive SiteConfiguration form fields from model metadata` (B)
 
 ### Chunk 9: Reconcile feature-flag systems — PENDING
 
-Moderate-high. Small LOC delta. Tests per touched field.
+Low-moderate (rescoped). Document-and-comment, don't migrate-everything. The original "decide per-field for every flag" framing is open-ended with no clean stopping point — the opposite of the rest of this plan. Narrow to the cheap, high-value half; defer actual DB-first migration of individual flags unless one is actively causing confusion.
 
-- [ ] Pick and document one precedence rule in `SiteConfiguration` docstring: "DB wins, settings.py seeds"
-- [ ] Make `omdb_api_key`, `eventlink_extra_allowed_domains`, `programme_*` max-chars/min-words fields consistently DB-first across all readers
-- [ ] Decide per-field for `TAGS_WITHOUT_TERMS`, `EDIT_INDEX_DEFAULT_DAYS_AHEAD`, `MULTIROOM_ENABLED` etc. — fold into SiteConfiguration OR mark explicitly as settings-only with a comment
+In scope:
+- [ ] Pick and document one precedence rule in the `SiteConfiguration` docstring: "DB wins, settings.py seeds"
+- [ ] Add a one-line comment at each settings-only flag reader (`TAGS_WITHOUT_TERMS`, `EDIT_INDEX_DEFAULT_DAYS_AHEAD`, `MULTIROOM_ENABLED` — readers found in `models.py:248`, `edit_prefs.py:9`, `edit_views.py` + `context_processors.py` + `calendar_links.py`) marking it explicitly settings-only, so a maintainer doesn't go looking for a DB field that isn't there.
 - [ ] Remove the dead/misleading claim in the `SiteConfiguration` docstring (`models.py:1627-1632`)
+
+Out of scope (defer unless a specific flag is causing live confusion):
+- [ ] ~~Make `omdb_api_key`, `eventlink_extra_allowed_domains`, `programme_*` fields consistently DB-first across all readers~~ — only worth the churn+test cost per flag if the inconsistency is actually biting. `omdb_api_key` already has a DB-first reader (`_get_omdb_api_key`); leave the rest unless asked.
 
 ### Chunk 10: Squash migrations — PENDING
 
-High on active deploys; safe here (fresh-branch port, no live DB on `sns_2026_overhaul`). Squash in stable chunks, NOT big-bang.
+High on active deploys; **safe here — verified 2026-06-27**: the only two environments (homeserver + local dev) are both regularly wiped and only ever hold seed data; no production DB lives on a codebase newer than the pre-`sns_2026_overhaul` baseline. No `--fake` reconciliation step needed on any deploy. Squash in stable chunks, NOT big-bang.
 
 Per app, squash the migration range above the merge-base (see "Squashing baseline" table). Preserve data-migration semantics for: `0014 copy_roles_to_through_model`, `0047 seed_new_fields`, `0050 carry_over_dormancy_value`, `0067 copy_notes_to_programming_notes`, `0071 seed_ticketsource_guidance`. If squashing past these, fold the data migration into the squashed migration's `RunPython`.
 

@@ -730,6 +730,8 @@ Any future feature that sends automated email or surfaces contact addresses in t
 
 ## 8. Data model
 
+> **Source layout (2026-06-27):** the diary models live in a `toolkit/diary/models/` package, split per concern — `site_config.py` (`SiteConfiguration`), `event.py` (`Event`, `Film`, `EventLink`, `EventTemplateLink`, `EventTermsRevision`), `showing.py` (`Showing`, `Room`, `RoomBooking`), `rota.py` (`Role`, `EventTemplate`, `EventTemplateRole`, `EventTemplateRoom`, `RotaEntry`), `misc.py` (`MediaItem`, `EventTag`, `DiaryIdea`, `PrintedProgramme`, `VolunteerEventMark`). Cross-module ForeignKey/M2M targets use string references (`"diary.ModelName"`) resolved via the app registry, so the submodules can be imported without Python-level cycles. Importers still use `from toolkit.diary.models import X`; the package `__init__.py` re-exports every public name. No schema change — only file layout. Migrations are unaffected (they reference models by `app_label.ModelName`).
+
 ### 8.1 Entity-relationship diagram
 
 ```mermaid
