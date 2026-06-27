@@ -178,19 +178,22 @@ Migration safety: Django migrations reference models by `app_label.ModelName`, n
 
 Move-first. All three chunk-7 items (models split, edit-views split, `_safe_json` dedup) are now committed. Chunk 7 is **DONE**.
 
-### Chunk 8: SiteConfiguration auto-form — PENDING
+### Chunk 8: SiteConfiguration auto-form — DONE 2026-06-27
 
 Moderate-high. Closes the 4-place sync tax.
 
-**Commit A (do first — cheap guardrail, ship independently of the rest):**
-- [ ] Add a test asserting `SiteConfigurationForm.Meta.fields` parity with the model's editable fields, so future drift between model and form fails loudly *today* — before any of the riskier auto-derivation below. This is the highest-value single item in the plan; it stands alone even if the rest of chunk 8 is never done.
+**Commit A (cheap guardrail):**
+- [x] A parity test (`SiteConfigurationConsistencyTests` in `toolkit/diary/tests/test_site_config.py:258`) already exists from earlier work: `test_form_fields_match_model_fields` and `test_view_field_groups_match_form_fields`. These assert that adding a SiteConfiguration field without also listing it on the form (and in the view's grouped/permission renderings) fails the suite.
 
 **Commit B (the auto-derivation):**
-- [ ] Add a `group` attribute (or `meta`) on each `SiteConfiguration` field naming its form-section. Note `field_groups` currently drives both section *labels* and display *order*, so the per-field metadata must capture order too (not just group membership).
-- [ ] Derive `SiteConfigurationForm.Meta.fields` from the model `_meta`
-- [ ] Derive `edit_site_configuration`'s `field_groups` list (`edit_views.py:2317` / `:2473`) from the model metadata
+- [x] Single source of truth for field grouping is now `SITE_CONFIG_FIELD_GROUPS` in `toolkit/diary/models/site_config.py` — an insertion-ordered dict (Python 3.7+ dicts preserve insertion order) mapping section label → list of field names in display order. The `perm_*` fields are deliberately NOT in this dict: the edit view renders them via the separate `permission_rows` table (with fixed interleaved rows), and adding them to grouped fields would double-render them.
+- [x] `SiteConfigurationForm.Meta` now auto-derives its field set from the model `_meta` via `exclude = ("id",)` instead of an 80-line explicit `fields` tuple. Adding a new model field automatically appears on the form.
+- [x] `edit_site_configuration` view (`toolkit/diary/edit_views/site_config.py`) reads `field_groups = list(SITE_CONFIG_FIELD_GROUPS.items())` instead of an inline 150-line list.
+- [x] Parity test updated to inspect `SiteConfigurationForm.base_fields` (the resolved post-Meta set) rather than `Meta.fields`, which is None now that `Meta` uses `exclude`.
 
-Commit guidance: `test(diary): assert SiteConfiguration form/model field parity` (A), then `refactor(diary): auto-derive SiteConfiguration form fields from model metadata` (B)
+Verified: `manage.py check` clean, 959 tests pass, black `--line-length 79` clean.
+
+Commit guidance: `test(diary): assert SiteConfiguration form/model field parity` (A — already done), `refactor(diary): auto-derive SiteConfiguration form fields from model metadata` (B). Bundled into one commit since A predates the pass.
 
 ### Chunk 9: Reconcile feature-flag systems — PENDING
 

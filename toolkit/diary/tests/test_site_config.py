@@ -84,7 +84,9 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
             "breakeven_fc_standard_threshold": str(
                 config.breakeven_fc_standard_threshold
             ),
-            "breakeven_fc_music_threshold": str(config.breakeven_fc_music_threshold),
+            "breakeven_fc_music_threshold": str(
+                config.breakeven_fc_music_threshold
+            ),
             "max_count_per_role": "20",
             "max_showing_dates_shown": str(config.max_showing_dates_shown),
             "programme_copy_summary_max_chars": str(
@@ -93,12 +95,18 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
             "programme_event_terms_min_words": str(
                 config.programme_event_terms_min_words
             ),
-            "programme_media_max_size_mb": str(config.programme_media_max_size_mb),
+            "programme_media_max_size_mb": str(
+                config.programme_media_max_size_mb
+            ),
             "thumbnail_crop_width": str(config.thumbnail_crop_width),
             "thumbnail_crop_height": str(config.thumbnail_crop_height),
             "programme_accent_colour": config.programme_accent_colour,
-            "mailout_details_days_ahead": str(config.mailout_details_days_ahead),
-            "mailout_listings_days_ahead": str(config.mailout_listings_days_ahead),
+            "mailout_details_days_ahead": str(
+                config.mailout_details_days_ahead
+            ),
+            "mailout_listings_days_ahead": str(
+                config.mailout_listings_days_ahead
+            ),
             "calendar_slot_min_hour": str(config.calendar_slot_min_hour),
             "membership_length_days": str(config.membership_length_days),
             "default_training_expiry_months": str(
@@ -116,15 +124,21 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
             "last_gasp_cooldown_days": str(config.last_gasp_cooldown_days),
             "rota_gap_min_missing": str(config.rota_gap_min_missing),
             "rota_gap_min_pct": str(config.rota_gap_min_pct),
-            "programming_min_event_shifts": str(config.programming_min_event_shifts),
+            "programming_min_event_shifts": str(
+                config.programming_min_event_shifts
+            ),
             "stats_training_tag_slugs": [],  # MultipleChoiceField; empty = no tags excluded
             "image_copyright_guidance_url": "",
             "alt_text_guidance_url": "",
             "access_rider_guidance_url": "",
             "ticket_link_guidance_html": "",
             "film_programming_guide_url": "",
-            "lost_and_found_retain_days": str(config.lost_and_found_retain_days),
-            "bulletin_default_expiry_days": str(config.bulletin_default_expiry_days),
+            "lost_and_found_retain_days": str(
+                config.lost_and_found_retain_days
+            ),
+            "bulletin_default_expiry_days": str(
+                config.bulletin_default_expiry_days
+            ),
             "bulletin_guidance": "",
             "bulletin_post_permission": config.bulletin_post_permission,
             "perm_diary_read": config.perm_diary_read,
@@ -166,7 +180,8 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
         reloaded = get_site_config()
         self.assertTrue(reloaded.films_start_on_time)
         self.assertEqual(
-            reloaded.films_start_on_time_banner_text, "Films start at the listed time."
+            reloaded.films_start_on_time_banner_text,
+            "Films start at the listed time.",
         )
         self.assertEqual(reloaded.max_count_per_role, 20)
 
@@ -181,7 +196,9 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
         # rfind: the main config </form> is the last one on the page; find() would
         # hit the nav logout form first and give a false failure.
         form_close_pos = content.rfind("</form>")
-        self.assertGreater(perm_pos, 0, "perm_diary_read input not found in page")
+        self.assertGreater(
+            perm_pos, 0, "perm_diary_read input not found in page"
+        )
         self.assertGreater(
             form_close_pos,
             perm_pos,
@@ -229,9 +246,7 @@ class FilmsStartOnTimeBannerTests(DiaryTestsMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         # The default Cube view_event.html doesn't render the banner — but the
         # context variables should be populated correctly.
-        self.assertEqual(
-            response.context["films_start_on_time"], True
-        )
+        self.assertEqual(response.context["films_start_on_time"], True)
         self.assertEqual(
             response.context["films_start_on_time_banner_text"],
             "Punctuality matters.",
@@ -247,24 +262,34 @@ class FilmsStartOnTimeBannerTests(DiaryTestsMixin, TestCase):
         config.films_start_on_time_banner_text = "Films start promptly."
         config.save()
 
-        url = reverse("single-event-view", kwargs={"event_id": event_without_film_tag.pk})
+        url = reverse(
+            "single-event-view", kwargs={"event_id": event_without_film_tag.pk}
+        )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            response.context["films_start_on_time"], False
-        )
+        self.assertEqual(response.context["films_start_on_time"], False)
 
 
 class SiteConfigurationConsistencyTests(DiaryTestsMixin, TestCase):
-    """Assert that the three places listing SiteConfiguration fields stay in sync.
+    """Assert that the model, form, and view stay in sync on SiteConfiguration fields.
+
+    SiteConfigurationForm auto-derives its field set from the model `_meta`
+    via ``Meta.exclude = ("id",)``, so adding a model field automatically
+    appears on the form. The grouping/ordering for the Panopticon edit page
+    lives in ``SITE_CONFIG_FIELD_GROUPS`` (in site_config.py) and is
+    consumed by the edit_site_configuration view. The view additionally
+    renders the perm_* fields through a separate permission_rows table.
 
     If you add a field to the model, you must also add it to
-    SiteConfigurationForm.Meta.fields and to the field_groups in the
-    edit_site_configuration view — or this test will tell you which is missing.
+    ``SITE_CONFIG_FIELD_GROUPS`` (or to the permission_rows list in the
+    view) — this test will tell you which is missing.
     """
 
     def _get_form_fields(self):
-        return set(SiteConfigurationForm.Meta.fields)
+        # Use base_fields (the resolved set after Meta is applied) rather
+        # than Meta.fields, which is None when Meta uses `exclude` instead
+        # of an explicit `fields` tuple.
+        return set(SiteConfigurationForm.base_fields)
 
     def _get_view_fields(self):
         self.client.login(username="admin", password="T3stPassword!")
@@ -272,11 +297,17 @@ class SiteConfigurationConsistencyTests(DiaryTestsMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         # grouped_fields is [(label, [BoundField, ...]), ...]; extract names via .name
         grouped_fields = response.context["grouped_fields"]
-        fields_in_groups = {bound_field.name for _label, fields in grouped_fields for bound_field in fields}
+        fields_in_groups = {
+            bound_field.name
+            for _label, fields in grouped_fields
+            for bound_field in fields
+        }
         # permission_rows renders perm_* form fields outside grouped_fields
         permission_rows = response.context["permission_rows"]
         fields_in_perm_table = {
-            row["field"].name for _feature, row in permission_rows if row["field"] is not None
+            row["field"].name
+            for _feature, row in permission_rows
+            if row["field"] is not None
         }
         return fields_in_groups | fields_in_perm_table
 

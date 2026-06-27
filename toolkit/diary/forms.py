@@ -74,7 +74,7 @@ class EventTemplateForm(forms.ModelForm):
             "pricing": forms.TextInput(
                 attrs={
                     "placeholder": (
-                        "e.g. '\u00A30 Full / \u00A30 Concession'"
+                        "e.g. '\u00a30 Full / \u00a30 Concession'"
                     ),
                 }
             ),
@@ -83,10 +83,23 @@ class EventTemplateForm(forms.ModelForm):
                     "placeholder": "e.g. Dir: [director], 1990, USA, 120 mins, Cert: 15",
                 }
             ),
-            "cost_flat_fee_gbp": forms.NumberInput(attrs={"step": "0.01", "min": "0", "style": "width:9em"}),
-            "cost_percentage_split": forms.NumberInput(attrs={"step": "0.01", "min": "0", "max": "100", "style": "width:7em"}),
-            "cost_minimum_guarantee_gbp": forms.NumberInput(attrs={"step": "0.01", "min": "0", "style": "width:9em"}),
-            "cost_total_gbp": forms.NumberInput(attrs={"step": "0.01", "min": "0", "style": "width:9em"}),
+            "cost_flat_fee_gbp": forms.NumberInput(
+                attrs={"step": "0.01", "min": "0", "style": "width:9em"}
+            ),
+            "cost_percentage_split": forms.NumberInput(
+                attrs={
+                    "step": "0.01",
+                    "min": "0",
+                    "max": "100",
+                    "style": "width:7em",
+                }
+            ),
+            "cost_minimum_guarantee_gbp": forms.NumberInput(
+                attrs={"step": "0.01", "min": "0", "style": "width:9em"}
+            ),
+            "cost_total_gbp": forms.NumberInput(
+                attrs={"step": "0.01", "min": "0", "style": "width:9em"}
+            ),
         }
 
 
@@ -95,7 +108,9 @@ class EventTemplateRoleForm(forms.ModelForm):
         model = toolkit.diary.models.EventTemplateRole
         fields = ("role", "count")
         widgets = {
-            "count": forms.NumberInput(attrs={"min": 1, "max": 20, "style": "width:4em"}),
+            "count": forms.NumberInput(
+                attrs={"min": 1, "max": 20, "style": "width:4em"}
+            ),
         }
 
 
@@ -115,8 +130,12 @@ class EventTemplateRoomForm(forms.ModelForm):
         model = toolkit.diary.models.EventTemplateRoom
         fields = ("room", "start_delta_minutes", "end_delta_minutes")
         widgets = {
-            "start_delta_minutes": forms.NumberInput(attrs={"style": "width:5em"}),
-            "end_delta_minutes": forms.NumberInput(attrs={"style": "width:5em"}),
+            "start_delta_minutes": forms.NumberInput(
+                attrs={"style": "width:5em"}
+            ),
+            "end_delta_minutes": forms.NumberInput(
+                attrs={"style": "width:5em"}
+            ),
         }
 
 
@@ -193,14 +212,19 @@ class EventForm(forms.ModelForm):
             if e.get("value")
         ]
         self.fields["age_restriction"].widget = forms.Select(choices=choices)
-        self.fields["age_restriction"].widget.attrs.setdefault("class", "form-select")
+        self.fields["age_restriction"].widget.attrs.setdefault(
+            "class", "form-select"
+        )
 
         if cfg.structured_cost_terms_enabled:
             cost_and_terms = [
                 HTML(_card_open("costs", "Cost &amp; terms")),
-                "cost_type", "cost_distributor",
-                "cost_flat_fee_gbp", "cost_fee_includes_vat",
-                "cost_percentage_split", "cost_minimum_guarantee_gbp",
+                "cost_type",
+                "cost_distributor",
+                "cost_flat_fee_gbp",
+                "cost_fee_includes_vat",
+                "cost_percentage_split",
+                "cost_minimum_guarantee_gbp",
                 "cost_total_gbp",
                 "terms",
                 "cost_rider_notes",
@@ -217,23 +241,35 @@ class EventForm(forms.ModelForm):
             ]
         self.helper.layout = Layout(
             HTML(_card_open("basics", "Basics")),
-            "name", "tags",
+            "name",
+            "tags",
             HTML(_CARD_CLOSE),
             HTML(_card_open("public", "Public listing")),
-            "pricing", "ticket_link", "trailer_url",
+            "pricing",
+            "ticket_link",
+            "trailer_url",
             "film_information",
-            "age_restriction", "pre_title", "post_title",
+            "age_restriction",
+            "pre_title",
+            "post_title",
             HTML(_CARD_CLOSE),
             HTML(_card_open("programming", "Programming")),
-            "approval_type", "approved_at_meeting_date",
-            "meeting_name", "meeting_minutes_url",
-            "programming_status", "programming_notes", "duration",
+            "approval_type",
+            "approved_at_meeting_date",
+            "meeting_name",
+            "meeting_minutes_url",
+            "programming_status",
+            "programming_notes",
+            "duration",
             HTML(_CARD_CLOSE),
             HTML(_card_open("access", "Visibility &amp; access")),
-            "outside_hire", "hire_name", "private",
+            "outside_hire",
+            "hire_name",
+            "private",
             HTML(_CARD_CLOSE),
             HTML(_card_open("description", "Description")),
-            "copy", "copy_summary",
+            "copy",
+            "copy_summary",
             HTML(_CARD_CLOSE),
             *cost_and_terms,
         )
@@ -253,13 +289,32 @@ class EventForm(forms.ModelForm):
                     "placeholder": f"e.g {settings.DEFAULT_TERMS_TEXT}",
                 }
             ),
-            "cost_flat_fee_gbp": forms.NumberInput(attrs={"step": "0.01", "min": "0", "style": "width:9em"}),
-            "cost_percentage_split": forms.NumberInput(attrs={"step": "0.01", "min": "0", "max": "100", "style": "width:7em"}),
-            "cost_minimum_guarantee_gbp": forms.NumberInput(attrs={"step": "0.01", "min": "0", "style": "width:9em"}),
-            "cost_total_gbp": forms.NumberInput(attrs={"step": "0.01", "min": "0", "style": "width:9em"}),
-            "cost_rider_notes": forms.Textarea(attrs={"wrap": "soft", "rows": 3}),
-            "cost_sound_engineer_fee_gbp": forms.NumberInput(attrs={"step": "0.01", "min": "0", "style": "width:9em"}),
-            "cost_sound_engineer_paid_by": forms.Select(attrs={"style": "width:auto"}),
+            "cost_flat_fee_gbp": forms.NumberInput(
+                attrs={"step": "0.01", "min": "0", "style": "width:9em"}
+            ),
+            "cost_percentage_split": forms.NumberInput(
+                attrs={
+                    "step": "0.01",
+                    "min": "0",
+                    "max": "100",
+                    "style": "width:7em",
+                }
+            ),
+            "cost_minimum_guarantee_gbp": forms.NumberInput(
+                attrs={"step": "0.01", "min": "0", "style": "width:9em"}
+            ),
+            "cost_total_gbp": forms.NumberInput(
+                attrs={"step": "0.01", "min": "0", "style": "width:9em"}
+            ),
+            "cost_rider_notes": forms.Textarea(
+                attrs={"wrap": "soft", "rows": 3}
+            ),
+            "cost_sound_engineer_fee_gbp": forms.NumberInput(
+                attrs={"step": "0.01", "min": "0", "style": "width:9em"}
+            ),
+            "cost_sound_engineer_paid_by": forms.Select(
+                attrs={"style": "width:auto"}
+            ),
             "programming_notes": forms.Textarea(
                 attrs={
                     "wrap": "soft",
@@ -267,12 +322,14 @@ class EventForm(forms.ModelForm):
                     "placeholder": "e.g. Looking for a Friday in May; tech rider: DCP, 5.1 audio, projector set up by noon",
                 }
             ),
-            "approved_at_meeting_date": forms.DateInput(attrs={"type": "date"}),
+            "approved_at_meeting_date": forms.DateInput(
+                attrs={"type": "date"}
+            ),
             "pricing": forms.TextInput(
                 attrs={
                     "placeholder": (
-                        "e.g. '\u00A30 Full / \u00A30 Concession' "
-                        "or '\u00A30 advance, \u00A30 on the door'"
+                        "e.g. '\u00a30 Full / \u00a30 Concession' "
+                        "or '\u00a30 advance, \u00a30 on the door'"
                     ),
                 }
             ),
@@ -374,7 +431,10 @@ class EventForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        if cleaned_data.get("approval_type") == toolkit.diary.models.Event.APPROVAL_MEETING:
+        if (
+            cleaned_data.get("approval_type")
+            == toolkit.diary.models.Event.APPROVAL_MEETING
+        ):
             if not cleaned_data.get("approved_at_meeting_date"):
                 self.add_error(
                     "approved_at_meeting_date",
@@ -393,7 +453,8 @@ class EventForm(forms.ModelForm):
 
             cost_type = cleaned_data.get("cost_type")
             cost_type_set = bool(
-                cost_type and cost_type != toolkit.diary.models.Event.COST_TYPE_TBC
+                cost_type
+                and cost_type != toolkit.diary.models.Event.COST_TYPE_TBC
             )
 
             cfg = get_site_config()
@@ -437,6 +498,7 @@ class MediaItemForm(forms.ModelForm):
         guidance_url = get_site_config().alt_text_guidance_url or None
         if guidance_url:
             from django.utils.safestring import mark_safe
+
             base = self.fields["alt_text"].help_text
             self.fields["alt_text"].help_text = mark_safe(
                 f'{base} <a href="{guidance_url}" target="_blank" rel="noopener">Guide ↗</a>'
@@ -449,7 +511,11 @@ class MediaItemForm(forms.ModelForm):
                 attrs={"accept": "image/jpeg,image/gif,image/png"}
             ),
             "alt_text": forms.Textarea(
-                attrs={"rows": 3, "style": "resize: vertical;", "class": "form-control"}
+                attrs={
+                    "rows": 3,
+                    "style": "resize: vertical;",
+                    "class": "form-control",
+                }
             ),
             "bar_colour": forms.HiddenInput(),
             "crop_x": forms.HiddenInput(),
@@ -524,9 +590,15 @@ class ShowingForm(forms.ModelForm):
 
         widgets = {
             "start": JQueryDateTimePicker(),
-            "setup_time": forms.TimeInput(attrs={"type": "time", "class": "form-control"}),
-            "doors_time": forms.TimeInput(attrs={"type": "time", "class": "form-control"}),
-            "final_volunteer_time": forms.TimeInput(attrs={"type": "time", "class": "form-control"}),
+            "setup_time": forms.TimeInput(
+                attrs={"type": "time", "class": "form-control"}
+            ),
+            "doors_time": forms.TimeInput(
+                attrs={"type": "time", "class": "form-control"}
+            ),
+            "final_volunteer_time": forms.TimeInput(
+                attrs={"type": "time", "class": "form-control"}
+            ),
         }
 
     def clean_confirmed(self):
@@ -572,7 +644,9 @@ def rota_form_factory(showing):
     members = OrderedDict()
 
     # All permanent roles (one-shot roles are handled separately in the view)
-    roles = toolkit.diary.models.Role.objects.filter(is_one_shot=False).order_by("name")
+    roles = toolkit.diary.models.Role.objects.filter(
+        is_one_shot=False
+    ).order_by("name")
 
     # list of role IDs, to get stored in form and used to build rota from
     # submitted form data (as submitted data won't include IDs where rota
@@ -741,7 +815,9 @@ class BatchAddShowingsForm(forms.Form):
                 parsed.append(datetime.date.fromisoformat(part))
             except ValueError:
                 raise forms.ValidationError(
-                    "Unrecognised date: {!r}. Expected YYYY-MM-DD.".format(part)
+                    "Unrecognised date: {!r}. Expected YYYY-MM-DD.".format(
+                        part
+                    )
                 )
         if not parsed:
             raise forms.ValidationError("Select at least one date.")
@@ -757,7 +833,11 @@ class BatchAddShowingsForm(forms.Form):
         start_time = cleaned.get("start_time")
         if dates and start_time:
             now = datetime.datetime.now()
-            past = [d for d in dates if datetime.datetime.combine(d, start_time) < now]
+            past = [
+                d
+                for d in dates
+                if datetime.datetime.combine(d, start_time) < now
+            ]
             if past:
                 date_strs = ", ".join(d.strftime("%-d %b %Y") for d in past)
                 raise forms.ValidationError(
@@ -780,10 +860,16 @@ class EventLinkForm(forms.ModelForm):
         fields = ("label", "url")
         widgets = {
             "label": forms.TextInput(
-                attrs={"placeholder": "e.g. Event folder, Crew chat…", "class": "form-control form-control-sm"}
+                attrs={
+                    "placeholder": "e.g. Event folder, Crew chat…",
+                    "class": "form-control form-control-sm",
+                }
             ),
             "url": forms.URLInput(
-                attrs={"placeholder": "https://…", "class": "form-control form-control-sm"}
+                attrs={
+                    "placeholder": "https://…",
+                    "class": "form-control form-control-sm",
+                }
             ),
         }
         labels = {
@@ -814,10 +900,16 @@ class EventTemplateLinkForm(forms.ModelForm):
         fields = ("label", "url")
         widgets = {
             "label": forms.TextInput(
-                attrs={"placeholder": "e.g. Event folder, Crew chat…", "class": "form-control form-control-sm"}
+                attrs={
+                    "placeholder": "e.g. Event folder, Crew chat…",
+                    "class": "form-control form-control-sm",
+                }
             ),
             "url": forms.URLInput(
-                attrs={"placeholder": "https://…", "class": "form-control form-control-sm"}
+                attrs={
+                    "placeholder": "https://…",
+                    "class": "form-control form-control-sm",
+                }
             ),
         }
 
@@ -838,9 +930,22 @@ class RoomForm(forms.ModelForm):
         model = toolkit.diary.models.Room
         fields = ("name", "colour", "is_primary", "show_column", "map_slug")
         widgets = {
-            "name": forms.TextInput(attrs={"class": "form-control form-control-sm"}),
-            "colour": forms.TextInput(attrs={"type": "color", "class": "form-control form-control-sm", "style": "max-width: 80px; padding: 2px 4px;"}),
-            "map_slug": forms.TextInput(attrs={"class": "form-control form-control-sm", "placeholder": "e.g. room-cinema"}),
+            "name": forms.TextInput(
+                attrs={"class": "form-control form-control-sm"}
+            ),
+            "colour": forms.TextInput(
+                attrs={
+                    "type": "color",
+                    "class": "form-control form-control-sm",
+                    "style": "max-width: 80px; padding: 2px 4px;",
+                }
+            ),
+            "map_slug": forms.TextInput(
+                attrs={
+                    "class": "form-control form-control-sm",
+                    "placeholder": "e.g. room-cinema",
+                }
+            ),
         }
 
 
@@ -895,25 +1000,35 @@ class RoomBookingForm(forms.ModelForm):
         # Pre-populate time and offset fields from existing instance
         if self.instance and self.instance.pk and self.instance.start:
             import django.utils.timezone as dj_tz
-            self.initial["start_time"] = dj_tz.localtime(self.instance.start).strftime("%H:%M")
+
+            self.initial["start_time"] = dj_tz.localtime(
+                self.instance.start
+            ).strftime("%H:%M")
             if self.instance.end:
-                self.initial["end_time"] = dj_tz.localtime(self.instance.end).strftime("%H:%M")
+                self.initial["end_time"] = dj_tz.localtime(
+                    self.instance.end
+                ).strftime("%H:%M")
             self.initial["date_offset"] = self.instance.date_offset
 
     def save(self, commit=True):
         instance = super().save(commit=False)
         if self.showing_date and self.cleaned_data.get("start_time"):
             import django.utils.timezone as dj_tz
+
             tz = dj_tz.get_current_timezone()
             offset = self.cleaned_data.get("date_offset") or 0
             actual_date = self.showing_date + datetime.timedelta(days=offset)
             instance.start = dj_tz.make_aware(
-                datetime.datetime.combine(actual_date, self.cleaned_data["start_time"]),
+                datetime.datetime.combine(
+                    actual_date, self.cleaned_data["start_time"]
+                ),
                 tz,
             )
             end_t = self.cleaned_data.get("end_time")
             instance.end = (
-                dj_tz.make_aware(datetime.datetime.combine(actual_date, end_t), tz)
+                dj_tz.make_aware(
+                    datetime.datetime.combine(actual_date, end_t), tz
+                )
                 if end_t
                 else None
             )
@@ -955,7 +1070,9 @@ class NewEventForm(forms.Form):
         self.helper.label_class = "col-sm-2"
         self.helper.field_class = "col-sm-10"
         self.helper.layout = Layout(
-            Field("entry_mode"),  # renders as hidden input; card UI is in the template
+            Field(
+                "entry_mode"
+            ),  # renders as hidden input; card UI is in the template
             HTML(
                 '<div class="new-event-zone new-event-zone--required">'
                 '<h3 class="new-event-zone__title">Book it now</h3>'
@@ -1062,7 +1179,9 @@ class NewEventForm(forms.Form):
                 parsed.append(datetime.date.fromisoformat(part))
             except ValueError:
                 raise forms.ValidationError(
-                    "Unrecognised date: {!r}. Expected YYYY-MM-DD.".format(part)
+                    "Unrecognised date: {!r}. Expected YYYY-MM-DD.".format(
+                        part
+                    )
                 )
         if len(parsed) > _MAX_BATCH_SHOWINGS:
             raise forms.ValidationError(
@@ -1075,17 +1194,25 @@ class NewEventForm(forms.Form):
         dates = cleaned.get("dates")
         start_time = cleaned.get("start_time")
         if dates and not start_time:
-            self.add_error("start_time", "Select a start time for the date(s) you chose.")
+            self.add_error(
+                "start_time", "Select a start time for the date(s) you chose."
+            )
         if dates and start_time:
             now = timezone.now()
             past = [
-                d for d in dates
-                if timezone.make_aware(datetime.datetime.combine(d, start_time)) <= now
+                d
+                for d in dates
+                if timezone.make_aware(
+                    datetime.datetime.combine(d, start_time)
+                )
+                <= now
             ]
             if past:
                 date_strs = ", ".join(d.strftime("%-d %b %Y") for d in past)
                 raise forms.ValidationError(
-                    "The following dates are in the past: {}.".format(date_strs)
+                    "The following dates are in the past: {}.".format(
+                        date_strs
+                    )
                 )
         return cleaned
 
@@ -1094,26 +1221,34 @@ class QuickCreateOpenSessionForm(forms.Form):
     """Minimal form for a keyholder to announce the building is open."""
 
     date = forms.DateField(
-        widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+        widget=forms.DateInput(
+            attrs={"type": "date", "class": "form-control"}
+        ),
         help_text="Which day? Defaults to today.",
     )
     opens_at = forms.TimeField(
-        widget=forms.TimeInput(attrs={"type": "time", "class": "form-control"}),
+        widget=forms.TimeInput(
+            attrs={"type": "time", "class": "form-control"}
+        ),
         initial=datetime.time(14, 0),
         help_text="When will you open up?",
     )
     closes_at = forms.TimeField(
-        widget=forms.TimeInput(attrs={"type": "time", "class": "form-control"}),
+        widget=forms.TimeInput(
+            attrs={"type": "time", "class": "form-control"}
+        ),
         initial=datetime.time(18, 0),
         help_text="When will you be locking up? Volunteers need to be out by this time.",
     )
     note = forms.CharField(
         max_length=256,
         required=False,
-        widget=forms.TextInput(attrs={
-            "class": "form-control",
-            "placeholder": "e.g. Print room is free all day",
-        }),
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "e.g. Print room is free all day",
+            }
+        ),
         help_text="Optional — anything useful for people dropping in.",
     )
 
@@ -1235,95 +1370,25 @@ class SiteConfigurationForm(forms.ModelForm):
             "volunteer stats page. Use this to keep induction sessions and training events "
             "separate from the programming eligibility total."
         ),
-        widget=forms.CheckboxSelectMultiple(attrs={"class": "list-unstyled ps-0 mt-1"}),
+        widget=forms.CheckboxSelectMultiple(
+            attrs={"class": "list-unstyled ps-0 mt-1"}
+        ),
     )
 
     class Meta:
         model = SiteConfiguration
-        fields = (
-            "films_start_on_time",
-            "films_start_on_time_banner_text",
-            "rota_show_tags",
-            "rota_clear_email_prompt_enabled",
-            "rota_clear_email_prompt_text",
-            "vols_email",
-            "show_archive_images",
-            "images_start_date",
-            "occurrence_noun",
-            "occurrence_noun_plural",
-            "confirm_label",
-            "breakeven_guidance_note",
-            "breakeven_fc_standard_threshold",
-            "breakeven_fc_music_threshold",
-            "max_count_per_role",
-            "max_showing_dates_shown",
-            "programme_copy_summary_max_chars",
-            "programme_event_terms_min_words",
-            "programme_media_max_size_mb",
-            "thumbnail_crop_width",
-            "thumbnail_crop_height",
-            "programme_accent_colour",
-            "mailout_details_days_ahead",
-            "mailout_listings_days_ahead",
-            "calendar_slot_min_hour",
-            "membership_length_days",
-            "default_training_expiry_months",
-            "general_training_enabled",
-            "volunteer_dormancy_days",
-            "volunteer_never_logged_in_grace_days",
-            "volunteer_purge_days",
-            "volunteer_digest_day",
-            "rota_gap_min_missing",
-            "rota_gap_min_pct",
-            "programming_min_event_shifts",
-            "stats_programming_note",
-            "stats_training_tag_slugs",
-            "image_copyright_guidance_url",
-            "alt_text_guidance_url",
-            "access_rider_guidance_url",
-            "ticket_link_guidance_html",
-            "film_programming_guide_url",
-            "community_exchange_enabled",
-            "lost_and_found_retain_days",
-            "bulletin_default_expiry_days",
-            "bulletin_guidance",
-            "bulletin_post_permission",
-            "perm_diary_read",
-            "perm_diary_calendar",
-            "perm_programming_queue_read",
-            "perm_programming_queue_write",
-            "perm_event_templates",
-            "perm_event_tags",
-            "perm_roles",
-            "perm_rooms",
-            "perm_diary_reports",
-            "perm_printed_programmes",
-            "perm_rota_vacancies",
-            "perm_donations_manage",
-            "eventlink_extra_allowed_domains",
-            "age_rating_choices",
-            "structured_cost_terms_enabled",
-            "structured_cost_required",
-            "last_gasp_email_enabled",
-            "last_gasp_email_subject",
-            "last_gasp_email_body",
-            "last_gasp_cooldown_days",
-            "suspension_email_subject",
-            "suspension_email_body",
-            "collectives_intro",
-            "collectives_mailing_list_signup_url",
-            "donations_intro",
-            "show_donations_in_public_nav",
-            "banner_active",
-            "banner_level",
-            "banner_text",
-            "banner_dismissible",
-            "omdb_api_key",
-            "certificate_lookup_url",
-        )
+        # Auto-derive the form field set from the model `_meta` so adding a
+        # SiteConfiguration field never requires also listing it here. The
+        # grouping/ordering for the Panopticon edit page lives in
+        # `SITE_CONFIG_FIELD_GROUPS` (see site_config.py), not in this Meta.
+        exclude = ("id",)
         widgets = {
             "programme_accent_colour": forms.TextInput(
-                attrs={"type": "color", "class": "form-control form-control-sm", "style": "width:60px;height:32px;padding:2px;"}
+                attrs={
+                    "type": "color",
+                    "class": "form-control form-control-sm",
+                    "style": "width:60px;height:32px;padding:2px;",
+                }
             ),
             "breakeven_guidance_note": forms.Textarea(
                 attrs={"rows": 3, "class": "form-control"}
@@ -1355,18 +1420,20 @@ class SiteConfigurationForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         tag_choices = [
-            (tag.slug, tag.name)
-            for tag in EventTag.objects.order_by("name")
+            (tag.slug, tag.name) for tag in EventTag.objects.order_by("name")
         ]
         self.fields["stats_training_tag_slugs"].choices = tag_choices
         for name, field in self.fields.items():
             widget = field.widget
             if isinstance(widget, forms.CheckboxInput):
                 widget.attrs.setdefault("class", "form-check-input")
-            elif isinstance(widget, (AgeRatingChoicesWidget, forms.CheckboxSelectMultiple)):
+            elif isinstance(
+                widget, (AgeRatingChoicesWidget, forms.CheckboxSelectMultiple)
+            ):
                 pass  # these widgets manage their own markup; don't inject form-control
             else:
                 existing = widget.attrs.get("class", "")
                 if "form-control" not in existing:
-                    widget.attrs["class"] = (existing + " form-control").strip()
-
+                    widget.attrs["class"] = (
+                        existing + " form-control"
+                    ).strip()

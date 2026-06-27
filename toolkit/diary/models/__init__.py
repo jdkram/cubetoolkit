@@ -11,6 +11,7 @@ name for back-compat with the old single-file models.py.
 
 from .site_config import (
     DEFAULT_FILMS_START_BANNER_TEXT,
+    SITE_CONFIG_FIELD_GROUPS,
     SiteConfiguration,
     get_site_config,
 )
@@ -66,6 +67,7 @@ __all__ = [
     "Room",
     "RoomBooking",
     "RotaEntry",
+    "SITE_CONFIG_FIELD_GROUPS",
     "Showing",
     "ShowingQuerySet",
     "SiteConfiguration",

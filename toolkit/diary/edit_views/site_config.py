@@ -54,6 +54,7 @@ from toolkit.diary.models import (
     EventTemplateRoom,
     VolunteerEventMark,
     get_site_config,
+    SITE_CONFIG_FIELD_GROUPS,
 )
 import toolkit.diary.forms as diary_forms
 import toolkit.diary.validators as diary_validators
@@ -75,157 +76,9 @@ def edit_site_configuration(request):
 
     config = get_site_config()
 
-    field_groups = [
-        (
-            "Display & UX",
-            [
-                "films_start_on_time",
-                "films_start_on_time_banner_text",
-                "rota_show_tags",
-                "rota_clear_email_prompt_enabled",
-                "rota_clear_email_prompt_text",
-                "vols_email",
-                "show_archive_images",
-                "images_start_date",
-            ],
-        ),
-        (
-            "Terminology",
-            [
-                "occurrence_noun",
-                "occurrence_noun_plural",
-                "confirm_label",
-            ],
-        ),
-        (
-            "Age ratings",
-            ["age_rating_choices"],
-        ),
-        (
-            "Break-even calculator",
-            [
-                "breakeven_guidance_note",
-                "breakeven_fc_standard_threshold",
-                "breakeven_fc_music_threshold",
-            ],
-        ),
-        (
-            "Calendar",
-            ["calendar_slot_min_hour"],
-        ),
-        (
-            "Programme limits",
-            [
-                "max_count_per_role",
-                "max_showing_dates_shown",
-                "programme_copy_summary_max_chars",
-                "programme_event_terms_min_words",
-                "programme_media_max_size_mb",
-                "thumbnail_crop_width",
-                "thumbnail_crop_height",
-                "programme_accent_colour",
-            ],
-        ),
-        (
-            "Mailout",
-            ["mailout_details_days_ahead", "mailout_listings_days_ahead"],
-        ),
-        (
-            "Membership & volunteers",
-            [
-                "membership_length_days",
-                "default_training_expiry_months",
-                "general_training_enabled",
-                "volunteer_dormancy_days",
-                "volunteer_never_logged_in_grace_days",
-                "volunteer_purge_days",
-                "volunteer_digest_day",
-            ],
-        ),
-        (
-            "Last-gasp re-engagement email",
-            [
-                "last_gasp_email_enabled",
-                "last_gasp_email_subject",
-                "last_gasp_email_body",
-                "last_gasp_cooldown_days",
-            ],
-        ),
-        (
-            "Suspension email",
-            [
-                "suspension_email_subject",
-                "suspension_email_body",
-            ],
-        ),
-        (
-            "Dashboard",
-            ["rota_gap_min_missing", "rota_gap_min_pct"],
-        ),
-        (
-            "Volunteer stats",
-            [
-                "programming_min_event_shifts",
-                "stats_programming_note",
-                "stats_training_tag_slugs",
-            ],
-        ),
-        (
-            "Guidance URLs",
-            [
-                "image_copyright_guidance_url",
-                "alt_text_guidance_url",
-                "access_rider_guidance_url",
-                "ticket_link_guidance_html",
-                "film_programming_guide_url",
-            ],
-        ),
-        (
-            "Structured cost terms",
-            ["structured_cost_terms_enabled", "structured_cost_required"],
-        ),
-        (
-            "Community exchange",
-            ["community_exchange_enabled"],
-        ),
-        (
-            "Lost & found",
-            ["lost_and_found_retain_days"],
-        ),
-        (
-            "Bulletins",
-            [
-                "bulletin_default_expiry_days",
-                "bulletin_guidance",
-                "bulletin_post_permission",
-            ],
-        ),
-        (
-            "Event links",
-            ["eventlink_extra_allowed_domains"],
-        ),
-        (
-            "Collectives",
-            ["collectives_intro", "collectives_mailing_list_signup_url"],
-        ),
-        (
-            "Donations page",
-            ["donations_intro", "show_donations_in_public_nav"],
-        ),
-        (
-            "Site-wide banner",
-            [
-                "banner_active",
-                "banner_level",
-                "banner_text",
-                "banner_dismissible",
-            ],
-        ),
-        (
-            "External APIs",
-            ["omdb_api_key", "certificate_lookup_url"],
-        ),
-    ]
+    # Grouping/ordering comes from the model module so the model is the single
+    # source of truth for which fields exist and how they are presented.
+    field_groups = list(SITE_CONFIG_FIELD_GROUPS.items())
 
     if request.method == "POST":
         form = diary_forms.SiteConfigurationForm(request.POST, instance=config)
