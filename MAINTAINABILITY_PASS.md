@@ -158,10 +158,17 @@ Migration safety: Django migrations reference models by `app_label.ModelName`, n
   - `models/__init__.py` re-exports everything to preserve `from toolkit.diary.models import X`
   - **Cycle-break strategy used:** all cross-module ForeignKey/M2M `to` and `through` args use string references (`"diary.ModelName"`), resolved by Django's app registry — so submodules can be imported in any order with no Python-level import cycles. The one module-level cross-import is `rota.py` → `from .event import Event` (for `Event.COST_TYPE_CHOICES` / `Event.SOUND_ENGINEER_PAID_BY_CHOICES` used at EventTemplate class-def time); acyclic since `event.py` has no module-level rota import. `showing.py` module-level imports `Role, RotaEntry` from `rota.py` for use in Showing method bodies. `misc.py` module-level imports `Event` for `EventTag.delete()`.
   - No schema change; migrations unaffected (they reference models by `app_label.ModelName`). `docs/SPEC.md` §8 notes the new layout. Suite green at 959; black clean.
-- [ ] Then split `diary/edit_views.py` (2,879 lines) into `diary/views/` subpackage — natural split: rota views (2041-2267), event CRUD (470-763, 1208-1383), showing CRUD (1107-1198, 1439-1473), templates (1563-1753), tag/role/room admin (1755-1938, 2574-2621), site config (2320-2536), film/OMDb (2724-2888), reports (1474-1560). Line numbers are pre-split estimates; re-derive after the models move.
-- [ ] Move `_safe_json` duplicate (`public_views.py:9` + `edit_views.py:64`) into `diary/utils.py` or `daterange.py` (already the shared module)
+- [x] Then split `diary/edit_views.py` (2,879 lines) into `diary/edit_views/` subpackage — DONE 2026-06-27:
+  - 12 submodules: `_common`, `diary_overview`, `events`, `showings`, `templates`, `tags_roles_rooms`, `rota`, `misc`, `site_config`, `film`, `reports`, `__init__`.
+  - Each submodule carries the original import header verbatim so every name a view uses is available locally (no per-view import surgery, lowest risk).
+  - Helpers were traced for cross-module use: only `_get_omdb_api_key` and `_film_json` are referenced from more than one feature area (by `EditEventView` in `events` AND by `omdb_search`/`link_film` in `film`), so those two live in `_common`. Every other `_`-helper (`_safe_json`, `_return_to_editindex`, `_create_room_booking`, `_template_data`, `_rooms_json`, `_get_oneshot_roles_for_showing`, `_parse_oneshot_roles`, `_is_light_colour`, `_export_template_json`, `_build_cert_lookup_url`, `_post_int_or_none`) is local to exactly one submodule and stays there.
+  - `events.py` co-locates the tightly-coupled EditEventView with the film-display helpers (`_build_cert_lookup_url`, `_safe_json`) it uses; it imports `_get_omdb_api_key`/`_film_json` from `_common`.
+  - The package `__init__.py` re-exports all 53 top-level names (views, classes, and the `_`-private helpers) so `urls.py`'s `from toolkit.diary.edit_views import (...)` and the one test importing `_export_template_json` keep working unchanged. `edit_views.py` is now a package, not a shim.
+  - Decorator handling: the slicer walks each `def`/`class` upward to capture preceding `@decorator` lines so no view loses its `@write_required` / `@permission_required` / `@require_POST` / `@feature_required` guard.
+  - Suite green at 959; black --line-length 79 clean.
+- [ ] Move `_safe_json` duplicate (`public_views.py:9` + `edit_views.py:64` → now `edit_views/events.py`) into `diary/daterange.py` (the existing shared module) — pending as a follow-up commit in this chunk.
 
-Move-first. The models split (above) is committable on its own; the edit-views split is a follow-up commit in this same chunk.
+Move-first. The models split and edit-views split are now both committed; the `_safe_json` dedup is the remaining loose end for chunk 7.
 
 ### Chunk 8: SiteConfiguration auto-form — PENDING
 

@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-06-27 (maintainability pass chunk 7 — split `diary/models.py` (2,432 lines) into a `models/` package: `site_config`, `event`, `showing`, `rota`, `misc`. Cross-module FKs use string refs; `__init__.py` re-exports every public name for back-compat. No schema change. Suite green at 959; black clean. Edit-views split pending.)
+**Last updated:** 2026-06-27 (maintainability pass chunk 7 — split `diary/models.py` (2,432 lines) into a `models/` package and `diary/edit_views.py` (2,879 lines) into an `edit_views/` package of 12 feature-focused submodules. Cross-module model FKs use string refs; view submodules each carry the original import header, with `_get_omdb_api_key`/`_film_json` shared via `_common`. No schema change. Suite green at 959; black clean. `_safe_json` duplicate dedup pending as a follow-up.)
 
 **Current phase:** Phase 4 ongoing
 **See also:** [ROADMAP.md](docs/ROADMAP.md) (wave-by-wave sequencing) · [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
@@ -41,8 +41,8 @@ Tracking file: [MAINTAINABILITY_PASS.md](MAINTAINABILITY_PASS.md). Chunks 1-5 do
 | 4 Shared helpers | ✅ 2026-06-26 | `password_emails`, `_render_admin_email`, `_user_volunteer`, shared test fixture. |
 | 5 Split `volunteer_views.py` | ✅ 2026-06-26 | `members/views/` subpackage (8 modules). |
 | 7 Split `diary/models.py` | ✅ 2026-06-27 (models split; edit_views pending) | `models/` package: `site_config`, `event`, `showing`, `rota`, `misc`. Cross-module FKs use string refs `"diary.X"`; `__init__.py` re-exports for back-compat. No schema change; migrations unaffected. Suite green at 959; black clean. `docs/SPEC.md` §8 notes the new layout. |
-| 6 Split `labs/views.py` + admin | pending | After chunk 7's edit_views split. |
-| 7 Split `diary/edit_views.py` | pending | Second half of chunk 7. |
+| 6 Split `labs/views.py` + admin | pending | After chunk 7. |
+| 7 Split `diary/edit_views.py` | ✅ 2026-06-27 | `edit_views/` package (12 submodules): `_common`, `diary_overview`, `events`, `showings`, `templates`, `tags_roles_rooms`, `rota`, `misc`, `site_config`, `film`, `reports`, `__init__`. Each submodule carries the original import header verbatim; the two genuinely cross-module helpers (`_get_omdb_api_key`, `_film_json`) live in `_common`. `__init__.py` re-exports all 53 public names so `urls.py` and the one test importing `_export_template_json` keep working unchanged. Suite green at 959; black clean. (`_safe_json` duplicate with `public_views.py` dedup pending as a follow-up commit.) |
 | 8-11 | pending | SiteConfig auto-form, feature-flag reconciliation, migration squash, docs cleanup. |
 
 ---
