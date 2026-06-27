@@ -127,15 +127,19 @@ Moderate risk. URL paths preserved; view predicates unchanged. 959 tests pass.
 
 Commit: `refactor(members): split volunteer_views.py into views/ subpackage` + follow-up comment-polish commit.
 
-### Chunk 6: Split `labs/views.py` + register unregistered models — PENDING
+### Chunk 6: Split `labs/views.py` + register unregistered models — DONE 2026-06-27
 
-Moderate. URL paths preserved. **Lower maintainability value than chunk 7's `models.py` split — do chunk 7 first** (see reprioritisation note at the head of chunk 7).
+Moderate. URL paths preserved via `views/__init__.py` re-exports; `labs/urls.py` and `toolkit/index/views.py` (which imports `_unread_bulletins_for`) unchanged.
 
-- [ ] Split `labs/views.py` (1,567 lines) into `labs/views/` per feature:
-  - `collectives.py` (140-233), `floorplan.py` (237-305), `donations.py` (308-387), `jobs.py` (399-483), `loft.py` (488-558), `area_photos.py` (563-591), `bulletins.py` (587-791), `shopping.py` (794-1238), `lost_found.py` (1243-1326), `exchange.py` (1331-1567)
-- [ ] Update `labs/urls.py` imports
-- [ ] Register the seven unregistered labs models in `labs/admin.py`: `RoomNote`, `LoftItem`, `BulletinRead`, `ProcurementPledge`, `CollectiveLink`, `AreaPhoto`, `LoftItemPhoto`
-- [ ] Register the four inductions models in `inductions/admin.py` (currently a 2-line stub)
+- [x] Split `labs/views.py` (1,556 lines) into `labs/views/` per feature:
+  - `_common.py` (verbatim header + `_user_volunteer`, the one cross-module helper), `collectives.py`, `floorplan.py`, `loft.py` (loft zone constants + photos CRUD; floorplan imports `_serialize_loft_items`/`_LOFT_ZONE_*` from here), `donations.py`, `jobs.py`, `area_photos.py`, `bulletins.py` (incl. `_user_can_post_bulletin`, `_active_bulletins_qs`, `_unread_bulletins_for`, `BULLETIN_RATE_LIMIT_PER_HOUR`), `shopping.py`, `lost_found.py`, `exchange.py`, `__init__.py` re-exporting every public view name + the 3 externally-referenced private names.
+  - Each submodule carries the original import header verbatim (with `from .models` → `from ..models` etc. since we are now one directory deeper), plus a targeted `from ._common import _user_volunteer` in the two submodules that use it (collectives, shopping). No circular imports; loft constants consumed by floorplan via `from .loft import …`.
+  - Source `labs/views.py` deleted; replaced by the package. `git mv` semantics not used (file rewritten across the package split).
+- [x] `labs/urls.py` unchanged (still `from . import views`); no URL rewrite needed.
+- [x] Register the seven previously-unregistered labs models in `labs/admin.py`: `RoomNote`, `LoftItem`, `BulletinRead`, `ProcurementPledge`, `CollectiveLink`, `AreaPhoto`, `LoftItemPhoto`. Each gets `list_display`/`search_fields`/`raw_id_fields` calibrated to its fields; image-bearing ones mark `uploaded_at` readonly.
+- [x] Register the four inductions models in `inductions/admin.py` (replaced the 2-line stub): `InductionSession` (prepopulated slug, date_hierarchy), `InductionSignup`, `InductionRequest`, `InductionsSettings`. `InductionsSettingsAdmin.has_add_permission` returns False once a row exists, to nudge the singleton case.
+
+Verified: `manage.py check` clean; 959 tests pass; black `--line-length 79` clean on all touched files.
 
 Move-first, refactor-after. Commit guidance: `refactor(labs): split views per-feature; register admin for unregistered models`
 

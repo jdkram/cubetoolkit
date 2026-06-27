@@ -1,12 +1,37 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]; status: "#ai-written"
 from django.contrib import admin
-from .models import Bulletin, Collective, CollectiveRole, ConsumableItem, DonationItem, ExchangeItem, FoundItem, Job, NeedFlag, Supplier, SupplierRecord
+from .models import (
+    AreaPhoto,
+    Bulletin,
+    BulletinRead,
+    Collective,
+    CollectiveLink,
+    CollectiveRole,
+    ConsumableItem,
+    DonationItem,
+    ExchangeItem,
+    FoundItem,
+    Job,
+    LoftItem,
+    LoftItemPhoto,
+    NeedFlag,
+    ProcurementPledge,
+    RoomNote,
+    Supplier,
+    SupplierRecord,
+)
 
 
 class CollectiveRoleInline(admin.TabularInline):
     model = CollectiveRole
     extra = 1
-    fields = ("title", "time_commitment", "needs_volunteers", "open_to_new_volunteers", "display_order")
+    fields = (
+        "title",
+        "time_commitment",
+        "needs_volunteers",
+        "open_to_new_volunteers",
+        "display_order",
+    )
 
 
 @admin.register(Collective)
@@ -17,8 +42,24 @@ class CollectiveAdmin(admin.ModelAdmin):
     prepopulated_fields = {"slug": ("name",)}
     ordering = ("display_order", "name")
     fieldsets = (
-        (None, {"fields": ("name", "slug", "colour", "display_order", "active")}),
-        ("Content", {"fields": ("volunteer_count", "about", "roles", "organising", "proud_of", "get_involved", "contact")}),
+        (
+            None,
+            {"fields": ("name", "slug", "colour", "display_order", "active")},
+        ),
+        (
+            "Content",
+            {
+                "fields": (
+                    "volunteer_count",
+                    "about",
+                    "roles",
+                    "organising",
+                    "proud_of",
+                    "get_involved",
+                    "contact",
+                )
+            },
+        ),
     )
     inlines = [CollectiveRoleInline]
 
@@ -52,7 +93,17 @@ class SupplierAdmin(admin.ModelAdmin):
 class SupplierRecordInline(admin.TabularInline):
     model = SupplierRecord
     extra = 1
-    fields = ("supplier", "supplier_name", "product_code", "unit_desc", "approx_price", "product_url", "ordering_notes", "account_holder", "account_notes")
+    fields = (
+        "supplier",
+        "supplier_name",
+        "product_code",
+        "unit_desc",
+        "approx_price",
+        "product_url",
+        "ordering_notes",
+        "account_holder",
+        "account_notes",
+    )
 
 
 @admin.register(ConsumableItem)
@@ -66,7 +117,14 @@ class ConsumableItemAdmin(admin.ModelAdmin):
 
 @admin.register(NeedFlag)
 class NeedFlagAdmin(admin.ModelAdmin):
-    list_display = ("item", "flagged_by", "flagged_at", "is_resolved", "resolved_by", "resolved_at")
+    list_display = (
+        "item",
+        "flagged_by",
+        "flagged_at",
+        "is_resolved",
+        "resolved_by",
+        "resolved_at",
+    )
     list_filter = ("item",)
     readonly_fields = ("flagged_at",)
     ordering = ("-flagged_at",)
@@ -74,15 +132,47 @@ class NeedFlagAdmin(admin.ModelAdmin):
 
 @admin.register(Job)
 class JobAdmin(admin.ModelAdmin):
-    list_display = ("title", "area", "urgency", "safety_risk", "skill_needed", "resolved", "posted_by", "claimed_by", "posted_at")
-    list_filter = ("urgency", "resolved", "safety_risk", "skill_needed", "keyholder_required", "location_type")
+    list_display = (
+        "title",
+        "area",
+        "urgency",
+        "safety_risk",
+        "skill_needed",
+        "resolved",
+        "posted_by",
+        "claimed_by",
+        "posted_at",
+    )
+    list_filter = (
+        "urgency",
+        "resolved",
+        "safety_risk",
+        "skill_needed",
+        "keyholder_required",
+        "location_type",
+    )
     ordering = ("resolved", "urgency", "-posted_at")
 
 
 @admin.register(ExchangeItem)
 class ExchangeItemAdmin(admin.ModelAdmin):
-    list_display = ("name", "listing_type", "category", "condition", "status", "owner_type", "active", "added_at")
-    list_filter = ("listing_type", "category", "status", "owner_type", "active")
+    list_display = (
+        "name",
+        "listing_type",
+        "category",
+        "condition",
+        "status",
+        "owner_type",
+        "active",
+        "added_at",
+    )
+    list_filter = (
+        "listing_type",
+        "category",
+        "status",
+        "owner_type",
+        "active",
+    )
     list_editable = ("status", "active")
     search_fields = ("name", "description", "notes")
     raw_id_fields = ("owner_volunteer",)
@@ -91,8 +181,94 @@ class ExchangeItemAdmin(admin.ModelAdmin):
 
 @admin.register(FoundItem)
 class FoundItemAdmin(admin.ModelAdmin):
-    list_display = ("label_id", "description", "location_found", "found_on", "logged_by", "status")
+    list_display = (
+        "label_id",
+        "description",
+        "location_found",
+        "found_on",
+        "logged_by",
+        "status",
+    )
     list_filter = ("status",)
-    search_fields = ("description", "location_found", "logged_by", "claimed_by", "notes")
+    search_fields = (
+        "description",
+        "location_found",
+        "logged_by",
+        "claimed_by",
+        "notes",
+    )
     readonly_fields = ("found_on",)
     ordering = ("-found_on", "-pk")
+
+
+# Previously unregistered labs models. Surfaced in admin for incident response
+# and direct data cleanup; the day-to-day UI lives in the labs views.
+
+
+@admin.register(CollectiveLink)
+class CollectiveLinkAdmin(admin.ModelAdmin):
+    list_display = ("label", "collective", "url", "order")
+    list_filter = ("collective",)
+    search_fields = ("label", "url", "collective__name")
+    raw_id_fields = ("collective",)
+    ordering = ("order", "pk")
+
+
+@admin.register(RoomNote)
+class RoomNoteAdmin(admin.ModelAdmin):
+    list_display = ("room_id", "updated_at", "updated_by")
+    search_fields = ("room_id", "body")
+    raw_id_fields = ("updated_by",)
+    ordering = ("-updated_at",)
+
+
+@admin.register(LoftItem)
+class LoftItemAdmin(admin.ModelAdmin):
+    list_display = ("zone_id", "name", "added_by", "added_at", "updated_at")
+    list_filter = ("zone_id",)
+    search_fields = ("name", "description", "zone_id")
+    raw_id_fields = ("added_by",)
+    ordering = ("-added_at",)
+
+
+@admin.register(LoftItemPhoto)
+class LoftItemPhotoAdmin(admin.ModelAdmin):
+    list_display = ("item", "uploaded_by", "uploaded_at", "caption")
+    search_fields = ("caption", "item__name", "item__zone_id")
+    raw_id_fields = ("item", "uploaded_by")
+    readonly_fields = ("uploaded_at",)
+    ordering = ("-uploaded_at",)
+
+
+@admin.register(AreaPhoto)
+class AreaPhotoAdmin(admin.ModelAdmin):
+    list_display = ("area_id", "uploaded_by", "uploaded_at", "caption")
+    search_fields = ("area_id", "caption")
+    raw_id_fields = ("uploaded_by",)
+    readonly_fields = ("uploaded_at",)
+    ordering = ("-uploaded_at",)
+
+
+@admin.register(BulletinRead)
+class BulletinReadAdmin(admin.ModelAdmin):
+    list_display = ("bulletin", "user", "read_at")
+    search_fields = ("bulletin__title", "user__username")
+    raw_id_fields = ("bulletin", "user")
+    ordering = ("-read_at",)
+
+
+@admin.register(ProcurementPledge)
+class ProcurementPledgeAdmin(admin.ModelAdmin):
+    list_display = (
+        "need_flag",
+        "pledged_by",
+        "status",
+        "intended_supplier",
+        "pledged_at",
+        "eta_date",
+        "fulfilled_at",
+    )
+    list_filter = ("status",)
+    search_fields = ("status_notes", "eta_notes")
+    raw_id_fields = ("need_flag", "pledged_by", "intended_supplier")
+    ordering = ("-pledged_at",)
