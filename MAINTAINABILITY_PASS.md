@@ -139,9 +139,9 @@ Moderate. URL paths preserved. **Lower maintainability value than chunk 7's `mod
 
 Move-first, refactor-after. Commit guidance: `refactor(labs): split views per-feature; register admin for unregistered models`
 
-### Chunk 7: Split `diary/edit_views.py` + models package — PENDING
+### Chunk 7: Split `diary/edit_views.py` + models package — DONE 2026-06-27
 
-Moderate. Import paths preserved via `models/__init__.py` re-exports.
+Moderate. Import paths preserved via `models/__init__.py` and `edit_views/__init__.py` re-exports.
 
 **Do this chunk before chunk 6.** `diary/models.py` (2,432 lines) is the single biggest maintainability liability in the repo — it holds the models with the `__init__`/`refresh_from_db` recursion footgun (see CLAUDE.md "Never use `.only()`"), so making it navigable helps a future human far more than splitting `labs/views.py`. Within this chunk, split `models.py` **first**, then `edit_views.py`.
 
