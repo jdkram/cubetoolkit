@@ -1,20 +1,10 @@
 import datetime
-import json
 import logging
 import calendar
 
-# Characters that must be escaped when embedding JSON directly in a <script> block.
-# json.dumps does not escape these, so </script> in a value would close the block.
-# Same escapes Django uses internally for the json_script template tag.
-_JSON_SCRIPT_ESCAPES = str.maketrans({"<": "\\u003c", ">": "\\u003e", "&": "\\u0026"})
-
-
-def _safe_json(data):
-    """json.dumps with HTML-special chars escaped — safe to embed in a <script> block."""
-    return json.dumps(data).translate(_JSON_SCRIPT_ESCAPES)
-
 from collections import OrderedDict
 
+from toolkit.diary.daterange import safe_json
 
 from django.db.models import Q
 from django.http import Http404, HttpResponse
@@ -24,7 +14,13 @@ from django.utils.html import conditional_escape, mark_safe
 import django.utils.timezone as timezone
 import django.views.generic as generic
 
-from toolkit.diary.models import Showing, Event, EventTag, PrintedProgramme, get_site_config
+from toolkit.diary.models import (
+    Showing,
+    Event,
+    EventTag,
+    PrintedProgramme,
+    get_site_config,
+)
 from toolkit.diary.daterange import get_date_range
 from toolkit.diary.forms import SearchForm
 from toolkit.diary.calendar_links import build_ics
@@ -32,7 +28,6 @@ from toolkit.content.models import BasicArticlePage
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
 
 
 def _show_archive_images(request, showings):
@@ -124,7 +119,9 @@ def _view_diary(request, startdate, enddate, tag=None, extra_title=None):
     configured_groups = getattr(settings, "PROGRAMME_FILTER_GROUPS", [])
     active_group_slugs = set(tag_filter_map.values())
     filter_groups = [
-        (slug, label) for slug, label in configured_groups if slug in active_group_slugs
+        (slug, label)
+        for slug, label in configured_groups
+        if slug in active_group_slugs
     ]
 
     context = {
@@ -153,7 +150,7 @@ def _view_diary(request, startdate, enddate, tag=None, extra_title=None):
         "filter_groups": filter_groups,
         # JSON-serialised slug → filter_group map for inline JS. Values are slug strings
         # from settings/DB (no user input), so embedding after json.dumps is safe.
-        "tag_filter_map_json": mark_safe(_safe_json(tag_filter_map)),
+        "tag_filter_map_json": mark_safe(safe_json(tag_filter_map)),
     }
 
     return render(request, "view_showing_index.html", context)
@@ -286,7 +283,12 @@ def view_showing(request, showing_id=None):
 
 
 def single_showing_ics(request, showing_id=None):
-    showings = Showing.objects.public().filter(id=showing_id).select_related("event").prefetch_related("room_bookings__room")
+    showings = (
+        Showing.objects.public()
+        .filter(id=showing_id)
+        .select_related("event")
+        .prefetch_related("room_bookings__room")
+    )
     if not showings:
         raise Http404("Showing not found")
     showing = showings[0]

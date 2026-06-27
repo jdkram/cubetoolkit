@@ -166,9 +166,13 @@ Migration safety: Django migrations reference models by `app_label.ModelName`, n
   - The package `__init__.py` re-exports all 53 top-level names (views, classes, and the `_`-private helpers) so `urls.py`'s `from toolkit.diary.edit_views import (...)` and the one test importing `_export_template_json` keep working unchanged. `edit_views.py` is now a package, not a shim.
   - Decorator handling: the slicer walks each `def`/`class` upward to capture preceding `@decorator` lines so no view loses its `@write_required` / `@permission_required` / `@require_POST` / `@feature_required` guard.
   - Suite green at 959; black --line-length 79 clean.
-- [ ] Move `_safe_json` duplicate (`public_views.py:9` + `edit_views.py:64` → now `edit_views/events.py`) into `diary/daterange.py` (the existing shared module) — pending as a follow-up commit in this chunk.
+- [x] Move `_safe_json` duplicate (`public_views.py:9` + `edit_views.py:64` → `edit_views/events.py`) into `diary/daterange.py` (the existing shared module) — DONE 2026-06-27:
+  - Promoted to a public `safe_json(data)` in `daterange.py` (with the `_JSON_SCRIPT_ESCAPES` table) since it is now genuinely cross-module.
+  - `public_views.py` and `edit_views/events.py` both drop their local copies and import `safe_json` from `daterange`; their two call sites use `mark_safe(safe_json(...))`. The now-unused `import json` was removed from `public_views.py` (its only other use was the local docstring/comment).
+  - `edit_views/__init__.py` drops the `_safe_json` re-export (no external importer used it).
+  - Suite green at 959; black clean.
 
-Move-first. The models split and edit-views split are now both committed; the `_safe_json` dedup is the remaining loose end for chunk 7.
+Move-first. All three chunk-7 items (models split, edit-views split, `_safe_json` dedup) are now committed. Chunk 7 is **DONE**.
 
 ### Chunk 8: SiteConfiguration auto-form — PENDING
 

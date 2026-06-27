@@ -63,17 +63,12 @@ from toolkit.members.models import Qualification, VolunteerQualification
 from toolkit.util.image import adjust_colour
 
 # Shared utility method:
-from toolkit.diary.daterange import get_date_range
+from toolkit.diary.daterange import get_date_range, safe_json
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 from ._common import _film_json, _get_omdb_api_key
-
-# Same escapes Django uses internally for json_script — prevents </script> injection.
-_JSON_SCRIPT_ESCAPES = str.maketrans(
-    {"<": "\\u003c", ">": "\\u003e", "&": "\\u0026"}
-)
 
 
 @write_required
@@ -712,11 +707,6 @@ def _create_room_booking(showing, room, event):
     )
 
 
-def _safe_json(data):
-    """json.dumps with HTML-special chars escaped — safe to embed in a <script> block."""
-    return json.dumps(data).translate(_JSON_SCRIPT_ESCAPES)
-
-
 def _build_cert_lookup_url(url_template: str, film) -> str:
     """Substitute {title} and {year} into the certificate lookup URL template."""
     if not url_template or not film:
@@ -889,7 +879,7 @@ class EditEventView(PermissionRequiredMixin, View):
             "breakeven_guidance_note": cfg.breakeven_guidance_note,
             "breakeven_fc_standard_threshold": cfg.breakeven_fc_standard_threshold,
             "breakeven_fc_music_threshold": cfg.breakeven_fc_music_threshold,
-            "tag_descriptions_json": mark_safe(_safe_json(tag_descriptions)),
+            "tag_descriptions_json": mark_safe(safe_json(tag_descriptions)),
             "top_5_tag_pks_json": mark_safe(json.dumps(top_5_tag_pks)),
             "thumbnail_crop_width": cfg.thumbnail_crop_width,
             "thumbnail_crop_height": cfg.thumbnail_crop_height,

@@ -9,7 +9,6 @@ The package re-exports every public name so urls.py and tests keep using
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["glm-5.2"]; status: "#ai-input"
 
 from .events import (
-    _safe_json,
     _create_room_booking,
     event_detail_view,
     update_showing_status,
@@ -95,7 +94,6 @@ from .film import (
 )
 
 __all__ = [
-    "_safe_json",
     "_return_to_editindex",
     "_create_room_booking",
     "cancel_edit",

@@ -1,5 +1,6 @@
 """Code shared between both public and editing sets of diary views"""
 
+import json
 from typing import Optional, Tuple, Union
 import calendar
 import logging
@@ -7,6 +8,22 @@ from datetime import datetime
 import django.utils.timezone
 
 logger = logging.getLogger(__name__)
+
+
+# Characters that must be escaped when embedding JSON directly in a <script>
+# block. json.dumps does not escape these, so a "</script>" in a value would
+# close the block. Same escapes Django uses internally for the json_script
+# template tag.
+_JSON_SCRIPT_ESCAPES = str.maketrans(
+    {"<": "\\u003c", ">": "\\u003e", "&": "\\u0026"}
+)
+
+
+def safe_json(data) -> str:
+    """json.dumps with HTML-special chars escaped -- safe to embed in a
+    ``<script>`` block. Used by both public and edit views when passing JSON
+    into templates for inline rendering."""
+    return json.dumps(data).translate(_JSON_SCRIPT_ESCAPES)
 
 
 def get_date_range(
