@@ -195,17 +195,23 @@ Verified: `manage.py check` clean, 959 tests pass, black `--line-length 79` clea
 
 Commit guidance: `test(diary): assert SiteConfiguration form/model field parity` (A — already done), `refactor(diary): auto-derive SiteConfiguration form fields from model metadata` (B). Bundled into one commit since A predates the pass.
 
-### Chunk 9: Reconcile feature-flag systems — PENDING
+### Chunk 9: Reconcile feature-flag systems — DONE 2026-06-27
 
 Low-moderate (rescoped). Document-and-comment, don't migrate-everything. The original "decide per-field for every flag" framing is open-ended with no clean stopping point — the opposite of the rest of this plan. Narrow to the cheap, high-value half; defer actual DB-first migration of individual flags unless one is actively causing confusion.
 
 In scope:
-- [ ] Pick and document one precedence rule in the `SiteConfiguration` docstring: "DB wins, settings.py seeds"
-- [ ] Add a one-line comment at each settings-only flag reader (`TAGS_WITHOUT_TERMS`, `EDIT_INDEX_DEFAULT_DAYS_AHEAD`, `MULTIROOM_ENABLED` — readers found in `models.py:248`, `edit_prefs.py:9`, `edit_views.py` + `context_processors.py` + `calendar_links.py`) marking it explicitly settings-only, so a maintainer doesn't go looking for a DB field that isn't there.
-- [ ] Remove the dead/misleading claim in the `SiteConfiguration` docstring (`models.py:1627-1632`)
+- [x] Precedence rule written into the `SiteConfiguration` docstring: "the DB row is the source of truth for every field on this model; settings.py values seed the row via the initial data migration and are not re-read at runtime for fields on this model." Plus a pointer to the settings-only flags.
+- [x] One-line comments at each settings-only flag reader marking it explicitly settings-only:
+  - `TAGS_WITHOUT_TERMS`: `toolkit/diary/models/misc.py:101`, `toolkit/diary/forms.py:614`
+  - `EDIT_INDEX_DEFAULT_DAYS_AHEAD`: `toolkit/diary/edit_prefs.py:9`
+  - `MULTIROOM_ENABLED`: `toolkit/diary/calendar_links.py:57`, `toolkit/diary/context_processors.py:31`, `toolkit/diary/edit_views/diary_overview.py` (module-level comment near module logger — used at 5 sites in this file)
+  - Bonus while reading `context_processors.py`: `MEMBERSHIP_EXPIRY_ENABLED` is also settings-only (no SiteConfiguration counterpart) — comment marks both together.
+- [x] Removed the dead/misleading claim in the `SiteConfiguration` docstring that "settings.py values are only used to seed the row in the initial data migration" — replaced with the precedence rule above that makes the settings-only flags explicit.
 
 Out of scope (defer unless a specific flag is causing live confusion):
 - [ ] ~~Make `omdb_api_key`, `eventlink_extra_allowed_domains`, `programme_*` fields consistently DB-first across all readers~~ — only worth the churn+test cost per flag if the inconsistency is actually biting. `omdb_api_key` already has a DB-first reader (`_get_omdb_api_key`); leave the rest unless asked.
+
+Verified: `manage.py check` clean, 959 tests pass, black `--line-length 79` clean on all touched files (bonus: also reformatted three pre-existing long-line files in the same directories).
 
 ### Chunk 10: Squash migrations — PENDING
 

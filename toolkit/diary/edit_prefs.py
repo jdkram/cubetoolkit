@@ -5,13 +5,17 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 # Set of known preferences and default values:
+# EDIT_INDEX_DEFAULT_DAYS_AHEAD is settings-only — no SiteConfiguration counterpart.
 KNOWN_PREFS = {
     "daysahead": str(settings.EDIT_INDEX_DEFAULT_DAYS_AHEAD),
 }
 
 
 def get_preferences(session, volunteer=None):
-    return {pref: get_preference(session, pref, volunteer=volunteer) for pref in KNOWN_PREFS}
+    return {
+        pref: get_preference(session, pref, volunteer=volunteer)
+        for pref in KNOWN_PREFS
+    }
 
 
 def get_preference(session, name, volunteer=None):

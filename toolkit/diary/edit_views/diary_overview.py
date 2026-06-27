@@ -68,6 +68,9 @@ from toolkit.diary.daterange import get_date_range
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+# MULTIROOM_ENABLED is settings-only — no SiteConfiguration counterpart.
+# Used throughout this module to gate multi-room columns/UI in diary views.
+
 
 def _return_to_editindex(request):
     return HttpResponseRedirect(reverse("default-edit"))

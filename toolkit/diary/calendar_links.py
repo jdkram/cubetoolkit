@@ -29,6 +29,7 @@ def _utc_iso(dt):
 
 def _utc():
     import datetime as _dt
+
     return _dt.timezone.utc
 
 
@@ -48,12 +49,18 @@ def _ics_escape(text):
 
 def _venue_location():
     venue = getattr(settings, "VENUE", {}) or {}
-    return venue.get("cinemaname") or venue.get("longname") or venue.get("name") or ""
+    return (
+        venue.get("cinemaname")
+        or venue.get("longname")
+        or venue.get("name")
+        or ""
+    )
 
 
 def _summary(showing):
     parts = [showing.event.name]
     room = showing.primary_room
+    # MULTIROOM_ENABLED is settings-only — no SiteConfiguration counterpart.
     if getattr(settings, "MULTIROOM_ENABLED", False) and room:
         parts.append(f"({room.name})")
     return " ".join(p for p in parts if p)
@@ -77,6 +84,7 @@ def _public_url(request, showing):
     if request is None:
         return ""
     from django.urls import reverse
+
     return request.build_absolute_uri(
         reverse("single-showing-view", kwargs={"showing_id": showing.pk})
     )
@@ -91,6 +99,7 @@ def build_ics(showing, request=None, dtstamp=None):
     and our content rarely exceeds 75 octets in practice).
     """
     import datetime as _dt
+
     if dtstamp is None:
         dtstamp = _dt.datetime.now(tz=_utc())
 
@@ -98,7 +107,12 @@ def build_ics(showing, request=None, dtstamp=None):
     host = (
         request.get_host()
         if request is not None
-        else (venue.get("url", "toolkit.local").replace("https://", "").replace("http://", "").rstrip("/"))
+        else (
+            venue.get("url", "toolkit.local")
+            .replace("https://", "")
+            .replace("http://", "")
+            .rstrip("/")
+        )
     )
     prodid = f"-//{venue.get('longname', 'Toolkit')}//Toolkit//EN"
     uid = f"showing-{showing.pk}@{host}"

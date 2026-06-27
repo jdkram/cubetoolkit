@@ -611,6 +611,7 @@ class ShowingForm(forms.ModelForm):
 
             raise forms.ValidationError(
                 "Events require terms information "
+                # TAGS_WITHOUT_TERMS is settings-only — no SiteConfiguration counterpart.
                 f'(unless they are tagged with one of {"/".join(sorted(settings.TAGS_WITHOUT_TERMS))}). '
                 "Please add more details."
             )

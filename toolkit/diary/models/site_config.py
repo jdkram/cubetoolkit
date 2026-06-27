@@ -15,8 +15,16 @@ class SiteConfiguration(models.Model):
     """Singleton (pk=1) holding runtime-editable site settings.
 
     A Panopticon edits these via /toolkit/site-config/ instead of needing a
-    code deploy. The DB row is the source of truth; settings.py values are
-    only used to seed the row in the initial data migration.
+    code deploy. Precedence: the DB row is the source of truth for every
+    field on this model. ``settings.py`` values seed the row via the initial
+    data migration and are not re-read at runtime for fields on this model.
+
+    A small number of feature flags have no SiteConfiguration counterpart and
+    are still read directly from ``settings.py`` at runtime — see
+    ``TAGS_WITHOUT_TERMS``, ``EDIT_INDEX_DEFAULT_DAYS_AHEAD`` and
+    ``MULTIROOM_ENABLED`` in ``toolkit/settings_common.py``. Comments at each
+    reader mark them as settings-only so a maintainer doesn't go looking for
+    a DB field that isn't there.
     """
 
     # --- Display & UX ---

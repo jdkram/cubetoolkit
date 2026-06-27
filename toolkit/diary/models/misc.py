@@ -98,6 +98,7 @@ class EventTagQuerySet(QuerySet):
         Do any of the tags match the list of tags which mean terms text is not
         required for an event?
         """
+        # TAGS_WITHOUT_TERMS is settings-only — no SiteConfiguration counterpart.
         return self.filter(name__in=settings.TAGS_WITHOUT_TERMS).exists()
 
 

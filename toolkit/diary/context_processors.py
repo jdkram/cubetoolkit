@@ -24,14 +24,18 @@ def diary_settings(request):
     user = request.user
     feature_perms = {
         name: SiteConfiguration._passes_level(
-            user, getattr(config, f"perm_{name}", SiteConfiguration.PERM_PROGRAMMER)
+            user,
+            getattr(config, f"perm_{name}", SiteConfiguration.PERM_PROGRAMMER),
         )
         for name in _FEATURE_NAMES
     }
     return {
+        # MULTIROOM_ENABLED and MEMBERSHIP_EXPIRY_ENABLED are settings-only —
+        # no SiteConfiguration counterpart.
         "MULTIROOM_ENABLED": settings.MULTIROOM_ENABLED,
         "MEMBERSHIP_EXPIRY_ENABLED": settings.MEMBERSHIP_EXPIRY_ENABLED,
-        "IMAGE_COPYRIGHT_GUIDANCE_URL": config.image_copyright_guidance_url or None,
+        "IMAGE_COPYRIGHT_GUIDANCE_URL": config.image_copyright_guidance_url
+        or None,
         "ALT_TEXT_GUIDANCE_URL": config.alt_text_guidance_url or None,
         "site_config": config,
         "inductions_settings": get_inductions_settings(),
