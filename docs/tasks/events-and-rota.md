@@ -4,6 +4,61 @@ Feature specs for the diary, event creation, programming pipeline, rota, room bo
 
 **For work status:** [CURRENT_WORK.md](../../CURRENT_WORK.md)
 
+## Quick navigation by topic
+
+**Programming workflow** — how events go from idea to approval to screen:
+[9.2 Programming pipeline](#92-event-programming-pipeline) ·
+[9.9 Break-even calculator](#99-break-even-calculator-for-programmers-) ·
+[9.14 Post-screening checklist](#914-post-screening-admin-checklist-) ·
+[9.15 Film metadata](#915-film-metadata-distributor-records-and-screening-reports-) ·
+[9.18 Event create/edit UX](#918-unified-event-createedit-ux-) ·
+[9.108 TicketSource guide](#9108--ticketsource-setup-guide-in-the-event-creation-flow-) ·
+[9.109 Mark as confirmed](#9109--mark-as-confirmed-as-a-satisfying-end-of-creation-action-)
+
+**Rota management** — volunteer sign-up and rota operations:
+[9.3 Rota management view](#93-volunteer-rota--improved-management-view) ·
+[9.10 Rota improvements](#910-rota-improvements-from-the-backlog) ·
+[9.25 Mobile sign-up](#925-tap-to-sign-up-on-rota-mobile-self-service-) ·
+[9.29 Role management](#929-role-management-multiple-other-roles-and-role-change-behaviour-) ·
+[9.40 Setup/doors times](#940-setup-time-doors-open-time-and-final-volunteer-time-on-showings-) ·
+[9.44 Role notifications](#944--role-based-rota-notifications-) ·
+[9.47 Role display order](#947--rota-role-display-order-) ·
+[9.52 Rota links](#952--rota-links-from-rota-notes-replace-eventlink-model-) ·
+[9.53 End time](#953--show-end-time-on-the-rota-) ·
+[9.72 Role deletion](#972--role-deletion-cascades-silently-to-all-historical-rota-entries-) ·
+[9.73 Outside hire badge](#973--display-outside-hire-flag-prominently-on-rota-) ·
+[9.75 Starred events](#975--starred-and-shadowed-events-on-the-rota-) ·
+[9.76 Rota date nav](#976--rota-date-navigation-and-orientation-)
+
+**Room bookings and calendar:**
+[9.7 Multi-room bookings](#97-room-booking--multi-room-and-clash-detection) ·
+[9.33 S&S spaces + calendar](#933-ss-spaces-seed-data--diary-column-per-room-display-) ·
+[9.41 Room filter](#941-clickable-legend-room-filter-calendar-) ·
+[9.43 Room management UI](#943--room-management-ui-)
+
+**Individual event features:**
+[9.21 Recurring events](#921-recurring-events--clone-to-dates-) ·
+[9.26 Resource links](#926-event-resource-links-generalised-rota-links-) ·
+[9.48 Template export/import](#948--template-exportimport-) ·
+[9.54 Cost terms](#954--structured-event-cost-terms-) ·
+[9.55 Legacy archive](#955--legacy-event-archive-stub-display-and-import-) ·
+[9.66 Film metadata](#966--film-event-metadata--tmdb-integration---done-2026-06-11) ·
+[9.69 Showing dates UX](#969--event-detail-showing-date-ux-improvements-) ·
+[9.71 Terms change log](#971--event-terms-and-financial-field-change-log-) ·
+[9.131 Clone from past](#9131--clone-from-past-events-) ·
+[9.132 Template from event](#9132--create-event-template-from-an-existing-event-) ·
+[9.141 Poster import](#9141--filmscreened-work-import-poster-from-omdb-with-copyright-acknowledgement-) ·
+[9.142 One-shot role UX](#9142--one-shot-role-remove-button-ux--deletion-warning-)
+
+**Dashboard and toolkit UI:**
+[9.35.1 Dashboard section](#9351-toolkit-homepage-dashboard-section-above-link-directory-) ·
+[9.91 Rota gaps widget](#991--dashboard-widget-upcoming-showings-with-gaps-in-the-rota-) ·
+[9.92 Unconfirmed widget](#992--dashboard-widget-unconfirmed-upcoming-showings-) ·
+[9.95 Bulletins](#995--bulletins-operational-notice-board-with-dashboard-banner-)
+
+**Notifications and comms:**
+[9.11 Notification alternatives](#911-notification-alternatives-to-email-)
+
 ---
 
 ### 9.2 Event programming pipeline

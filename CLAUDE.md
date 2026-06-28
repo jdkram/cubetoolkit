@@ -6,7 +6,7 @@ This is the **Cube Toolkit** codebase — a Django app that manages events, memb
 
 Before doing anything else, read:
 - [docs/ONBOARDING.md](docs/ONBOARDING.md) — project structure, apps, Django primer, how to run with Docker
-- [docs/BRANCH_NOTES.md](docs/BRANCH_NOTES.md) — detailed audit of differences between the `master` and `s+s` branches
+- [docs/ARCHIVE/BRANCH_NOTES.md](docs/ARCHIVE/BRANCH_NOTES.md) — detailed audit of differences between the `master` and `s+s` branches
 
 The current branch is **`master`** (Django 5.2 LTS, Wagtail 6.3, Python 3, no Celery).
 
@@ -108,7 +108,7 @@ Also relevant: `~/notes/Community/sns/servers.md` for SSH aliases, server paths,
 
 The `s+s` branch was the Star and Shadow production branch but ran Django 2.2 (EOL). We have started fresh from `master` (which is far more modern) and ported the S+S-specific functionality across. Initial Docker setup and basic seed data are complete; focus is now on porting remaining features.
 
-The `s+s` branch is available locally for reference (`git checkout s+s`, or inspect files with `git show s+s:path/to/file`). See [docs/BRANCH_NOTES.md](docs/BRANCH_NOTES.md) for full details on branch differences.
+The `s+s` branch is available locally for reference (`git checkout s+s`, or inspect files with `git show s+s:path/to/file`). See [docs/ARCHIVE/BRANCH_NOTES.md](docs/ARCHIVE/BRANCH_NOTES.md) for full details on branch differences.
 
 **For current task status, what's done, and what's next, see [CURRENT_WORK.md](CURRENT_WORK.md).** That is the single source of truth — do not track status anywhere else.
 

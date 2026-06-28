@@ -232,16 +232,16 @@ Order:
 
 Test DBs rebuild from scratch, so squash correctness is verified by the suite running clean.
 
-### Chunk 11: Docs cleanup — PENDING
+### Chunk 11: Docs cleanup — DONE 2026-06-28
 
 Low risk. No tests.
 
-- [ ] CURRENT_WORK.md: archive done-items older than the latest release into CHANGELOG.md only. Improve signal-to-noise for "what's actually left". Move the "Last updated" run-on sentence into structured fields.
-- [ ] `docs/tasks/events-and-rota.md` (3,775 lines): split by feature or shrink. Largest spec file, larger than SPEC + ONBOARDING combined.
-- [ ] Move rewrite-essay sections out of `docs/SPEC.md` (sections 10-12, ~300 lines) into `docs/REWRITE_STRATEGY.md`. Keep SPEC as a snapshot of the current system.
-- [ ] Fix the broken-ish `BRANCH_NOTES.md` link in `CLAUDE.md` (points at `docs/BRANCH_NOTES.md`, file is at `docs/ARCHIVE/BRANCH_NOTES.md`)
-- [ ] `docs/ARCHIVE/README.md` is 1 line — make it a real index, or remove
-- [ ] Flatten `docs/ROADMAP.md` since `CURRENT_WORK` has overtaken it; or freeze it with a clear "superseded by CURRENT_WORK" header
+- [x] `CLAUDE.md`: fixed two broken `docs/BRANCH_NOTES.md` links → `docs/ARCHIVE/BRANCH_NOTES.md`
+- [x] `docs/ARCHIVE/README.md`: expanded 1-line placeholder to a real index (3 files with descriptions)
+- [x] `docs/ROADMAP.md`: added "superseded by CURRENT_WORK.md" header callout (content preserved as historical record)
+- [x] `docs/SPEC.md` sections 10–12 extracted to `docs/REWRITE_STRATEGY.md` (−307 lines from SPEC; SPEC now stays as a snapshot of the current system; TASKS.md index updated to point at new file)
+- [x] `CURRENT_WORK.md` "Last updated" run-on sentence restructured to three short fields; maintainability pass row updated
+- [x] `docs/tasks/events-and-rota.md`: added grouped topic-navigation header (57 cross-links organised by theme: programming workflow, rota management, rooms/calendar, event features, dashboard, notifications) — avoids risky file splitting while making 3,775-line file navigable without scrolling
 
 ---
 

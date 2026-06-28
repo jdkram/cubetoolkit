@@ -6,6 +6,8 @@ status: "#ai-input"
 
 # Roadmap
 
+> **Superseded.** This file was written 2026-04-28 and reflects the sequencing thinking at that point. Most of the items listed here have since shipped. For current priorities and status, see [CURRENT_WORK.md](../CURRENT_WORK.md). This file is kept as a historical record of the reasoning; the dependency diagram may still be useful context.
+
 **Last updated:** 2026-04-28
 
 Sequencing plan for remaining Phase 2 work. Source of truth for individual

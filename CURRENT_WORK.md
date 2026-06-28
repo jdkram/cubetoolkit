@@ -2,10 +2,10 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-06-28 (maintainability pass chunk 10 **DONE** — squashed 139 migration files into 6 across 5 apps: diary 0009-0035 → `0009_v2` and 0036-0090 → `0036_v2` (folds 15 data migrations incl. `seed_singleton`, the TMDB→OMDb cycle, and the 0029/0060/0061/0062 MySQL IF-NOT-EXISTS column guards; caught and fixed an optimizer pitfall where 0086+0087's `AddField(default='programmer')`+`AlterField(default='volunteer')` merged into a single AddField that would have loosened diary-edit-list access — split back to preserve the seeded 'programmer' value), members 0009-0028 → `0009_v2` (folds `populate_status_from_active` + `split_dir_share_name`, `atomic=False` for MariaDB), labs 0001-0027 → `0001_initial_v2` + `0015_v2` (split at 0014/0015 to break a cross-app cycle with members.0014), inductions 0001-0009 → `0001_initial_v2`. mailer+index left alone (single follow-on files). Suite green at 959; black clean. Next: chunk 11 — docs cleanup.)
-
+**Last updated:** 2026-06-28
+**Last major change:** Maintainability pass chunk 11 (docs cleanup) — see [MAINTAINABILITY_PASS.md](MAINTAINABILITY_PASS.md) for full details of chunks 1–11.
 **Current phase:** Phase 4 ongoing
-**See also:** [ROADMAP.md](docs/ROADMAP.md) (wave-by-wave sequencing) · [TASKS.md](docs/TASKS.md) (design rationale & feature specs)
+**See also:** [TASKS.md](docs/TASKS.md) (design rationale & feature specs) · [REWRITE_STRATEGY.md](docs/REWRITE_STRATEGY.md) (tech notes and migration guide)
 
 ---
 
@@ -47,7 +47,7 @@ Tracking file: [MAINTAINABILITY_PASS.md](MAINTAINABILITY_PASS.md). Chunks 1-5 do
 | 8 SiteConfig auto-form | ✅ 2026-06-27 | Parity test (`SiteConfigurationConsistencyTests`) was already in place from earlier work — it now uses `base_fields` rather than `Meta.fields`. `SiteConfigurationForm.Meta` switched from an 80-line explicit `fields` tuple to `exclude = ("id",)`, so the form auto-derives from the model `_meta`. New single source of truth `SITE_CONFIG_FIELD_GROUPS` (insertion-ordered dict in `toolkit/diary/models/site_config.py`, re-exported via `toolkit.diary.models`) feeds the edit page's section grouping; the view's 150-line inline `field_groups` list is now one line. `perm_*` fields stay out of the dict (still rendered via `permission_rows`). Suite green at 959; black clean. |
 | 9 Feature-flag reconciliation | ✅ 2026-06-27 | Documented the precedence rule in the `SiteConfiguration` docstring (DB row is source of truth; settings.py seeds the row). Added one-line comments at every settings-only flag reader (`TAGS_WITHOUT_TERMS` × 2 sites, `EDIT_INDEX_DEFAULT_DAYS_AHEAD` × 1, `MULTIROOM_ENABLED` × 3 files incl. a module-level note in diary_overview.py since it's read at 5 sites, `MEMBERSHIP_EXPIRY_ENABLED` × 1) marking them as having no SiteConfiguration counterpart. Rescoped to document-comment per chunk plan; per-flag DB-first migration deferred. Suite green at 959; black clean. |
 | 10 Migration squash | ✅ 2026-06-28 | Squashed 139 migration files → 6 across 5 apps. diary: 81 → 2 (`0009_v2` 0009-0035, `0036_v2` 0036-0090, folds 15 data migrations incl. `seed_singleton`, TMDB→OMDb cycle, MySQL column guards; fixed an AddField+AlterField optimizer merge that would have loosened diary-edit-list access from Programmer+ to all volunteers). members: 20 → 1 (`0009_v2`, folds `populate_status_from_active` + `split_dir_share_name`, `atomic=False`). labs: 27 → 2 (split at 0014/0015 to break a cross-app cycle with `members.0014` ← `labs.0009`). inductions: 9 → 1 (leaf app, no data migrations). mailer+index left alone. Suite green at 959; black clean. |
-| 11 Docs cleanup | pending | CURRENT_WORK archive, split events-and-rota spec, move rewrite essay out of SPEC, fix BRANCH_NOTES link, docs/ARCHIVE index, flatten ROADMAP. |
+| 11 Docs cleanup | ✅ 2026-06-28 | BRANCH_NOTES link fixed in CLAUDE.md. `docs/ARCHIVE/README.md` expanded to a real index. `docs/ROADMAP.md` marked superseded. SPEC.md sections 10–12 extracted to `docs/REWRITE_STRATEGY.md` (−307 lines from SPEC). CURRENT_WORK.md "Last updated" restructured. `events-and-rota.md` grouped TOC added. |
 
 ---
 

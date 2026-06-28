@@ -8,6 +8,8 @@ This file is the index. Full specs live in [`docs/tasks/`](tasks/) split by doma
 
 **Rule:** specs and rationale only — no ❌/✅ status markers. Status lives in CURRENT_WORK.md.
 
+**Also see:** [REWRITE_STRATEGY.md](REWRITE_STRATEGY.md) for technology notes and data migration guidance (formerly SPEC.md sections 10–12).
+
 **Size key:** 🟢 XS (1–4h) · 🔵 S (4–16h) · 🟡 M (16–40h) · 🟠 L (40–80h) · 🔴 XL (80–160h) · ⛔ XXL (160h+)
 
 ---
