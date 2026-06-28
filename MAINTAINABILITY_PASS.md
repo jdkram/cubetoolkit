@@ -1,7 +1,7 @@
 # Maintainability Pass Plan
 
 > **Status:** in progress on branch `chore/maintainability-pass`, branched from `sns_2026_overhaul` at `6d9cf776`.
-> **Last updated:** 2026-06-26
+> **Last updated:** 2026-06-28
 > **Source review:** fresh-eyes code review dispatched 2026-06-26 (four parallel deep reads of diary, members+auth, labs+inductions+mailer, settings+scripts+docs+tests).
 > **Resume by:** reading this file top-to-bottom — each chunk has status + scope + commit guidance. Check `git log chore/maintainability-pass` to see which chunks have shipped.
 
@@ -224,9 +224,11 @@ Order:
 - [ ] Squash diary TMDB cycle 0075-0083 → fold (add-then-remove disappears; create Film with OMDb fields)
 - [ ] Squash diary SiteConfiguration field-add migrations 0036-0090 → diary 0010_v2 (one CreateModel + seed data)
 - [ ] Squash members 0009-0029 → members 0009_v2
-- [ ] Squash labs 0001-0027 → labs 0001_initial_v2 (single initial migration, whole app)
-- [ ] Squash inductions 0001-0008 → inductions 0001_initial_v2 (single initial)
+- [x] Squash labs 0001-0027 → DONE 2026-06-28 as **two** files, not one: `labs.0001_initial_v2` (replaces 0001-0014, deps = AUTH_USER_MODEL only) + `labs.0015_v2` (replaces 0015-0027, deps = members.0017/0023/0028 + labs.0001_initial_v2, carries the 0027 `populate_suppliers_from_records` RunPython locally). A single squash is impossible here: `members.0014_volunteer_directory_fields` depends on `labs.0009_areaphoto` (for the `volunteer.collectives` M2M → `labs.collective`), and `labs.0015+` depend on `members.0017+` (for FKs to `members.volunteer`) — a cross-app cycle. One squash would have to be both before and after `members.0014`. Splitting at the 0014/0015 boundary breaks the cycle: the early squash (no member deps) sits before `members.0014`; the later squash sits after `members.0017+`. 27 → 2 files; 170 labs tests pass.
+- [x] Squash inductions 0001-0009 → inductions 0001_initial_v2 — DONE 2026-06-28. inductions is a leaf app (no members/diary migration depends on it), so a single squash is safe. No data migrations in range. 9 → 1 file; 30 inductions tests pass.
 - [ ] mailer + index already single-file additions; leave alone unless tests catch issues
+
+Verified so far: 959 tests pass with labs + inductions squashes in place; black --line-length 79 clean.
 
 Test DBs rebuild from scratch, so squash correctness is verified by the suite running clean.
 
