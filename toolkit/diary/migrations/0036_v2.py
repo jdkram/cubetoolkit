@@ -760,6 +760,7 @@ class Migration(migrations.Migration):
                 migrations.RunPython(
                     code=_add_columns,
                     reverse_code=_remove_columns,
+                    atomic=False,  # raw DDL on MySQL — can't be inside a transaction
                 ),
             ],
             state_operations=[
@@ -797,6 +798,7 @@ class Migration(migrations.Migration):
                 migrations.RunPython(
                     code=_add_crop_columns,
                     reverse_code=_remove_crop_columns,
+                    atomic=False,  # raw DDL on MySQL — can't be inside a transaction
                 ),
             ],
             state_operations=[
@@ -838,6 +840,7 @@ class Migration(migrations.Migration):
                 migrations.RunPython(
                     code=_add_programme_accent_colour_column,
                     reverse_code=_remove_programme_accent_colour_column,
+                    atomic=False,  # raw DDL on MySQL — can't be inside a transaction
                 ),
             ],
             state_operations=[

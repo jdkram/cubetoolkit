@@ -803,6 +803,7 @@ class Migration(migrations.Migration):
         migrations.RunPython(
             code=_add_column,
             reverse_code=_drop_column,
+            atomic=False,  # executes raw DDL on MySQL — can't be inside a transaction
         ),
         migrations.SeparateDatabaseAndState(
             state_operations=[
