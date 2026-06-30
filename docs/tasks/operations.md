@@ -274,6 +274,9 @@ The key improvement over the spreadsheet is not the colour coding (it already do
 - Expanding a task reveals the full spec: skills, keyholder requirement, time commitment, contractor details, linked documentation
 - Write-permission users can add records and mark tasks complete
 - Mobile-friendly: the collapsed view is usable on a phone; expanded detail is readable without horizontal scrolling
+- **Make background work visible to volunteers who only do shifts.** S+S has a cultural gap: people who do shifts (which can itself be a lot of work) often have no visibility into the volume of behind-the-scenes maintenance, compliance, and admin work that keeps the building running. A schedule that's only ever opened by the few people who already know it exists doesn't close that gap — see the **dashboard card** requirement below, and [9.148](#9148--jobs-board-skill-labelling-and-dashboard-visibility-s-1015h) for the matching change to the existing ad-hoc jobs board.
+
+**Dashboard integration:** add an "Upcoming maintenance" card to the volunteer dashboard (alongside the cards from [9.94](#994--dashboard-widget-toggles-localstorage-xs-23h) / [9.126](#9126--dashboard-preferences-to-db--favourite-links-panel--shipped-2026-06-16)) showing the next 3–5 tasks by `next_due`, colour-coded, with a link through to the full schedule. This is the main fix for the visibility problem — most volunteers will never navigate to a dedicated maintenance page, but will see the dashboard on every login.
 
 **Data model:** Two new models (new `toolkit.operations` app, or `toolkit.diary` if preferred):
 
@@ -292,6 +295,8 @@ The key improvement over the spreadsheet is not the colour coding (it already do
 | `nextcloud_link` | URLField(blank) | Link to related documents, previous reports, contracts |
 | `notes` | TextField(blank) | Context, caveats, embedded knowledge currently buried in spreadsheet cells |
 | `active` | BooleanField(default=True) | Retire tasks without losing history |
+| `committed_to` | FK(Volunteer, null, SET_NULL) | Who has said they'll do the next occurrence, if anyone. See trust/commitment note below |
+| `committed_on` | DateField(null) | When the commitment was made — lets a stale commitment (e.g. 6 months old, nothing done) surface as a problem rather than silently blocking the task from view |
 
 `MaintenanceRecord`:
 
@@ -318,21 +323,47 @@ Calculated `next_due` property: most recent `MaintenanceRecord` + frequency peri
 - Keyholder flag should render as a visible badge (🔑) in the collapsed view — important for volunteers scanning for tasks they can take on.
 - `completed_by_name` text field matters: many tasks are done by contractors who don't have toolkit accounts.
 - Phase 2: email/notification when tasks come within N weeks of due date. Phase 2: assign a task owner per upcoming period (mirroring the spreadsheet's task owner columns).
+- **Commitment vs trust.** A standing problem at S+S: someone picks up a task by saying "I'll do it", which discourages anyone else from doing it, but doesn't always result in it actually getting done. `committed_to`/`committed_on` makes that claim visible (a "claimed by Alex, 3 weeks ago" badge) rather than gating the task on it — anyone can still mark it done regardless of who's committed. If `committed_on` is old relative to `frequency` and the task still isn't done, the schedule view should surface that as its own "stale commitment" flag, distinct from plain overdue, so it's visible without anyone having to publicly call it out. This mirrors `claimed_by` on the existing `Job` model in `toolkit/labs/models.py` (see [9.148](#9148--jobs-board-skill-labelling-and-dashboard-visibility-s-1015h)) — same idea, applied to recurring tasks rather than one-off jobs.
 
 **Sizing:**
 
 | Component | Est. |
 |---|---|
-| `MaintenanceTask` + `MaintenanceRecord` models + migrations | 2h |
+| `MaintenanceTask` + `MaintenanceRecord` models + migrations (incl. `committed_to`/`committed_on`) | 2.5h |
 | Django admin registration | 1h |
-| Main schedule view + template (collapsed rows, expand on click, colour coding) | 6–8h |
-| Add/edit task form | 3h |
+| Main schedule view + template (collapsed rows, expand on click, colour coding, stale-commitment flag) | 7–9h |
+| Add/edit task form + "commit to this" action | 4h |
 | "Mark done" inline form | 2–3h |
+| Dashboard "Upcoming maintenance" card | 2–3h |
 | Tests | 3–4h |
 | Optional: spreadsheet import script | 3–4h |
-| **Total** | **~17–21h** (without import script) |
+| **Total** | **~21–26h** (without import script) |
 
 **Minimum viable increment:** models + admin registration + read-only schedule view (~8h). "Mark done" action is the next step; full CRUD follows.
+
+---
+
+### 9.148 — Jobs board: skill labelling and dashboard visibility 🔵 S (10–15h)
+
+**Context:** The ad-hoc jobs board already exists (`toolkit/labs/models.py` `Job`, `toolkit/labs/views/jobs.py`, `/labs/jobs/`) — title, area, description, `plan_status` (progress notes), `safety_risk`, `skill_needed` flag, `keyholder_required`, `urgency`, `location_type`, `posted_by`/`reporter_name`, `claimed_by`, `resolved`/`resolved_at`. Claim/unclaim/resolve actions are all built. This ticket is **not** a new jobs feature — it's two gaps against what's already shipped, both aimed at the same cultural problem described in [9.80](#980--non-rota-jobs-and-maintenance-schedule-m-2035h): volunteers who only do shifts often don't know how much background work exists, and there's a recurring trust friction around claimed-but-stalled jobs.
+
+**Gap 1 — `skill_needed` is a flag, not a description.** The jobs list renders it as a 🔧 icon (`jobs.html:126`) meaning "needs a skill or trade", but doesn't say *which* one. A volunteer scanning the board for something they can personally help with has to open every flagged job to find out if it's electrical, IT, woodwork, etc. Add a `skill_required` `CharField(blank=True)` free-text field (e.g. "Electrical", "Sound desk", "Carpentry") shown directly in the list view, alongside or instead of the icon. Keep it free text rather than a choices field or lookup table — a fixed list will always lag behind the actual range of jobs that come up, and free text is enough to scan.
+
+**Gap 2 — no dashboard presence.** The jobs board has no card on the volunteer dashboard (`toolkit/index/views.py` `ToolkitIndexView.get_context_data` — compare the existing `shopping_needs` and `recent_bulletins` cards, which follow the same pattern: query a short list, add to context only if non-empty, template renders a card). Most volunteers will never navigate to `/labs/jobs/` unprompted; the dashboard is the one place that's seen on every login, so it's the actual fix for the visibility problem the user described, not a nice-to-have.
+
+Add an "Open jobs" card: open + claimed (not yet resolved) jobs, ordered by urgency then `posted_at`, capped at ~8. Show title, `skill_required` (if set), urgency badge, and claimed-by (or "unclaimed") — same minimal-but-legible treatment as `jobs.html`'s table, condensed for a card. Link through to the full `/labs/jobs/` board.
+
+**Out of scope for this ticket:** anything resembling the recurring maintenance schedule in 9.80 — that's a genuinely separate model (scheduled, frequency-driven, contractor-aware) and shouldn't be bolted onto `Job`, which is deliberately a flat one-off list. If a `Job` turns out to be recurring in practice, the right move is to promote it to a `MaintenanceTask`, not to grow `Job` extra scheduling fields.
+
+**Sizing:**
+
+| Component | Est. |
+|---|---|
+| `skill_required` field + migration | 1h |
+| Update job list/form templates to show/edit it | 2h |
+| Dashboard "Open jobs" card (query + template) | 4–6h |
+| Tests | 3–4h |
+| **Total** | **~10–13h** |
 
 ---
 

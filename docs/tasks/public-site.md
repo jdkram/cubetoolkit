@@ -161,6 +161,27 @@ The current live S+S site sidesteps this by serving all images square (800×800 
 
 ---
 
+### 9.147 — Age rating filter on public programme (progressive reveal for "Film" group) 🔵 S (6–10h)
+
+**Context:** The programme filter bar (`view_showing_index.html`, see `prog_index()` in `public_views.py`) already has a group-type filter row driven by `EventTag.filter_group` — buttons for Film / Event / etc, built from `filter_groups` and `tag_filter_map_json` in the view context. There's a separate day-of-week filter row underneath. Both are client-side JS filters over the rendered cards; no server round-trip.
+
+`SiteConfiguration.age_rating_choices` already exists (a configurable JSONField of value/label pairs, BBFC-style by default — `U`, `PG`, `12A`, etc, see `event.py:472` `Event.get_age_rating_display()` equivalent) and is set per-event. So the data is already there; this ticket is purely about exposing it as a filter.
+
+**Goal:** Let visitors filter the programme by age rating, but only surface the control once they've selected the "Film" group filter — keeping the default filter bar uncluttered for people just browsing what's on.
+
+**Explicitly out of scope:** genre filtering. Flagged but deliberately not pursued — tag/genre data quality isn't there yet, and part of the venue's appeal is showing a genre-defying mishmash rather than letting people filter themselves into a narrower comfort zone. Revisit only if someone commits to maintaining clean genre tagging.
+
+**Proposed approach:**
+- Server side: add an `age_rating` row to the existing tag-filter-style context data, or simply emit the set of distinct age ratings present in the current showings queryset (`Event.objects.values_list("age_rating", flat=True).distinct()`) alongside `filter_groups`.
+- Client side: a new filter-button row, same `prog-filter-btn` pattern as the existing day-of-week row, but hidden (`display: none` or a `hidden` attribute) until `data-filter-group="film"` (or whatever slug the Film group resolves to) becomes active. Toggle visibility in the same JS that currently handles `data-filter-group` clicks.
+- Filtering logic: extend the existing client-side card-filtering JS to also check `data-age-rating` on each card, the same way it already checks `data-filter-group` and `data-dow-filter`.
+
+**Design note:** the reveal should animate or at least appear without a layout jump that scrolls the page — a sudden new row above the card grid is jarring. A simple slide-down or fade-in on the new row, or reserving the vertical space with `visibility: hidden` rather than `display: none`, avoids this.
+
+**Sizing:** mostly front-end — extending an existing JS filtering pattern rather than building new infrastructure, hence S not M.
+
+---
+
 ### 9.62 — Mailing list subscriptions as a proper toolkit Django view 🔵 S (3–6h)
 
 **Context:** The current "Working groups" page at `/toolkit/working-groups/` is a live Wagtail `ComplexArticlePage` with `show_in_menus=False` (unlisted — access by URL only). It embeds mailing list signup forms via `raw_html` blocks — almost certainly Mailman subscription form embeds. It has been live since 2017 and is widely shared in rota notes and at inductions.

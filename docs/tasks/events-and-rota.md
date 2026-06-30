@@ -48,7 +48,8 @@ Feature specs for the diary, event creation, programming pipeline, rota, room bo
 [9.131 Clone from past](#9131--clone-from-past-events-) ·
 [9.132 Template from event](#9132--create-event-template-from-an-existing-event-) ·
 [9.141 Poster import](#9141--filmscreened-work-import-poster-from-omdb-with-copyright-acknowledgement-) ·
-[9.142 One-shot role UX](#9142--one-shot-role-remove-button-ux--deletion-warning-)
+[9.142 One-shot role UX](#9142--one-shot-role-remove-button-ux--deletion-warning-) ·
+[9.149 Itemised budget lines](#9149--itemised-budget-lines-estimate-vs-actual-per-event-type-)
 
 **Dashboard and toolkit UI:**
 [9.35.1 Dashboard section](#9351-toolkit-homepage-dashboard-section-above-link-directory-) ·
@@ -3828,3 +3829,357 @@ Everything that makes sense as a template default: title, description, copy summ
 - Add a warning when `oneshot_count_N < signed_up_count` — requires the view to pass the signed-up-volunteer count per one-shot role to the template (already partially available via `current_count` in `_get_oneshot_roles_for_showing`; the missing piece is distinguishing "slots requested" from "slots filled by a real volunteer").
 
 **Related:** 9.X (one-shot roles — shipped), `_parse_oneshot_roles` in `edit_views.py`.
+
+---
+
+### 9.149 — Itemised budget lines: estimate vs actual, per event type 🟠 L (25–40h)
+
+**Goal:** Capture the itemised, category-broken-down budget (estimate **and**
+actual, side by side) that the Programming/Finance Collective actually uses
+at Monday meetings and in post-event reconciliation, replacing the informal
+spreadsheet ("Budget template.xlsx", Collective - Programming) with structured
+data on the `Event`.
+
+#### Background
+
+9.54 (shipped 2026-06-11) added structured *deal* fields — `cost_type`,
+`cost_distributor`, `cost_flat_fee_gbp`, `cost_percentage_split`,
+`cost_total_gbp`, etc. These capture **what was agreed with the
+performer/distributor**, which is the right shape for a single negotiated
+fee. They do not capture the **itemised running budget** a programmer
+prepares for the Monday meeting (9.2: *"An itemised budget breakdown —
+expected costs and income"*) or the actuals reconciled afterwards.
+
+The Collective's real practice — visible in `Budget template.xlsx` — is a
+spreadsheet with one tab per event type, each listing categories (and, for
+some categories, named items within them), with **Estimate** and **Actual**
+columns side by side, plus an Incoming section for ticket sales:
+
+| Event type (sheet) | Categories | Items within category |
+|---|---|---|
+| Music Gig | Acts/Performers, Fees, Catering, Decoration, Merch, Promotion, Volunteer costs, Misc. | Acts/Performers → Hire fee, Travel, Accommodation, Rider; Fees → Late night licence, Door staff |
+| Film | Programming, Catering, Decoration, Merch, Promotion, Misc. | Programming → Licence, DVD/Blu-ray |
+| Other Public Event | Acts/Performers, Catering, Decoration, Merch, Promotion, Cafe & bar, Volunteer costs, Misc. | (no item-level breakdown) |
+| Vol Only Event | (none — outgoing total only) | — |
+
+Every sheet also has an Incoming section (Ticket sales, Estimate/Actual) and
+a running Totals row.
+
+This is a genuinely different shape of data to 9.54's deal fields — it is
+**not** a replacement for them, it sits alongside. A flat-fee performer deal
+(`cost_type=performer_fee`, `cost_total_gbp=150`) tells you the headline
+number; the itemised lines tell you where the rest of the money goes
+(travel, rider, promotion, volunteer food) and whether the estimate held up
+once the event actually happened.
+
+#### Realism: this only works if it's less effort than the spreadsheet
+
+A volunteer-run venue with no paid admin time will not reliably fill in a
+9-category form on top of the 9.54 deal fields it already asks for. If the
+toolkit asks for the same number twice — once as `cost_total_gbp`, again as
+the "Acts/Performers → Hire fee" line — it has made the job *harder* than
+the spreadsheet, not easier, and adoption will fail silently (rows left
+blank, programmers reverting to the spreadsheet for "the real numbers").
+
+So the design principle for this task is: **derive and pre-fill everything
+that can be derived from data the toolkit already has, and only ask a human
+for numbers that genuinely require their judgement** (what a venue costs to
+hire, what merch cost, what was spent on decorations — things with no other
+system of record). Concretely:
+
+| Line | Can it be derived? | Source |
+|---|---|---|
+| Acts/Performers → Hire fee (gig) | Yes | 9.54 `cost_total_gbp` / `cost_flat_fee_gbp` when `cost_type` is `performer_fee` or `venue_hire` |
+| Programming → Licence (film) | Yes | 9.54 `cost_flat_fee_gbp` when `cost_type=film_license` |
+| Acts/Performers → Rider (notes) | Yes | 9.54 `cost_rider_notes` |
+| Fees → Late night licence | Partially | fixed/known venue rate — store as a `SiteConfiguration` constant (`late_licence_fee_gbp`) and pre-fill as the default estimate; editable, since the rate does occasionally change |
+| Ticket sales (estimate) | Yes | 9.9's break-even calculator already derives an expected-revenue figure from ticket price × capacity × fill assumption — reuse that as the default estimate instead of asking for it again |
+| Ticket sales (actual, online) | Partially, future work | TicketSource API booking total (9.108's optional enhancement) once that exists — door/cash sales are in EPOSnow, a separate system with no toolkit integration today (documented gap, see 9.10), so actuals will stay manual for the cash portion regardless |
+| VAT-adjusted figures | Yes | display-only calculation: when `cost_fee_includes_vat` is set, show the net figure alongside the gross rather than asking the programmer to do the sum. Standard rate as a `SiteConfiguration.vat_rate_pct` constant (default 20%), not hardcoded |
+| Totals (per category, per direction) | Yes | always computed, never entered |
+| Travel, Accommodation, Catering, Decoration, Merch, Promotion, Volunteer costs, Misc. | No | genuinely need a human estimate; no other system of record exists for these today |
+
+This roughly halves the number of cells a programmer has to type into
+compared to a literal port of the spreadsheet, and — importantly — removes
+the double-entry between the 9.54 deal fields and the budget lines, rather
+than adding a second place to type the same headline number.
+
+**Door staff** (Music Gig → Fees) was considered for derivation from the
+rota (volunteers signed up to a "Door" role × hours × a per-hour rate), but
+S&S door cover is unpaid-volunteer not paid-SIA-staff for ordinary events;
+confirm with the Finance Collective during implementation whether this line
+is ever actually a real cost before building a derivation for it — if it's
+rarely used, it's better left as a free-entry field than over-engineered.
+
+#### Data model
+
+New model, one row per budget line:
+
+```python
+class EventBudgetLine(models.Model):
+    DIRECTION_OUTGOING = "outgoing"
+    DIRECTION_INCOMING = "incoming"
+    DIRECTION_CHOICES = [
+        ("outgoing", "Outgoing"),
+        ("incoming", "Incoming"),
+    ]
+
+    # Where the estimate figure came from. A derived line is recalculated
+    # from its source whenever that source changes (e.g. cost_total_gbp is
+    # edited); a manual line, or one the programmer has explicitly
+    # overridden, is left alone.
+    SOURCE_MANUAL = "manual"
+    SOURCE_DEAL_TERMS = "deal_terms"       # 9.54 cost_* fields
+    SOURCE_SITE_DEFAULT = "site_default"   # SiteConfiguration constant
+    SOURCE_CALCULATOR = "calculator"       # 9.9 break-even calculator output
+    SOURCE_CHOICES = [
+        ("manual", "Manual entry"),
+        ("deal_terms", "Linked to deal terms"),
+        ("site_default", "Site default"),
+        ("calculator", "Break-even calculator"),
+    ]
+
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="budget_lines")
+    direction = models.CharField(max_length=8, choices=DIRECTION_CHOICES)
+    category = models.CharField(max_length=64)   # e.g. "Acts/ Performers", "Catering", "Ticket sales"
+    item = models.CharField(max_length=128, blank=True)  # e.g. "Hire fee" — blank for category-level-only rows
+    estimate_gbp = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    estimate_source = models.CharField(max_length=16, choices=SOURCE_CHOICES, default="manual")
+    actual_gbp = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    notes = models.TextField(max_length=1024, blank=True)
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["direction", "order", "pk"]
+```
+
+A separate `EventBudgetLine` row per category/item keeps the model simple
+(no JSON blob, each cell individually editable/auditable) and lets a
+category appear with or without item-level rows depending on event type,
+matching the spreadsheet exactly. `estimate_source` is what makes derived
+values safe to auto-fill: the form can show a "linked to deal terms ✓"
+indicator instead of an editable box for lines whose source isn't manual,
+with a single "override" click that flips it to manual and unlocks editing
+— so the common case (deal fields already filled in) needs zero typing for
+that row, and the escape hatch is one click away, not a parallel form.
+
+#### Event-type category sets
+
+The four sheets become four **category templates**, keyed off the same
+tag-based logic already used elsewhere in this codebase (e.g.
+`contains_tag_to_not_need_terms`, the `film` tag check in 9.23). Define them
+as a Python constant (not DB-configurable — these are stable, collectively
+agreed categories, not something an individual programmer should be able to
+silently change):
+
+```python
+BUDGET_CATEGORY_TEMPLATES = {
+    "music_gig": [
+        ("Acts/ Performers", ["Hire fee", "Travel", "Accommodation", "Rider"]),
+        ("Fees", ["Late night licence", "Door staff"]),
+        ("Catering", []),
+        ("Decoration", []),
+        ("Merch", []),
+        ("Promotion", []),
+        ("Volunteer costs", []),
+        ("Misc.", []),
+    ],
+    "film": [
+        ("Programming", ["Licence", "DVD/ Blu-ray"]),
+        ("Catering", []),
+        ("Decoration", []),
+        ("Merch", []),
+        ("Promotion", []),
+        ("Misc.", []),
+    ],
+    "other_public_event": [
+        ("Acts/ Performers", []),
+        ("Catering", []),
+        ("Decoration", []),
+        ("Merch", []),
+        ("Promotion", []),
+        ("Cafe & bar", []),
+        ("Volunteer costs", []),
+        ("Misc.", []),
+    ],
+    "vol_only_event": [],
+}
+INCOME_CATEGORY_TEMPLATE = [("Ticket sales", [])]
+```
+
+Event-type selection mirrors how `film`/`music`-style tags already drive
+behaviour elsewhere (9.23's `films_start_on_time` check is the precedent):
+inspect `event.tags` for a matching tag (`film`, `music`/`gig`), falling
+back to "other_public_event" rather than guessing. "Vol only event" maps to
+events tagged volunteer-only / not public (existing tag, confirm exact slug
+during implementation — do not invent a new tag if one already serves this
+purpose).
+
+#### Form / UX
+
+- `EventBudgetLine` rows for the event's category template are created
+  automatically — a `post_save`/`pre_save` step on `Event` (or a check in
+  the event edit view) creates any missing rows for the current event type
+  whenever the form is loaded, rather than relying on a programmer
+  remembering to click a "populate" button. Re-tagging an event to a
+  different type (rare, but possible) adds the new type's rows without
+  deleting ones already filled in — never silently destroy entered data.
+- Each row is pre-filled per the derivation table above wherever a source
+  exists (`estimate_source` set accordingly); everything else starts blank,
+  not zero, so an empty budget section never looks confusingly "complete".
+- Budget section in the event edit form: one row per `EventBudgetLine`,
+  grouped by category, Estimate and Actual columns side by side (visually
+  matching the source spreadsheet, which the Collective already reads
+  fluently), Notes as an expandable field per row, not always visible.
+  Totals row per direction, computed client-side via JS (same fill-on-input
+  pattern as 9.9's calculator) and re-confirmed server-side on save.
+- "Add item" link per category for ad-hoc items beyond the template (the
+  spreadsheet's category-only rows like Catering/Decoration/Merch
+  already absorb miscellaneous spend under Notes — keep that option rather
+  than forcing every category to have named items).
+- Actuals are filled in after the event (post-event reconciliation,
+  separate workflow step from the pre-event estimate) — the form should
+  not force Actual to be filled at creation time. See "Post-event editing"
+  below for how programmers get back to this screen once the event has
+  passed.
+
+#### Post-event editing: bills come due after the event is over
+
+This is one of the first toolkit features that asks people to come back
+and edit an event's data *after* the showing has happened — everything
+else in the toolkit is oriented around the lead-up to an event, not its
+aftermath. Invoices and receipts often land days or weeks later, so this
+needs to be designed for that pattern explicitly, not bolted on:
+
+- **Findability — confirmed blocker, not a risk to "check later".**
+  `toolkit/diary/edit_views/diary_overview.py:132-147` explicitly redirects
+  the admin day/calendar view away from any past date ("Don't allow viewing
+  of dates before today, to avoid editing of the past") straight back to
+  today. That guard exists for a good reason (discourage retroactive rota
+  fiddling) but it also makes a past event's edit page hard to *reach* via
+  the calendar UI once its date has gone by — exactly the path a programmer
+  filling in actuals would take. This task needs either: a separate
+  past-events finder (search/list view, not the calendar) that links
+  directly to each event's edit page, bypassing the date-redirect entirely;
+  or a scoped exception to the redirect specifically for navigating *to* an
+  existing event (the guard is presumably meant to stop creating/editing
+  showings on past dates wholesale, not block reaching one that already
+  exists — confirm the original intent before touching it). Resolve this
+  before building the budget UI itself, not after — it blocks the whole
+  post-event workflow this task depends on.
+- A direct, bookmarkable URL to an event's budget section (`#budget` anchor
+  or a dedicated `/event/<id>/budget/` view) is worth having regardless, so
+  it can be linked from an email/reminder without going through the
+  calendar at all.
+- **"Awaiting actuals" worklist.** A small dashboard/admin view (Programmer+
+  visibility) listing past events that have estimate figures but incomplete
+  actuals — the natural "what bills am I still waiting on" queue for
+  whoever owns reconciliation. This is the post-event equivalent of 9.92's
+  "unconfirmed upcoming showings" widget, same pattern applied the other
+  direction in time.
+- **No artificial lock.** Events should remain editable in the budget
+  section indefinitely after the date has passed — don't add a "this event
+  is too old to edit" guard. Reconciliation is sometimes genuinely slow
+  (an invoice queried months later); the system should not fight that.
+- **Reminder hook.** Optionally surface "fill in actuals" in whatever
+  notification mechanism already nudges programmers post-event (9.14's
+  post-screening checklist, if it has an email/reminder path) rather than
+  inventing a new one.
+
+#### Finance reporting and data export
+
+The Programming/Finance Collective is moving off a spreadsheet they can
+freely pivot, filter, and check by eye — the toolkit has to be at least as
+trustworthy, or this regresses real capability. Two things follow:
+
+- **Aggregate report view**, Finance-Collective-visible (or Programmer+,
+  confirm exact access tier with the Collective): per-period summary
+  (month/quarter/custom date range) of total outgoing vs incoming, broken
+  down by category, across all events in range, with estimate vs actual
+  shown side by side and the variance highlighted (events where actual
+  significantly exceeded estimate are exactly the cases Finance want to
+  see, not buried). This is read-only reporting — no editing happens here.
+- **Full CSV export, not aggregate-only.** A finance volunteer checking
+  the toolkit's arithmetic by re-deriving it themselves in a spreadsheet is
+  a legitimate and expected use case, not a fallback to design against —
+  trust in the new system depends on it being possible. The export must be
+  **row-level** (one row per `EventBudgetLine`: event, date, event type,
+  category, item, direction, estimate, actual, source, notes), not just the
+  aggregated report figures, so Finance can re-total, re-group, and
+  re-check it in their own spreadsheet however they like. Filter by date
+  range at minimum; category/event-type filters are a reasonable v1 addition
+  if cheap. Plain CSV (UTF-8, comma-separated) is sufficient — no need for
+  a richer export format unless Finance specifically ask for one.
+- Reuse the existing CSV export pattern from
+  `toolkit/members/views/volunteer_export.py` (`HttpResponse(content_type=
+  "text/csv")` + `csv.writer`) rather than introducing a new export
+  mechanism — this codebase already has one established way of doing CSV
+  downloads.
+
+#### Integration with existing features
+
+- **9.9 (break-even calculator):** pre-populate the calculator's cost
+  inputs from the sum of `EventBudgetLine` estimates (outgoing) when lines
+  exist, falling back to 9.54's `cost_total_gbp`/`cost_flat_fee_gbp` when
+  they don't. Ticket price/capacity inputs stay as they are.
+- **9.54 (deal terms):** unchanged, kept alongside. Cross-reference in the
+  form: the deal fields describe one external negotiated cost; budget lines
+  describe everything else.
+- **9.14 (post-screening checklist):** add "Fill in actuals" as a checklist
+  item once an event has budget lines with estimates but no actuals.
+- **9.92-style dashboard widgets:** the "awaiting actuals" worklist above
+  follows the same card pattern already established for rota-gap and
+  unconfirmed-showing widgets.
+- **Finance Collective referral threshold (9.2):** the £500/£750 referral
+  check should sum `EventBudgetLine.estimate_gbp` (outgoing) when present,
+  rather than relying solely on `cost_total_gbp`.
+
+#### Migration / rollout
+
+- New model, no changes to existing fields — fully additive.
+- No back-fill needed for past events; itemised lines start from rollout.
+- Gate the budget-lines UI behind a `SiteConfiguration` flag (mirrors
+  `structured_cost_terms_enabled` from 9.54) so it can be trialled before
+  becoming the default workflow, given the Collective is still actively
+  using the spreadsheet.
+
+#### Out of scope (this task)
+
+- Replacing the spreadsheet for *non-toolkit* events (it's also used for
+  internal collective spending unrelated to programmed events).
+- Multi-currency support, and any VAT handling beyond the simple net/gross
+  *display* calculation described above (no VAT return generation, no
+  per-line VAT category coding — that's accounting-software territory).
+- Door-staff cost derivation from the rota (see note above — only worth
+  building if Finance confirm it's a real recurring cost).
+- TicketSource actual-revenue auto-pull (depends on 9.108's optional API
+  enhancement, not yet built) — design the field for it, don't build the
+  integration in this task.
+- Automated import of historical spreadsheet data — a one-off manual or
+  scripted import could follow as separate work once this ships, if there's
+  appetite to backfill recent events.
+
+#### Size breakdown
+
+| Component | Size | Hours |
+|---|---|---|
+| `EventBudgetLine` model + migration + category-template constants | 🟢 XS | 3–5h |
+| Auto-creation of rows on event load + derivation from deal terms/site defaults | 🔵 S | 5–8h |
+| Budget section in event edit form (estimate/actual grid, totals, override toggle) | 🟠 L | 12–18h |
+| Past-events findability fix (search/list view bypassing the date redirect) | 🔵 S | 4–8h |
+| "Awaiting actuals" dashboard widget | 🟢 XS | 3–5h |
+| Finance aggregate report view | 🔵 S | 6–10h |
+| Row-level CSV export | 🟢 XS | 2–4h |
+| 9.9 / 9.2 referral-threshold integration | 🟢 XS | 2–3h |
+| **Total** | **🟠 L** | **~37–61h** |
+
+**Minimum viable increment:** model + auto-creation/derivation + the budget
+grid in the event edit form (~20–31h). This alone replaces the spreadsheet
+for entering numbers. The findability fix should ship in the *same* phase
+though, not be deferred — without it, actuals simply won't get filled in
+post-event, which defeats the point.
+
+**Related:** 9.2 (programming pipeline, itemised budget requirement at
+the Monday meeting), 9.9 (break-even calculator), 9.14 (post-screening
+checklist), 9.54 (structured deal terms — sibling, not superseded), 9.92
+(dashboard widget pattern), `volunteer_export.py` (CSV export pattern).
