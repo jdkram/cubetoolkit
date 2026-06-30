@@ -98,18 +98,9 @@ def _view_diary(request, startdate, enddate, tag=None, extra_title=None):
     # as-is so historical browsing still works.
     is_current_or_future_range = enddate >= now
 
-    # Build both output structures in one pass:
-    # - showings_grid: flat ordered list, one card per showing (S+S template)
-    # - events: OrderedDict[event -> list[showing]] (Cube template)
-    events: dict = OrderedDict()
-    showings_grid = []
-    for showing in showings_qs:
-        if is_current_or_future_range and showing.in_past():
-            continue
-        events.setdefault(showing.event, []).append(showing)
-        showings_grid.append(showing)
-
     # Build programme filter button data from tags that have a filter_group set.
+    # Done early so the loop below can detect which showings belong to the
+    # Film group and build the age-rating filter list from those showings only.
     filter_tags = (
         EventTag.objects.filter(archived=False, filter_group__isnull=False)
         .exclude(filter_group="")
@@ -123,6 +114,57 @@ def _view_diary(request, startdate, enddate, tag=None, extra_title=None):
         for slug, label in configured_groups
         if slug in active_group_slugs
     ]
+
+    # Slug that triggers the progressive age-rating filter reveal. The "Film"
+    # group is conventionally the first entry in PROGRAMME_FILTER_GROUPS.
+    film_group_slug = next(
+        (slug for slug, label in configured_groups if slug == "film"),
+        "film",
+    )
+
+    # Build both output structures in one pass:
+    # - showings_grid: flat ordered list, one card per showing (S+S template)
+    # - events: OrderedDict[event -> list[showing]] (Cube template)
+    # Also collect age ratings from showings that belong to the Film group.
+    events: dict = OrderedDict()
+    showings_grid = []
+    present_age_values = set()
+    has_film_without_rating = False
+    for showing in showings_qs:
+        if is_current_or_future_range and showing.in_past():
+            continue
+        events.setdefault(showing.event, []).append(showing)
+        showings_grid.append(showing)
+
+        event = showing.event
+        is_film = any(
+            tag_filter_map.get(tag.slug) == film_group_slug
+            for tag in event.tags.all()
+        )
+        if is_film:
+            if event.age_restriction:
+                present_age_values.add(event.age_restriction)
+            else:
+                has_film_without_rating = True
+
+    # Distinct age ratings present in the Film-group showings, mapped to labels
+    # from SiteConfiguration.age_rating_choices. Unknown values fall back to
+    # the raw stored value and are appended at the end. The "??" option catches
+    # film events with no age rating set. Only computed when the Film filter
+    # group is active.
+    site_config = get_site_config()
+    age_ratings = []
+    if film_group_slug in active_group_slugs:
+        seen_age_ratings = set()
+        for entry in site_config.age_rating_choices:
+            value = entry["value"]
+            if value in present_age_values and value not in seen_age_ratings:
+                age_ratings.append((value, entry.get("label", value)))
+                seen_age_ratings.add(value)
+        for value in sorted(present_age_values - seen_age_ratings):
+            age_ratings.append((value, value))
+        if has_film_without_rating:
+            age_ratings.insert(0, ("__none__", "??"))
 
     context = {
         "cms_pages": cms_pages,
@@ -151,6 +193,13 @@ def _view_diary(request, startdate, enddate, tag=None, extra_title=None):
         # JSON-serialised slug → filter_group map for inline JS. Values are slug strings
         # from settings/DB (no user input), so embedding after json.dumps is safe.
         "tag_filter_map_json": mark_safe(safe_json(tag_filter_map)),
+        # Age-rating buttons: [(value, label), ...] for ratings used by visible showings
+        "age_ratings": age_ratings,
+        # Slug of the "Film" filter group; the age-rating row is revealed when this
+        # group is selected.
+        "film_group_slug": film_group_slug,
+        # JSON-serialised film group slug for inline JS (no user input).
+        "film_group_slug_json": mark_safe(safe_json(film_group_slug)),
     }
 
     return render(request, "view_showing_index.html", context)

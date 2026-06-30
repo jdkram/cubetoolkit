@@ -93,6 +93,9 @@ setup_page(true);
 {% if tag_filter_map_json %}
 <script>window.PROG_TAG_FILTER_MAP = {{ tag_filter_map_json }};</script>
 {% endif %}
+{% if film_group_slug_json %}
+<script>window.PROG_FILM_GROUP_SLUG = {{ film_group_slug_json }};</script>
+{% endif %}
 {% endblock script %}
 
 {% block site-description %}
@@ -169,6 +172,14 @@ setup_page(true);
         <label for="programme-search" class="programme-search-label">Search:</label>
         <input type="search" id="programme-search" data-prog-search placeholder="Filter by title, tag…" autocomplete="off">
     </div>
+    {% if filter_groups and age_ratings %}
+    <div class="programme-age-filter-row" role="group" aria-label="Filter by age rating" data-age-filter-row>
+        <button type="button" class="prog-filter-btn prog-filter-btn--active" data-age-filter="">All ratings</button>
+        {% for value, label in age_ratings %}
+        <button type="button" class="prog-filter-btn" data-age-filter="{{ value }}">{{ label }}</button>
+        {% endfor %}
+    </div>
+    {% endif %}
     <div class="programme-dow-filter-row" role="group" aria-label="Filter by day of week">
         <button type="button" class="prog-filter-btn prog-filter-btn--active" data-dow-filter="">Any day</button>
         <button type="button" class="prog-filter-btn" data-dow-filter="1">Mon</button>
@@ -192,7 +203,8 @@ setup_page(true);
     <div class="showing{% if is_volunteer and event.private or is_volunteer and showing.hide_in_programme %} showing-internal{% endif %}{% if showing.cancelled %} showing--cancelled{% endif %}" id="showing_{{ showing.id }}"
          data-search-text="{{ event.pre_title }} {{ event.name }} {{ event.post_title }} {{ event.copy_summary|striptags|truncatewords:50 }}{% for tag in event.tags.all %} {{ tag.name }}{% endfor %}"
          data-tags="{% for tag in event.tags.all %}{% if not forloop.first %} {% endif %}{{ tag.slug }}{% endfor %}"
-         data-dow="{{ showing.start|date:"w" }}">
+         data-dow="{{ showing.start|date:"w" }}"
+         data-age-restriction="{{ event.age_restriction|default:"" }}">
 
         {% if showing.cancelled %}<div class="cancelled-flag" role="alert">CANCELLED</div>{% endif %}
         <div class="event_image">

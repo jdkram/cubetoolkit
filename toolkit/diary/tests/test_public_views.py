@@ -7,9 +7,23 @@ from django.test import TestCase
 from django.urls import reverse, resolve
 import django.http
 
+import copy
+import os
+
+from django.conf import settings
+
 from .common import DiaryTestsMixin
+from toolkit.diary.models import EventTag, SiteConfiguration, get_site_config
 
 uktz = zoneinfo.ZoneInfo("Europe/London")
+
+# The S+S programme index template lives in star_and_shadow_templates; the
+# default test settings use the Cube template dirs. Prepend the S+S dir so the
+# age-rating filter tests exercise the correct template.
+_SS_TEMPLATES = copy.deepcopy(settings.TEMPLATES)
+_SS_TEMPLATES[0]["DIRS"] = (
+    os.path.join(settings.BASE_DIR, "star_and_shadow_templates"),
+) + tuple(_SS_TEMPLATES[0]["DIRS"])
 
 
 class PublicDiaryViews(DiaryTestsMixin, TestCase):
@@ -477,3 +491,108 @@ class VolunteerProgrammeView(DiaryTestsMixin, TestCase):
         auth_response = self.client.get(url)
         self.assertTrue(auth_response.context["is_volunteer"])
         self.client.logout()
+
+
+class AgeRatingFilterTests(DiaryTestsMixin, TestCase):
+    """Tests for the progressive age-rating filter on the public programme."""
+
+    def _get(self, url_name="default-view", kwargs=None):
+        with self.settings(TEMPLATES=_SS_TEMPLATES):
+            return self.client.get(reverse(url_name, kwargs=kwargs or {}))
+
+    def _enable_film_filter_group(self):
+        """Tag e2's events with a 'film' filter_group so the Film button appears."""
+        film_tag = EventTag.objects.create(
+            name="film", slug="film", read_only=False, filter_group="film"
+        )
+        self.e2.tags.add(film_tag)
+        self.e2.save()
+        return film_tag
+
+    @patch("django.utils.timezone.now")
+    def test_age_ratings_omitted_when_no_film_group(self, now_patch):
+        now_patch.return_value = datetime(2013, 4, 1, 11, 00, tzinfo=uktz)
+        self.e2.age_restriction = "15"
+        self.e2.save()
+
+        response = self._get()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["age_ratings"], [])
+        self.assertNotContains(response, "data-age-filter-row")
+
+    @patch("django.utils.timezone.now")
+    def test_age_ratings_context_and_rendering(self, now_patch):
+        now_patch.return_value = datetime(2013, 4, 1, 11, 00, tzinfo=uktz)
+        self._enable_film_filter_group()
+        self.e2.age_restriction = "15"
+        self.e2.save()
+
+        response = self._get()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["age_ratings"], [("15", "15")])
+        self.assertContains(response, "data-age-filter-row")
+        self.assertContains(response, 'data-age-filter="15"')
+        self.assertContains(response, 'data-age-restriction="15"')
+
+    @patch("django.utils.timezone.now")
+    def test_age_rating_labels_preserve_config_order(self, now_patch):
+        now_patch.return_value = datetime(2013, 4, 1, 11, 00, tzinfo=uktz)
+        film_tag = self._enable_film_filter_group()
+        cfg = get_site_config()
+        cfg.age_rating_choices = [
+            {"value": "U", "label": "U — Universal"},
+            {"value": "12A", "label": "12A — Cinema only"},
+            {"value": "15", "label": "15"},
+        ]
+        cfg.save()
+
+        self.e2.age_restriction = "15"
+        self.e2.save()
+        # e4 is in the future and public; give it an earlier config value
+        self.e4.tags.add(film_tag)
+        self.e4.age_restriction = "U"
+        self.e4.save()
+
+        response = self._get()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.context["age_ratings"],
+            [("U", "U — Universal"), ("15", "15")],
+        )
+        self.assertContains(response, 'data-age-filter="U"')
+        self.assertContains(response, "U — Universal")
+
+    @patch("django.utils.timezone.now")
+    def test_age_ratings_only_for_visible_showings(self, now_patch):
+        now_patch.return_value = datetime(2013, 4, 1, 11, 00, tzinfo=uktz)
+        film_tag = self._enable_film_filter_group()
+        # Give e2 a rating so the "??" option doesn't appear from it.
+        self.e2.age_restriction = "12A"
+        self.e2.save()
+        # e4s3 is in the future and visible; e4s4 is unconfirmed and hidden.
+        self.e4.tags.add(film_tag)
+        self.e4.age_restriction = "18"
+        self.e4.save()
+
+        response = self._get()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.context["age_ratings"],
+            [("12A", "12A — Cinema only, under 12s with adult"), ("18", "18")],
+        )
+
+    @patch("django.utils.timezone.now")
+    def test_age_ratings_no_rating_button(self, now_patch):
+        now_patch.return_value = datetime(2013, 4, 1, 11, 00, tzinfo=uktz)
+        self._enable_film_filter_group()
+        # e2 is a film event with no age_restriction set.
+
+        response = self._get()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.context["age_ratings"],
+            [("__none__", "??")],
+        )
+        self.assertContains(response, 'data-age-filter="__none__"')
+        self.assertContains(response, "??")
+

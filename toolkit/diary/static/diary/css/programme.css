@@ -810,3 +810,27 @@ span.tags {
 .programme-dow-filter-row::-webkit-scrollbar {
     display: none;
 }
+
+/* Age-rating filter row — progressively revealed when the Film group is active.
+ * Hidden by default (display:none) so it doesn't leave a blank strip in the
+ * header; toggled to flex when Film is selected. */
+.programme-age-filter-row {
+    flex-basis: 100%;
+    display: none;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.35rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-top: 0.2rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.programme-age-filter-row::-webkit-scrollbar {
+    display: none;
+}
+
+.programme-age-filter-row.is-visible {
+    display: flex;
+}
