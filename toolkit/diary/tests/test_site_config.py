@@ -1,8 +1,13 @@
+import urllib.error
+from unittest.mock import patch
+
+from django import forms
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from toolkit.diary.forms import SiteConfigurationForm
 from toolkit.diary.models import EventTag, SiteConfiguration, get_site_config
+from toolkit.diary.omdb import OmdbAuthError, OmdbRateLimitError
 from toolkit.diary.tests.common import DiaryTestsMixin
 
 
@@ -204,6 +209,59 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
             perm_pos,
             "perm_diary_read appears after </form> — the Access Levels table must be inside the form element",
         )
+
+
+class OmdbApiKeyValidationTests(DiaryTestsMixin, TestCase):
+    """SiteConfigurationForm.clean_omdb_api_key: require a working key on save."""
+
+    def _form_with_key(self, key):
+        config = get_site_config()
+        form = SiteConfigurationForm(instance=config)
+        form.cleaned_data = {"omdb_api_key": key}
+        return form
+
+    def test_empty_key_skips_verification(self):
+        form = self._form_with_key("")
+        self.assertEqual(form.clean_omdb_api_key(), "")
+
+    def test_unchanged_key_skips_verification(self):
+        config = get_site_config()
+        config.omdb_api_key = "existing-key"
+        config.save()
+        form = self._form_with_key("existing-key")
+        # No mock needed: an unchanged key must not trigger a live API call.
+        self.assertEqual(form.clean_omdb_api_key(), "existing-key")
+
+    @patch("toolkit.diary.omdb.verify_api_key")
+    def test_new_valid_key_is_accepted(self, mock_verify):
+        form = self._form_with_key("new-key")
+        self.assertEqual(form.clean_omdb_api_key(), "new-key")
+        mock_verify.assert_called_once_with("new-key")
+
+    @patch("toolkit.diary.omdb.verify_api_key")
+    def test_new_invalid_key_is_rejected(self, mock_verify):
+        mock_verify.side_effect = OmdbAuthError("Invalid API key!")
+        form = self._form_with_key("bad-key")
+        with self.assertRaises(forms.ValidationError):
+            form.clean_omdb_api_key()
+
+    @patch("toolkit.diary.omdb.verify_api_key")
+    def test_rate_limited_key_gets_a_distinct_message(self, mock_verify):
+        # A quota hit must not be reported as "this key is wrong" — the
+        # message should mention the daily limit, not tell the Panopticon
+        # to go check the key itself.
+        mock_verify.side_effect = OmdbRateLimitError("Request limit reached!")
+        form = self._form_with_key("some-key")
+        with self.assertRaises(forms.ValidationError) as ctx:
+            form.clean_omdb_api_key()
+        self.assertIn("daily request limit", str(ctx.exception))
+
+    @patch("toolkit.diary.omdb.verify_api_key")
+    def test_network_error_is_rejected_with_friendly_message(self, mock_verify):
+        mock_verify.side_effect = urllib.error.URLError("timed out")
+        form = self._form_with_key("some-key")
+        with self.assertRaises(forms.ValidationError):
+            form.clean_omdb_api_key()
 
 
 class FilmsStartOnTimeBannerTests(DiaryTestsMixin, TestCase):

@@ -1438,3 +1438,37 @@ class SiteConfigurationForm(forms.ModelForm):
                     widget.attrs["class"] = (
                         existing + " form-control"
                     ).strip()
+
+    def clean_omdb_api_key(self):
+        key = self.cleaned_data.get("omdb_api_key", "").strip()
+        if not key:
+            return key
+        if self.instance.pk and key == self.instance.omdb_api_key:
+            # Unchanged — don't re-test OMDb on every unrelated settings save.
+            return key
+
+        import urllib.error
+
+        from toolkit.diary.omdb import OmdbAuthError, OmdbRateLimitError, verify_api_key
+
+        try:
+            verify_api_key(key)
+        except OmdbAuthError:
+            raise forms.ValidationError(
+                "OMDb rejected this API key. Check it's correct and active at "
+                "https://www.omdbapi.com/apikey.aspx, then try again."
+            )
+        except OmdbRateLimitError:
+            raise forms.ValidationError(
+                "Could not verify this key — OMDb says its daily request limit "
+                "has already been reached (shared across everyone using this "
+                "key). This doesn't necessarily mean the key itself is wrong. "
+                "The limit resets at midnight UTC; try saving again after that, "
+                "or leave the existing key in place for now."
+            )
+        except (urllib.error.URLError, ValueError):
+            raise forms.ValidationError(
+                "Could not reach OMDb to verify this key. Check the server's "
+                "network connection and try again."
+            )
+        return key

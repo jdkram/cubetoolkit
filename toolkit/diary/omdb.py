@@ -19,13 +19,48 @@ logger = logging.getLogger(__name__)
 OMDB_BASE = "https://www.omdbapi.com/"
 
 
+class OmdbAuthError(Exception):
+    """Raised when OMDb rejects an API key as invalid/inactive."""
+
+
+class OmdbRateLimitError(Exception):
+    """Raised when OMDb's daily request quota for this key is exhausted.
+
+    OMDb signals this the same way as an invalid key (HTTP 401, same JSON
+    shape) — kept as a separate exception so callers don't tell a Panopticon
+    their key is wrong when it's actually just quota, which resets daily.
+    """
+
+
 def _get(params: dict, api_key: str) -> dict:
-    """Make a GET request to the OMDb API. Raises urllib.error.URLError on failure."""
+    """Make a GET request to the OMDb API.
+
+    Raises OmdbAuthError if OMDb rejects the key, OmdbRateLimitError if the
+    key's daily quota is exhausted, or urllib.error.URLError for any other
+    network/HTTP failure.
+    """
     params["apikey"] = api_key
     url = f"{OMDB_BASE}?{urllib.parse.urlencode(params)}"
     req = urllib.request.Request(url, headers={"Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=10) as resp:
-        return json.loads(resp.read().decode())
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read().decode())
+    except urllib.error.HTTPError as exc:
+        # OMDb returns 401 (not 200) for a rejected key *and* for a quota-exhausted
+        # key, with the same {"Response": "False", "Error": "..."} body urlopen()
+        # would otherwise have parsed — but a non-2xx status makes urlopen raise
+        # before we get to read it, so we have to unpack the error response by
+        # hand here, then split on the Error text to tell the two cases apart.
+        if exc.code == 401:
+            try:
+                body = json.loads(exc.read().decode())
+            except (ValueError, UnicodeDecodeError):
+                body = {}
+            error_text = body.get("Error", "")
+            if "request limit" in error_text.lower():
+                raise OmdbRateLimitError(error_text or "Request limit reached") from exc
+            raise OmdbAuthError(error_text or "Invalid API key") from exc
+        raise
 
 
 def _na(value: Any) -> str:
@@ -41,6 +76,22 @@ def _parse_runtime(s: str) -> int | None:
         return None
     m = re.match(r"^(\d+)", s.strip())
     return int(m.group(1)) if m else None
+
+
+def verify_api_key(api_key: str) -> None:
+    """Check that an OMDb API key is accepted, by looking up a fixed, stable IMDb ID.
+
+    Raises OmdbAuthError if OMDb rejects the key, or OmdbRateLimitError if the
+    key's daily quota is exhausted (both raised by `_get`). Raises
+    urllib.error.URLError (network/DNS failure) or ValueError (bad JSON) if
+    OMDb can't be reached at all — callers should treat that differently from
+    either of the above.
+    """
+    data = _get({"i": "tt0000001"}, api_key)  # "Carmencita" (1894) — always exists
+    if data.get("Response") != "True" and "invalid api key" in data.get(
+        "Error", ""
+    ).lower():
+        raise OmdbAuthError(data.get("Error", "Invalid API key"))
 
 
 def search_works(query: str, api_key: str) -> list[dict]:

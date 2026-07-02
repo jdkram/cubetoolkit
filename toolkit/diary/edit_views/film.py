@@ -78,7 +78,7 @@ def omdb_search(request):
     GET /diary/edit/omdb/search/?q=...
     Returns JSON list of results or {"error": "..."}.
     """
-    from toolkit.diary.omdb import search_works
+    from toolkit.diary.omdb import OmdbAuthError, OmdbRateLimitError, search_works
     import urllib.error
 
     api_key = _get_omdb_api_key()
@@ -91,6 +91,29 @@ def omdb_search(request):
 
     try:
         results = search_works(query, api_key)
+    except OmdbRateLimitError as exc:
+        logger.warning("OMDb search hit daily request limit: %s", exc)
+        return JsonResponse(
+            {
+                "error": (
+                    "OMDb's daily search limit has been reached. Film search "
+                    "will work again once it resets (midnight UTC) — for now, "
+                    "you can enter the details manually."
+                )
+            },
+            status=503,
+        )
+    except OmdbAuthError as exc:
+        logger.error("OMDb rejected the configured API key: %s", exc)
+        return JsonResponse(
+            {
+                "error": (
+                    "OMDb rejected the configured API key. A Panopticon needs "
+                    "to fix this in Site Settings → External APIs."
+                )
+            },
+            status=503,
+        )
     except urllib.error.URLError as exc:
         logger.warning("OMDb search failed: %s", exc)
         return JsonResponse({"error": "OMDb request failed"}, status=502)
@@ -123,7 +146,7 @@ def link_film(request, event_id):
     Returns JSON with the film summary and a suggested film_information string.
     """
     from toolkit.diary.models import Film
-    from toolkit.diary.omdb import fetch_film_details
+    from toolkit.diary.omdb import OmdbAuthError, OmdbRateLimitError, fetch_film_details
     import urllib.error
 
     event = get_object_or_404(Event, pk=event_id)
@@ -138,6 +161,29 @@ def link_film(request, event_id):
 
         try:
             details = fetch_film_details(imdb_id_raw, api_key)
+        except OmdbRateLimitError as exc:
+            logger.warning("OMDb link fetch hit daily request limit: %s", exc)
+            return JsonResponse(
+                {
+                    "error": (
+                        "OMDb's daily request limit has been reached, so this "
+                        "film's details can't be fetched right now. Try again "
+                        "tomorrow, or use “Enter manually instead” for now."
+                    )
+                },
+                status=503,
+            )
+        except OmdbAuthError as exc:
+            logger.error("OMDb rejected the configured API key: %s", exc)
+            return JsonResponse(
+                {
+                    "error": (
+                        "OMDb rejected the configured API key. A Panopticon "
+                        "needs to fix this in Site Settings → External APIs."
+                    )
+                },
+                status=503,
+            )
         except urllib.error.URLError as exc:
             logger.warning("OMDb detail fetch failed: %s", exc)
             return JsonResponse({"error": "OMDb request failed"}, status=502)

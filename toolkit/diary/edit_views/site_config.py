@@ -57,6 +57,7 @@ from toolkit.diary.models import (
     SITE_CONFIG_FIELD_GROUPS,
 )
 import toolkit.diary.forms as diary_forms
+from ._common import _get_omdb_api_key
 import toolkit.diary.validators as diary_validators
 import toolkit.diary.edit_prefs as edit_prefs
 from toolkit.diary.poster import generate_event_placeholder
@@ -173,6 +174,7 @@ def edit_site_configuration(request):
             "grouped_fields": grouped_fields,
             "permission_rows": permission_rows,
             "inductions_settings": inductions_settings,
+            "omdb_configured": bool(_get_omdb_api_key()),
         },
     )
 

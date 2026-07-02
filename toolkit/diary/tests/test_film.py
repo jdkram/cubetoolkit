@@ -1,6 +1,7 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Sonnet 4.6"]; status: "#ai-input"
 """Tests for Film model, OMDb client, and film link/unlink views (9.66)."""
 import json
+import urllib.error
 from io import BytesIO
 from unittest.mock import MagicMock, patch
 from urllib.error import URLError
@@ -72,6 +73,17 @@ class FilmModelTests(TestCase):
 # ---------------------------------------------------------------------------
 # OMDb client
 # ---------------------------------------------------------------------------
+
+
+def _make_http_error(data: dict, code: int = 401):
+    """Return an HTTPError (as urlopen() raises for non-2xx) with a JSON body."""
+    return urllib.error.HTTPError(
+        url="https://www.omdbapi.com/",
+        code=code,
+        msg="Unauthorized",
+        hdrs=None,
+        fp=BytesIO(json.dumps(data).encode()),
+    )
 
 
 def _make_response(data: dict):
@@ -171,6 +183,47 @@ class OmdbClientTests(TestCase):
     def test_parse_runtime_empty(self):
         self.assertIsNone(omdb_module._parse_runtime(""))
 
+    @patch("urllib.request.urlopen")
+    def test_verify_api_key_accepts_valid_key(self, mock_urlopen):
+        mock_urlopen.return_value = _make_response(MOCK_MOVIE_DETAIL)
+        omdb_module.verify_api_key("real-key")  # should not raise
+
+    @patch("urllib.request.urlopen")
+    def test_verify_api_key_rejects_invalid_key(self, mock_urlopen):
+        # OMDb signals a bad key with an HTTP 401, not a 200 + JSON body —
+        # urlopen() raises HTTPError before we ever see a "normal" response.
+        mock_urlopen.side_effect = _make_http_error(
+            {"Response": "False", "Error": "Invalid API key!"}
+        )
+        with self.assertRaises(omdb_module.OmdbAuthError):
+            omdb_module.verify_api_key("bad-key")
+
+    @patch("urllib.request.urlopen")
+    def test_verify_api_key_rate_limit_is_not_treated_as_invalid(self, mock_urlopen):
+        # OMDb's daily-quota-exhausted response looks identical to an invalid
+        # key (401 + same JSON shape) except for the Error text — a quota hit
+        # must not be reported to the user as "this key is wrong".
+        mock_urlopen.side_effect = _make_http_error(
+            {"Response": "False", "Error": "Request limit reached!"}
+        )
+        with self.assertRaises(omdb_module.OmdbRateLimitError):
+            omdb_module.verify_api_key("real-key")
+
+    @patch("urllib.request.urlopen")
+    def test_verify_api_key_ignores_unrelated_errors(self, mock_urlopen):
+        # A valid key but a "not found" style error (200 + Response: False)
+        # should not raise OmdbAuthError.
+        mock_urlopen.return_value = _make_response(
+            {"Response": "False", "Error": "Incorrect IMDb ID."}
+        )
+        omdb_module.verify_api_key("real-key")  # should not raise
+
+    @patch("urllib.request.urlopen")
+    def test_verify_api_key_propagates_network_errors(self, mock_urlopen):
+        mock_urlopen.side_effect = URLError("timed out")
+        with self.assertRaises(URLError):
+            omdb_module.verify_api_key("real-key")
+
 
 # ---------------------------------------------------------------------------
 # OMDb search view
@@ -210,6 +263,29 @@ class OmdbSearchViewTests(DiaryTestsMixin, TestCase):
     def test_omdb_error_returns_502(self, mock_urlopen):
         response = self.client.get(reverse("omdb-search") + "?q=seacoal")
         self.assertEqual(response.status_code, 502)
+
+    @override_settings(OMDB_API_KEY="fake-key")
+    @patch("urllib.request.urlopen")
+    def test_rate_limit_hit_returns_friendly_503(self, mock_urlopen):
+        mock_urlopen.side_effect = _make_http_error(
+            {"Response": "False", "Error": "Request limit reached!"}
+        )
+        response = self.client.get(reverse("omdb-search") + "?q=seacoal")
+        self.assertEqual(response.status_code, 503)
+        data = json.loads(response.content)
+        self.assertIn("daily search limit", data["error"])
+        self.assertIn("manually", data["error"])
+
+    @override_settings(OMDB_API_KEY="fake-key")
+    @patch("urllib.request.urlopen")
+    def test_rejected_key_returns_panopticon_pointer_503(self, mock_urlopen):
+        mock_urlopen.side_effect = _make_http_error(
+            {"Response": "False", "Error": "Invalid API key!"}
+        )
+        response = self.client.get(reverse("omdb-search") + "?q=seacoal")
+        self.assertEqual(response.status_code, 503)
+        data = json.loads(response.content)
+        self.assertIn("Panopticon", data["error"])
 
     @override_settings(OMDB_API_KEY="fake-key")
     def test_empty_query_returns_empty_list(self):
@@ -285,6 +361,22 @@ class LinkFilmViewTests(DiaryTestsMixin, TestCase):
         data = json.loads(response.content)
         self.assertIn("suggested_film_information", data)
         self.assertIn("Director", data["suggested_film_information"])
+
+    @override_settings(OMDB_API_KEY="fake-key")
+    @patch("urllib.request.urlopen")
+    def test_link_via_omdb_rate_limited_gives_friendly_error(self, mock_urlopen):
+        mock_urlopen.side_effect = _make_http_error(
+            {"Response": "False", "Error": "Request limit reached!"}
+        )
+        url = reverse("link-film", kwargs={"event_id": self.e1.pk})
+        response = self.client.post(url, {"imdb_id": "tt0090186", "media_type": "film"})
+        self.assertEqual(response.status_code, 503)
+        data = json.loads(response.content)
+        self.assertNotIn("success", data)
+        self.assertIn("daily request limit", data["error"])
+        self.assertIn("manually", data["error"])
+        self.e1.refresh_from_db()
+        self.assertIsNone(self.e1.film)
 
     def test_unlink_clears_film_fk(self):
         film = Film.objects.create(title="Test Film")

@@ -1080,6 +1080,8 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     }
 
+    var searchError = document.getElementById('film-search-error');
+
     if (searchInput) {
       searchInput.addEventListener('input', function() {
         clearTimeout(searchTimer);
@@ -1092,7 +1094,17 @@ document.addEventListener('DOMContentLoaded', function () {
           .then(function(r) { return r.json(); })
           .then(function(data) {
             searchResults.innerHTML = '';
-            if (!Array.isArray(data) || !data.length) {
+            if (!Array.isArray(data)) {
+              // Search failed server-side (rate limit, bad key, etc.) — show why.
+              searchResults.style.display = 'none';
+              if (searchError) {
+                searchError.textContent = data.error || 'OMDb search failed.';
+                searchError.style.display = '';
+              }
+              return;
+            }
+            if (searchError) searchError.style.display = 'none';
+            if (!data.length) {
               searchResults.style.display = 'none'; return;
             }
             data.forEach(function(item) {
@@ -1112,7 +1124,13 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             searchResults.style.display = '';
           })
-          .catch(function() { searchResults.style.display = 'none'; });
+          .catch(function() {
+            searchResults.style.display = 'none';
+            if (searchError) {
+              searchError.textContent = 'OMDb search failed.';
+              searchError.style.display = '';
+            }
+          });
         }, 300);
       });
     }
@@ -1130,6 +1148,10 @@ document.addEventListener('DOMContentLoaded', function () {
           suggestFilmInfo(data.suggested_film_information);
           if (searchResults) { searchResults.innerHTML = ''; searchResults.style.display = 'none'; }
           if (searchInput) searchInput.value = '';
+          if (searchError) searchError.style.display = 'none';
+        } else if (searchError) {
+          searchError.textContent = data.error || 'Could not link this film.';
+          searchError.style.display = '';
         }
       });
     }
@@ -1323,6 +1345,7 @@ document.addEventListener('DOMContentLoaded', function () {
             {% endif %}
           </div>
           <div id="film-search-results" class="list-group mb-2" style="display:none"></div>
+          <div id="film-search-error" class="alert alert-warning mt-2 py-1 small" style="display:none"></div>
         </div>
         {% endif %}
 
