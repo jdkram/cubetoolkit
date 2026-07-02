@@ -9,6 +9,9 @@
             {% endfor %}
             <li><a href="{% url "programme-view" %}"><span>All</span></a></li>
             <li><a href="{% url "archive-view-index" %}"><span>Archive</span></a></li>
+            {% if site_config.printed_programme_archive_enabled %}
+            <li><a href="{% url "printed-programme-archive" %}"><span>Printed programme archive</span></a></li>
+            {% endif %}
         </ul>
     </li>
     {% for top_level_child in current_site.root_page.get_children.live.in_menu %}
