@@ -217,8 +217,12 @@ function hideAddShowingForm() {
   {% if not all_showings_in_past %}
   <a href="{% url "edit-event-details" event.pk %}" class="btn btn-sm btn-outline-secondary me-2">Edit event →</a>
   {% endif %}
-  <a href="{% url 'clone-event' event.pk %}" class="btn btn-sm btn-outline-secondary"
+  <a href="{% url 'clone-event' event.pk %}" class="btn btn-sm btn-outline-secondary me-2"
      data-bs-toggle="tooltip" title="Create a new event pre-loaded with this event&rsquo;s copy, summary, terms, rota, and tags. The image and ticket link are not copied.">Clone as new event →</a>
+  {% if feature_perms.event_templates %}
+  <a href="{% url 'add_event_template' %}?from_event={{ event.pk }}" class="btn btn-sm btn-outline-secondary"
+     data-bs-toggle="tooltip" title="Start a new reusable event template pre-filled from this event&rsquo;s config (copy, terms, tags, rota roles, room bookings). Nothing is saved until you review and confirm on the template form.">Save as template →</a>
+  {% endif %}
 </div>
 
 <dl class="row event-details-dl">

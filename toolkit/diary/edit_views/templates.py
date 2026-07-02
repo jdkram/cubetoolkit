@@ -45,6 +45,7 @@ from toolkit.diary.models import (
     DiaryIdea,
     MediaItem,
     EventTemplate,
+    EventTemplateRole,
     EventTag,
     Role,
     RotaEntry,
@@ -88,6 +89,18 @@ def edit_event_template_detail(request, template_id=None):
     else:
         event_template = None
 
+    # 9.132: "Use as template" - a new template can be pre-filled from an
+    # existing event's config via ?from_event=<id>. Only applies to the
+    # blank-template GET form; the programmer still has to review and hit
+    # Save, nothing is created here.
+    source_event = None
+    if (
+        event_template is None
+        and request.method == "GET"
+        and request.GET.get("from_event")
+    ):
+        source_event = get_object_or_404(Event, pk=request.GET["from_event"])
+
     if request.method == "POST":
         if "delete" in request.POST and event_template is not None:
             name = event_template.name
@@ -129,6 +142,13 @@ def edit_event_template_detail(request, template_id=None):
                 request, messages.SUCCESS, f"Saved template '{saved.name}'"
             )
             return HttpResponseRedirect(reverse("edit_event_templates"))
+    elif source_event is not None:
+        (
+            form,
+            roles_formset,
+            links_formset,
+            rooms_formset,
+        ) = _template_forms_prefilled_from_event(source_event)
     else:
         form = diary_forms.EventTemplateForm(instance=event_template)
         roles_formset = diary_forms.EventTemplateRoleFormSet(
@@ -153,8 +173,113 @@ def edit_event_template_detail(request, template_id=None):
         "event_template": event_template,
         "export_json": export_json,
         "allowed_domains": diary_validators.get_eventlink_allowed_domains(),
+        "source_event": source_event,
     }
     return render(request, "edit_event_template_detail.html", context)
+
+
+def _template_forms_prefilled_from_event(source_event):
+    """Build blank, unsaved template forms pre-filled from an existing
+    event's config (9.132 "Use as template"). The programmer reviews and
+    must explicitly hit Save - nothing is created here.
+
+    Uses the source event's latest showing as the reference for role
+    counts and room time offsets, matching the reference showing clone_event
+    already uses for rota cloning.
+    """
+    blank_template = EventTemplate()
+    latest_showing = source_event.showings.order_by("start").last()
+
+    form = diary_forms.EventTemplateForm(
+        instance=blank_template,
+        initial={
+            "name": source_event.name,
+            "tags": list(source_event.tags.values_list("pk", flat=True)),
+            "pricing": source_event.pricing,
+            "film_information": source_event.film_information,
+            "copy_summary": source_event.copy_summary,
+            "copy": source_event.copy,
+            "cost_type": source_event.cost_type,
+            "cost_distributor": source_event.cost_distributor,
+            "cost_flat_fee_gbp": source_event.cost_flat_fee_gbp,
+            "cost_fee_includes_vat": source_event.cost_fee_includes_vat,
+            "cost_percentage_split": source_event.cost_percentage_split,
+            "cost_minimum_guarantee_gbp": source_event.cost_minimum_guarantee_gbp,
+            "cost_total_gbp": source_event.cost_total_gbp,
+            "terms": source_event.terms,
+            "rota_notes": latest_showing.rota_notes if latest_showing else "",
+            "private": source_event.private,
+            "outside_hire": source_event.outside_hire,
+        },
+    )
+
+    role_initial = []
+    if latest_showing is not None:
+        role_initial = [
+            {"role": row["role"], "count": row["count"]}
+            for row in RotaEntry.objects.filter(showing=latest_showing)
+            .values("role")
+            .annotate(count=Count("id"))
+            .order_by("role__name")
+        ]
+    RolesFormSet = django_forms.inlineformset_factory(
+        EventTemplate,
+        EventTemplateRole,
+        form=diary_forms.EventTemplateRoleForm,
+        extra=len(role_initial) + 1,
+        can_delete=True,
+    )
+    roles_formset = RolesFormSet(
+        instance=blank_template, initial=role_initial
+    )
+
+    link_initial = [
+        {"label": link.label, "url": link.url}
+        for link in source_event.links.all()
+    ]
+    LinksFormSet = django_forms.inlineformset_factory(
+        EventTemplate,
+        EventTemplateLink,
+        form=diary_forms.EventTemplateLinkForm,
+        extra=min(len(link_initial) + 1, 3),
+        max_num=3,
+        validate_max=True,
+        can_delete=True,
+    )
+    links_formset = LinksFormSet(instance=blank_template, initial=link_initial)
+
+    room_initial = []
+    if latest_showing is not None:
+        for booking in latest_showing.room_bookings.all():
+            room_initial.append(
+                {
+                    "room": booking.room_id,
+                    "start_delta_minutes": int(
+                        (booking.start - latest_showing.start).total_seconds()
+                        // 60
+                    ),
+                    "end_delta_minutes": (
+                        int(
+                            (
+                                booking.end - latest_showing.start
+                            ).total_seconds()
+                            // 60
+                        )
+                        if booking.end
+                        else None
+                    ),
+                }
+            )
+    RoomsFormSet = django_forms.inlineformset_factory(
+        EventTemplate,
+        EventTemplateRoom,
+        form=diary_forms.EventTemplateRoomForm,
+        extra=len(room_initial) + 1,
+        can_delete=True,
+    )
+    rooms_formset = RoomsFormSet(instance=blank_template, initial=room_initial)
+
+    return form, roles_formset, links_formset, rooms_formset
 
 
 def _export_template_json(template):

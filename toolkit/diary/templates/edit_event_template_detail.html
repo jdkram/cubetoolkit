@@ -81,6 +81,46 @@
     }
   });
 })();
+
+(function () {
+  "use strict";
+  var FIELD_TIPS = {
+    "id_name":                       "Internal name for this template — not shown to the public.",
+    "id_tags":                       "Tags applied to every new event created from this template.",
+    "id_pricing":                    "Pricing text shown to the public, e.g. “£5 Full / £3 Concession”. Leave blank if usually free.",
+    "id_film_information":           "Screening details shown in public listings, e.g. “Dir: Jane Smith, 1990, USA, 95 mins, Cert: 15”.",
+    "id_private":                    "New events start hidden from the public website until unticked.",
+    "id_outside_hire":               "Flags new events as run by an external organisation hiring the venue.",
+    "id_cost_type":                  "The nature of the financial deal. Leave unset if it varies per booking.",
+    "id_cost_distributor":           "Distribution company, agent, or booker contact, if usually the same for this kind of booking.",
+    "id_cost_flat_fee_gbp":          "Default fixed upfront fee in pounds, if there is one.",
+    "id_cost_fee_includes_vat":      "Tick if the flat fee above already includes VAT.",
+    "id_cost_percentage_split":      "Default percentage of net door takings paid to the distributor or performer.",
+    "id_cost_minimum_guarantee_gbp": "Default guaranteed minimum payment regardless of door takings, in pounds.",
+    "id_cost_total_gbp":             "Default total agreed fee, in pounds.",
+    "id_terms":                      "Booking or screening terms text. Must be filled in (minimum word count) before any showing can be confirmed, unless a cost type is set above.",
+    "id_rota_notes":                 "Setup instructions, access codes, timing — shown to volunteers on the rota.",
+    "id_copy_summary":                "Short plain-text description (ideally ≤25 words) shown in listings.",
+    "id_copy":                       "The main event description shown in the public programme."
+  };
+
+  document.addEventListener("DOMContentLoaded", function () {
+    Object.keys(FIELD_TIPS).forEach(function (fieldId) {
+      var label = document.querySelector('label[for="' + fieldId + '"]');
+      if (!label) { return; }
+      var tip = document.createElement("span");
+      tip.className = "field-tip";
+      tip.setAttribute("data-bs-toggle", "tooltip");
+      tip.setAttribute("data-bs-placement", "right");
+      tip.setAttribute("title", FIELD_TIPS[fieldId]);
+      tip.textContent = "ⓘ";
+      label.appendChild(tip);
+    });
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+      new bootstrap.Tooltip(el);
+    });
+  });
+})();
 </script>
 {% endblock %}
 
@@ -90,22 +130,31 @@
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}diary/css/edit_form.css">
 <style type="text/css">
   .template-detail {
-      max-width: 900px;
+      max-width: 1100px;
   }
   .warn {
       color: red;
   }
+  .field-tip {
+      cursor: help;
+      color: #6c757d;
+      font-size: 0.8em;
+      margin-left: 0.2em;
+      vertical-align: middle;
+      font-weight: normal;
+  }
   .field-section {
       margin-bottom: 1.5rem;
   }
-  .field-section h3 {
+  .field-section .card-header h3 {
       font-size: 1rem;
-      border-bottom: 1px solid #dee2e6;
-      padding-bottom: 4px;
-      margin-bottom: 0.75rem;
-      color: #555;
+      margin-bottom: 0;
+      color: #495057;
       text-transform: uppercase;
       letter-spacing: 0.05em;
+  }
+  .field-section .card-body label {
+      font-weight: 600;
   }
   table.role-table {
       border-collapse: collapse;
@@ -159,24 +208,37 @@
   <h1>{% if event_template %}{{ event_template.name }}{% else %}New event template{% endif %}</h1>
   <p>These defaults are applied when a new event is created from this template. Editing them does <strong>not</strong> affect existing events.</p>
   <p class="warn">This template is shared — changes take effect immediately for anyone creating a new event. A carefully set-up template with rota, copy, and terms can represent a lot of work; edit with care.</p>
+  {% if source_event %}
+  <p class="text-info">
+    Pre-filled from <a href="{% url 'edit-event-details-view' source_event.pk %}">{{ source_event.name }}</a>. Review the fields below and give it a distinct name before saving — nothing is created yet.
+  </p>
+  {% endif %}
 
 
   <form method="post">
     {% csrf_token %}
 
     {# ---- Identity ---- #}
-    <div class="field-section">
-      <h3>Identity</h3>
-      <div class="mb-3 row">
-        <label class="col-sm-2 col-form-label" for="{{ form.name.id_for_label }}">Name</label>
-        <div class="col-sm-6">{{ form.name }}</div>
-        {% if form.name.errors %}<div class="col-sm-4 text-danger">{{ form.name.errors }}</div>{% endif %}
+    <div class="field-section card">
+      <div class="card-header"><h3>Identity</h3></div>
+      <div class="card-body">
+        <div class="mb-3 row">
+          <label class="col-sm-2 col-form-label" for="{{ form.name.id_for_label }}">Name</label>
+          <div class="col-sm-8 col-lg-6">{{ form.name }}</div>
+          {% if form.name.errors %}<div class="col-sm-4 text-danger">{{ form.name.errors }}</div>{% endif %}
+        </div>
+        <div class="mb-0 row">
+          <label class="col-sm-2 col-form-label" for="{{ form.tags.id_for_label }}">Tags</label>
+          <div class="col-sm-10">{{ form.tags }}</div>
+          {% if form.tags.errors %}<div class="col-sm-10 offset-sm-2 text-danger">{{ form.tags.errors }}</div>{% endif %}
+        </div>
       </div>
     </div>
 
     {# ---- Rota ---- #}
-    <div class="field-section">
-      <h3>Rota</h3>
+    <div class="field-section card">
+      <div class="card-header"><h3>Rota</h3></div>
+      <div class="card-body">
 
       {# Inline role-slot formset #}
       {{ roles_formset.management_form }}
@@ -220,19 +282,20 @@
 
       <button type="button" id="add-role-row" class="btn btn-secondary btn-sm">+ Add role</button>
 
-      <div class="mb-3 row mt-3">
+      <div class="mb-0 row mt-3">
         <label class="col-sm-2 col-form-label" for="{{ form.rota_notes.id_for_label }}">Rota notes</label>
         <div class="col-sm-10">
           {{ form.rota_notes }}
-          <small class="form-text text-muted">Setup instructions, access codes, timing — shown to volunteers on the rota.</small>
         </div>
         {% if form.rota_notes.errors %}<div class="col-sm-10 offset-sm-2 text-danger">{{ form.rota_notes.errors }}</div>{% endif %}
+      </div>
       </div>
     </div>
 
     {# ---- Default room bookings ---- #}
-    <div class="field-section">
-      <h3>Default room bookings</h3>
+    <div class="field-section card">
+      <div class="card-header"><h3>Default room bookings</h3></div>
+      <div class="card-body">
       <p class="text-muted" style="font-size:0.88em; margin-bottom:0.5rem;">
         Rooms booked automatically when a new showing is created from this template.
         Start/end offsets are minutes relative to the showing start time (0 = same time, 180 = 3 hours later).
@@ -281,11 +344,13 @@
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     {# ---- Resource links ---- #}
-    <div class="field-section">
-      <h3>Resource links</h3>
+    <div class="field-section card">
+      <div class="card-header"><h3>Resource links</h3></div>
+      <div class="card-body">
       <p class="text-muted" style="font-size:0.88em; margin-bottom:0.5rem;">
         Up to 3 links copied to every new event created from this template. Appear as chip buttons on the rota — internal only, not on the public site.
       </p>
@@ -328,27 +393,24 @@
       <button id="add-link-btn" type="button" class="btn btn-sm btn-outline-secondary mb-2">
         + Add another link
       </button>
+      </div>
     </div>
 
     {# ---- Event details ---- #}
-    <div class="field-section">
-      <h3>Event details</h3>
-      <div class="mb-3 row">
-        <label class="col-sm-2 col-form-label" for="{{ form.tags.id_for_label }}">Tags</label>
-        <div class="col-sm-10">{{ form.tags }}</div>
-        {% if form.tags.errors %}<div class="col-sm-10 offset-sm-2 text-danger">{{ form.tags.errors }}</div>{% endif %}
-      </div>
+    <div class="field-section card">
+      <div class="card-header"><h3>Event details</h3></div>
+      <div class="card-body">
       <div class="mb-3 row">
         <label class="col-sm-2 col-form-label" for="{{ form.pricing.id_for_label }}">Pricing</label>
-        <div class="col-sm-6">{{ form.pricing }}</div>
+        <div class="col-sm-8 col-lg-6">{{ form.pricing }}</div>
         {% if form.pricing.errors %}<div class="col-sm-4 text-danger">{{ form.pricing.errors }}</div>{% endif %}
       </div>
       <div class="mb-3 row">
         <label class="col-sm-2 col-form-label" for="{{ form.film_information.id_for_label }}">Film info</label>
-        <div class="col-sm-6">{{ form.film_information }}</div>
+        <div class="col-sm-8 col-lg-6">{{ form.film_information }}</div>
         {% if form.film_information.errors %}<div class="col-sm-4 text-danger">{{ form.film_information.errors }}</div>{% endif %}
       </div>
-      <div class="mb-3 row">
+      <div class="mb-0 row">
         <div class="col-sm-10 offset-sm-2">
           <div class="form-check">
             {{ form.private }}
@@ -360,33 +422,75 @@
           </div>
         </div>
       </div>
+      </div>
     </div>
 
     {# ---- Copy ---- #}
-    <div class="field-section">
-      <h3>Copy</h3>
+    <div class="field-section card">
+      <div class="card-header"><h3>Copy</h3></div>
+      <div class="card-body">
       <div class="mb-3 row">
         <label class="col-sm-2 col-form-label" for="{{ form.copy_summary.id_for_label }}">Summary</label>
         <div class="col-sm-10">
           {{ form.copy_summary }}
-          <small class="form-text text-muted">Short description shown in listings.</small>
         </div>
         {% if form.copy_summary.errors %}<div class="col-sm-10 offset-sm-2 text-danger">{{ form.copy_summary.errors }}</div>{% endif %}
       </div>
-      <div class="mb-3 row">
+      <div class="mb-0 row">
         <label class="col-sm-2 col-form-label" for="{{ form.copy.id_for_label }}">Full copy</label>
         <div class="col-sm-10">{{ form.copy }}</div>
         {% if form.copy.errors %}<div class="col-sm-10 offset-sm-2 text-danger">{{ form.copy.errors }}</div>{% endif %}
       </div>
+      </div>
     </div>
 
-    {# ---- Terms ---- #}
-    <div class="field-section">
-      <h3>Terms</h3>
+    {# ---- Terms & cost ---- #}
+    <div class="field-section card">
+      <div class="card-header"><h3>Terms &amp; cost</h3></div>
+      <div class="card-body">
       <div class="mb-3 row">
+        <label class="col-sm-2 col-form-label" for="{{ form.cost_type.id_for_label }}">Cost type</label>
+        <div class="col-sm-6 col-lg-4">{{ form.cost_type }}</div>
+        {% if form.cost_type.errors %}<div class="col-sm-4 text-danger">{{ form.cost_type.errors }}</div>{% endif %}
+      </div>
+      <div class="row row-cols-1 row-cols-md-2 g-3 mb-3">
+        <div class="col">
+          <label class="form-label" for="{{ form.cost_distributor.id_for_label }}">Distributor / booker</label>
+          {{ form.cost_distributor }}
+          {% if form.cost_distributor.errors %}<div class="text-danger small">{{ form.cost_distributor.errors }}</div>{% endif %}
+        </div>
+        <div class="col">
+          <label class="form-label" for="{{ form.cost_flat_fee_gbp.id_for_label }}">Flat fee (£)</label>
+          {{ form.cost_flat_fee_gbp }}
+          {% if form.cost_flat_fee_gbp.errors %}<div class="text-danger small">{{ form.cost_flat_fee_gbp.errors }}</div>{% endif %}
+        </div>
+        <div class="col">
+          <label class="form-label" for="{{ form.cost_percentage_split.id_for_label }}">Percentage split (%)</label>
+          {{ form.cost_percentage_split }}
+          {% if form.cost_percentage_split.errors %}<div class="text-danger small">{{ form.cost_percentage_split.errors }}</div>{% endif %}
+        </div>
+        <div class="col">
+          <label class="form-label" for="{{ form.cost_minimum_guarantee_gbp.id_for_label }}">Minimum guarantee (£)</label>
+          {{ form.cost_minimum_guarantee_gbp }}
+          {% if form.cost_minimum_guarantee_gbp.errors %}<div class="text-danger small">{{ form.cost_minimum_guarantee_gbp.errors }}</div>{% endif %}
+        </div>
+        <div class="col">
+          <label class="form-label" for="{{ form.cost_total_gbp.id_for_label }}">Total agreed fee (£)</label>
+          {{ form.cost_total_gbp }}
+          {% if form.cost_total_gbp.errors %}<div class="text-danger small">{{ form.cost_total_gbp.errors }}</div>{% endif %}
+        </div>
+        <div class="col d-flex align-items-end">
+          <div class="form-check mb-2">
+            {{ form.cost_fee_includes_vat }}
+            <label class="form-check-label" for="{{ form.cost_fee_includes_vat.id_for_label }}">Fee includes VAT</label>
+          </div>
+        </div>
+      </div>
+      <div class="mb-0 row">
         <label class="col-sm-2 col-form-label" for="{{ form.terms.id_for_label }}">Terms</label>
         <div class="col-sm-10">{{ form.terms }}</div>
         {% if form.terms.errors %}<div class="col-sm-10 offset-sm-2 text-danger">{{ form.terms.errors }}</div>{% endif %}
+      </div>
       </div>
     </div>
 

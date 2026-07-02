@@ -875,6 +875,81 @@ class BatchAddShowingsTests(DiaryTestsMixin, TestCase):
 
 
 
+class EventTemplateFormLayoutTests(DiaryTestsMixin, TestCase):
+    """Cost fields are part of EventTemplateForm.Meta.fields but were not
+    rendered anywhere on the template detail page - since they're
+    non-required model fields, an un-rendered field is simply absent from
+    POST data, and Django's ModelForm.save() then silently blanks it on
+    every edit. Guard that they stay rendered."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="admin", password="T3stPassword!")
+
+    def test_cost_fields_rendered_on_template_form(self):
+        url = reverse(
+            "edit_event_template_detail", kwargs={"template_id": self.tmpl1.pk}
+        )
+        response = self.client.get(url)
+        self.assertContains(response, 'name="cost_type"')
+        self.assertContains(response, 'name="cost_distributor"')
+        self.assertContains(response, 'name="cost_flat_fee_gbp"')
+        self.assertContains(response, 'name="cost_percentage_split"')
+        self.assertContains(response, 'name="cost_minimum_guarantee_gbp"')
+        self.assertContains(response, 'name="cost_total_gbp"')
+        self.assertContains(response, 'name="cost_fee_includes_vat"')
+
+    def test_saving_template_preserves_existing_cost_fields(self):
+        self.tmpl1.cost_type = "venue_hire"
+        self.tmpl1.cost_distributor = "Acme Distribution"
+        self.tmpl1.cost_flat_fee_gbp = "150.00"
+        self.tmpl1.save()
+
+        url = reverse(
+            "edit_event_template_detail", kwargs={"template_id": self.tmpl1.pk}
+        )
+        get_response = self.client.get(url)
+        roles_fs = get_response.context["roles_formset"]
+        links_fs = get_response.context["links_formset"]
+        rooms_fs = get_response.context["rooms_formset"]
+
+        post_data = {
+            "name": self.tmpl1.name,
+            "pricing": self.tmpl1.pricing or "",
+            "film_information": self.tmpl1.film_information or "",
+            "copy_summary": self.tmpl1.copy_summary or "",
+            "copy": self.tmpl1.copy or "",
+            "cost_type": "venue_hire",
+            "cost_distributor": self.tmpl1.cost_distributor,
+            "cost_flat_fee_gbp": self.tmpl1.cost_flat_fee_gbp,
+            "cost_percentage_split": "",
+            "cost_minimum_guarantee_gbp": "",
+            "cost_total_gbp": "",
+            "terms": self.tmpl1.terms or "",
+            "rota_notes": self.tmpl1.rota_notes or "",
+        }
+        for tag in self.tmpl1.tags.all():
+            post_data.setdefault("tags", []).append(tag.pk)
+        for fs in (roles_fs, links_fs, rooms_fs):
+            post_data[fs.add_prefix("TOTAL_FORMS")] = fs.total_form_count()
+            post_data[fs.add_prefix("INITIAL_FORMS")] = fs.initial_form_count()
+            post_data[fs.add_prefix("MIN_NUM_FORMS")] = 0
+            post_data[fs.add_prefix("MAX_NUM_FORMS")] = 1000
+            for f in fs.forms:
+                for name in f.fields:
+                    key = f.add_prefix(name)
+                    value = f[name].value()
+                    if value not in (None, ""):
+                        post_data[key] = value
+
+        response = self.client.post(url, post_data)
+        self.assertEqual(response.status_code, 302)
+        self.tmpl1.refresh_from_db()
+        self.assertEqual(self.tmpl1.cost_type, "venue_hire")
+        self.assertEqual(self.tmpl1.cost_distributor, "Acme Distribution")
+        self.assertEqual(str(self.tmpl1.cost_flat_fee_gbp), "150.00")
+
+
 class TemplateExportImportTests(DiaryTestsMixin, TestCase):
     def setUp(self):
         super().setUp()
@@ -1035,3 +1110,103 @@ class TemplateExportImportTests(DiaryTestsMixin, TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Paste a JSON template")
+
+
+class CreateTemplateFromEventTests(DiaryTestsMixin, TestCase):
+    """9.132: "Use as template" pre-fills a new template from an event."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="admin", password="T3stPassword!")
+
+    def _url(self, event=None):
+        url = reverse("add_event_template")
+        if event is not None:
+            url += f"?from_event={event.pk}"
+        return url
+
+    def test_button_appears_on_event_hub(self):
+        response = self.client.get(
+            reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk})
+        )
+        self.assertContains(response, "Save as template")
+        self.assertContains(response, self._url(self.e4))
+
+    def test_get_without_from_event_is_unaffected(self):
+        response = self.client.get(self._url())
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["form"].initial, {})
+
+    def test_get_prefills_scalar_fields(self):
+        response = self.client.get(self._url(self.e4))
+        self.assertEqual(response.status_code, 200)
+        initial = response.context["form"].initial
+        self.assertEqual(initial["name"], self.e4.name)
+        self.assertEqual(initial["copy"], self.e4.copy)
+        self.assertEqual(initial["copy_summary"], self.e4.copy_summary)
+        self.assertEqual(initial["terms"], self.e4.terms)
+        self.assertEqual(initial["pricing"], self.e4.pricing)
+        self.assertEqual(initial["film_information"], self.e4.film_information)
+        self.assertEqual(initial["private"], self.e4.private)
+        self.assertEqual(initial["outside_hire"], self.e4.outside_hire)
+
+    def test_get_prefills_tags(self):
+        response = self.client.get(self._url(self.e4))
+        initial_tags = response.context["form"].initial["tags"]
+        self.assertEqual(
+            set(initial_tags), set(self.e4.tags.values_list("pk", flat=True))
+        )
+
+    def test_get_prefills_role_counts_from_latest_showing(self):
+        role_1 = Role.objects.get(id=1)
+        role_2 = Role.objects.get(id=2)
+        # e4s4 is e4's latest showing (see common.py)
+        RotaEntry(showing=self.e4s4, role=role_1, rank=1).save()
+        RotaEntry(showing=self.e4s4, role=role_1, rank=2).save()
+        RotaEntry(showing=self.e4s4, role=role_2, rank=1).save()
+
+        response = self.client.get(self._url(self.e4))
+        roles_formset = response.context["roles_formset"]
+        counts = {
+            form.initial["role"]: form.initial["count"]
+            for form in roles_formset.forms
+            if form.initial
+        }
+        self.assertEqual(counts.get(role_1.pk), 2)
+        self.assertEqual(counts.get(role_2.pk), 1)
+
+    def test_get_prefills_room_bookings_as_deltas(self):
+        RoomBooking(
+            showing=self.e4s4,
+            room=self.room_2,
+            start=self.e4s4.start - timedelta(minutes=30),
+            end=self.e4s4.start + timedelta(hours=2),
+        ).save()
+
+        response = self.client.get(self._url(self.e4))
+        rooms_formset = response.context["rooms_formset"]
+        booking_forms = [f for f in rooms_formset.forms if f.initial]
+        self.assertEqual(len(booking_forms), 1)
+        initial = booking_forms[0].initial
+        self.assertEqual(initial["room"], self.room_2.pk)
+        self.assertEqual(initial["start_delta_minutes"], -30)
+        self.assertEqual(initial["end_delta_minutes"], 120)
+
+    def test_get_prefills_links(self):
+        EventLink(event=self.e4, label="Crew chat", url="https://riseup.net/x").save()
+
+        response = self.client.get(self._url(self.e4))
+        links_formset = response.context["links_formset"]
+        link_forms = [f for f in links_formset.forms if f.initial]
+        self.assertEqual(len(link_forms), 1)
+        self.assertEqual(link_forms[0].initial["label"], "Crew chat")
+        self.assertEqual(link_forms[0].initial["url"], "https://riseup.net/x")
+
+    def test_get_does_not_create_a_template(self):
+        """Visiting the prefilled form is read-only - nothing is saved
+        until the programmer explicitly submits it."""
+        before = EventTemplate.objects.count()
+        self.client.get(self._url(self.e4))
+        self.assertEqual(EventTemplate.objects.count(), before)
+        self.e4.refresh_from_db()
+        self.assertIsNone(self.e4.template)

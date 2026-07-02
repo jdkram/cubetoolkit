@@ -43,6 +43,30 @@ class RoleForm(forms.ModelForm):
 
 
 class EventTemplateForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # This form is rendered by hand (not via crispy) so it doesn't pick
+        # up Bootstrap classes automatically - add them here, matching the
+        # pattern in SiteConfigurationForm.
+        for field in self.fields.values():
+            widget = field.widget
+            if isinstance(widget, forms.CheckboxInput):
+                widget.attrs.setdefault("class", "form-check-input")
+            elif isinstance(widget, TagPillSelect):
+                pass  # manages its own markup
+            elif isinstance(widget, (forms.Select, forms.SelectMultiple)):
+                existing = widget.attrs.get("class", "")
+                if "form-select" not in existing:
+                    widget.attrs["class"] = (
+                        existing + " form-select"
+                    ).strip()
+            else:
+                existing = widget.attrs.get("class", "")
+                if "form-control" not in existing:
+                    widget.attrs["class"] = (
+                        existing + " form-control"
+                    ).strip()
+
     class Meta:
         model = toolkit.diary.models.EventTemplate
         # roles is handled by a separate inline formset (EventTemplateRoleFormSet)
@@ -108,8 +132,14 @@ class EventTemplateRoleForm(forms.ModelForm):
         model = toolkit.diary.models.EventTemplateRole
         fields = ("role", "count")
         widgets = {
+            "role": forms.Select(attrs={"class": "form-select"}),
             "count": forms.NumberInput(
-                attrs={"min": 1, "max": 20, "style": "width:4em"}
+                attrs={
+                    "min": 1,
+                    "max": 20,
+                    "style": "width:5em",
+                    "class": "form-control",
+                }
             ),
         }
 
@@ -130,11 +160,12 @@ class EventTemplateRoomForm(forms.ModelForm):
         model = toolkit.diary.models.EventTemplateRoom
         fields = ("room", "start_delta_minutes", "end_delta_minutes")
         widgets = {
+            "room": forms.Select(attrs={"class": "form-select"}),
             "start_delta_minutes": forms.NumberInput(
-                attrs={"style": "width:5em"}
+                attrs={"style": "width:6em", "class": "form-control"}
             ),
             "end_delta_minutes": forms.NumberInput(
-                attrs={"style": "width:5em"}
+                attrs={"style": "width:6em", "class": "form-control"}
             ),
         }
 
