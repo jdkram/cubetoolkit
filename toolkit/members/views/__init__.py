@@ -30,7 +30,6 @@ from .volunteer_edit import (
     edit_volunteer,
     add_volunteer_training_record,
     delete_volunteer_training_record,
-    add_volunteer_training_group_record,
     set_volunteer_password,
     send_volunteer_password_reset,
     add_volunteer_qualification,

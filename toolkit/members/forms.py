@@ -5,9 +5,8 @@ import datetime
 from django import forms
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
-from toolkit.members.models import Member, TrainingRecord
+from toolkit.members.models import TrainingRecord
 import toolkit.diary.models
-from toolkit.diary.form_widgets import ChosenSelectMultiple
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -306,13 +305,6 @@ class GroupTrainingForm(forms.Form):
         max_length=128,
         required=True,
         widget=forms.TextInput(attrs={"class": "form-control form-control-sm"}),
-    )
-    volunteers = forms.ModelMultipleChoiceField(
-        queryset=Member.objects.filter(
-            volunteer__status=toolkit.members.models.Volunteer.STATUS_ACTIVE
-        ).order_by("name"),
-        widget=ChosenSelectMultiple(attrs={"size": "8"}),
-        required=True,
     )
     notes = forms.CharField(
         widget=forms.Textarea(attrs={"class": "form-control form-control-sm", "rows": "3"}),

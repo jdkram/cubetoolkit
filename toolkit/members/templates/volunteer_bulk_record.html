@@ -17,7 +17,6 @@
 
 {% block script %}
 {{ block.super }}
-{% if mode == "training" %}{{ form.media }}{% endif %}
 <script>
 "use strict";
 document.addEventListener("DOMContentLoaded", function () {
@@ -39,6 +38,40 @@ document.addEventListener("DOMContentLoaded", function () {
     typeField.addEventListener("change", setupForTrainingType);
     setupForTrainingType();
   }
+
+  var tChecks = document.querySelectorAll(".training-vol-check");
+  var tCountEl = document.getElementById("training-checked-count");
+  var tSubmitBtn = document.getElementById("training-submit-btn");
+
+  function updateTrainingCount() {
+    var n = document.querySelectorAll(".training-vol-check:checked").length;
+    if (tCountEl) tCountEl.textContent = n;
+    if (tSubmitBtn) tSubmitBtn.disabled = n === 0;
+  }
+
+  tChecks.forEach(function (c) { c.addEventListener("change", updateTrainingCount); });
+
+  var tSelectAll = document.getElementById("training-select-all");
+  var tSelectNone = document.getElementById("training-select-none");
+  if (tSelectAll) tSelectAll.addEventListener("click", function () {
+    document.querySelectorAll("#training-vol-table tr.vol-row:not(.hidden-holder) .training-vol-check")
+      .forEach(function (c) { c.checked = true; });
+    updateTrainingCount();
+  });
+  if (tSelectNone) tSelectNone.addEventListener("click", function () {
+    tChecks.forEach(function (c) { c.checked = false; });
+    updateTrainingCount();
+  });
+
+  var tSearch = document.getElementById("training-vol-search");
+  if (tSearch) tSearch.addEventListener("input", function () {
+    var term = tSearch.value.trim().toLowerCase();
+    document.querySelectorAll("#training-vol-table tr.vol-row").forEach(function (row) {
+      row.classList.toggle("hidden-holder", term !== "" && row.dataset.name.indexOf(term) === -1);
+    });
+  });
+
+  updateTrainingCount();
   {% endif %}
 
   {% if mode == "qualification" %}
@@ -118,14 +151,22 @@ document.addEventListener("DOMContentLoaded", function () {
     var trainingForm = trainingModeInput.closest("form");
     attachConfirm(trainingForm,
       function () {
-        var sel = trainingForm.querySelector('select[name="volunteers"]');
-        return sel ? Array.from(sel.selectedOptions).map(function (o) { return o.text.trim(); }) : [];
+        var names = [];
+        trainingForm.querySelectorAll(".training-vol-check:checked").forEach(function (cb) {
+          var row = cb.closest("tr");
+          if (row) {
+            var cell = row.querySelector("td:nth-child(2)");
+            if (cell) names.push(cell.textContent.trim());
+          }
+        });
+        return names;
       },
       function () {
         var typeEl = document.getElementById("id_type");
         var roleEl = document.getElementById("id_role");
         var dateEl = document.getElementById("id_training_date");
         var trainerEl = document.getElementById("id_trainer");
+        var qualEl = document.getElementById("id_qualification");
         var typeText = typeEl ? typeEl.options[typeEl.selectedIndex].text : "";
         var roleActive = roleEl && !roleEl.disabled && roleEl.selectedIndex > 0;
         var roleText = roleActive ? roleEl.options[roleEl.selectedIndex].text : "";
@@ -133,6 +174,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (roleText) s += " &mdash; role: <strong>" + esc(roleText) + "</strong>";
         if (dateEl && dateEl.value) s += "<br>Date: " + esc(dateEl.value);
         if (trainerEl && trainerEl.value) s += " &nbsp;&middot;&nbsp; Trainer: " + esc(trainerEl.value);
+        if (qualEl && qualEl.value) s += "<br>Also grants: <strong>" + esc(qualEl.options[qualEl.selectedIndex].text) + "</strong>";
         return s;
       }
     );
@@ -192,7 +234,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 {# ── Training section ──────────────────────────────────────────────────── #}
 {% if mode == "training" %}
-{{ form.media }}
 <form action="" method="POST">
   {% csrf_token %}
   <input type="hidden" name="mode" value="training">
@@ -226,18 +267,57 @@ document.addEventListener("DOMContentLoaded", function () {
           {{ form.notes }}
           {% if form.notes.errors %}<div class="text-danger small mt-1">{{ form.notes.errors }}</div>{% endif %}
         </div>
+        <div class="col-sm-6">
+          <label for="id_qualification" class="form-label">Also grant qualification <span class="text-muted">(optional)</span></label>
+          <select name="qualification_id" id="id_qualification" class="form-select form-select-sm">
+            <option value="">-- none --</option>
+            {% for qual in all_qualifications %}
+              <option value="{{ qual.pk }}">{{ qual.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
       </div>
     </div>
   </div>
 
   <div class="card mb-3">
-    <div class="card-header fw-semibold">Volunteers</div>
-    <div class="card-body">
-      {% if form.volunteers.errors %}<div class="text-danger small mb-2">{{ form.volunteers.errors }}</div>{% endif %}
-      {{ form.volunteers }}
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:0.5rem">
+      <span>Volunteers</span>
+      <div class="select-controls">
+        <input type="search" id="training-vol-search" class="form-control form-control-sm"
+               placeholder="Filter by name…" style="max-width:220px">
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="training-select-none">Select none</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="training-select-all">Select all</button>
+      </div>
     </div>
-    <div class="card-footer d-flex justify-content-end">
-      <button type="submit" class="btn btn-primary">Add training records</button>
+    <div class="card-body p-0" style="overflow-x:auto">
+      {% if form.non_field_errors %}<div class="text-danger small p-2">{{ form.non_field_errors }}</div>{% endif %}
+      <table class="table table-sm table-bordered mb-0" id="training-vol-table">
+        <thead class="thead-light">
+          <tr>
+            <th style="width:36px"></th>
+            <th>Name</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for vol in volunteers %}
+          <tr class="vol-row" data-name="{{ vol.name|lower }}">
+            <td class="text-center">
+              <input type="checkbox" name="volunteer_ids" value="{{ vol.pk }}" class="training-vol-check">
+            </td>
+            <td>{{ vol.name }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="2" class="text-muted p-3">No active volunteers found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="card-footer d-flex justify-content-between align-items-center flex-wrap" style="gap:0.5rem">
+      <small class="text-muted">
+        <span id="training-checked-count">0</span> selected &nbsp;·&nbsp; {{ volunteers|length }} active volunteer(s) total
+      </small>
+      <button type="submit" class="btn btn-primary" id="training-submit-btn" disabled>Add training records</button>
     </div>
   </div>
 

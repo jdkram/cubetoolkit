@@ -904,7 +904,10 @@ class TestDeleteTraining(MembersTestsMixin, TestCase):
         self.assertEqual(len(TrainingRecord.objects.all()), 1)
 
 
-class TestAddGroupTraining(MembersTestsMixin, TestCase):
+class TestBulkRecordTraining(MembersTestsMixin, TestCase):
+    """Covers the checkbox-table training flow (9.137) and the optional
+    simultaneous qualification grant (9.138) on /volunteers/bulk-record/."""
+
     def setUp(self):
         super().setUp()
         self.assertTrue(
@@ -914,17 +917,20 @@ class TestAddGroupTraining(MembersTestsMixin, TestCase):
     def tearDown(self):
         self.client.logout()
 
-    def test_get_form(self):
-        url = reverse("add-volunteer-training-group-record")
-        response = self.client.get(url)
-        self.assertTemplateUsed(response, "form_group_training.html")
+    def _url(self):
+        return reverse("bulk-record") + "?mode=training"
+
+    def test_get_form_lists_active_volunteers_only(self):
+        response = self.client.get(self._url())
+        self.assertTemplateUsed(response, "volunteer_bulk_record.html")
+        pks = {vol.pk for vol in response.context["volunteers"]}
+        self.assertEqual(pks, {self.mem_4.pk, self.mem_5.pk, self.mem_6.pk})
+        self.assertNotIn(self.mem_7.pk, pks)  # retired
 
     def _shared_test_add_group_role_record(self, test_general):
-        url = reverse("add-volunteer-training-group-record")
-
         role = Role.objects.get(id=1)
-        trainer = "Trainer \u0187hri\u01a8topher"
-        notes = " Some not\u018fs\nwere noted here. "
+        trainer = "Trainer Ƈhriƨtopher"
+        notes = " Some notƏs\nwere noted here. "
         training_date = datetime.date(day=4, month=5, year=2016)
 
         volunteers = Volunteer.objects.active()[:3]
@@ -934,7 +940,7 @@ class TestAddGroupTraining(MembersTestsMixin, TestCase):
             "trainer": trainer,
             "training_date": "4/5/2016",
             "notes": notes,
-            "volunteers": [v.member.id for v in volunteers],
+            "volunteer_ids": [v.member.id for v in volunteers],
         }
 
         if test_general:
@@ -943,22 +949,18 @@ class TestAddGroupTraining(MembersTestsMixin, TestCase):
             post_data["type"] = TrainingRecord.ROLE_TRAINING
             post_data["role"] = role.id
 
-        response = self.client.post(url, data=post_data)
-        self.assertRedirects(response, url)
+        response = self.client.post(self._url(), data=post_data)
+        self.assertRedirects(response, self._url())
 
         volunteers = Volunteer.objects.active()[:3]
         for vol in volunteers:
             recs = vol.training_records.all()
             self.assertEqual(len(recs), 1)
             if test_general:
-                self.assertEqual(
-                    recs[0].training_type, TrainingRecord.GENERAL_TRAINING
-                )
+                self.assertEqual(recs[0].training_type, TrainingRecord.GENERAL_TRAINING)
                 self.assertEqual(recs[0].role, None)
             else:
-                self.assertEqual(
-                    recs[0].training_type, TrainingRecord.ROLE_TRAINING
-                )
+                self.assertEqual(recs[0].training_type, TrainingRecord.ROLE_TRAINING)
                 self.assertEqual(recs[0].role, role)
             self.assertEqual(recs[0].notes, notes.strip())
             self.assertEqual(recs[0].trainer, trainer)
@@ -970,89 +972,127 @@ class TestAddGroupTraining(MembersTestsMixin, TestCase):
     def test_add_group_general_record(self):
         self._shared_test_add_group_role_record(test_general=True)
 
-    def test_add_group_inactive_volunteer(self):
-        url = reverse("add-volunteer-training-group-record")
+    def test_add_group_no_volunteers_selected(self):
+        response = self.client.post(
+            self._url(),
+            data={
+                "type": TrainingRecord.GENERAL_TRAINING,
+                "role": "",
+                "trainer": "trainer",
+                "training_date": "4/5/2016",
+                "notes": "",
+            },
+        )
+        self.assertRedirects(response, self._url())
+        self.assertEqual(TrainingRecord.objects.count(), 0)
 
-        role = Role.objects.get(id=1)
-
-        volunteers = Volunteer.objects.active()[:3]
-        self.assertEqual(len(volunteers), 3)
+    def test_add_group_inactive_volunteer_id_rejected(self):
+        volunteers = list(Volunteer.objects.active()[:3])
         volunteers[1].status = Volunteer.STATUS_RETIRED
         volunteers[1].save()
 
         response = self.client.post(
-            url,
+            self._url(),
             data={
                 "type": TrainingRecord.ROLE_TRAINING,
-                "role": role.id,
+                "role": Role.objects.get(id=1).id,
                 "trainer": "trainer",
                 "training_date": "4/5/2016",
                 "notes": "",
-                "volunteers": [v.member.id for v in volunteers],
+                "volunteer_ids": [v.member.id for v in volunteers],
             },
         )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "form_group_training.html")
-
-        # It's not the ideal error message, I grant you:
-        self.assertFormError(
-            response.context["form"],
-            "volunteers",
-            "Select a valid choice. %d is not one of the available choices."
-            % (volunteers[1].member.id),
-        )
+        self.assertRedirects(response, self._url())
+        # The two still-active volunteers got a record; the retired one didn't.
+        self.assertEqual(TrainingRecord.objects.count(), 2)
 
     def test_add_group_record_missing_data(self):
-        url = reverse("add-volunteer-training-group-record")
-
-        self.assertEqual(len(TrainingRecord.objects.all()), 0)
-
-        response = self.client.post(url)
-
+        response = self.client.post(self._url())
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "form_group_training.html")
-
-        self.assertFormError(
-            response.context["form"], "type", "This field is required."
-        )
-        # 'role' isn't requireed unless 'type' is selected
-        # self.assertFormError(response, 'form', 'role',
-        #                     u'This field is required.')
-        self.assertFormError(
-            response.context["form"],
-            "training_date",
-            "This field is required.",
-        )
-        self.assertFormError(
-            response.context["form"], "trainer", "This field is required."
-        )
-        self.assertFormError(
-            response.context["form"], "volunteers", "This field is required."
-        )
+        self.assertTemplateUsed(response, "volunteer_bulk_record.html")
+        self.assertFormError(response.context["form"], "type", "This field is required.")
+        self.assertFormError(response.context["form"], "training_date", "This field is required.")
+        self.assertFormError(response.context["form"], "trainer", "This field is required.")
 
     def test_add_group_record_missing_role(self):
-        url = reverse("add-volunteer-training-group-record")
-
-        self.assertEqual(len(TrainingRecord.objects.all()), 0)
-
         response = self.client.post(
-            url,
+            self._url(),
             data={
                 "type": TrainingRecord.ROLE_TRAINING,
                 "trainer": "trainer",
                 "training_date": "4/5/2016",
                 "notes": "",
-                "volunteers": 1,
+                "volunteer_ids": [self.mem_4.id],
             },
         )
-
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "form_group_training.html")
+        self.assertFormError(response.context["form"], "role", "This field is required.")
+        self.assertEqual(TrainingRecord.objects.count(), 0)
 
-        self.assertFormError(
-            response.context["form"], "role", "This field is required."
+    def test_also_grants_qualification(self):
+        from toolkit.members.models import Qualification, VolunteerQualification
+
+        qual = Qualification.objects.create(name="Bar")
+        volunteers = Volunteer.objects.active()[:3]
+
+        response = self.client.post(
+            self._url(),
+            data={
+                "type": TrainingRecord.GENERAL_TRAINING,
+                "role": "",
+                "trainer": "trainer",
+                "training_date": "4/5/2016",
+                "notes": "",
+                "volunteer_ids": [v.member.id for v in volunteers],
+                "qualification_id": qual.pk,
+            },
         )
+        self.assertRedirects(response, self._url())
+        self.assertEqual(TrainingRecord.objects.count(), 3)
+        self.assertEqual(
+            set(VolunteerQualification.objects.filter(qualification=qual).values_list("volunteer_id", flat=True)),
+            {v.pk for v in volunteers},
+        )
+
+    def test_qualification_grant_skips_existing_holders(self):
+        from toolkit.members.models import Qualification, VolunteerQualification
+
+        qual = Qualification.objects.create(name="Bar")
+        volunteers = list(Volunteer.objects.active()[:3])
+        VolunteerQualification.objects.create(volunteer=volunteers[0], qualification=qual)
+
+        response = self.client.post(
+            self._url(),
+            data={
+                "type": TrainingRecord.GENERAL_TRAINING,
+                "role": "",
+                "trainer": "trainer",
+                "training_date": "4/5/2016",
+                "notes": "",
+                "volunteer_ids": [v.member.id for v in volunteers],
+                "qualification_id": qual.pk,
+            },
+        )
+        self.assertRedirects(response, self._url())
+        # Still only one VolunteerQualification per volunteer — no duplicate for the existing holder.
+        self.assertEqual(VolunteerQualification.objects.filter(qualification=qual).count(), 3)
+
+    def test_no_qualification_selected_does_not_grant(self):
+        from toolkit.members.models import VolunteerQualification
+
+        volunteers = Volunteer.objects.active()[:3]
+        self.client.post(
+            self._url(),
+            data={
+                "type": TrainingRecord.GENERAL_TRAINING,
+                "role": "",
+                "trainer": "trainer",
+                "training_date": "4/5/2016",
+                "notes": "",
+                "volunteer_ids": [v.member.id for v in volunteers],
+            },
+        )
+        self.assertEqual(VolunteerQualification.objects.count(), 0)
 
 
 class TestViewVolunteerTraining(MembersTestsMixin, TestCase):

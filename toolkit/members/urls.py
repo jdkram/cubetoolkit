@@ -11,7 +11,6 @@ from toolkit.members.views import (
     export_volunteers_as_csv,
     export_audit_log,
     add_volunteer_training_record,
-    add_volunteer_training_group_record,
     view_volunteer_training_records,
     delete_volunteer_training_record,
     anonymise_volunteer,
@@ -71,11 +70,6 @@ volunteer_urls = [
         r"^delete-training/(?P<training_record_id>\d+)/$",
         delete_volunteer_training_record,
         name="delete-volunteer-training-record",
-    ),
-    re_path(
-        r"^add-training-group/$",
-        add_volunteer_training_group_record,
-        name="add-volunteer-training-group-record",
     ),
     re_path(r"^view/$", view_volunteer_list, name="view-volunteer-list"),
     re_path(

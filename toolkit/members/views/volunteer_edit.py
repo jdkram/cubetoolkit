@@ -264,56 +264,6 @@ def delete_volunteer_training_record(request, training_record_id):
     return HttpResponse("OK", content_type="text/plain")
 
 
-@panopticon_required
-def add_volunteer_training_group_record(request):
-    if request.method == "POST":
-        form = GroupTrainingForm(request.POST)
-        if form.is_valid():
-            training_type = form.cleaned_data["type"]
-            role = form.cleaned_data["role"]
-            trainer = form.cleaned_data["trainer"]
-            members = form.cleaned_data["volunteers"]
-            logger.info(
-                f"Bulk add training records, type {training_type}, role '{role}', trainer '{trainer}', "
-                f" members '{members}'"
-            )
-
-            for member in members:
-                volunteer = member.volunteer
-                record = TrainingRecord(
-                    training_type=training_type,
-                    role=role,
-                    trainer=trainer,
-                    training_date=form.cleaned_data["training_date"],
-                    notes=form.cleaned_data["notes"],
-                    volunteer=volunteer,
-                )
-                record.save()
-
-            if training_type == TrainingRecord.ROLE_TRAINING:
-                messages.add_message(
-                    request,
-                    messages.SUCCESS,
-                    f"Added {len(form.cleaned_data['volunteers'])} training records for {form.cleaned_data['role']}",
-                )
-            elif training_type == TrainingRecord.GENERAL_TRAINING:
-                messages.add_message(
-                    request,
-                    messages.SUCCESS,
-                    f"Added {len(form.cleaned_data['volunteers'])} {TrainingRecord.GENERAL_TRAINING_DESC} records",
-                )
-            return HttpResponseRedirect(
-                reverse("add-volunteer-training-group-record")
-            )
-    else:  # i.e. request.method == 'GET':
-        form = GroupTrainingForm()
-
-    context = {
-        "form": form,
-    }
-    return render(request, "form_group_training.html", context)
-
-
 @require_POST
 def set_volunteer_password(request, volunteer_id):
     """Set a volunteer's password directly (Panopticon only)."""

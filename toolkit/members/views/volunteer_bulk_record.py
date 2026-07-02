@@ -21,37 +21,89 @@ def bulk_record(request):
 
 
 def _bulk_record_training(request):
+    from toolkit.members.models import Qualification, VolunteerQualification
+
+    volunteers_qs = (
+        Member.objects.filter(volunteer__status=Volunteer.STATUS_ACTIVE)
+        .select_related("volunteer")
+        .order_by("name")
+    )
+    all_qualifications = Qualification.objects.order_by("name")
+
     if request.method == "POST":
         form = GroupTrainingForm(request.POST)
         if form.is_valid():
-            training_type = form.cleaned_data["type"]
-            role = form.cleaned_data["role"]
-            trainer = form.cleaned_data["trainer"]
-            members = form.cleaned_data["volunteers"]
-            logger.info(
-                f"Bulk add training records, type {training_type}, role '{role}', trainer '{trainer}', "
-                f"members '{members}'"
-            )
-            for member in members:
-                volunteer = member.volunteer
-                TrainingRecord(
-                    training_type=training_type,
-                    role=role,
-                    trainer=trainer,
-                    training_date=form.cleaned_data["training_date"],
-                    notes=form.cleaned_data["notes"],
-                    volunteer=volunteer,
-                ).save()
-            messages.success(
-                request,
-                f"Added {len(members)} training record(s) for "
-                f"{'role ' + str(role) if role else 'general training'}.",
-            )
+            try:
+                selected_ids = {int(i) for i in request.POST.getlist("volunteer_ids") if i}
+            except ValueError:
+                selected_ids = set()
+                messages.error(request, "Invalid volunteer selection.")
+
+            members = list(volunteers_qs.filter(pk__in=selected_ids))
+            if len(members) != len(selected_ids):
+                messages.error(request, "One or more selected volunteers are no longer active.")
+
+            if not members:
+                messages.warning(request, "No volunteers selected.")
+            else:
+                training_type = form.cleaned_data["type"]
+                role = form.cleaned_data["role"]
+                trainer = form.cleaned_data["trainer"]
+                logger.info(
+                    f"Bulk add training records, type {training_type}, role '{role}', trainer '{trainer}', "
+                    f"members '{members}'"
+                )
+                for member in members:
+                    TrainingRecord(
+                        training_type=training_type,
+                        role=role,
+                        trainer=trainer,
+                        training_date=form.cleaned_data["training_date"],
+                        notes=form.cleaned_data["notes"],
+                        volunteer=member.volunteer,
+                    ).save()
+
+                msg = (
+                    f"Added {len(members)} training record(s) for "
+                    f"{'role ' + str(role) if role else 'general training'}."
+                )
+
+                qual_id = request.POST.get("qualification_id")
+                if qual_id:
+                    try:
+                        selected_qual = Qualification.objects.get(pk=qual_id)
+                    except Qualification.DoesNotExist:
+                        selected_qual = None
+                        messages.error(request, "Selected qualification not found; training records were still saved.")
+                    if selected_qual:
+                        volunteer_ids = [m.volunteer.pk for m in members]
+                        existing = set(
+                            VolunteerQualification.objects.filter(
+                                volunteer_id__in=volunteer_ids,
+                                qualification=selected_qual,
+                            ).values_list("volunteer_id", flat=True)
+                        )
+                        to_create = [vid for vid in volunteer_ids if vid not in existing]
+                        granted_by = request.user.get_full_name() or request.user.username
+                        VolunteerQualification.objects.bulk_create([
+                            VolunteerQualification(
+                                volunteer_id=vid, qualification=selected_qual, granted_by=granted_by,
+                            )
+                            for vid in to_create
+                        ])
+                        msg += f" Also granted '{selected_qual.name}' to {len(to_create)} volunteer(s)."
+
+                messages.success(request, msg)
             return HttpResponseRedirect(reverse("bulk-record") + "?mode=training")
     else:
         form = GroupTrainingForm()
 
-    return render(request, "volunteer_bulk_record.html", {"mode": "training", "form": form})
+    return render(request, "volunteer_bulk_record.html", {
+        "mode": "training",
+        "form": form,
+        "volunteers": volunteers_qs,
+        "all_qualifications": all_qualifications,
+    })
 
 
 def _bulk_record_qualification(request):
