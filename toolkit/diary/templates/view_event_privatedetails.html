@@ -557,9 +557,9 @@ function hideAddShowingForm() {
 {# ── Dates / occurrences ─────────────────────────────────────────────────────── #}
 {# occurrence_noun (e.g. "showing"/"date") is venue-configurable via SiteConfiguration. #}
 {% if is_series %}
-<h3 class="mb-3">{{ site_config.occurrence_noun_plural|capfirst }}</h3>
+<h3 id="showings-heading" class="mb-3">{{ site_config.occurrence_noun_plural|capfirst }}</h3>
 {% else %}
-<h3 class="mb-3">{{ site_config.occurrence_noun|capfirst }} &amp; booking</h3>
+<h3 id="showings-heading" class="mb-3">{{ site_config.occurrence_noun|capfirst }} &amp; booking</h3>
 {% endif %}
 
 {% for showing in future_showings %}
