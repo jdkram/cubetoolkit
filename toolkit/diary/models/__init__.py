@@ -22,6 +22,12 @@ from .event import (
     EventTermsRevision,
     Film,
 )
+from .budget import (
+    BUDGET_CATEGORY_TEMPLATES,
+    INCOME_CATEGORY_TEMPLATE,
+    EventBudgetLine,
+    sync_budget_lines_for_event,
+)
 from .rota import (
     EventTemplate,
     EventTemplateRole,
@@ -47,9 +53,11 @@ from .misc import (
 )
 
 __all__ = [
+    "BUDGET_CATEGORY_TEMPLATES",
     "DEFAULT_FILMS_START_BANNER_TEXT",
     "DiaryIdea",
     "Event",
+    "EventBudgetLine",
     "EventLink",
     "EventTag",
     "EventTagQuerySet",
@@ -60,6 +68,7 @@ __all__ = [
     "EventTermsRevision",
     "Film",
     "FutureDateTimeField",
+    "INCOME_CATEGORY_TEMPLATE",
     "MediaItem",
     "PrintedProgramme",
     "PrintedProgrammeQuerySet",
@@ -73,4 +82,5 @@ __all__ = [
     "SiteConfiguration",
     "VolunteerEventMark",
     "get_site_config",
+    "sync_budget_lines_for_event",
 ]

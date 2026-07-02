@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal
 
 from django.db import models
 
@@ -776,6 +777,42 @@ class SiteConfiguration(models.Model):
         ),
     )
 
+    # --- Itemised budget lines ---
+    budget_lines_enabled = models.BooleanField(
+        default=False,
+        verbose_name="Budget lines enabled (experimental)",
+        help_text=(
+            "EXPERIMENTAL -- not yet well-tested in real use, and may not survive contact with the "
+            "Collective's actual workflow; the live spreadsheet remains the working solution unless "
+            "this is proven better. Enable the itemised budget section (estimate vs actual, by "
+            "category) on event edit forms. Would replace the 'Budget template.xlsx' spreadsheet "
+            "workflow. Independent of the structured cost terms flag above -- deal terms describe one "
+            "negotiated fee; budget lines describe everything else. Off by default while trialled "
+            "with the Programming/Finance Collective."
+        ),
+    )
+    late_licence_fee_gbp = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Late licence fee (£)",
+        help_text=(
+            "Default estimate for the 'Fees > Late night licence' budget line on music gigs. "
+            "Editable per-event since the rate occasionally changes."
+        ),
+    )
+    vat_rate_pct = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("20.00"),
+        verbose_name="VAT rate (%)",
+        help_text=(
+            "Standard VAT rate used for the net/gross display calculation when a cost's "
+            "'Fee includes VAT' flag is set. Display only -- no VAT return generation."
+        ),
+    )
+
     # --- Printed programme archive ---
     printed_programme_archive_enabled = models.BooleanField(
         default=False,
@@ -916,6 +953,11 @@ SITE_CONFIG_FIELD_GROUPS = {
     "Structured cost terms": [
         "structured_cost_terms_enabled",
         "structured_cost_required",
+    ],
+    "Itemised budget lines (experimental)": [
+        "budget_lines_enabled",
+        "late_licence_fee_gbp",
+        "vat_rate_pct",
     ],
     "Community exchange": ["community_exchange_enabled"],
     "Lost & found": ["lost_and_found_retain_days"],

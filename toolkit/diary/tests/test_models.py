@@ -8,6 +8,7 @@ from django.core.exceptions import ValidationError
 from toolkit.diary.models import (
     Showing,
     Event,
+    EventBudgetLine,
     PrintedProgramme,
     EventTag,
     Role,
@@ -15,6 +16,7 @@ from toolkit.diary.models import (
     RoomBooking,
     SiteConfiguration,
     get_site_config,
+    sync_budget_lines_for_event,
 )
 
 from .common import DiaryTestsMixin, NowPatchMixin
@@ -798,3 +800,188 @@ class AgeRestrictionDisplayTests(TestCase):
     def test_unknown_value_returns_raw(self):
         e = self._event("FSK 16")
         self.assertEqual(e.get_age_restriction_display(), "FSK 16")
+
+
+class EventBudgetLineSyncTests(TestCase):
+    """sync_budget_lines_for_event(): row auto-creation and derivation (9.149)."""
+
+    def tearDown(self):
+        SiteConfiguration.objects.all().delete()
+
+    def _event(self, **kwargs):
+        e = Event(name="Test event", **kwargs)
+        e.save()
+        return e
+
+    def test_untagged_event_gets_other_public_event_template(self):
+        event = self._event()
+        sync_budget_lines_for_event(event)
+        categories = set(
+            event.budget_lines.filter(
+                direction=EventBudgetLine.DIRECTION_OUTGOING
+            ).values_list("category", flat=True)
+        )
+        self.assertIn("Cafe & bar", categories)
+        self.assertNotIn("Programming", categories)  # film-only category
+
+    def test_film_tagged_event_gets_film_template(self):
+        EventTag(name="film", slug="film").save()
+        event = self._event()
+        event.tags.set([EventTag.objects.get(slug="film")])
+        sync_budget_lines_for_event(event)
+        categories = set(
+            event.budget_lines.filter(
+                direction=EventBudgetLine.DIRECTION_OUTGOING
+            ).values_list("category", flat=True)
+        )
+        self.assertIn("Programming", categories)
+        self.assertNotIn("Acts/ Performers", categories)
+
+    def test_music_filter_group_tagged_event_gets_music_gig_template(self):
+        EventTag(name="music", slug="music", filter_group="music").save()
+        event = self._event()
+        event.tags.set([EventTag.objects.get(slug="music")])
+        sync_budget_lines_for_event(event)
+        categories = set(
+            event.budget_lines.filter(
+                direction=EventBudgetLine.DIRECTION_OUTGOING
+            ).values_list("category", flat=True)
+        )
+        self.assertIn("Fees", categories)
+        self.assertIn("Acts/ Performers", categories)
+
+    def test_income_category_always_created(self):
+        event = self._event()
+        sync_budget_lines_for_event(event)
+        self.assertTrue(
+            event.budget_lines.filter(
+                direction=EventBudgetLine.DIRECTION_INCOME,
+                category="Ticket sales",
+            ).exists()
+        )
+
+    def test_sync_is_idempotent(self):
+        event = self._event()
+        sync_budget_lines_for_event(event)
+        count_after_first = event.budget_lines.count()
+        sync_budget_lines_for_event(event)
+        self.assertEqual(event.budget_lines.count(), count_after_first)
+
+    def test_hire_fee_derived_from_deal_terms(self):
+        event = self._event(
+            cost_type=Event.COST_TYPE_PERFORMER_FEE,
+            cost_total_gbp="150.00",
+        )
+        EventTag(name="music", slug="music", filter_group="music").save()
+        event.tags.set([EventTag.objects.get(slug="music")])
+        sync_budget_lines_for_event(event)
+        line = event.budget_lines.get(
+            category="Acts/ Performers", item="Hire fee"
+        )
+        self.assertEqual(str(line.estimate_gbp), "150.00")
+        self.assertEqual(line.estimate_source, EventBudgetLine.SOURCE_DEAL_TERMS)
+
+    def test_manual_override_survives_resync_even_if_source_changes(self):
+        event = self._event(
+            cost_type=Event.COST_TYPE_PERFORMER_FEE,
+            cost_total_gbp="150.00",
+        )
+        EventTag(name="music", slug="music", filter_group="music").save()
+        event.tags.set([EventTag.objects.get(slug="music")])
+        sync_budget_lines_for_event(event)
+        line = event.budget_lines.get(
+            category="Acts/ Performers", item="Hire fee"
+        )
+        line.estimate_gbp = "200.00"
+        line.estimate_source = EventBudgetLine.SOURCE_MANUAL
+        line.save()
+
+        event.cost_total_gbp = "999.00"
+        event.save()
+        sync_budget_lines_for_event(event)
+
+        line.refresh_from_db()
+        self.assertEqual(str(line.estimate_gbp), "200.00")
+
+    def test_derived_row_updates_when_source_value_changes(self):
+        event = self._event(
+            cost_type=Event.COST_TYPE_PERFORMER_FEE,
+            cost_total_gbp="150.00",
+        )
+        EventTag(name="music", slug="music", filter_group="music").save()
+        event.tags.set([EventTag.objects.get(slug="music")])
+        sync_budget_lines_for_event(event)
+
+        event.cost_total_gbp = "999.00"
+        event.save()
+        sync_budget_lines_for_event(event)
+
+        line = event.budget_lines.get(
+            category="Acts/ Performers", item="Hire fee"
+        )
+        self.assertEqual(str(line.estimate_gbp), "999.00")
+
+    def test_late_licence_fee_derived_from_site_default(self):
+        cfg = get_site_config()
+        cfg.late_licence_fee_gbp = "75.00"
+        cfg.save()
+        EventTag(name="music", slug="music", filter_group="music").save()
+        event = self._event()
+        event.tags.set([EventTag.objects.get(slug="music")])
+        sync_budget_lines_for_event(event)
+        line = event.budget_lines.get(
+            category="Fees", item="Late night licence"
+        )
+        self.assertEqual(str(line.estimate_gbp), "75.00")
+        self.assertEqual(line.estimate_source, EventBudgetLine.SOURCE_SITE_DEFAULT)
+
+    def test_retagging_adds_new_rows_without_deleting_old(self):
+        EventTag(name="film", slug="film").save()
+        EventTag(name="music", slug="music", filter_group="music").save()
+        event = self._event()
+        event.tags.set([EventTag.objects.get(slug="film")])
+        sync_budget_lines_for_event(event)
+        film_line = event.budget_lines.get(
+            category="Programming", item="Licence"
+        )
+        film_line.actual_gbp = "42.00"
+        film_line.save()
+
+        event.tags.set([EventTag.objects.get(slug="music")])
+        sync_budget_lines_for_event(event)
+
+        film_line.refresh_from_db()
+        self.assertEqual(str(film_line.actual_gbp), "42.00")
+        self.assertTrue(
+            event.budget_lines.filter(
+                category="Acts/ Performers", item="Hire fee"
+            ).exists()
+        )
+
+    def test_ad_hoc_item_not_touched_by_sync(self):
+        event = self._event()
+        sync_budget_lines_for_event(event)
+        adhoc = EventBudgetLine.objects.create(
+            event=event,
+            direction=EventBudgetLine.DIRECTION_OUTGOING,
+            category="Misc.",
+            item="Skip hire",
+            estimate_gbp="60.00",
+            estimate_source=EventBudgetLine.SOURCE_MANUAL,
+            order=999,
+        )
+        sync_budget_lines_for_event(event)
+        adhoc.refresh_from_db()
+        self.assertEqual(str(adhoc.estimate_gbp), "60.00")
+
+    def test_ordering(self):
+        event = self._event()
+        sync_budget_lines_for_event(event)
+        lines = list(event.budget_lines.all())
+        directions = [line.direction for line in lines]
+        # All outgoing rows sort before incoming (Meta.ordering =
+        # ["direction", "order", "pk"], and "incoming" > "outgoing" alphabetically).
+        self.assertEqual(
+            directions,
+            sorted(directions),
+        )
