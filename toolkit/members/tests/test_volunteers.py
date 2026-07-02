@@ -1504,3 +1504,98 @@ class TestVolunteerPIIPermissionBoundary(MembersTestsMixin, TestCase):
         self.client.login(username="admin", password="T3stPassword!")
         resp = self._get("view-volunteer-list")
         self.assertEqual(resp.status_code, 200)
+
+
+class TestVolunteerExportFilters(MembersTestsMixin, TestCase):
+    """9.139: export filter by upcoming shift or specific event."""
+
+    def setUp(self):
+        super().setUp()
+        self.assertTrue(self.client.login(username="admin", password="T3stPassword!"))
+
+        self.role = Role.objects.filter(read_only=False).first()
+
+        self.event_future = Event(name="Future confirmed event")
+        self.event_future.save()
+        self.showing_future = Showing(
+            start=timezone.now() + datetime.timedelta(days=10),
+            event=self.event_future,
+            booked_by="Tester",
+            confirmed=True,
+        )
+        self.showing_future.save()
+
+        self.event_other = Event(name="Other future confirmed event")
+        self.event_other.save()
+        self.showing_other = Showing(
+            start=timezone.now() + datetime.timedelta(days=20),
+            event=self.event_other,
+            booked_by="Tester",
+            confirmed=True,
+        )
+        self.showing_other.save()
+
+        self.showing_past = Showing(
+            start=timezone.now() - datetime.timedelta(days=10),
+            event=self.event_future,
+            booked_by="Tester",
+            confirmed=True,
+        )
+        self.showing_past.save(force=True)
+
+        # vol_1 has a future shift on event_future; vol_2 has only a past shift.
+        RotaEntry.objects.create(
+            role=self.role, showing=self.showing_future, volunteer=self.vol_1
+        )
+        RotaEntry.objects.create(
+            role=self.role, showing=self.showing_past, volunteer=self.vol_2
+        )
+
+    def _post(self, filter_type, event_ids=None):
+        data = {"group_basic": "on", "filter_type": filter_type}
+        if event_ids:
+            data["filter_event_ids"] = [str(pk) for pk in event_ids]
+        return self.client.post(reverse("view-volunteer-export"), data)
+
+    def test_get_shows_upcoming_events_checklist(self):
+        resp = self.client.get(reverse("view-volunteer-export"))
+        self.assertContains(resp, "Future confirmed event")
+        self.assertContains(resp, "Other future confirmed event")
+
+    def test_all_filter_includes_everyone(self):
+        resp = self._post(ExportAuditLog.FILTER_ALL)
+        body = resp.content.decode()
+        self.assertIn("Volunteer One", body)
+        self.assertIn("Volunteer Two", body)
+
+    def test_upcoming_filter_excludes_volunteer_with_only_past_shift(self):
+        resp = self._post(ExportAuditLog.FILTER_UPCOMING)
+        body = resp.content.decode()
+        self.assertIn("Volunteer One", body)
+        self.assertNotIn("Volunteer Two", body)
+
+    def test_events_filter_only_includes_selected_event_signups(self):
+        resp = self._post(
+            ExportAuditLog.FILTER_EVENTS, event_ids=[self.event_other.pk]
+        )
+        body = resp.content.decode()
+        # vol_1 is signed up to event_future, not event_other.
+        self.assertNotIn("Volunteer One", body)
+
+    def test_events_filter_includes_matching_signup(self):
+        resp = self._post(
+            ExportAuditLog.FILTER_EVENTS, event_ids=[self.event_future.pk]
+        )
+        body = resp.content.decode()
+        self.assertIn("Volunteer One", body)
+
+    def test_audit_log_records_filter(self):
+        self._post(ExportAuditLog.FILTER_EVENTS, event_ids=[self.event_future.pk])
+        log = ExportAuditLog.objects.latest("exported_at")
+        self.assertEqual(log.filter_type, ExportAuditLog.FILTER_EVENTS)
+        self.assertEqual(log.filter_event_ids, [self.event_future.pk])
+
+    def test_audit_log_page_shows_event_names(self):
+        self._post(ExportAuditLog.FILTER_EVENTS, event_ids=[self.event_future.pk])
+        resp = self.client.get(reverse("view-volunteer-export-audit"))
+        self.assertContains(resp, "Future confirmed event")
