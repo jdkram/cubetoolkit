@@ -6,6 +6,40 @@ Each release below is tagged (`v2026.03.0` through `v2026.05.7`) and represents 
 
 ---
 
+## v2026.07.0 — Programme Archive, Budget Trial, Volunteer Consent Renewal
+
+### What's new
+
+**Public programme**
+
+- **Printed programme archive (9.130)** — public gallery of past printed programmes at `/programme/programme-archive/` (off by default). Programmes are now recorded as a season (a date range, e.g. "Spring 2025") rather than one record per calendar month, with an auto-generated thumbnail from the PDF's first page
+
+**Programming and events**
+
+- **Save an event as a reusable template (9.132)** — a "Save as template" button on the event hub pre-fills a new template from an existing event's copy, terms, tags, rota roles, and room bookings; nothing is saved until you review and confirm
+- **Itemised budget lines (9.149, experimental)** — an optional, clearly-labelled trial replacement for the Collective's "Budget template.xlsx" spreadsheet: a category-broken-down estimate-vs-actual grid on the event edit form, auto-populated from existing cost information where possible. Off by default and marked experimental in the settings UI — the spreadsheet remains the working solution until this earns its keep
+- Fixed: cloning a long-past event no longer suggests a start date that's still in the past
+- Fixed: the event hub's amber checklist bar no longer silently drops its "unconfirmed showings" warning when other issues (like a missing image) are also present
+- Fixed: one-shot rota roles now warn before a reduced headcount would drop already-signed-up volunteers, and removing one no longer leaves stale, half-hidden rows behind
+
+**Volunteers**
+
+- **Bulk training sign-off, redone (9.137/9.138)** — the training tab of the bulk-record page now uses a searchable checkbox table instead of a fragile shift-click list, and can optionally grant a qualification to everyone trained in the same action
+- **Volunteer export filtering (9.139)** — the CSV export can now be limited to volunteers with any upcoming shift, or to specific events, rather than always exporting everyone
+- **Consent renewal (9.151)** — volunteers consented once at induction and were never asked again. Adds a periodic, configurable renewal reminder (off by default) and a "privacy policy changed" notification, both surfaced only as a flag for manual follow-up — never automatic account changes
+
+**Operations**
+
+- **Recurring maintenance schedule (9.80)** — a new tool for tracking recurring compliance/maintenance obligations (fire alarm service, PAT testing, etc.), replacing an ad-hoc spreadsheet. Supports "I'll do it" commitments and flags stale ones
+- **Jobs board skill labelling (9.148)** — the ad-hoc jobs board can now record which specific skill a job needs (e.g. "Electrical"), not just that one is needed; both the jobs board and the new maintenance schedule get dashboard visibility cards
+
+**Fixed**
+
+- OMDb film search was silently disabled after a volume wipe — a docker-compose environment variable wasn't being forwarded. Added a Site Settings warning banner and save-time key verification so this fails loudly next time, with a clear distinction between "key is wrong" and "daily quota reached"
+- Rota page: the event title now leads on mobile, with date/room/link details wrapping beneath it
+
+---
+
 ## v2026.06.3 — Personal Feature Sprint
 
 **Tagged at:** `2026.06.3` (2026-06-22)
