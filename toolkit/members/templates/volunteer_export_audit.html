@@ -9,6 +9,7 @@
     <tr>
       <th>When</th>
       <th>Exported by</th>
+      <th>Filter</th>
       <th>Rows</th>
       <th>Field groups</th>
       <th>Personal data?</th>
@@ -20,6 +21,12 @@
     <tr>
       <td>{{ log.exported_at|date:"d M Y H:i" }}</td>
       <td>{{ log.exported_by|default:"(deleted user)" }}</td>
+      <td>
+        {{ log.get_filter_type_display }}
+        {% if log.filter_type == "events" %}
+        <br><span class="text-muted small">{{ log.filter_event_names|join:", " }}</span>
+        {% endif %}
+      </td>
       <td>{{ log.recipient_count }}</td>
       <td>{{ log.fields_included|join:", " }}</td>
       <td>

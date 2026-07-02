@@ -11,7 +11,15 @@ from django.test.utils import override_settings
 from django.urls import reverse
 from django.conf import settings
 
-from toolkit.members.models import AnonymisationLog, Member, Volunteer, TrainingRecord
+from django.utils import timezone
+
+from toolkit.members.models import (
+    AnonymisationLog,
+    Member,
+    Volunteer,
+    TrainingRecord,
+    ExportAuditLog,
+)
 from toolkit.diary.models import Role, RotaEntry, Showing, Event
 
 from .common import MembersTestsMixin

@@ -285,10 +285,46 @@ class Volunteer(models.Model):
     # Cleared automatically on reinstatement. Panopticon-only — not shown to the volunteer.
     suspension_reason = models.TextField(blank=True)
 
+    # Privacy policy version this volunteer last consented to (at induction, or
+    # by renewing). Compared against InductionsSettings.privacy_policy_version
+    # to detect consent that's stale because the policy itself changed.
+    consent_policy_version = models.PositiveIntegerField(default=1)
+    # When the current outstanding renewal reminder was sent. Cleared on renewal.
+    # Used both to avoid re-sending reminders every cron run, and to compute
+    # consent_overdue once the grace period has passed.
+    consent_reminder_sent_at = models.DateTimeField(null=True, blank=True)
+
     @property
     def is_active(self):
         """On the rota and receiving mailouts. Derived from `status`."""
         return self.status == self.STATUS_ACTIVE
+
+    @property
+    def consent_overdue(self):
+        """True if this volunteer needs to reconfirm consent, for manual review.
+
+        Retention-exempt volunteers are never flagged, mirroring their exclusion
+        from purge_candidates(). Overdue if either: a renewal reminder was sent
+        and the grace period has since passed, or the privacy policy has moved
+        on to a version they haven't consented to.
+        """
+        if self.retention_exempt:
+            return False
+
+        from toolkit.inductions.models import InductionsSettings
+
+        if self.consent_policy_version < InductionsSettings.load().privacy_policy_version:
+            return True
+
+        if self.consent_reminder_sent_at is None:
+            return False
+
+        grace_days = get_site_config().consent_renewal_grace_days
+        if not grace_days:
+            return False
+        return self.consent_reminder_sent_at < timezone_now() - datetime.timedelta(
+            days=grace_days
+        )
 
     portrait = models.ImageField(
         upload_to=settings.VOLUNTEER_PORTRAIT_DIR,

@@ -10,6 +10,37 @@
 
 <form method="post">
   {% csrf_token %}
+
+  <div class="mb-4">
+    <label class="form-label fw-semibold">Who to include</label>
+    <div class="form-check">
+      <input class="form-check-input" type="radio" name="filter_type" id="filter_all" value="all" checked>
+      <label class="form-check-label" for="filter_all">All volunteers</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="radio" name="filter_type" id="filter_upcoming" value="upcoming">
+      <label class="form-check-label" for="filter_upcoming">Volunteers with any upcoming shift</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="radio" name="filter_type" id="filter_events" value="events">
+      <label class="form-check-label" for="filter_events">Volunteers signed up to specific events</label>
+    </div>
+    <div id="filter-events-list" class="ms-4 mt-2" style="display:none;">
+      {% if upcoming_events %}
+      <ul class="list-unstyled" style="max-height: 240px; overflow-y: auto;">
+        {% for event in upcoming_events %}
+        <li class="form-check">
+          <input class="form-check-input" type="checkbox" name="filter_event_ids" value="{{ event.pk }}" id="filter_event_{{ event.pk }}">
+          <label class="form-check-label" for="filter_event_{{ event.pk }}">{{ event.name }}</label>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="text-muted small">No confirmed events with upcoming showings in the next 90 days.</p>
+      {% endif %}
+    </div>
+  </div>
+
   <div class="row g-3 mb-4">
     {% for gid, label, sensitive, fields in field_groups %}
     <div class="col-12">
@@ -42,4 +73,23 @@
   <button type="submit" class="btn btn-primary">Download CSV</button>
   <a href="{% url 'view-volunteer-export-audit' %}" class="btn btn-outline-secondary ms-2">View audit log</a>
 </form>
+{% endblock %}
+
+{% block script %}
+{{ block.super }}
+<script>
+"use strict";
+document.addEventListener("DOMContentLoaded", function () {
+    var eventsList = document.getElementById("filter-events-list");
+    var radios = document.querySelectorAll('input[name="filter_type"]');
+    function updateVisibility() {
+        var checked = document.querySelector('input[name="filter_type"]:checked');
+        eventsList.style.display = checked && checked.value === "events" ? "" : "none";
+    }
+    radios.forEach(function (radio) {
+        radio.addEventListener("change", updateVisibility);
+    });
+    updateVisibility();
+});
+</script>
 {% endblock %}

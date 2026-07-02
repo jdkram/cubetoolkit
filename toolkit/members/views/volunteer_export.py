@@ -4,6 +4,9 @@ maintainability pass — see MAINTAINABILITY_PASS.md). Verbatim move; no
 behaviour change. Group: export.
 """
 from ._common import *
+from toolkit.diary.models import Event
+
+_UPCOMING_EVENTS_HORIZON_DAYS = 90
 
 _EXPORT_FIELD_GROUPS = [
     (
@@ -70,9 +73,41 @@ _EXPORT_GROUP_IDS = {g[0] for g in _EXPORT_FIELD_GROUPS}
 _SENSITIVE_GROUP_IDS = {g[0] for g in _EXPORT_FIELD_GROUPS if g[2]}
 
 
+def _upcoming_confirmed_events():
+    """Confirmed events with a future showing, for the export event checklist."""
+    horizon = timezone.now() + timedelta(days=_UPCOMING_EVENTS_HORIZON_DAYS)
+    return (
+        Event.objects.filter(
+            showings__start__gte=timezone.now(),
+            showings__start__lte=horizon,
+            showings__confirmed=True,
+        )
+        .distinct()
+        .order_by("name")
+    )
+
+
+def _filtered_volunteers(filter_type, event_ids):
+    """Volunteer queryset for the given export filter."""
+    volunteers = (
+        Volunteer.objects.active()
+        .select_related("member")
+        .prefetch_related("collectives")
+        .order_by("member__name")
+    )
+    if filter_type == ExportAuditLog.FILTER_ALL:
+        return volunteers
+
+    shift_filter = RotaEntry.objects.filter(showing__start__gte=timezone.now())
+    if filter_type == ExportAuditLog.FILTER_EVENTS:
+        shift_filter = shift_filter.filter(showing__event_id__in=event_ids)
+    volunteer_ids = shift_filter.values_list("volunteer_id", flat=True).distinct()
+    return volunteers.filter(pk__in=volunteer_ids)
+
+
 @panopticon_required
 def export_volunteers_as_csv(request):
-    """Full export page: field-group selector + PII warning + audit log."""
+    """Full export page: filter + field-group selector + PII warning + audit log."""
     if request.method == "POST":
         selected_ids = [
             gid for gid in _EXPORT_GROUP_IDS
@@ -81,18 +116,22 @@ def export_volunteers_as_csv(request):
         if not selected_ids:
             selected_ids = ["basic"]
 
+        filter_type = request.POST.get("filter_type", ExportAuditLog.FILTER_ALL)
+        if filter_type not in dict(ExportAuditLog.FILTER_TYPE_CHOICES):
+            filter_type = ExportAuditLog.FILTER_ALL
+        event_ids = [
+            int(pk) for pk in request.POST.getlist("filter_event_ids") if pk.isdigit()
+        ]
+        if filter_type != ExportAuditLog.FILTER_EVENTS:
+            event_ids = []
+
         # Build flat list of (header, accessor) for selected groups.
         columns = []
         for gid, _label, _sensitive, fields in _EXPORT_FIELD_GROUPS:
             if gid in selected_ids:
                 columns.extend(fields)
 
-        volunteers = (
-            Volunteer.objects.active()
-            .select_related("member")
-            .prefetch_related("collectives")
-            .order_by("member__name")
-        )
+        volunteers = _filtered_volunteers(filter_type, event_ids)
         rows = list(volunteers)
 
         # Log the export.
@@ -100,13 +139,15 @@ def export_volunteers_as_csv(request):
         is_sensitive = bool(set(selected_ids) & _SENSITIVE_GROUP_IDS)
         logger.info(
             f"User {request.user} exported {len(rows)} volunteers "
-            f"(fields: {selected_ids}, sensitive={is_sensitive}, reason={export_reason!r})"
+            f"(fields: {selected_ids}, filter: {filter_type}, sensitive={is_sensitive}, reason={export_reason!r})"
         )
         ExportAuditLog.objects.create(
             exported_by=request.user,
             fields_included=selected_ids,
             recipient_count=len(rows),
             export_reason=export_reason,
+            filter_type=filter_type,
+            filter_event_ids=event_ids,
         )
 
         now = datetime.now().strftime("%d %b %Y %I-%M %p")
@@ -123,6 +164,7 @@ def export_volunteers_as_csv(request):
     return render(request, "volunteer_export.html", {
         "field_groups": _EXPORT_FIELD_GROUPS,
         "sensitive_ids": _SENSITIVE_GROUP_IDS,
+        "upcoming_events": _upcoming_confirmed_events(),
     })
 
 
@@ -130,7 +172,15 @@ def export_volunteers_as_csv(request):
 @require_safe
 def export_audit_log(request):
     """Audit log of all volunteer CSV exports."""
-    logs = ExportAuditLog.objects.select_related("exported_by").all()[:200]
+    logs = list(ExportAuditLog.objects.select_related("exported_by").all()[:200])
+
+    event_ids = {eid for log in logs for eid in log.filter_event_ids}
+    event_names = dict(Event.objects.filter(pk__in=event_ids).values_list("pk", "name"))
+    for log in logs:
+        log.filter_event_names = [
+            event_names.get(eid, f"(deleted event {eid})") for eid in log.filter_event_ids
+        ]
+
     return render(request, "volunteer_export_audit.html", {"logs": logs})
 
 
