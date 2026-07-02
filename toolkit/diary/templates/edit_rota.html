@@ -132,14 +132,18 @@
     }
 
     /* ── Showing header row ──────────────────────────────────────────── */
-    /* Two-line layout: meta row (date/room/link) above title row.
-       Consistent on both mobile and desktop; the toggle button floats
-       to the gutter on desktop via position:absolute. */
+    /* Two-line layout on mobile: title leads, meta (date/room/link) wraps
+       beneath it — the event name is what a volunteer scans for first.
+       Desktop collapses both into one row via display:contents + order,
+       so this ordering only affects the mobile column layout below. */
     .showing-header-row {
         display: flex;
         flex-direction: column;
         gap: 0.1em;
         margin: 0.3em 0;
+    }
+    .showing-title-line {
+        order: -1;
     }
 
     /* Meta row: toggle (mobile-only inline), date, room, external link.
