@@ -123,6 +123,8 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
                 config.volunteer_never_logged_in_grace_days
             ),
             "volunteer_purge_days": str(config.volunteer_purge_days),
+            "consent_renewal_days": str(config.consent_renewal_days),
+            "consent_renewal_grace_days": str(config.consent_renewal_grace_days),
             "volunteer_digest_day": str(config.volunteer_digest_day),
             "last_gasp_email_subject": "",
             "last_gasp_email_body": "",

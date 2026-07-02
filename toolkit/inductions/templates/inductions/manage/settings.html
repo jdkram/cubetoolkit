@@ -173,6 +173,35 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  // AJAX handler for the "Mark privacy policy as updated" button
+  var policyBtn = document.getElementById('mark-policy-updated-btn');
+  if (policyBtn) {
+    policyBtn.addEventListener('click', function () {
+      if (!window.confirm('This immediately emails every active volunteer behind the current policy version, asking them to review it and reconfirm consent. Continue?')) {
+        return;
+      }
+      var statusEl = document.getElementById('policy-update-status');
+      policyBtn.disabled = true;
+      if (statusEl) { statusEl.textContent = 'Sending…'; statusEl.className = 'preview-status'; }
+      var formData = new FormData();
+      formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+      fetch('{{ mark_policy_updated_url }}', { method: 'POST', body: formData })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          policyBtn.disabled = false;
+          if (statusEl) {
+            statusEl.textContent = data.ok ? ('✓ Notified ' + data.notified + ' volunteer(s)') : ('✗ ' + (data.error || 'Failed'));
+            statusEl.className = 'preview-status ' + (data.ok ? 'ok' : 'err');
+          }
+          if (data.ok) { window.location.reload(); }
+        })
+        .catch(function () {
+          policyBtn.disabled = false;
+          if (statusEl) { statusEl.textContent = '✗ Request failed'; statusEl.className = 'preview-status err'; }
+        });
+    });
+  }
+
   // AJAX handler for "Send preview to my email" buttons
   document.addEventListener('click', function (e) {
     var btn = e.target.closest('.send-preview-btn');
@@ -238,6 +267,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <ul>
         <li><a href="#section-general">General</a></li>
         <li><a href="#section-notifications">Notifications</a></li>
+        <li><a href="#section-consent">Consent &amp; privacy</a></li>
         <li><a href="#section-access">1:1 requests</a></li>
         <li><a href="#section-welcome-pack">Welcome pack</a></li>
         <li><a href="#section-email-confirmation">Confirmation email</a></li>
@@ -295,6 +325,23 @@ document.addEventListener('DOMContentLoaded', function () {
           <span class="ms-auto d-flex align-items-center gap-2">
             <span class="preview-status" id="notification-test-status"></span>
             <button type="button" class="btn btn-outline-secondary btn-sm" id="send-notification-test-btn">Send test notification</button>
+          </span>
+        </div>
+      </div>
+
+      <div class="config-section" id="section-consent">
+        <div class="config-section-header">Consent &amp; privacy</div>
+        <div class="config-section-body">
+          <p class="text-muted small mt-1">Volunteers consent to data processing at induction. How often they're asked to reconfirm it is set in <a href="{% url "edit-site-configuration" %}">Site settings</a>, under "Membership &amp; volunteers" ("Consent renewal days" / "Consent renewal grace days").</p>
+        </div>
+        <div class="email-section-footer">
+          <span class="text-muted small">
+            Privacy policy version <strong>{{ policy_version }}</strong>{% if policy_updated_at %}, last marked updated {{ policy_updated_at|date:"d/m/Y" }}{% endif %}.
+            Bumping the version immediately emails every active volunteer behind it, asking them to review the policy and reconfirm consent.
+          </span>
+          <span class="ms-auto d-flex align-items-center gap-2">
+            <span class="preview-status" id="policy-update-status"></span>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="mark-policy-updated-btn">Mark privacy policy as updated</button>
           </span>
         </div>
       </div>

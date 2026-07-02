@@ -747,11 +747,25 @@ class AnonymisationLog(models.Model):
 
 class ExportAuditLog(models.Model):
     """Audit trail for volunteer CSV exports, especially those including PII."""
+
+    FILTER_ALL = "all"
+    FILTER_UPCOMING = "upcoming"
+    FILTER_EVENTS = "events"
+    FILTER_TYPE_CHOICES = [
+        (FILTER_ALL, "All volunteers"),
+        (FILTER_UPCOMING, "Volunteers with any upcoming shift"),
+        (FILTER_EVENTS, "Volunteers signed up to specific events"),
+    ]
+
     exported_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
     exported_at = models.DateTimeField(auto_now_add=True)
     fields_included = models.JSONField(default=list)
     recipient_count = models.PositiveIntegerField(default=0)
     export_reason = models.CharField(max_length=500, blank=True, default="")
+    filter_type = models.CharField(
+        max_length=20, choices=FILTER_TYPE_CHOICES, default=FILTER_ALL
+    )
+    filter_event_ids = models.JSONField(default=list, blank=True)
 
     class Meta:
         ordering = ["-exported_at"]

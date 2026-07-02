@@ -106,6 +106,14 @@ class InductionsSettings(models.Model):
         max_length=500, blank=True,
         help_text="URL to your GDPR/privacy policy. Linked from the sign-up consent checkbox. Leave blank to omit the link.",
     )
+    privacy_policy_version = models.PositiveIntegerField(
+        default=1,
+        help_text="Bumped automatically when the policy is marked as updated. Volunteers who last consented to an earlier version are flagged for renewal and emailed immediately.",
+    )
+    privacy_policy_updated_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When the privacy policy was last marked as updated.",
+    )
     access_needs_enabled = models.BooleanField(
         default=True,
         help_text=(

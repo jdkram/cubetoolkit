@@ -50,6 +50,7 @@ from .volunteer_suspension import (
 
 from .volunteer_self_service import (
     reactivate_self,
+    renew_consent_self,
     volunteer_digest_unsubscribe,
 )
 

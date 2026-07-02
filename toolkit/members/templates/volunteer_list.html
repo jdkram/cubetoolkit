@@ -198,6 +198,9 @@ Active {{ VENUE.name }} volunteers: {{ active_count }}</p>
                     {% else %}
                        <p><em><b>No GDPR opt-in</b></em></p>
                     {% endif %}
+                    {% if volunteer.consent_overdue %}
+                       <p><strong class="text-danger">Consent overdue</strong></p>
+                    {% endif %}
                     {% if general_training_enabled %}
                     {% with volunteer.general_training.0 as general_training %}
                     {% if not general_training %}

@@ -17,6 +17,7 @@ from toolkit.members.views import (
     set_volunteer_password,
     send_volunteer_password_reset,
     reactivate_self,
+    renew_consent_self,
     view_volunteer_directory,
     volunteer_digest_unsubscribe,
     add_volunteer_qualification,
@@ -156,6 +157,7 @@ volunteer_urls = [
         name="send-volunteer-password-reset",
     ),
     re_path(r"^reactivate/$", reactivate_self, name="volunteer-reactivate-self"),
+    re_path(r"^renew-consent/$", renew_consent_self, name="volunteer-renew-consent-self"),
     re_path(
         r"^bulk-award-qualification/$",
         bulk_award_qualification,

@@ -940,6 +940,8 @@ SITE_CONFIG_FIELD_GROUPS = {
         "volunteer_dormancy_days",
         "volunteer_never_logged_in_grace_days",
         "volunteer_purge_days",
+        "consent_renewal_days",
+        "consent_renewal_grace_days",
         "volunteer_digest_day",
     ],
     "Last-gasp re-engagement email": [

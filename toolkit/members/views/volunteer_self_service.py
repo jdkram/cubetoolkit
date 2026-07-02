@@ -32,6 +32,32 @@ def reactivate_self(request):
     return HttpResponseRedirect(reverse("toolkit-index"))
 
 
+@require_POST
+@login_required
+def renew_consent_self(request):
+    """Let a volunteer reconfirm data-processing consent from their dashboard.
+
+    Requires login (unlike a token-link renewal) so that renewing also proves
+    the account is still in active use. Stamps Member.gdpr_opt_in and brings
+    the volunteer's consent_policy_version up to date, clearing the overdue flag.
+    """
+    from toolkit.inductions.models import InductionsSettings
+
+    try:
+        volunteer = request.user.volunteer
+    except Exception:
+        return HttpResponseRedirect(reverse("toolkit-index"))
+
+    volunteer.member.gdpr_opt_in = timezone.now()
+    volunteer.member.save(update_fields=["gdpr_opt_in"])
+    volunteer.consent_policy_version = InductionsSettings.load().privacy_policy_version
+    volunteer.consent_reminder_sent_at = None
+    volunteer.save(update_fields=["consent_policy_version", "consent_reminder_sent_at"])
+    logger.info("Volunteer pk=%s renewed consent", volunteer.pk)
+    messages.success(request, "Thanks — your consent has been reconfirmed.")
+    return HttpResponseRedirect(reverse("toolkit-index"))
+
+
 @require_safe
 def volunteer_digest_unsubscribe(request):
     """One-click unsubscribe from the weekly volunteer digest. No login required.

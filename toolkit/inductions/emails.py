@@ -8,11 +8,17 @@ password-set URL is built via toolkit.toolkit_auth.password_emails so the
 token + venue lookup is shared with members' volunteer password flow and
 the post-check-in reset flow in inductions/views.
 """
-from django.core.mail import send_mail
+import logging
+
+from django.conf import settings
+from django.core.mail import EmailMessage, get_connection, send_mail
 from django.urls import reverse
+from django.utils import timezone
 
 from toolkit.toolkit_auth import password_emails
 from .models import get_inductions_settings
+
+logger = logging.getLogger(__name__)
 
 
 def _venue():
@@ -204,6 +210,99 @@ def send_session_full_notification(session):
         recipient_list=[cfg.organiser_notification_email],
         fail_silently=True,
     )
+
+
+def _login_url():
+    return settings.VENUE.get("siteurl", "").rstrip("/") + reverse("toolkit-index")
+
+
+def build_consent_renewal_email(volunteer):
+    """Return (subject, body) asking a volunteer to log in and reconfirm consent.
+
+    Used by send_consent_renewal_reminders (bulk, one SMTP connection for the
+    whole run) — hence returning strings rather than sending directly, unlike
+    the single-recipient send_* functions above.
+    """
+    cfg = get_inductions_settings()
+    venue = _venue()
+    member = volunteer.member
+    first_name = member.name.split()[0] if member.name else "there"
+    policy_line = f"\n\nPrivacy policy: {cfg.privacy_policy_url}" if cfg.privacy_policy_url else ""
+    subject = f"[{venue}] Please reconfirm your data consent"
+    body = (
+        f"Hi {first_name},\n\n"
+        f"It's been a while since you confirmed you're happy for {venue} to hold your "
+        f"volunteer contact and rota details. Please log in and reconfirm on your dashboard:\n\n"
+        f"{_login_url()}\n\n"
+        f"If you no longer volunteer with us, that's fine too — just let an organiser know, "
+        f"or ignore this and we'll follow up about your account in due course.{policy_line}"
+    )
+    return subject, body
+
+
+def build_policy_change_email(volunteer):
+    """Return (subject, body) telling a volunteer the privacy policy changed.
+
+    Used by send_policy_change_notification — same reasoning as
+    build_consent_renewal_email above.
+    """
+    cfg = get_inductions_settings()
+    venue = _venue()
+    member = volunteer.member
+    first_name = member.name.split()[0] if member.name else "there"
+    policy_line = f"\n\n{cfg.privacy_policy_url}" if cfg.privacy_policy_url else ""
+    subject = f"[{venue}] Our privacy policy has changed"
+    body = (
+        f"Hi {first_name},\n\n"
+        f"We've updated the privacy policy covering how {venue} handles your volunteer data. "
+        f"Please take a look, then log in and reconfirm your consent on your dashboard.{policy_line}\n\n"
+        f"{_login_url()}"
+    )
+    return subject, body
+
+
+def notify_policy_change():
+    """Email every active, non-exempt volunteer behind the current policy version.
+
+    Called both by the send_policy_change_notification management command and
+    directly (as a plain function call) by the "mark privacy policy as
+    updated" admin action, so the admin action gets an immediate sent/skipped
+    count without shelling out via call_command. Stamps consent_reminder_sent_at
+    so send_consent_renewal_reminders doesn't also nag these volunteers the
+    same week. Returns (sent, skipped).
+    """
+    from toolkit.members.models import Volunteer
+
+    cfg = get_inductions_settings()
+    outstanding = Volunteer.objects.filter(
+        status=Volunteer.STATUS_ACTIVE,
+        retention_exempt=False,
+        consent_policy_version__lt=cfg.privacy_policy_version,
+    ).select_related("member")
+
+    now = timezone.now()
+    sent = 0
+    skipped = 0
+    connection = get_connection()
+    connection.open()
+    try:
+        for volunteer in outstanding:
+            email = volunteer.member.email
+            if not email:
+                skipped += 1
+                continue
+            try:
+                subject, body = build_policy_change_email(volunteer)
+                EmailMessage(subject, body, _from_email(), [email], connection=connection).send()
+                volunteer.consent_reminder_sent_at = now
+                volunteer.save(update_fields=["consent_reminder_sent_at"])
+                sent += 1
+            except Exception:
+                logger.exception(f"Failed to send policy-change notification to volunteer pk={volunteer.pk}")
+                skipped += 1
+    finally:
+        connection.close()
+    return sent, skipped
 
 
 def send_test_notification_email(recipient_email):

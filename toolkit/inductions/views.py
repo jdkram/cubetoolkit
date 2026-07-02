@@ -20,6 +20,7 @@ from toolkit.toolkit_auth.decorators import panopticon_required
 from toolkit.members.models import Member, Volunteer
 
 from .emails import (
+    notify_policy_change,
     send_access_needs_ack,
     send_new_signup_notification,
     send_organiser_notification,
@@ -625,8 +626,34 @@ def manage_settings(request):
         "form": form,
         "sample_vars": _test_template_vars(request, cfg),
         "test_email_url": reverse("inductions:manage_send_test_email"),
+        "mark_policy_updated_url": reverse("inductions:manage_mark_policy_updated"),
+        "policy_version": cfg.privacy_policy_version,
+        "policy_updated_at": cfg.privacy_policy_updated_at,
         "user_email": request.user.email or "",
     })
+
+
+@require_POST
+@panopticon_required
+def manage_mark_policy_updated(request):
+    """Bump the privacy policy version and immediately notify affected volunteers.
+
+    Non-destructive and fully reversible in effect (worst case: one extra
+    email round), so this only needs a JS confirm() dialog rather than the
+    typed-confirmation-phrase pattern used for anonymisation.
+    """
+    cfg = InductionsSettings.load()
+    cfg.privacy_policy_version += 1
+    cfg.privacy_policy_updated_at = timezone.now()
+    cfg.save()
+
+    try:
+        sent, skipped = notify_policy_change()
+    except Exception as exc:
+        logger.exception("Failed to send policy-change notifications")
+        return JsonResponse({"ok": False, "error": str(exc)})
+
+    return JsonResponse({"ok": True, "notified": sent, "skipped": skipped})
 
 
 @require_POST

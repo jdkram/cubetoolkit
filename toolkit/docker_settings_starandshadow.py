@@ -5,6 +5,10 @@ from toolkit.settings_starandshadow import *
 DEBUG = True
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
+# Used to build absolute URLs (login links, etc.) in emails sent from
+# management commands, which have no request to call build_absolute_uri() on.
+VENUE["siteurl"] = "http://localhost:8000"
+
 # settings_common.py sets TEMPLATES[0]["OPTIONS"]["debug"] = DEBUG at import
 # time, before our DEBUG = True override takes effect. Fix it here so that
 # the filesystem template loader does not cache templates in memory, allowing

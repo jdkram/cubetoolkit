@@ -473,3 +473,102 @@ class TestLastGaspEmail(PoolManagementBase):
         self.client.force_login(vol.user)
         resp = self.client.get(reverse("last-gasp-email", kwargs={"volunteer_id": vol.pk}))
         self.assertNotEqual(resp.status_code, 200)
+
+
+class TestConsentOverdue(PoolManagementBase):
+    """Volunteer.consent_overdue: reminder-lapse and policy-version triggers."""
+
+    def setUp(self):
+        super().setUp()
+        self._set_config(consent_renewal_days=365, consent_renewal_grace_days=30)
+        from toolkit.inductions.models import InductionsSettings
+        self.inductions_settings = InductionsSettings.load()
+        self.inductions_settings.privacy_policy_version = 1
+        self.inductions_settings.save()
+
+    def test_not_overdue_with_no_reminder_sent(self):
+        vol = self._make_vol("co1")
+        vol.member.gdpr_opt_in = _days_ago(1200)
+        vol.member.save()
+        self.assertFalse(vol.consent_overdue)
+
+    def test_not_overdue_within_grace_period(self):
+        vol = self._make_vol("co2")
+        vol.consent_reminder_sent_at = _days_ago(10)
+        vol.save()
+        self.assertFalse(vol.consent_overdue)
+
+    def test_overdue_after_grace_period(self):
+        vol = self._make_vol("co3")
+        vol.consent_reminder_sent_at = _days_ago(40)
+        vol.save()
+        self.assertTrue(vol.consent_overdue)
+
+    def test_retention_exempt_never_overdue(self):
+        vol = self._make_vol("co4")
+        vol.consent_reminder_sent_at = _days_ago(40)
+        vol.retention_exempt = True
+        vol.save()
+        self.assertFalse(vol.consent_overdue)
+
+    def test_overdue_when_behind_policy_version(self):
+        vol = self._make_vol("co5")
+        vol.consent_policy_version = 1
+        vol.save()
+        self.inductions_settings.privacy_policy_version = 2
+        self.inductions_settings.save()
+        self.assertTrue(vol.consent_overdue)
+
+    def test_not_overdue_when_matching_current_policy_version(self):
+        vol = self._make_vol("co6")
+        vol.consent_policy_version = 2
+        vol.save()
+        self.inductions_settings.privacy_policy_version = 2
+        self.inductions_settings.save()
+        self.assertFalse(vol.consent_overdue)
+
+
+class TestRenewConsentSelf(PoolManagementBase):
+    def test_renews_consent_and_clears_reminder(self):
+        from toolkit.inductions.models import InductionsSettings
+        InductionsSettings.load()  # ensure singleton row exists at version 1
+
+        vol = self._make_vol("rc1")
+        vol.consent_policy_version = 1
+        vol.consent_reminder_sent_at = _days_ago(40)
+        vol.save()
+        vol.member.gdpr_opt_in = _days_ago(1200)
+        vol.member.save()
+
+        self.client.force_login(vol.user)
+        resp = self.client.post(reverse("volunteer-renew-consent-self"))
+        self.assertEqual(resp.status_code, 302)
+
+        vol.refresh_from_db()
+        vol.member.refresh_from_db()
+        self.assertIsNone(vol.consent_reminder_sent_at)
+        self.assertFalse(vol.consent_overdue)
+        self.assertGreater(vol.member.gdpr_opt_in, _days_ago(1))
+
+    def test_get_not_allowed(self):
+        vol = self._make_vol("rc2")
+        self.client.force_login(vol.user)
+        resp = self.client.get(reverse("volunteer-renew-consent-self"))
+        self.assertEqual(resp.status_code, 405)
+
+
+class TestConsentBannerOnDashboard(PoolManagementBase):
+    def test_banner_shown_when_overdue(self):
+        vol = self._make_vol("cb1")
+        vol.consent_reminder_sent_at = _days_ago(40)
+        vol.save()
+        self.client.force_login(vol.user)
+        resp = self.client.get(reverse("toolkit-index"))
+        self.assertTrue(resp.context["consent_overdue"])
+        self.assertContains(resp, "reconfirm your data consent")
+
+    def test_banner_not_shown_when_not_overdue(self):
+        vol = self._make_vol("cb2")
+        self.client.force_login(vol.user)
+        resp = self.client.get(reverse("toolkit-index"))
+        self.assertFalse(resp.context["consent_overdue"])

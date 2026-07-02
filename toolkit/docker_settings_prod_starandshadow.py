@@ -18,6 +18,10 @@ CSRF_TRUSTED_ORIGINS = [
     f"https://{os.environ['ALLOWED_HOST']}"
 ]
 
+# Used to build absolute URLs (login links, etc.) in emails sent from
+# management commands, which have no request to call build_absolute_uri() on.
+VENUE["siteurl"] = f"https://{os.environ['ALLOWED_HOST']}"
+
 # The whole domain is dedicated to this app, so no subpath prefix is needed.
 # FORCE_SCRIPT_NAME is only needed when serving at a subpath alongside other
 # apps on the same domain.
