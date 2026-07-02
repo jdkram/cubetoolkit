@@ -302,8 +302,13 @@ def clone_event(request, event_id):
         suggested_room = None
         suggested_booked_by = ""
         if latest_showing:
-            suggested_start = latest_showing.start + datetime.timedelta(
-                weeks=1
+            # Source event may be long in the past (9.131 - cloning from
+            # past events) - anchor to "today + a week" too, so an old
+            # source event doesn't suggest a start date that's still in
+            # the past and gets rejected by validate_in_future.
+            suggested_start = max(
+                latest_showing.start + datetime.timedelta(weeks=1),
+                timezone.now() + datetime.timedelta(weeks=1),
             )
             suggested_room = latest_showing.primary_room
             suggested_booked_by = latest_showing.booked_by

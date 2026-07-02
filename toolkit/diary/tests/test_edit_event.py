@@ -1059,6 +1059,28 @@ class CloneEventTests(DiaryTestsMixin, TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
 
+    @patch("django.utils.timezone.now")
+    def test_get_suggests_future_start_for_long_past_source_event(
+        self, now_patch
+    ):
+        """9.131: cloning an event whose latest showing was years ago should
+        not suggest a start date that's still in the past."""
+        now_patch.return_value = self._fake_now
+        old_showing = Showing(
+            start=self._fake_now - timedelta(days=730),
+            event=self.e4,
+            booked_by="Old Booker",
+            confirmed=True,
+        )
+        old_showing.save(force=True)
+
+        response = self.client.get(self.url)
+
+        suggested_start = response.context["form"].initial["start"]
+        self.assertGreaterEqual(
+            suggested_start, self._fake_now + timedelta(weeks=1)
+        )
+
 
 class EventLinkTests(DiaryTestsMixin, TestCase):
     """Tests for the edit-event-links view and EventLink model."""
