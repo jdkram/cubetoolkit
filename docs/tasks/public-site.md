@@ -585,7 +585,7 @@ Add `max_upload_image_kb = models.PositiveIntegerField(default=5120)` + migratio
 
 ---
 
-### 9.130 — Printed programme archive: season model + gallery view 🟡 M (12–20h)
+### 9.130 — Printed programme archive: season model + gallery view — ✅ Done 2026-07-01
 
 **Context.** The current `PrintedProgramme` model stores one PDF per calendar month (`month` DateField, unique). S+S publishes programmes by season (typically covering 2–3 months), so the month-per-record model forces a mismatch: either one month gets the file and others are blank, or the same PDF is uploaded multiple times.
 

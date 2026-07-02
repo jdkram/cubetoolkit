@@ -562,6 +562,8 @@ Reinstating a suspended volunteer (setting status back to Active) restores their
 
 **Purge / data minimisation.** Dormant and retired volunteers whose last activity (last login, or join date if they never logged in) is older than `volunteer_purge_days` are surfaced as **purge candidates** on the panopticon pool-health dashboard (`/volunteers/view/pool-health/`). Erasure is never automatic: it is done one record at a time via the per-volunteer Anonymise flow, or in bulk via the manual `purge_stale_volunteers` command, which reports only unless given `--apply` and a typed confirmation phrase. Both paths call the same `Volunteer.anonymise()` method, so the audited web flow and the bulk command cannot diverge.
 
+**Consent renewal** is a third, independent clock alongside login-recency (dormancy) and last-activity (purge) — deliberately kept separate rather than merged into `status`, since "hasn't logged in" and "hasn't reconfirmed consent" are different facts with different remedies. A volunteer's `Volunteer.consent_overdue` property is `True` when either: a renewal reminder was sent (`send_consent_renewal_reminders`, cron, gated by `SiteConfiguration.consent_renewal_days`/`consent_renewal_grace_days` — grouped with `volunteer_dormancy_days`/`volunteer_purge_days` under "Membership & volunteers" in Site settings, the closest sibling settings) and the grace period has since passed, or their `consent_policy_version` is behind the current `InductionsSettings.privacy_policy_version` (bumped via the "Mark privacy policy as updated" admin action in Inductions settings, which immediately emails everyone behind it). Retention-exempt volunteers are always excluded, mirroring `purge_candidates()`. As with dormancy and purging, this only ever flags for manual review (a red badge on the volunteer list) — never auto-changes status, never auto-anonymises. Volunteers reconfirm consent themselves via a dashboard card that requires being logged in (`renew_consent_self`), not a token link, so renewing also proves the account is still live.
+
 Suspension is a Panopticon-only action: the "Suspended" choice is hidden from the status options when a non-superuser edits a profile (and a suspended volunteer cannot reach the form anyway, since their login is disabled).
 
 **Deleting a suspended volunteer.** Suspension preserves the full record while blocking access, so the usual answer during an investigation is to *leave them suspended*. If the outcome is permanent removal, prefer **Anonymise** (the GDPR right-to-erasure flow): it wipes personal data from the Member/Volunteer/User records, anonymises rota history, deletes training records, and writes an `AnonymisationLog` audit entry — keeping accountability. A hard "Delete member" also works on a suspended volunteer (the active-volunteer guard does not block non-active statuses), but it destroys all history with no audit trail and currently leaves the disabled `User` account orphaned, so it is not recommended for safeguarding cases.
@@ -828,8 +830,10 @@ erDiagram
     }
     PrintedProgramme {
         int id PK
-        date month
+        date start_month
+        date end_month
         file programme_pdf
+        file thumbnail
         string designer
         text notes
     }
@@ -861,6 +865,8 @@ erDiagram
         text notes
         string status
         image portrait
+        int consent_policy_version
+        datetime consent_reminder_sent_at
         datetime created_at
         datetime updated_at
     }
@@ -982,6 +988,23 @@ are pre-processed to fix wrapping/links.
 - Events **cannot be deleted** (enforced at model level). They can be cancelled
 at the `Showing` level.
 
+#### EventBudgetLine
+Itemised budget rows (estimate vs actual, by category) for an Event — replaces the "Budget template.xlsx" spreadsheet workflow. Sits alongside `Event`'s `cost_*` deal-terms fields (above), not instead of them: deal terms describe one negotiated headline cost; budget lines describe everything else (catering, decoration, promotion, ...) plus the incoming side (ticket sales). Gated behind `SiteConfiguration.budget_lines_enabled` (default off), independent of `structured_cost_terms_enabled`.
+
+Key fields:
+- `event` — FK to Event, `related_name="budget_lines"`
+- `direction` — `outgoing` or `incoming`
+- `category`, `item` — e.g. category "Acts/ Performers", item "Hire fee"; `item` blank for category-only rows (no item-level breakdown)
+- `estimate_gbp`, `actual_gbp` — nullable; blank (not zero) means not yet entered
+- `estimate_source` — `manual`, `deal_terms`, `site_default`, or `calculator` (the last currently unused — see below). A non-manual row is auto-refreshed from its source whenever the source value changes; a manual row (including a programmer's explicit override) is never touched again.
+- `order` — sort position within the category template
+
+Which categories exist for a given event is decided by `BUDGET_CATEGORY_TEMPLATES` (`toolkit/diary/models/budget.py`) — a fixed Python constant, not DB-configurable, keyed by event type (`film`, `music_gig`, `other_public_event`). `sync_budget_lines_for_event()` auto-creates any missing rows for the event's type whenever its edit page is loaded (GET only — never on POST, since the inline formset binds submitted data to existing rows positionally and inserting a new row mid-request would misassign values), deriving `estimate_gbp` from `Event.cost_total_gbp`/`cost_flat_fee_gbp` or `SiteConfiguration.late_licence_fee_gbp` where a mapping exists, leaving everything else blank for manual entry. It never deletes or blanks an existing row, so re-tagging an event to a different type just adds the new type's rows alongside any already filled in.
+
+Event-type detection: `film` via the proven `slug="film"` tag convention; `music_gig` via `EventTag.filter_group="music"` (the only confirmed live field for this, though not yet proven as the specific convention for gig-classification — flagged in code); everything else (including any future "volunteer only" events) falls back to `other_public_event`, since no such tag exists in this codebase yet.
+
+Not yet built: `estimate_source="calculator"` (pre-filling Ticket sales from the break-even calculator) is unused — the calculator (`form_event.html`) is pure client-side JS with no server-side value to read, so there is currently nothing to derive from. Finance aggregate reporting, row-level CSV export, and the "awaiting actuals" dashboard widget are also not yet built.
+
 #### Showing
 A specific scheduled date/time of an Event. One event can have many showings.
 
@@ -1060,6 +1083,7 @@ A member who volunteers. Extends (OneToOne) `Member`.
 - `status` — lifecycle state: active / dormant / retired / suspended (added in migration `members/0019`). Single source of truth; "active" means on the rota and receiving mailouts. There is no separate `active` boolean (removed in migration `members/0018`); read the derived `is_active` property or query `Volunteer.objects.active()` / `.inactive()`. `suspended` is a safeguarding hold that also disables the linked `User` login — `Volunteer.save()` syncs `user.is_active` and clears future rota entries on the suspend transition (see §[Volunteer status, login access and suspension](#volunteer-status-login-access-and-suspension)).
 - `roles` — M2M to `Role`: what roles this volunteer is qualified for
 - `portrait` — headshot photo
+- `consent_policy_version` / `consent_reminder_sent_at` — drive the computed `consent_overdue` property (see §[Consent renewal](#volunteer-status-login-access-and-suspension))
 - Every `Volunteer` has a linked Django `User` (OneToOne), auto-created when the volunteer record is saved for the first time. The `User` is created with an unusable password; the volunteer sets their own password via an emailed link. See §4.6 for the full account and password flow.
 - When a new volunteer is added, a welcome email with a password-set link is sent to the volunteer, and a notification email is sent to `vols_admin_address` asking admins to add them to the volunteers mailing list (which runs externally via Simplelists).
 - Retirement and dormancy are `status` changes made on the profile page; they do **not** disable the Django `User` login or wipe the password. **Suspension** is the one status that does disable login (and clears future shifts) — it is the safeguarding/emergency-deactivation lever. Whenever a status change moves a volunteer on or off the active roster, a mailing-list notification is sent to `vols_admin_address`.
@@ -1179,6 +1203,7 @@ Singleton (pk=1) configuration for the inductions feature.
 - `induction_purge_days` — days after session date before pending/no-show records are purged
 - `default_max_signups` — site-wide cap fallback (nullable = no cap)
 - `privacy_policy_url` — linked from the GDPR consent checkbox on the sign-up form
+- `privacy_policy_version` / `privacy_policy_updated_at` — bumped via the "Mark privacy policy as updated" admin action; volunteers behind the current version are flagged consent-overdue and emailed immediately. (The renewal cadence itself — `consent_renewal_days` / `consent_renewal_grace_days` — lives on `SiteConfiguration`, not here, grouped with the other volunteer-pool-management thresholds; see §[Consent renewal](#volunteer-status-login-access-and-suspension).)
 - `access_needs_intro_text` — configurable intro paragraph on the 1:1 request form
 - `organiser_notification_email` — receives new sign-up notifications and 1:1 request acknowledgements
 - Email template fields for confirmation, reminder, welcome, and access-needs acknowledgement emails
@@ -1224,6 +1249,25 @@ Records that someone intends to get an item. One-to-one with `NeedFlag`.
 - `status` — `pledged`, `ordered`, `oos` (out of stock), `fulfilled`
 - `intended_supplier` — nullable FK to `Supplier`; identifies which supplier's order this is part of
 - `status_notes` — free-text note (used for out-of-stock supplier name etc.)
+
+#### MaintenanceTask (operations)
+A recurring maintenance, compliance, or admin obligation (fire alarm service, PAT testing, etc.), replacing a spreadsheet. Deliberately a separate model from `labs.Job` — `Job` is a flat one-off list; a `Job` that turns out to be recurring should be promoted to a `MaintenanceTask` rather than growing `Job` scheduling fields.
+
+- `name`, `category` (Security & Fire / HVAC / Compliance & Legal / Utilities / Property / Digital & AV / Other), `frequency` (monthly/quarterly/biannual/annual/three_yearly/bespoke), `frequency_notes`
+- `contractor` — external service provider name; blank for volunteer-delivered tasks
+- `keyholder_required`, `skills_required`, `time_commitment`, `nextcloud_link`, `notes`, `active`
+- `committed_to` — nullable FK to `Volunteer`; who has said they'll do the next occurrence
+- `committed_on` — when the commitment was made
+- `next_due` (computed) — most recent `MaintenanceRecord.completed_date` + `frequency` period, or that record's `next_due_override` if set
+- `status` (computed) — `overdue` / `due_soon` (within 4 weeks) / `ok`
+- `stale_commitment` (computed) — `True` when `committed_on` predates one `frequency` period and nothing has been completed since; surfaced as a badge distinct from plain overdue, without gating who can mark the task done
+
+#### MaintenanceRecord (operations)
+A single completion of a `MaintenanceTask`.
+
+- `task` — FK, `CASCADE`
+- `completed_date`, `completed_by` (nullable FK to `Volunteer`), `completed_by_name` (free text, for contractor completions with no toolkit account), `notes`
+- `next_due_override` — manual override of the calculated next-due date
 
 ---
 
@@ -1297,6 +1341,12 @@ Records that someone intends to get an item. One-to-one with `NeedFlag`.
 | `/labs/shopping/<item_id>/enrich/` | POST — attach supplier to item |
 | `/labs/shopping/buy/add/<flag_id>/` | POST — add item to a supplier's order |
 | `/labs/shopping/oos/<flag_id>/` | POST — mark item out of stock at supplier |
+| `/operations/schedule/` | Maintenance schedule — recurring task list, expandable detail |
+| `/operations/schedule/add/` | Add maintenance task (write permission) |
+| `/operations/schedule/<task_id>/edit/` | Edit maintenance task (write permission) |
+| `/operations/schedule/<task_id>/mark-done/` | Log a completion (write permission) |
+| `/operations/schedule/<task_id>/commit/` | POST — commit to doing the next occurrence |
+| `/operations/schedule/<task_id>/uncommit/` | POST — withdraw a commitment |
 
 ---
 

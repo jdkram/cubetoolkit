@@ -1056,7 +1056,7 @@ Active / Dormant / Retired remain as a radio group. Suspend is a standalone acti
 
 ---
 
-### 9.139 — Volunteer export: filter by upcoming shift or specific event 🔵 S (4–8h)
+### 9.139 — Volunteer export: filter by upcoming shift or specific event 🔵 S (4–8h) — ✅ DONE 2026-07-01
 
 **Problem.** The current volunteer export gives every volunteer in the database. There is no way to quickly get a list of people signed up to a specific upcoming event — which is needed when something changes and you need to contact all attendees.
 
@@ -1122,7 +1122,7 @@ Display the filter type and event names in the audit log table.
 
 ---
 
-### 9.142 — Induction session: attendee cap + signup removal 🔵 S (6–10h)
+### 9.150 — Induction session: attendee cap + signup removal 🔵 S (6–10h)
 
 **Partial implementation: ✅ 2026-06-23** — cap display in session detail header and × remove button on pending signups shipped as part of the inductions feedback pass (9.4 / B-induction-tracking-94.md). The `max_signups` field and `effective_capacity()` helper already existed from 9.4. Remaining: over-cap warning banner when total > cap, public signup page "session full" behaviour. These are still to do.
 
@@ -1438,7 +1438,7 @@ These are ModelForm fields — use `RadioSelect` widgets in `InductionsSettingsF
 
 **Out of scope:** Per-session field configuration (site-wide setting only). Custom questions are already per-session via `InductionSession.custom_questions`.
 
-**Related:** 9.4 (induction workflow), 9.142 (session capacity)
+**Related:** 9.4 (induction workflow), 9.150 (session capacity)
 
 ---
 
@@ -1480,3 +1480,31 @@ If blank, show nothing. No default — forces an explicit decision.
 **Out of scope here:** Facebook/programme links (external, S&S-specific, better handled via the `notes` field in (a) than hardcoded). Session duration as a structured model field (overkill — freeform notes covers it).
 
 **Related:** 9.4 (induction workflow), 9.144 (configurable form fields)
+
+---
+
+### 9.151 — Volunteer consent renewal + privacy-policy-change notification 🔵 S (8–14h) — ✅ DONE 2026-07-01
+
+**Background.** Volunteers consent to data processing once, at induction sign-up (a required checkbox, stamped as `Member.gdpr_opt_in`). That timestamp was never revisited — no mechanism asked volunteers to reconfirm consent periodically, and no mechanism told them when the privacy policy itself changed.
+
+**Design decisions (agreed before build):**
+
+- Scope is volunteers only, not plain mailout `Member`s — the richer personal data (address, phone, rota history, access needs) is the concern here, and mailout already has its own opt-out mechanism.
+- Renewal requires **logging in**, not a one-click emailed token link — proves the account is still in active use, which is itself a useful signal alongside the existing login-recency dormancy logic.
+- A volunteer who doesn't renew is **flagged for manual review only** — no automatic status change, no automatic anonymisation. This deliberately mirrors the existing lifecycle philosophy in `auto_dormancy.py` (soft/reversible/cron) and `purge_stale_volunteers.py` (manual/reported/confirmed): a *third*, independent clock (consent) is not merged into `Volunteer.status`, which already tracks login-activity-driven state.
+- Privacy policy changes are a **manual admin action** (a version-bump button), not automatic diffing — the policy is just an external URL (`InductionsSettings.privacy_policy_url`); the toolkit has no visibility into its content.
+- Policy-change notifications are an **immediate email**, not just a login banner — a compliance-relevant event shouldn't wait for a volunteer's next login, which for a dormant account could be months away.
+
+**What shipped:**
+
+- `InductionsSettings`: `privacy_policy_version`, `privacy_policy_updated_at` (stays with `privacy_policy_url`, which it versions).
+- `SiteConfiguration`: `consent_renewal_days` (0 disables), `consent_renewal_grace_days` — grouped under "Membership & volunteers" alongside `volunteer_dormancy_days`/`volunteer_purge_days`, the closest sibling settings, rather than in `InductionsSettings` (which is scoped to the induction/sign-up workflow, not ongoing pool management).
+- `Volunteer`: `consent_policy_version`, `consent_reminder_sent_at`, computed `consent_overdue` property (excludes `retention_exempt` volunteers, same as `purge_candidates()`).
+- `send_consent_renewal_reminders` management command — cron-run alongside `auto_dormancy`, emails active volunteers whose consent has gone stale once the grace period has passed.
+- `send_policy_change_notification` command + `notify_policy_change()` helper (`toolkit/inductions/emails.py`) — emails everyone behind the current policy version; invoked directly (function call, not `call_command`) by the "Mark privacy policy as updated" admin action in Inductions settings, so the admin gets an immediate sent/skipped count.
+- `renew_consent_self` self-service view (`toolkit/members/views/volunteer_self_service.py`), modelled on the existing `reactivate_self` "welcome back" pattern — a dashboard card appears when `consent_overdue`, with a form POST to reconfirm.
+- Volunteer list gains a red "Consent overdue" badge — the reviewer surface, no separate report command needed since the list is already the working view for pool management.
+
+**Known gap surfaced by this work (not fixed, out of scope):** the reminder/notification emails build their login link from `settings.VENUE.get("siteurl", "")`. No settings file for this venue actually defines `siteurl`, so the link resolves relative rather than absolute — the same latent issue already present in `send_volunteer_digest.py`'s `toolkit_url`. Needs a one-line fix to `settings_starandshadow.py` (or wherever `VENUE` is defined per-environment) before either of these email flows can be relied on in production.
+
+**Related:** 9.4 (induction workflow, where consent is first captured)

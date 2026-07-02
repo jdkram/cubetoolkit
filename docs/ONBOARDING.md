@@ -398,6 +398,44 @@ The Docker settings expect these environment variables (with defaults from `dock
 | `DB_PORT` | `3306` | Database port |
 | `SECRET_KEY` | `really_bad_django_secret_key` | Django secret key (change in production!) |
 | `TMDB_API_KEY` | *(empty — TMDB disabled)* | API key for The Movie Database. Optional. Enables the film metadata search in the event edit form (feature 9.66). Register at themoviedb.org — free for non-commercial use. The contact email for the account should be recorded in Site Settings → External APIs. |
+| `OMDB_API_KEY` | *(empty — OMDb disabled)* | API key for OMDb, the other film-lookup source. Optional; same UI as TMDB. |
+| `ALLOWED_HOST` | *(required in production only)* | The production domain, e.g. `toolkit.starandshadow.org.uk`. Used for `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, and `VENUE["siteurl"]` (see checklist below) — set once, several things derive from it. |
+
+---
+
+## Setting Up a New Venue (Go-Live Checklist)
+
+Cube and Star and Shadow currently share this codebase via separate settings files (`settings_cube.py` / `settings_starandshadow.py`, each with a `docker_settings_*` and `docker_settings_prod_*` pair). Adding a third venue means copying that pattern — see [Multi-venue support](#key-concepts-and-patterns) below. Whether you're standing up a new venue or reviewing an existing one after a code upgrade, work through this list. Nothing here is enforced by the code — every item is a silent-default-until-someone-notices trap, which is exactly why several of them (see 9.151 in [CURRENT_WORK.md](../CURRENT_WORK.md)) were only caught after the fact.
+
+### 1. Settings file / environment variables
+
+- Copy an existing `settings_<venue>.py` as a starting point; review every value in its `VENUE` dict, not just the obviously venue-specific ones (`name`, `url`).
+- `VENUE["siteurl"]` — the toolkit's own domain (not the marketing site in `VENUE["url"]`). Used to build absolute login links in emails sent from management commands, which have no HTTP request to call `build_absolute_uri()` on. Set in `docker_settings_<venue>.py` (dev, e.g. `http://localhost:8000`) and `docker_settings_prod_<venue>.py` (prod, typically `f"https://{os.environ['ALLOWED_HOST']}"`). **Easy to miss:** there's no error if it's unset — affected links just resolve relative instead of absolute, and nothing surfaces that in the UI.
+- `VENUE["mailout_from_address"]`, `VENUE["vols_admin_address"]` — the latter defaults to `[]` (no-op) if unset; the volunteer-status-change notification to your vols admin silently does nothing until it's set.
+- Production only: `SECRET_KEY`, `ALLOWED_HOST`, `DB_PASSWORD` — see environment variable table above.
+
+### 2. Site Settings (`/toolkit/site-config/`, Panopticon only)
+
+- Every field on this page defaults to Cube's values — review the whole page, not just the "differs from Cube" table under [step 4 above](#4-create-demo-user-accounts-and-seed-sample-data), which only lists the S+S-specific overrides discovered so far.
+- Specifically check the **"Membership & volunteers"** group: `volunteer_dormancy_days`, `volunteer_purge_days`, `consent_renewal_days`/`consent_renewal_grace_days`, `volunteer_digest_day` — these drive the [scheduled jobs](#scheduled-tasks-production) below and a wrong default either nags volunteers too often or (worse) never flags a genuine data-retention concern.
+
+### 3. Inductions Settings (`/inductions/manage/settings/`, Panopticon only)
+
+Only relevant if you use the inductions sign-up flow (`inductions_enabled`).
+
+- `organiser_notification_email` defaults to the placeholder `inductions@example.com` — sign-up/capacity notifications silently vanish into a non-existent address until this is changed.
+- `privacy_policy_url` — set before relying on the consent renewal flow; it's what the sign-up consent checkbox and the "reconfirm your consent" dashboard card link to. Blank just omits the link rather than erroring, so this one's also easy to leave unset by accident.
+- Use "Mark privacy policy as updated" (same page) the first time a real policy is published, if volunteers were inducted before this feature existed and never explicitly linked to one.
+
+### 4. Scheduler container
+
+Confirm it's actually running (`docker compose ps` should show a `scheduler` service) and check its logs once (`docker compose logs scheduler`) to see the job list and next-run times. See [Scheduled Tasks](#scheduled-tasks-production) below for what runs and when.
+
+### 5. Accounts
+
+Run `configure_toolkit_users` (prompts interactively for passwords in production; never pass `--password` outside dev).
+
+**Upgrading an existing install:** `docker compose up --build -d` (or your production equivalent) applies new migrations automatically, but a migration only ever writes the *model's default* for a new field — it can't know what value actually suits your venue. After any upgrade that added settings fields (check the migration names, or the relevant `CURRENT_WORK.md` entry), re-visit Site Settings and Inductions Settings and confirm the new defaults are still what you want, same as steps 2–3 above.
 
 ---
 
@@ -565,6 +603,7 @@ The container controls **when** jobs fire. SiteConfiguration controls **what the
 |---------|--------|
 | `volunteer_dormancy_days = 0` | `auto_dormancy` runs but is a no-op (disabled) |
 | `volunteer_never_logged_in_grace_days = 0` | Grace-period cohort not checked |
+| `consent_renewal_days = 0` | `send_consent_renewal_reminders` runs but is a no-op (disabled) |
 | No opted-in volunteers | `send_volunteer_digest` sends nothing |
 
 You do not need to restart or reconfigure the scheduler container to toggle behaviour — change the setting in Django admin and the next run picks it up.
@@ -584,6 +623,7 @@ No image rebuild is needed because `tk_run.sh` is bind-mounted from source in de
 | Auto-dormancy | `auto_dormancy` | Daily at 03:00 | `volunteer_dormancy_days`, `volunteer_never_logged_in_grace_days` in SiteConfiguration |
 | Purge induction sign-ups | `purge_induction_signups` | Daily at 03:30 | `InductionsSettings.induction_purge_days`; no-op if `inductions_enabled = False` |
 | Induction reminders | `send_induction_reminders` | Daily at 08:00 | `InductionsSettings.inductions_enabled`; sends once per session in the 72-hour window |
+| Consent renewal reminders | `send_consent_renewal_reminders` | Daily at 08:30 | `consent_renewal_days`, `consent_renewal_grace_days` in SiteConfiguration |
 | Volunteer digest | `send_volunteer_digest` | Daily at 09:00 | `volunteer_digest_day` in SiteConfiguration |
 
 **`auto_dormancy`** marks active volunteers as Dormant when they have gone quiet: no login for `volunteer_dormancy_days`, or never logged in within `volunteer_never_logged_in_grace_days` of joining. Dormant is soft and reversible — it does not disable login or rota signup. Set either field to 0 in Site settings to disable that cohort. Run `manage.py auto_dormancy --dry-run` to preview.
@@ -591,6 +631,8 @@ No image rebuild is needed because `tk_run.sh` is bind-mounted from source in de
 **`purge_induction_signups`** nulls name, email, and custom responses on `pending` and `no_show` sign-ups whose `purge_after` date has passed, then marks the session as purged. Also purges stale access-needs requests that were never scheduled. The purge window is set per-session at creation time (default: `induction_purge_days` days after the session date, configurable in Inductions settings). The command is safe to run even when inductions is disabled — it simply finds nothing to purge.
 
 **`send_induction_reminders`** finds open sessions scheduled within the next 72 hours that have not yet had a reminder sent, emails all pending sign-ups, and stamps `reminder_sent_at` on the session so it only fires once. Does nothing if `inductions_enabled` is False or if no sessions are in the window.
+
+**`send_consent_renewal_reminders`** emails active volunteers whose consent (`Member.gdpr_opt_in`) is older than `consent_renewal_days` (Site settings), asking them to log in and reconfirm. Stamps `Volunteer.consent_reminder_sent_at` so it doesn't re-send within the same cycle. Set `consent_renewal_days` to 0 to disable. This is separate from — and does not replace — the "Mark privacy policy as updated" admin action in Inductions settings, which sends its own immediate notification when the policy itself changes (see [SPEC.md § Consent renewal](SPEC.md#volunteer-status-login-access-and-suspension)).
 
 **`send_volunteer_digest`** sends a personalised plain-text weekly summary to each opted-in active volunteer: upcoming shifts, new programme items, and starred events. The scheduler fires this command every day at 09:00, but the command checks `SiteConfiguration.volunteer_digest_day` (default: Thursday) and exits quietly on non-matching days. Set the field to **Disabled** in Site settings to suppress sending without counting the container. Only volunteers who have explicitly opted in (`weekly_digest = True` on their profile, default off) and are currently Active receive the email.
 
@@ -615,6 +657,7 @@ Each job logs its start time, completion, and any failure with an exit code.
 | Command | Why |
 |---------|-----|
 | `purge_stale_volunteers` | Irreversible anonymisation. Requires `--apply --confirm "anonymise N volunteers"`. Always run by hand as a conscious decision. |
+| `send_policy_change_notification` | Only meaningful right after the privacy policy actually changes — invoked automatically by the "Mark privacy policy as updated" admin action (Inductions settings). Running it on a schedule would just re-notify the same volunteers repeatedly with nothing new to say. Exists as a standalone command only so a failed send can be retried by hand. |
 | `check_vols_against_mailman` | Interactive — prompts for server, list name, and password. |
 | `delete_members_who_dont_get_the_mailout` | Interactive prompt. Destructive. |
 | `delete_non_members_who_dont_get_the_mailout` | Destructive one-off. |
