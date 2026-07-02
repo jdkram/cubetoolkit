@@ -41,6 +41,7 @@
     <li><a href="{% url "toolkit-index" %}" data-nav-key="t">Toolkit</a></li>
     {% if feature_perms.diary_read %}
     <li><a href="{% url "default-edit" %}" data-nav-key="i">Diary</a></li>
+    <li><a href="{% url "past-events-search" %}" data-nav-key="p">Past events</a></li>
     {% endif %}
     {% if feature_perms.diary_calendar %}
     <li><a href="{% url "diary-edit-calendar" %}" data-nav-key="a">Calendar</a></li>

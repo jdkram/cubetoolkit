@@ -1275,6 +1275,198 @@ document.addEventListener('DOMContentLoaded', function () {
 <form action="{% url "edit-event-details" event_id=event.id %}" method="post" enctype="multipart/form-data">
     {% crispy event_form %}
 
+    {# ---- Itemised budget lines (9.149 MVI) ---- #}
+    {% if budget_lines_enabled %}
+    <div class="card mb-3" id="budget-card">
+      <div class="card-header p-2" id="budget-hdr" style="cursor:pointer;user-select:none;"
+           data-bs-toggle="collapse" data-bs-target="#budget-body"
+           aria-expanded="false" aria-controls="budget-body">
+        <span class="section-arrow">&#9658;</span>
+        <strong>Budget</strong>
+        <span class="badge bg-warning text-dark ms-1">Experimental</span>
+        <small class="text-muted ms-2">estimate vs actual, by category — trial replacement for the budget spreadsheet, not yet well-tested</small>
+      </div>
+      <div id="budget-body" class="collapse">
+        <div class="card-body pt-2 pb-1">
+          {{ budget_formset.management_form }}
+
+          {% for cat in budget_categories %}
+          <table class="table table-sm budget-category-table mb-3"
+                 data-category="{{ cat.name }}"
+                 data-direction="{{ cat.forms.0.instance.direction }}">
+            <thead>
+              <tr>
+                <th>{{ cat.name }}</th>
+                <th style="width:10em">Estimate (£)</th>
+                <th style="width:10em">Actual (£)</th>
+                <th style="width:2em"></th>
+              </tr>
+            </thead>
+            <tbody class="budget-rows" id="budget-rows-{{ forloop.counter0 }}">
+              {% for f in cat.forms %}
+              <tr class="budget-row" data-direction="{{ f.instance.direction }}"
+                  {% if f.DELETE.value %}data-deleted="1" style="display:none"{% endif %}>
+                <td>
+                  {{ f.id }}{{ f.direction }}{{ f.category }}{{ f.order }}
+                  {{ f.item }}
+                  {% if f.instance.estimate_source != "manual" %}
+                    <span class="badge bg-info text-dark">linked</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if f.instance.estimate_source != "manual" %}
+                    <span class="budget-derived-value">£{{ f.instance.estimate_gbp|default:"—" }}</span>
+                    <button type="button" class="btn btn-link btn-sm p-0 budget-override-btn">override</button>
+                    <span class="budget-estimate-wrap d-none">{{ f.estimate_gbp }}</span>
+                  {% else %}
+                    <span class="budget-estimate-wrap">{{ f.estimate_gbp }}</span>
+                  {% endif %}
+                  {{ f.estimate_source }}
+                </td>
+                <td>{{ f.actual_gbp }}</td>
+                <td>
+                  <button type="button" class="btn btn-link btn-sm p-0 budget-delete-row" title="Remove this row">×</button>
+                  <span hidden>{% if f.DELETE %}{{ f.DELETE }}{% endif %}</span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="4">
+                  <a href="#" class="budget-add-item" data-category="{{ cat.name }}"
+                     data-direction="{{ cat.forms.0.instance.direction }}">+ Add item</a>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+          {% endfor %}
+
+          <div id="budget-totals" class="text-muted small">
+            Estimate: outgoing £<span id="budget-est-out">{{ budget_totals.estimate_outgoing|default:"0.00" }}</span>,
+            incoming £<span id="budget-est-in">{{ budget_totals.estimate_incoming|default:"0.00" }}</span>
+            &mdash;
+            Actual: outgoing £<span id="budget-act-out">{{ budget_totals.actual_outgoing|default:"0.00" }}</span>,
+            incoming £<span id="budget-act-in">{{ budget_totals.actual_incoming|default:"0.00" }}</span>
+          </div>
+
+          {# Empty form template for JS cloning — not rendered to user #}
+          <script type="text/template" id="budget-empty-form">
+          <tr class="budget-row" data-direction="__direction__">
+            <td>
+              {{ budget_formset.empty_form.id }}{{ budget_formset.empty_form.direction }}{{ budget_formset.empty_form.category }}{{ budget_formset.empty_form.order }}
+              {{ budget_formset.empty_form.item }}
+            </td>
+            <td><span class="budget-estimate-wrap">{{ budget_formset.empty_form.estimate_gbp }}</span>{{ budget_formset.empty_form.estimate_source }}</td>
+            <td>{{ budget_formset.empty_form.actual_gbp }}</td>
+            <td><button type="button" class="btn btn-link btn-sm p-0 budget-delete-row" title="Remove this row">×</button></td>
+          </tr>
+          </script>
+        </div>
+      </div>
+    </div>
+    <script>
+    (function () {
+      "use strict";
+      var card = document.getElementById("budget-card");
+      if (!card) return;
+
+      function recomputeTotals() {
+        var totals = {
+          outgoing: { estimate: 0, actual: 0 },
+          incoming: { estimate: 0, actual: 0 },
+        };
+        card.querySelectorAll(".budget-row:not([data-deleted='1'])").forEach(function (row) {
+          var dir = row.dataset.direction === "incoming" ? "incoming" : "outgoing";
+          var estInput = row.querySelector("input[id$='-estimate_gbp']");
+          var actInput = row.querySelector("input[id$='-actual_gbp']");
+          totals[dir].estimate += parseFloat(estInput && estInput.value) || 0;
+          totals[dir].actual += parseFloat(actInput && actInput.value) || 0;
+        });
+        var setText = function (id, value) {
+          var el = document.getElementById(id);
+          if (el) el.textContent = value.toFixed(2);
+        };
+        setText("budget-est-out", totals.outgoing.estimate);
+        setText("budget-est-in", totals.incoming.estimate);
+        setText("budget-act-out", totals.outgoing.actual);
+        setText("budget-act-in", totals.incoming.actual);
+      }
+
+      card.addEventListener("input", function (e) {
+        if (e.target.matches("input[id$='-estimate_gbp'], input[id$='-actual_gbp']")) {
+          recomputeTotals();
+        }
+      });
+
+      card.addEventListener("click", function (e) {
+        var overrideBtn = e.target.closest(".budget-override-btn");
+        if (overrideBtn) {
+          e.preventDefault();
+          var td = overrideBtn.closest("td");
+          td.querySelector(".budget-derived-value").style.display = "none";
+          overrideBtn.style.display = "none";
+          var wrap = td.querySelector(".budget-estimate-wrap");
+          wrap.classList.remove("d-none");
+          var input = wrap.querySelector("input");
+          if (input) input.focus();
+          var sourceInput = td.querySelector("input[id$='-estimate_source']");
+          if (sourceInput) sourceInput.value = "manual";
+          return;
+        }
+
+        var deleteBtn = e.target.closest(".budget-delete-row");
+        if (deleteBtn) {
+          e.preventDefault();
+          var row = deleteBtn.closest(".budget-row");
+          var delCheckbox = row.querySelector("input[id$='-DELETE']");
+          if (delCheckbox) {
+            delCheckbox.checked = true;
+            row.setAttribute("data-deleted", "1");
+            row.style.display = "none";
+          } else {
+            row.remove();
+          }
+          recomputeTotals();
+          return;
+        }
+
+        var addLink = e.target.closest(".budget-add-item");
+        if (addLink) {
+          e.preventDefault();
+          var category = addLink.dataset.category;
+          var direction = addLink.dataset.direction;
+          var template = document.getElementById("budget-empty-form");
+          var totalForms = document.getElementById("id_budget_lines-TOTAL_FORMS");
+          if (!template || !totalForms) return;
+          var count = parseInt(totalForms.value, 10);
+          var html = template.innerHTML
+            .replace(/__prefix__/g, String(count))
+            .replace("__direction__", direction);
+          var tbody = document.createElement("tbody");
+          tbody.innerHTML = html;
+          var row = tbody.firstElementChild;
+          if (!row) return;
+          var directionInput = row.querySelector("input[id$='-direction']");
+          if (directionInput) directionInput.value = direction;
+          var categoryInput = row.querySelector("input[id$='-category']");
+          if (categoryInput) categoryInput.value = category;
+          var orderInput = row.querySelector("input[id$='-order']");
+          // Sentinel order value so ad-hoc rows sort after every
+          // template-derived row within the same category, rather than
+          // disrupting the category grouping on the next page load.
+          if (orderInput) orderInput.value = "999";
+          var itemInput = row.querySelector("input[id$='-item']");
+          if (itemInput) itemInput.focus();
+          var table = addLink.closest("table");
+          table.querySelector(".budget-rows").appendChild(row);
+          totalForms.value = count + 1;
+        }
+      });
+    })();
+    </script>
+    {% endif %}
+
     {# Film / screened work details (9.66) — managed via AJAX, not submitted with the main form #}
     <div class="card mb-3" id="film-section" data-suggested="{{ suggested_film_information|escapejs }}"
          data-film="{{ event_film_json|escape }}">
