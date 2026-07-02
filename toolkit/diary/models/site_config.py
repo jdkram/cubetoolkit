@@ -933,6 +933,7 @@ SITE_CONFIG_FIELD_GROUPS = {
         "donations_intro",
         "show_donations_in_public_nav",
     ],
+    "Printed programme archive": ["printed_programme_archive_enabled"],
     "Site-wide banner": [
         "banner_active",
         "banner_level",
