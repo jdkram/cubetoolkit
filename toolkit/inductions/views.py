@@ -260,12 +260,44 @@ def manage_session_detail(request, slug):
         reverse("inductions:signup", kwargs={"slug": slug})
     )
     accounts_created = sum(1 for s in signups if s.volunteer_id)
+
+    cap = session.effective_capacity()
+    over_cap_count = max(0, len(signups) - cap) if cap is not None else 0
+    if over_cap_count:
+        over_cap_ids = {s.pk for s in signups[-over_cap_count:]}
+        for s in signups:
+            s.is_over_cap = s.pk in over_cap_ids
+    else:
+        for s in signups:
+            s.is_over_cap = False
+
     return render(request, "inductions/manage/session_detail.html", {
         "session": session,
         "signups": signups,
         "signup_url": signup_url,
         "accounts_created": accounts_created,
+        "over_cap_count": over_cap_count,
     })
+
+
+@require_POST
+@panopticon_required
+def manage_session_set_cap(request, slug):
+    """AJAX: set this session's max_signups directly, for the +/- cap control on the detail page."""
+    session = get_object_or_404(InductionSession, slug=slug)
+    raw = request.POST.get("max_signups", "").strip()
+    if raw == "":
+        session.max_signups = None
+    else:
+        try:
+            value = int(raw)
+        except ValueError:
+            return JsonResponse({"ok": False, "error": "Invalid value."})
+        if value < 0:
+            return JsonResponse({"ok": False, "error": "Cap cannot be negative."})
+        session.max_signups = value
+    session.save()
+    return JsonResponse({"ok": True, "max_signups": session.max_signups})
 
 
 @require_POST
@@ -702,7 +734,11 @@ def _create_volunteer_from_signup(signup: InductionSignup) -> Volunteer:
     user.set_unusable_password()
     user.save()
 
-    volunteer = Volunteer(user=user, member=member)
+    volunteer = Volunteer(
+        user=user,
+        member=member,
+        consent_policy_version=InductionsSettings.load().privacy_policy_version,
+    )
     volunteer.save()
 
     return volunteer

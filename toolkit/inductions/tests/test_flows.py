@@ -74,21 +74,21 @@ class PublicSignup(InductionsTestsMixin, TestCase):
 
 
 class Capacity(InductionsTestsMixin, TestCase):
-    def test_effective_capacity_prefers_session_over_default(self):
-        cfg = InductionsSettings.load()
-        cfg.default_max_signups = 5
-        cfg.save()
+    def test_effective_capacity_reflects_session_value(self):
         self.session.max_signups = 2
         self.session.save()
         self.assertEqual(self.session.effective_capacity(), 2)
 
-    def test_effective_capacity_falls_back_to_default(self):
+    def test_effective_capacity_unlimited_when_blank(self):
+        # default_max_signups is only used to pre-fill the edit form's initial
+        # value — a session with max_signups explicitly None is unlimited,
+        # regardless of the site-wide default.
         cfg = InductionsSettings.load()
         cfg.default_max_signups = 3
         cfg.save()
         self.session.max_signups = None
         self.session.save()
-        self.assertEqual(self.session.effective_capacity(), 3)
+        self.assertIsNone(self.session.effective_capacity())
 
     def test_full_session_shows_full_page(self):
         from django.urls import reverse
@@ -106,6 +106,89 @@ class Capacity(InductionsTestsMixin, TestCase):
         url = reverse("inductions:signup", args=[self.session.slug])
         self.client.post(url, self.valid_signup_post())
         self.assertFalse(self.session.signups.filter(email="bob@test.example").exists())
+
+    def test_over_cap_banner_hidden_within_cap(self):
+        from django.urls import reverse
+        self.session.max_signups = 5  # only 1 signup (from the mixin) exists
+        self.session.save()
+        self.login_admin()
+        resp = self.client.get(reverse("inductions:manage_session_detail", args=[self.session.slug]))
+        self.assertNotContains(resp, "over the cap")
+
+    def test_over_cap_banner_shown_and_last_signups_flagged(self):
+        from django.urls import reverse
+        self.session.max_signups = 1  # lowered after signups already exist
+        self.session.save()
+        InductionSignup.objects.create(session=self.session, name="Late One", email="late1@test.example")
+        InductionSignup.objects.create(session=self.session, name="Late Two", email="late2@test.example")
+        self.login_admin()
+        resp = self.client.get(reverse("inductions:manage_session_detail", args=[self.session.slug]))
+        self.assertContains(resp, "2 over the cap")
+        # The two most recent sign-ups are flagged over-cap; the original mixin signup is not.
+        over_cap_ids = {s.pk for s in resp.context["signups"] if s.is_over_cap}
+        self.assertEqual(
+            over_cap_ids,
+            set(self.session.signups.exclude(pk=self.signup.pk).values_list("pk", flat=True)),
+        )
+
+    def test_set_cap_updates_session(self):
+        from django.urls import reverse
+        self.login_admin()
+        url = reverse("inductions:manage_session_set_cap", args=[self.session.slug])
+        resp = self.client.post(url, {"max_signups": "4"})
+        self.assertEqual(resp.json(), {"ok": True, "max_signups": 4})
+        self.session.refresh_from_db()
+        self.assertEqual(self.session.max_signups, 4)
+
+    def test_set_cap_blank_clears_to_unlimited(self):
+        from django.urls import reverse
+        self.session.max_signups = 4
+        self.session.save()
+        self.login_admin()
+        url = reverse("inductions:manage_session_set_cap", args=[self.session.slug])
+        resp = self.client.post(url, {"max_signups": ""})
+        self.assertEqual(resp.json(), {"ok": True, "max_signups": None})
+        self.session.refresh_from_db()
+        self.assertIsNone(self.session.max_signups)
+
+    def test_set_cap_rejects_negative(self):
+        from django.urls import reverse
+        self.login_admin()
+        url = reverse("inductions:manage_session_set_cap", args=[self.session.slug])
+        resp = self.client.post(url, {"max_signups": "-1"})
+        self.assertFalse(resp.json()["ok"])
+        self.session.refresh_from_db()
+        self.assertIsNone(self.session.max_signups)
+
+
+class SessionFormCapacityPrefill(InductionsTestsMixin, TestCase):
+    def test_new_session_form_prefills_max_signups_with_site_default(self):
+        from toolkit.inductions.forms import InductionSessionForm
+        cfg = InductionsSettings.load()
+        cfg.default_max_signups = 6
+        cfg.save()
+        form = InductionSessionForm()
+        self.assertEqual(form.fields["max_signups"].initial, 6)
+
+    def test_edit_form_prefills_max_signups_when_blank_on_session(self):
+        from toolkit.inductions.forms import InductionSessionForm
+        cfg = InductionsSettings.load()
+        cfg.default_max_signups = 8
+        cfg.save()
+        self.session.max_signups = None
+        self.session.save()
+        form = InductionSessionForm(instance=self.session)
+        self.assertEqual(form.fields["max_signups"].initial, 8)
+
+    def test_edit_form_does_not_override_existing_session_value(self):
+        from toolkit.inductions.forms import InductionSessionForm
+        cfg = InductionsSettings.load()
+        cfg.default_max_signups = 8
+        cfg.save()
+        self.session.max_signups = 2
+        self.session.save()
+        form = InductionSessionForm(instance=self.session)
+        self.assertIsNone(form.fields["max_signups"].initial)
 
 
 class UsernameGeneration(InductionsTestsMixin, TestCase):

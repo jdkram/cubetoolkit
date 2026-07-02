@@ -134,6 +134,12 @@ class InductionSessionForm(forms.ModelForm):
                 timezone.now() + timezone.timedelta(days=cfg.induction_purge_days + 7)
             )
 
+        # Pre-fill max_signups with the site default whenever it's not already set on
+        # this session, so admins see a concrete number rather than a blank field.
+        # Explicitly clearing it back to blank means "unlimited" for this session.
+        if self.instance.max_signups is None:
+            self.fields["max_signups"].initial = InductionsSettings.load().default_max_signups
+
 
 class InductionsSettingsForm(forms.ModelForm):
     class Meta:

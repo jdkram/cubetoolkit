@@ -41,9 +41,16 @@
 {# Live count header #}
 <div class="d-flex gap-3 mb-3 align-items-center flex-wrap">
   <span class="fs-5">
-    <strong id="total-count">{{ session.total_count }}</strong> signed up{% if session.effective_capacity %} / <strong>{{ session.effective_capacity }}</strong> cap{% endif %} &nbsp;·&nbsp;
+    <strong id="total-count">{{ session.total_count }}</strong> signed up &nbsp;·&nbsp;
     <strong id="checkedin-count">{{ session.checked_in_count }}</strong> marked present &nbsp;·&nbsp;
     <strong id="accounts-count">{{ accounts_created }}</strong> accounts created
+  </span>
+  <span class="fs-5 border-start ps-3 d-inline-flex align-items-center gap-1" id="cap-control">
+    Cap:
+    <input type="number" min="0" class="form-control form-control-sm" id="cap-input"
+           style="width:6rem;" placeholder="No cap"
+           value="{% if session.max_signups is not None %}{{ session.max_signups }}{% endif %}">
+    <button type="button" class="btn btn-outline-secondary btn-sm" id="cap-save-btn" onclick="saveCap()">Save</button>
   </span>
   <span class="text-muted ms-3">
     Count in room: <button class="btn btn-outline-secondary btn-sm" onclick="adjustRoom(-1)">−</button>
@@ -52,6 +59,14 @@
     <span id="room-mismatch" class="text-danger ms-2" style="display:none;">⚠ mismatch with marked-present count</span>
   </span>
 </div>
+
+{% if over_cap_count %}
+<div class="alert alert-warning">
+  This session has {{ session.total_count }} sign-ups, which is {{ over_cap_count }} over the cap
+  ({{ session.effective_capacity }}). The last {{ over_cap_count }} to sign up are shown highlighted
+  below. You can remove pending sign-ups using the × button.
+</div>
+{% endif %}
 
 {# Actions #}
 <div class="d-flex gap-2 mb-3 flex-wrap">
@@ -112,7 +127,7 @@ body.ots-mode #ots-btn { background-color: #0d6efd; color: #fff; border-color: #
   </thead>
   <tbody>
     {% for s in signups %}
-    <tr id="row-{{ s.pk }}" class="{% if s.status == 'checked_in' %}table-success{% elif s.status == 'no_show' %}table-secondary{% endif %}">
+    <tr id="row-{{ s.pk }}" class="{% if s.status == 'checked_in' %}table-success{% elif s.status == 'no_show' %}table-secondary{% elif s.is_over_cap %}table-warning{% endif %}">
       <td class="text-center align-middle">
         {% if s.volunteer_id %}
         {# Account created — checkbox locked #}
@@ -293,6 +308,7 @@ body.ots-mode #ots-btn { background-color: #0d6efd; color: #fff; border-color: #
 var CSRF = '{{ csrf_token }}';
 var EDIT_URL_PATTERN = "{% url 'inductions:manage_edit_signup' slug=session.slug signup_id=0 %}";
 var NO_SHOW_URL_PATTERN = "{% url 'inductions:manage_no_show' slug=session.slug signup_id=0 %}";
+var SET_CAP_URL = "{% url 'inductions:manage_session_set_cap' slug=session.slug %}";
 
 /* ── Attendance checkboxes ── */
 document.querySelectorAll('.attendance-cb[data-mark-url]').forEach(function(cb) {
@@ -627,6 +643,32 @@ document.getElementById('edit-save-btn').addEventListener('click', function() {
   });
 });
 {% endif %}
+
+/* ── Cap editor ── */
+function saveCap() {
+  var input = document.getElementById('cap-input');
+  var raw = input.value.trim();
+  if (raw !== '' && (!/^\d+$/.test(raw))) {
+    alert('Enter a whole number, or leave blank for no cap.');
+    return;
+  }
+  var btn = document.getElementById('cap-save-btn');
+  btn.disabled = true;
+  fetch(SET_CAP_URL, {
+    method: 'POST',
+    headers: {'X-CSRFToken': CSRF, 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded'},
+    body: 'max_signups=' + encodeURIComponent(raw),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (!data.ok) { btn.disabled = false; alert('Error: ' + data.error); return; }
+    location.reload();
+  })
+  .catch(function() { btn.disabled = false; alert('Network error. Please try again.'); });
+}
+document.getElementById('cap-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); saveCap(); }
+});
 
 /* ── Room count ── */
 var roomCount = 0;

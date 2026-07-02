@@ -62,9 +62,9 @@ class InductionsSettings(models.Model):
     default_max_signups = models.PositiveIntegerField(
         null=True, blank=True,
         help_text=(
-            "Default maximum sign-ups for group induction sessions. "
-            "Leave blank for no site-wide cap. "
-            "Individual sessions can override this with their own limit."
+            "Suggested starting value for the 'maximum sign-ups' field when creating a new "
+            "induction session — each session's own cap can then be adjusted or cleared "
+            "independently. Leave blank to suggest no cap."
         ),
     )
 
@@ -227,10 +227,7 @@ class InductionSession(models.Model):
     title = models.CharField(max_length=200)
     max_signups = models.PositiveIntegerField(
         null=True, blank=True,
-        help_text=(
-            "Maximum sign-ups for this session. Leave blank to use the site default "
-            "(set in Inductions settings), or leave both blank for no cap."
-        ),
+        help_text="Maximum sign-ups for this session. Leave blank for unlimited sign-ups.",
     )
     session_type = models.CharField(
         max_length=20, choices=TYPE_CHOICES, default=TYPE_REGULAR,
@@ -243,7 +240,15 @@ class InductionSession(models.Model):
         max_length=10, choices=STATUS_CHOICES, default=STATUS_OPEN,
     )
     slug = models.SlugField(max_length=100, unique=True)
-    purge_after = models.DateTimeField()
+    purge_after = models.DateTimeField(
+        help_text=(
+            "Personal details (name, email, and answers) for anyone still pending or marked "
+            "no-show are automatically deleted after this date, and the session is marked "
+            "'Purged'. Sign-ups who were checked in and already have a volunteer account are "
+            "not affected. Runs automatically once a day — defaults to the session date plus "
+            "the site-wide purge window (set in Inductions settings)."
+        ),
+    )
     reminder_sent_at = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -270,14 +275,8 @@ class InductionSession(models.Model):
         super().save(*args, **kwargs)
 
     def effective_capacity(self):
-        """Return the applicable signup cap, or None if unlimited.
-
-        Session-level max_signups takes precedence. If not set, falls back to
-        the site default (which may also be None = no cap).
-        """
-        if self.max_signups is not None:
-            return self.max_signups
-        return InductionsSettings.load().default_max_signups
+        """Return this session's sign-up cap, or None if unlimited."""
+        return self.max_signups
 
     @property
     def is_full(self):
