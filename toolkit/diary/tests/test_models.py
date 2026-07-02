@@ -244,18 +244,65 @@ class EventModelLegacyCopy(TestCase):
 
 class PrintedProgrammeModelTests(TestCase):
     def test_month_ok(self):
-        pp = PrintedProgramme(programme="/foo/bar", month=date(2010, 2, 1))
+        pp = PrintedProgramme(
+            programme="/foo/bar",
+            start_month=date(2010, 2, 1),
+            end_month=date(2010, 2, 1),
+        )
         pp.save()
 
         pp = PrintedProgramme.objects.get(pk=pp.pk)
-        self.assertEqual(pp.month, date(2010, 2, 1))
+        self.assertEqual(pp.start_month, date(2010, 2, 1))
+        self.assertEqual(pp.end_month, date(2010, 2, 1))
 
     def test_month_normalised(self):
-        pp = PrintedProgramme(programme="/foo/bar", month=date(2010, 2, 2))
+        pp = PrintedProgramme(
+            programme="/foo/bar",
+            start_month=date(2010, 2, 2),
+            end_month=date(2010, 3, 3),
+        )
         pp.save()
 
         pp = PrintedProgramme.objects.get(pk=pp.pk)
-        self.assertEqual(pp.month, date(2010, 2, 1))
+        self.assertEqual(pp.start_month, date(2010, 2, 1))
+        self.assertEqual(pp.end_month, date(2010, 3, 1))
+
+    def test_season_label_single_month(self):
+        pp = PrintedProgramme(
+            programme="/foo/bar",
+            start_month=date(2025, 2, 1),
+            end_month=date(2025, 2, 1),
+        )
+        self.assertEqual(pp.season_label(), "Spring 2025 · Feb")
+
+    def test_season_label_range(self):
+        pp = PrintedProgramme(
+            programme="/foo/bar",
+            start_month=date(2025, 2, 1),
+            end_month=date(2025, 4, 1),
+        )
+        self.assertEqual(pp.season_label(), "Spring 2025 · Feb–Apr")
+
+    def test_seasons_overlapping(self):
+        pp = PrintedProgramme(
+            programme="/foo/bar",
+            start_month=date(2025, 2, 1),
+            end_month=date(2025, 4, 1),
+        )
+        pp.save()
+
+        # Range entirely inside the season:
+        self.assertTrue(
+            PrintedProgramme.objects.seasons_overlapping(
+                date(2025, 3, 1), date(2025, 3, 1)
+            ).exists()
+        )
+        # Range adjacent, not overlapping:
+        self.assertFalse(
+            PrintedProgramme.objects.seasons_overlapping(
+                date(2025, 5, 1), date(2025, 6, 1)
+            ).exists()
+        )
 
 
 class EventPricingFromTemplate(DiaryTestsMixin, TestCase):
