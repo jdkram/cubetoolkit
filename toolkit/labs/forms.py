@@ -195,6 +195,7 @@ class JobForm(forms.ModelForm):
             "plan_status",
             "safety_risk",
             "skill_needed",
+            "skill_required",
             "keyholder_required",
             "urgency",
             "location_type",

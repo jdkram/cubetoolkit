@@ -253,6 +253,12 @@ class Job(models.Model):
     # Flags
     safety_risk = models.BooleanField(default=False, help_text="Is there an immediate safety risk?")
     skill_needed = models.BooleanField(default=False, help_text="Does this require a specific skill or trade?")
+    skill_required = models.CharField(
+        max_length=128,
+        blank=True,
+        default="",
+        help_text="Which skill or trade, e.g. 'Electrical', 'Sound desk', 'Carpentry'.",
+    )
     keyholder_required = models.BooleanField(default=False)
     urgency = models.CharField(max_length=16, choices=URGENCY_CHOICES, default=URGENCY_LOW)
     location_type = models.CharField(

@@ -27,6 +27,12 @@ class JobListTests(LabsTestsMixin, TestCase):
         # The job moves to done_jobs section but is still on the page
         self.assertContains(response, self.job_open.title)
 
+    def test_skill_required_shown_when_set(self):
+        self.job_open.skill_required = "Electrical"
+        self.job_open.save()
+        response = self.client.get(reverse("labs-jobs"))
+        self.assertContains(response, "Electrical")
+
 
 class JobAddTests(LabsTestsMixin, TestCase):
     """Job add view — requires toolkit.write permission."""
@@ -46,7 +52,8 @@ class JobAddTests(LabsTestsMixin, TestCase):
             "description": "Cracked tile above front row.",
             "plan_status": "",
             "safety_risk": False,
-            "skill_needed": False,
+            "skill_needed": True,
+            "skill_required": "Carpentry",
             "keyholder_required": False,
             "urgency": Job.URGENCY_MEDIUM,
             "location_type": Job.LOCATION_BUILDING,
@@ -54,7 +61,8 @@ class JobAddTests(LabsTestsMixin, TestCase):
         }
         response = self.client.post(reverse("labs-job-add"), data)
         self.assertRedirects(response, reverse("labs-jobs"))
-        self.assertTrue(Job.objects.filter(title="Replace ceiling tile").exists())
+        job = Job.objects.get(title="Replace ceiling tile")
+        self.assertEqual(job.skill_required, "Carpentry")
 
     def test_posted_job_has_posted_by_set(self):
         data = {

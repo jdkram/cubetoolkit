@@ -123,7 +123,8 @@
         </td>
         <td class="col-flags">
           {% if job.safety_risk %}<span title="Safety risk">⚠️</span>{% endif %}
-          {% if job.skill_needed %}<span title="Skill or trade needed">🔧</span>{% endif %}
+          {% if job.skill_required %}<span title="Skill or trade needed">🔧 {{ job.skill_required }}</span>
+          {% elif job.skill_needed %}<span title="Skill or trade needed">🔧</span>{% endif %}
           {% if job.keyholder_required %}<span title="Keyholder required">🔑</span>{% endif %}
           {% if job.location_type == LOCATION_BUILDING %}<span title="Must be done in the building">🏠</span>
           {% elif job.location_type == LOCATION_REMOTE %}<span title="Can be done remotely">🏡</span>
