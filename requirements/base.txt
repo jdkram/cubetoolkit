@@ -4,6 +4,10 @@ Django<5.3,>=5.2.3
 nh3
 easy_thumbnails==2.10
 Pillow>=10.0
+# Renders PDF pages to images for the printed programme archive thumbnails.
+# Requires the poppler-utils system package (see Dockerfile) — the app
+# degrades gracefully if it's missing.
+pdf2image>=1.17
 django-crispy-forms<1.13
 # Functionality introduced at these versions is required:
 python-magic>=0.4.0

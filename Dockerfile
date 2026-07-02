@@ -7,6 +7,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
   vim-tiny \
   libmariadb3 \
   libmagic1 \
+  poppler-utils \
   wait-for-it \
   && DEBIAN_FRONTEND=noninteractive apt-get clean \
   && rm -rf /var/lib/apt/lists/*
@@ -62,6 +63,7 @@ RUN ln -s /site/containerconfig/tk_run.sh /usr/local/bin/tk_run \
      && install -D --owner=toolkit --group=toolkit --directory /site/media/documents \
      && install -D --owner=toolkit --group=toolkit --directory /site/media/images \
      && install -D --owner=toolkit --group=toolkit --directory /site/media/printedprogramme \
+     && install -D --owner=toolkit --group=toolkit --directory /site/media/printedprogramme_thumbnails \
      && install -D --owner=toolkit --group=toolkit --directory /site/media/volunteers \
      && install -D --owner=toolkit --group=toolkit --directory /site/media/loft-photos \
      && install -D --owner=toolkit --group=toolkit --directory /site/media/area-photos \
