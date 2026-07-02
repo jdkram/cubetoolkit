@@ -124,9 +124,12 @@ setup_page(true);
     {% if printed_programmes %}
         <p>Print:</p>
         {% for printed_programme in printed_programmes %}
-            <a href="{{ printed_programme.programme.url }}" title="Printed programme for {{ printed_programme.month|date:"M Y" }}">
+            <a href="{{ printed_programme.programme.url }}" title="{{ printed_programme.season_label }}">
             <i class="fa fa-file"></i></a>
         {% endfor %}
+    {% endif %}
+    {% if site_config.printed_programme_archive_enabled %}
+    <a href="{% url "printed-programme-archive" %}" title="Printed programme archive">Archive</a>
     {% endif %}
 </div><!-- end .print-media -->
 <div class="print-media">

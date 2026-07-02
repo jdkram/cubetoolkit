@@ -56,6 +56,7 @@ from toolkit.diary.public_views import (
     view_showing,
     view_event,
     single_showing_ics,
+    view_printed_programme_archive,
 )
 
 from toolkit.diary.mailout_views import mailout, queue_mailout
@@ -134,6 +135,12 @@ programme_urls = [
         r"^rss/$",
         toolkit.diary.feeds.BasicWhatsOnFeed(),
         name="view-diary-rss",
+    ),
+    # Printed programme archive gallery
+    re_path(
+        r"^programme-archive/$",
+        view_printed_programme_archive,
+        name="printed-programme-archive",
     ),
 ]
 

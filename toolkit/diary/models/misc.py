@@ -1,6 +1,9 @@
+import io
 import logging
 import datetime
+from pathlib import Path
 
+from django.core.files.base import ContentFile
 from django.db import models
 from django.conf import settings
 from django.db.models.query import QuerySet
@@ -183,24 +186,48 @@ class DiaryIdea(models.Model):
         return f"{self.month.month}/{self.month.year}"
 
 
-class PrintedProgrammeQuerySet(QuerySet):
-    def month_in_range(self, start, end):
-        """Select printed programmes for months in given range"""
-        # The idea being that even if 'start' is some day after the first of
-        # the month, the programme for that month is still returned
-        start_date = datetime.date(start.year, start.month, 1)
+try:
+    import pdf2image
 
-        return self.filter(month__range=[start_date, end])
+    _PDF2IMAGE_AVAILABLE = True
+except ImportError:
+    # poppler isn't installed on this host — thumbnails are skipped and the
+    # gallery falls back to a placeholder icon.
+    _PDF2IMAGE_AVAILABLE = False
+
+
+class PrintedProgrammeQuerySet(QuerySet):
+    def seasons_overlapping(self, start, end):
+        """Select printed programme seasons whose month range overlaps [start, end]"""
+        # The idea being that even if 'start' is some day after the first of
+        # the month, the season covering that month is still returned
+        start_date = datetime.date(start.year, start.month, 1)
+        end_date = datetime.date(end.year, end.month, 1)
+
+        return self.filter(start_month__lte=end_date, end_month__gte=start_date)
 
 
 class PrintedProgramme(models.Model):
-    month = models.DateField(editable=False, unique=True)
+    # Both stored as the 1st of the month. A "season" is the inclusive
+    # month range [start_month, end_month]; single-month entries have
+    # start_month == end_month.
+    start_month = models.DateField(editable=False)
+    end_month = models.DateField(editable=False)
     programme = models.FileField(
         upload_to="printedprogramme",
         max_length=256,
         null=False,
         blank=False,
         verbose_name="Programme PDF",
+    )
+    # First page of the PDF, rendered on save() for the public gallery.
+    # Left blank if pdf2image/poppler isn't available on this host.
+    thumbnail = models.ImageField(
+        upload_to="printedprogramme_thumbnails",
+        max_length=256,
+        null=True,
+        blank=True,
+        editable=False,
     )
     designer = models.CharField(max_length=256, blank=True)
     notes = models.TextField(max_length=8192, null=True, blank=True)
@@ -211,17 +238,82 @@ class PrintedProgramme(models.Model):
         db_table = "PrintedProgrammes"
 
     def __str__(self):
-        return f"Printed programme for {self.month.month}/{self.month.year}"
+        if self.start_month == self.end_month:
+            return f"Printed programme for {self.start_month.month}/{self.start_month.year}"
+        return (
+            f"Printed programme for {self.start_month:%b %Y}"
+            f"–{self.end_month:%b %Y}"
+        )
+
+    def season_name(self):
+        """Approximate season name for the start month.
+
+        Nov-Jan = Winter, Feb-Apr = Spring, May-Jul = Summer, Aug-Oct = Autumn.
+        This is a display label, not a precision astronomical calendar.
+        """
+        index = ((self.start_month.month - 11) % 12) // 3
+        return ("Winter", "Spring", "Summer", "Autumn")[index]
+
+    def season_label(self):
+        """E.g. "Spring 2025 · Feb–Apr" for the public gallery."""
+        if self.start_month.month == self.end_month.month:
+            months = self.start_month.strftime("%b")
+        else:
+            months = (
+                f"{self.start_month.strftime('%b')}"
+                f"–{self.end_month.strftime('%b')}"
+            )
+        return f"{self.season_name()} {self.start_month.year} · {months}"
 
     def save(self, *args, **kwargs):
-        # Enforce month column always being a date for the first of the month:
-        if self.month.day != 1:
+        # Enforce start/end month columns always being the 1st of the month:
+        if self.start_month.day != 1:
             logger.error(
-                "PrintedProgramme has month value which isn't the 1st"
+                "PrintedProgramme has start_month value which isn't the 1st"
                 " of the month"
             )
-            self.month = datetime.date(self.month.year, self.month.month, 1)
+            self.start_month = datetime.date(
+                self.start_month.year, self.start_month.month, 1
+            )
+        if self.end_month.day != 1:
+            logger.error(
+                "PrintedProgramme has end_month value which isn't the 1st"
+                " of the month"
+            )
+            self.end_month = datetime.date(
+                self.end_month.year, self.end_month.month, 1
+            )
+        self._generate_thumbnail()
         return super().save(*args, **kwargs)
+
+    def _generate_thumbnail(self):
+        # Render the first page of the uploaded PDF as a JPEG thumbnail.
+        # Recomputed on every save, since the file may have been replaced
+        # without the name changing (same reasoning as MediaItem.mimetype).
+        if not _PDF2IMAGE_AVAILABLE or not self.programme:
+            return
+
+        try:
+            self.programme.seek(0)
+            pages = pdf2image.convert_from_bytes(
+                self.programme.read(), first_page=1, last_page=1
+            )
+            self.programme.seek(0)
+        except Exception:
+            logger.exception(
+                f"Failed to render thumbnail for {self.programme.name}"
+            )
+            return
+
+        if not pages:
+            return
+
+        buffer = io.BytesIO()
+        pages[0].convert("RGB").save(buffer, format="JPEG", quality=85)
+        filename = f"{Path(self.programme.name).stem}.jpg"
+        self.thumbnail.save(
+            filename, ContentFile(buffer.getvalue()), save=False
+        )
 
 
 class VolunteerEventMark(models.Model):

@@ -318,9 +318,10 @@ def edit_roles(request):
 def printed_programme_edit(request, operation):
     assert operation in ("edit", "add")
 
-    programme_queryset = PrintedProgramme.objects.order_by("month")
+    programme_queryset = PrintedProgramme.objects.order_by("start_month")
     programme_formset = modelformset_factory(
         PrintedProgramme,
+        form=diary_forms.EditPrintedProgrammeSeasonForm,
         fields=("programme", "designer", "notes"),
         can_delete=True,
         extra=0,
@@ -350,7 +351,7 @@ def printed_programme_edit(request, operation):
                     edited_form.save()
             except django.db.IntegrityError:
                 edited_form.add_error(
-                    "form_month",
+                    None,
                     "Printed programme with this month/year already exists.",
                 )
             else:

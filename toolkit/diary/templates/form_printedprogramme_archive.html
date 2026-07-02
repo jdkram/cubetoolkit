@@ -1,7 +1,7 @@
 {% extends "base_admin.html" %}
 
 {% block title %}
-Cube Programmes
+{{ VENUE.name }} Printed Programme Archive
 {% endblock %}
 
 {% block css %}
@@ -35,10 +35,10 @@ Cube Programmes
 
 
 <form method="POST" action="{% url "add-printed-programme" %}" enctype="multipart/form-data">
-<h2>Add a Month</h2>
+<h2>Add a Season</h2>
 {% csrf_token %}
 {{ new_programme_form.as_p }}
-<input type="submit" value="Add new month">
+<input type="submit" value="Add new season">
 </form>
 
 <form method="POST" enctype="multipart/form-data">
@@ -47,7 +47,11 @@ Cube Programmes
 <h2>Edit existing entries</h2>
 <ul class="editlist">
 {% for form in formset %}
-    <li>{{ form.instance.month|date:"F Y" }}<ul>
+    <li>{{ form.instance.season_label }}
+    {% if form.instance.thumbnail %}
+        <img src="{{ form.instance.thumbnail.url }}" alt="" style="max-height: 4em; vertical-align: middle;">
+    {% endif %}
+    <ul>
     {{ form.as_ul }}
     </ul>
     </li>

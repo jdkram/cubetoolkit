@@ -216,6 +216,9 @@ body {
             <a class="nav-link dropdown-toggle" href="{% url "default-view" %}" id="dropdown-website" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-nav-key="w">Website</a>
             <div class="dropdown-menu" aria-labelledby="dropdown-website">
               <a class="dropdown-item" href="{% url "default-view" %}">Public programme</a>
+              {% if site_config.printed_programme_archive_enabled %}
+              <a class="dropdown-item" href="{% url "printed-programme-archive" %}">Printed programme archive</a>
+              {% endif %}
               <a class="dropdown-item" href="{% url "labs-donations" %}">Donations wishlist <span class="labs-tag">labs</span></a>
               {% if feature_perms.donations_manage %}
               <a class="dropdown-item" href="{% url "labs-donations-manage" %}">Manage donations <span class="labs-tag">labs</span></a>

@@ -776,6 +776,16 @@ class SiteConfiguration(models.Model):
         ),
     )
 
+    # --- Printed programme archive ---
+    printed_programme_archive_enabled = models.BooleanField(
+        default=False,
+        help_text=(
+            "Make the printed programme archive gallery publicly visible, "
+            "and add a link to it from the programme navigation. "
+            "Public URL: /programme/programme-archive/. Off by default."
+        ),
+    )
+
     _CACHE_KEY = "diary.site_config.v1"
 
     class Meta:

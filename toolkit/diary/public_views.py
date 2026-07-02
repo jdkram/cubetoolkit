@@ -183,7 +183,7 @@ def _view_diary(request, startdate, enddate, tag=None, extra_title=None):
         # This is prepended to filepaths from the MediaPaths table to use
         # as a location for images:
         "media_url": settings.MEDIA_URL,
-        "printed_programmes": PrintedProgramme.objects.month_in_range(
+        "printed_programmes": PrintedProgramme.objects.seasons_overlapping(
             startdate, enddate
         ),
         # True when user is logged in — template uses this to show volunteer badges
@@ -448,6 +448,20 @@ def redirect_legacy_year(request, year=None):
     but for the meantime at least capture the year and use that"""
     logger.debug(f"Given legacy url {request.path}, just using year {year}")
     return redirect("archive-view-year", year=year)
+
+
+def view_printed_programme_archive(request):
+    """Public gallery of printed programme seasons, newest first."""
+    if not get_site_config().printed_programme_archive_enabled:
+        raise Http404("Printed programme archive is not enabled")
+
+    programmes = PrintedProgramme.objects.order_by("-start_month")
+
+    context = {
+        "printed_programmes": programmes,
+    }
+
+    return render(request, "view_printed_programme_archive.html", context)
 
 
 class ArchiveIndex(generic.ArchiveIndexView):
