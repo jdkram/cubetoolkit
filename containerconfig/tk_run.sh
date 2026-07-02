@@ -70,17 +70,19 @@ case "$COMMAND" in
         # file and restart the container — no image rebuild needed.
         #
         # Schedule:
-        #   auto_dormancy              — daily at 03:00
-        #   send_induction_reminders   — daily at 08:00
-        #   purge_induction_signups    — daily at 03:30
-        #   send_volunteer_digest      — daily at 09:00 (which day it sends is controlled
-        #                                by SiteConfiguration.volunteer_digest_day; set to
-        #                                0 in Django admin to disable without restarting)
+        #   auto_dormancy                 — daily at 03:00
+        #   send_induction_reminders      — daily at 08:00
+        #   purge_induction_signups       — daily at 03:30
+        #   send_consent_renewal_reminders — daily at 08:30
+        #   send_volunteer_digest         — daily at 09:00 (which day it sends is controlled
+        #                                   by SiteConfiguration.volunteer_digest_day; set to
+        #                                   0 in Django admin to disable without restarting)
         echo "Scheduler started."
-        echo "  auto_dormancy:             daily at 03:00"
-        echo "  purge_induction_signups:   daily at 03:30"
-        echo "  send_induction_reminders:  daily at 08:00"
-        echo "  send_volunteer_digest:     daily at 09:00 (day controlled by SiteConfiguration)"
+        echo "  auto_dormancy:                  daily at 03:00"
+        echo "  purge_induction_signups:        daily at 03:30"
+        echo "  send_induction_reminders:       daily at 08:00"
+        echo "  send_consent_renewal_reminders: daily at 08:30"
+        echo "  send_volunteer_digest:          daily at 09:00 (day controlled by SiteConfiguration)"
 
         _sleep_until() {
             # Sleep until the next occurrence of HH:MM today (or tomorrow if past).
@@ -110,6 +112,9 @@ case "$COMMAND" in
 
             _sleep_until "send_induction_reminders" "08:00"
             _run "send_induction_reminders" /venv/bin/python3 /site/manage.py send_induction_reminders
+
+            _sleep_until "send_consent_renewal_reminders" "08:30"
+            _run "send_consent_renewal_reminders" /venv/bin/python3 /site/manage.py send_consent_renewal_reminders
 
             # Run the digest command daily at 09:00. The command checks
             # SiteConfiguration.volunteer_digest_day and exits quietly if today
