@@ -219,6 +219,58 @@ class EditIdeasViewTests(DiaryTestsMixin, TestCase):
         self.assertEqual(response.content, new_idea.encode("utf8"))
 
 
+class EventHubChecklistTests(DiaryTestsMixin, TestCase):
+    """Event hub "Checklist" bar should flag unconfirmed future showings
+    even when other checklist items are also incomplete - previously the
+    warning only appeared in a separate banner shown when the rest of the
+    checklist was already clean, so it silently disappeared whenever there
+    was also a real gap (e.g. missing image)."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="admin", password="T3stPassword!")
+        self.url = reverse(
+            "edit-event-details-view", kwargs={"event_id": self.e4.pk}
+        )
+        self.time_patch = patch("django.utils.timezone.now")
+        self.time_mock = self.time_patch.start()
+        self.time_mock.return_value = self._fake_now
+
+    def tearDown(self):
+        self.time_patch.stop()
+
+    def test_unconfirmed_pill_shown_alongside_other_checklist_issues(self):
+        # e4 has no image uploaded (checklist bar renders for that reason
+        # alone); e4s4 is an unconfirmed future showing.
+        response = self.client.get(self.url)
+        self.assertContains(response, "No image yet")
+        self.assertContains(response, "1 unconfirmed")
+        self.assertContains(
+            response, "hidden from the public programme and rota"
+        )
+
+    def test_no_unconfirmed_pill_when_all_future_showings_confirmed(self):
+        self.e4s4.confirmed = True
+        self.e4s4.save(force=True)
+        response = self.client.get(self.url)
+        self.assertNotContains(response, "unconfirmed")
+
+    @override_settings(MEDIA_ROOT="/tmp")
+    def test_ready_to_go_live_banner_still_shown_when_checklist_clean(self):
+        with tempfile.NamedTemporaryFile(
+            dir="/tmp", prefix="toolkit-test-", suffix=".jpg"
+        ) as temp_jpg:
+            media_item = MediaItem(
+                media_file=temp_jpg.name, mimetype="image/jpeg"
+            )
+            media_item.save()
+            self.e4.media.add(media_item)
+
+            response = self.client.get(self.url)
+            self.assertContains(response, "Everything looks good")
+            self.assertNotContains(response, "No image yet")
+
+
 class ViewEventFieldTests(DiaryTestsMixin, TestCase):
     def setUp(self):
         super().setUp()

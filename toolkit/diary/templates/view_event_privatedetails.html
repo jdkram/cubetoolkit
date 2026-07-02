@@ -157,6 +157,7 @@ function hideAddShowingForm() {
         {% endif %}
     {% endif %}
     {% if c.film_details_required and not c.has_film_details %}<a href="{% url "edit-event-details" event.pk %}#film-section" class="badge text-bg-warning text-decoration-none">Film details not linked →</a>{% endif %}
+    {% if unconfirmed_future_count and c.has_future_showing %}<a href="#showings-heading" class="badge text-bg-warning text-decoration-none">{{ unconfirmed_future_count }} unconfirmed {% if unconfirmed_future_count == 1 %}{{ site_config.occurrence_noun }}{% else %}{{ site_config.occurrence_noun_plural }}{% endif %} — hidden from the public programme and rota →</a>{% endif %}
 </div>
 {% elif unconfirmed_future_count and c.has_future_showing %}
 <div class="alert alert-success d-flex align-items-center gap-3 mb-3 py-2 flex-wrap">
