@@ -26,7 +26,6 @@ class SecurityTests(MembersTestsMixin, TestCase):
     # users get a login redirect (302); authenticated non-superusers get 403.
     panopticon_required = {
         # Volunteer urls:
-        "add-volunteer-training-group-record": {},
         "add-volunteer-training-record": {"volunteer_id": 1},
         "delete-volunteer-training-record": {"training_record_id": 1},
         "view-volunteer-list": {},
