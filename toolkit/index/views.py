@@ -106,6 +106,11 @@ class ToolkitIndexView(ListView):
                     .first()
                 )
 
+            context["consent_overdue"] = volunteer.consent_overdue
+            if context["consent_overdue"]:
+                from toolkit.inductions.models import InductionsSettings
+                context["privacy_policy_url"] = InductionsSettings.load().privacy_policy_url
+
             context["upcoming_shifts"] = list(
                 RotaEntry.objects.filter(
                     volunteer=volunteer,
@@ -239,6 +244,33 @@ class ToolkitIndexView(ListView):
         )
         if shopping_needs:
             context["shopping_needs"] = shopping_needs
+
+        # Open jobs widget (9.148): unresolved jobs from the ad-hoc jobs board.
+        from toolkit.labs.models import Job
+        from toolkit.labs.views import _urgency_order
+        open_jobs = list(
+            Job.objects.filter(resolved=False)
+            .annotate(urgency_order=_urgency_order())
+            .select_related("claimed_by")
+            .order_by("urgency_order", "posted_at")[:8]
+        )
+        if open_jobs:
+            context["open_jobs"] = open_jobs
+
+        # Upcoming maintenance widget (9.80): next few recurring tasks by next_due.
+        from toolkit.operations.models import MaintenanceTask
+        active_tasks = (
+            MaintenanceTask.objects.filter(active=True)
+            .select_related("committed_to__member")
+            .prefetch_related("records")
+        )
+        upcoming_maintenance = sorted(
+            active_tasks, key=lambda t: (t.next_due is None, t.next_due)
+        )[:5]
+        if upcoming_maintenance:
+            context["upcoming_maintenance"] = upcoming_maintenance
+            context["MAINT_STATUS_OVERDUE"] = MaintenanceTask.STATUS_OVERDUE
+            context["MAINT_STATUS_DUE_SOON"] = MaintenanceTask.STATUS_DUE_SOON
 
         return context
 

@@ -1,0 +1,142 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Maintenance schedule{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+  .maint-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .maint-row {
+    border-bottom: 1px solid #dee2e6;
+    padding: 0.5rem 0;
+  }
+  .maint-row summary {
+    cursor: pointer;
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    list-style: none;
+  }
+  .maint-row summary::-webkit-details-marker { display: none; }
+  .maint-row summary::before { content: "▸ "; }
+  .maint-row[open] summary::before { content: "▾ "; }
+  .maint-status {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: bold;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .status-overdue { background: #dc3545; color: #fff; }
+  .status-due_soon { background: #ffc107; color: #333; }
+  .status-ok { background: #6c757d; color: #fff; }
+  .maint-stale {
+    display: inline-block;
+    font-size: 0.75rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    background: #fd7e14;
+    color: #fff;
+  }
+  .maint-detail {
+    margin: 0.5rem 0 0 1.4rem;
+    font-size: 0.9rem;
+  }
+  .maint-detail dt { font-weight: 600; }
+  .maint-detail dd { margin-left: 0; margin-bottom: 0.4rem; color: #495057; }
+  .maint-actions {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+  }
+  .text-muted-sm { font-size: 0.8rem; color: #6c757d; }
+</style>
+{% endblock %}
+
+{% block body %}
+<h2>Maintenance schedule</h2>
+
+<p>
+  {% if perms.toolkit.write %}
+    <a href="{% url "operations-task-add" %}" class="btn btn-primary btn-sm">+ Add task</a>
+  {% endif %}
+</p>
+
+{% if not tasks %}
+  <p><em>No active maintenance tasks yet.</em></p>
+{% else %}
+<ul class="maint-list">
+  {% for task in tasks %}
+  <li class="maint-row">
+    <details>
+      <summary>
+        <strong>{{ task.name }}</strong>
+        <span class="text-muted-sm">{{ task.get_category_display }}</span>
+        {% if task.status == STATUS_OVERDUE %}
+          <span class="maint-status status-overdue">Overdue</span>
+        {% elif task.status == STATUS_DUE_SOON %}
+          <span class="maint-status status-due_soon">Due soon</span>
+        {% else %}
+          <span class="maint-status status-ok">OK</span>
+        {% endif %}
+        {% if task.keyholder_required %}<span title="Keyholder required">🔑</span>{% endif %}
+        <span class="text-muted-sm">Next due: {{ task.next_due|date:"d M Y"|default:"not scheduled" }}</span>
+        {% if task.stale_commitment %}
+          <span class="maint-stale">Claimed by {{ task.committed_to.member.name }}, {{ task.committed_on|timesince }} ago — no update</span>
+        {% elif task.committed_to %}
+          <span class="text-muted-sm">Claimed by {{ task.committed_to.member.name }}, {{ task.committed_on|timesince }} ago</span>
+        {% endif %}
+      </summary>
+      <dl class="maint-detail">
+        {% if task.skills_required %}<dt>Skills required</dt><dd>{{ task.skills_required|linebreaksbr }}</dd>{% endif %}
+        {% if task.time_commitment %}<dt>Time commitment</dt><dd>{{ task.time_commitment }}</dd>{% endif %}
+        {% if task.contractor %}<dt>Contractor</dt><dd>{{ task.contractor }}</dd>{% endif %}
+        {% if task.frequency_notes %}<dt>Frequency notes</dt><dd>{{ task.frequency_notes }}</dd>{% endif %}
+        {% if task.notes %}<dt>Notes</dt><dd>{{ task.notes|linebreaksbr }}</dd>{% endif %}
+        {% if task.nextcloud_link %}<dt>Documents</dt><dd><a href="{{ task.nextcloud_link }}">Nextcloud &rarr;</a></dd>{% endif %}
+        <dt>Completion history</dt>
+        <dd>
+          {% with records=task.records.all %}
+            {% if records %}
+              <ul style="padding-left: 1.2rem; margin: 0;">
+                {% for record in records %}
+                <li>{{ record.completed_date|date:"d M Y" }} — {% if record.completed_by %}{{ record.completed_by.member.name }}{% elif record.completed_by_name %}{{ record.completed_by_name }}{% else %}unknown{% endif %}{% if record.notes %}: {{ record.notes }}{% endif %}</li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <em>No completions recorded yet.</em>
+            {% endif %}
+          {% endwith %}
+        </dd>
+      </dl>
+      <div class="maint-actions">
+        {% if perms.toolkit.write %}
+          <a href="{% url "operations-task-mark-done" task.pk %}" class="btn btn-sm btn-success">Mark done</a>
+          <a href="{% url "operations-task-edit" task.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+        {% endif %}
+        {% if not task.committed_to %}
+          <form method="post" action="{% url "operations-task-commit" task.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-primary">I'll do it</button>
+          </form>
+        {% elif task.committed_to == request.user.volunteer or perms.toolkit.write %}
+          <form method="post" action="{% url "operations-task-uncommit" task.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-secondary">Withdraw commitment</button>
+          </form>
+        {% endif %}
+      </div>
+    </details>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% endblock %}

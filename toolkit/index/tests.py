@@ -10,7 +10,9 @@ import django.contrib.contenttypes as contenttypes
 
 from toolkit.diary.models import Event, EventTag, Role, RotaEntry, Showing, SiteConfiguration, VolunteerEventMark
 from toolkit.index.models import IndexLink, IndexCategory
+from toolkit.labs.models import Job
 from toolkit.members.models import Member, Volunteer
+from toolkit.operations.models import MaintenanceTask
 
 UKTZ = zoneinfo.ZoneInfo("Europe/London")
 
@@ -540,3 +542,77 @@ class TestUpcomingTrainingWidget(TestCase):
         response = self.client.get(self.url)
         pks = [s.pk for s in response.context["upcoming_training"]]
         self.assertEqual(pks.count(showing.pk), 1)
+
+
+class TestOpenJobsWidget(TestCase):
+    """9.148 — Dashboard widget: unresolved jobs from the ad-hoc jobs board."""
+
+    def setUp(self):
+        self.url = reverse("toolkit-index")
+        self.user = auth_models.User.objects.create_user("jobsuser", password="T3stPassword!")
+        self.client.login(username="jobsuser", password="T3stPassword!")
+
+    def test_no_jobs_no_widget(self):
+        response = self.client.get(self.url)
+        self.assertNotIn("open_jobs", response.context)
+
+    def test_open_job_appears(self):
+        job = Job.objects.create(title="Fix gutter", urgency=Job.URGENCY_MEDIUM)
+        response = self.client.get(self.url)
+        self.assertIn("open_jobs", response.context)
+        pks = [j.pk for j in response.context["open_jobs"]]
+        self.assertIn(job.pk, pks)
+
+    def test_resolved_job_excluded(self):
+        Job.objects.create(title="Fixed already", urgency=Job.URGENCY_LOW, resolved=True)
+        response = self.client.get(self.url)
+        self.assertNotIn("open_jobs", response.context)
+
+    def test_urgent_job_ordered_before_low(self):
+        low = Job.objects.create(title="Low urgency job", urgency=Job.URGENCY_LOW)
+        high = Job.objects.create(title="Urgent job", urgency=Job.URGENCY_HIGH)
+        response = self.client.get(self.url)
+        pks = [j.pk for j in response.context["open_jobs"]]
+        self.assertLess(pks.index(high.pk), pks.index(low.pk))
+
+    def test_skill_required_shown_on_card(self):
+        Job.objects.create(title="Rewire socket", urgency=Job.URGENCY_MEDIUM, skill_required="Electrical")
+        response = self.client.get(self.url)
+        self.assertContains(response, "Electrical")
+
+
+class TestUpcomingMaintenanceWidget(TestCase):
+    """9.80 — Dashboard widget: next few recurring maintenance tasks by next_due."""
+
+    def setUp(self):
+        self.url = reverse("toolkit-index")
+        self.user = auth_models.User.objects.create_user("maintuser", password="T3stPassword!")
+        self.client.login(username="maintuser", password="T3stPassword!")
+
+    def test_no_tasks_no_widget(self):
+        response = self.client.get(self.url)
+        self.assertNotIn("upcoming_maintenance", response.context)
+
+    def test_active_task_appears(self):
+        task = MaintenanceTask.objects.create(
+            name="Fire alarm service", frequency=MaintenanceTask.FREQUENCY_ANNUAL
+        )
+        response = self.client.get(self.url)
+        self.assertIn("upcoming_maintenance", response.context)
+        pks = [t.pk for t in response.context["upcoming_maintenance"]]
+        self.assertIn(task.pk, pks)
+
+    def test_inactive_task_excluded(self):
+        MaintenanceTask.objects.create(
+            name="Retired task", frequency=MaintenanceTask.FREQUENCY_ANNUAL, active=False
+        )
+        response = self.client.get(self.url)
+        self.assertNotIn("upcoming_maintenance", response.context)
+
+    def test_limited_to_five(self):
+        for i in range(7):
+            MaintenanceTask.objects.create(
+                name=f"Task {i}", frequency=MaintenanceTask.FREQUENCY_ANNUAL
+            )
+        response = self.client.get(self.url)
+        self.assertEqual(len(response.context["upcoming_maintenance"]), 5)

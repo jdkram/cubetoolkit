@@ -100,7 +100,7 @@
 {% block body %}
 <h1>{{ VENUE.longname }} Toolkit</h1>
 
-{% if welcome_back or has_volunteer or new_showings or showings_with_gaps or unconfirmed_showings or upcoming_training or recent_bulletins or shopping_needs %}
+{% if welcome_back or has_volunteer or new_showings or showings_with_gaps or unconfirmed_showings or upcoming_training or recent_bulletins or shopping_needs or open_jobs or upcoming_maintenance %}
 <div class="d-flex justify-content-between align-items-baseline mb-2">
   <h2 class="h5 mb-0">Dashboard</h2>
   <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#dash-customise" aria-expanded="false">Customise</button>
@@ -137,6 +137,12 @@
       {% endif %}
       {% if shopping_needs %}
       <label class="mb-0"><input type="checkbox" class="dash-toggle" data-key="dash_shopping" checked> Shopping list</label>
+      {% endif %}
+      {% if open_jobs %}
+      <label class="mb-0"><input type="checkbox" class="dash-toggle" data-key="dash_jobs" checked> Open jobs</label>
+      {% endif %}
+      {% if upcoming_maintenance %}
+      <label class="mb-0"><input type="checkbox" class="dash-toggle" data-key="dash_maintenance" checked> Upcoming maintenance</label>
       {% endif %}
     </div>
   </div>
@@ -175,6 +181,29 @@
           {% endif %}
           <li>On the rota, beginner-friendly roles (&#127793;) are highlighted to help you ease back in.</li>
         </ul>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Consent overdue card — shown when consent has lapsed or the privacy policy has changed. #}
+  {% if consent_overdue %}
+  <div class="col-12 d-flex">
+    <div class="card w-100 border-warning">
+      <div class="card-header text-bg-warning">
+        <strong>Please reconfirm your data consent</strong>
+      </div>
+      <div class="card-body">
+        <p class="mb-2">
+          Either it's been a while since you last confirmed you're happy for us to hold your
+          volunteer contact and rota details, or our privacy policy has changed since you last agreed to it.
+          {% if privacy_policy_url %}<a href="{{ privacy_policy_url }}" target="_blank" rel="noopener">Read the privacy policy</a>, then{% else %}Please{% endif %}
+          reconfirm below.
+        </p>
+        <form method="post" action="{% url "volunteer-renew-consent-self" %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-warning btn-sm">I've read it — reconfirm my consent</button>
+        </form>
       </div>
     </div>
   </div>
@@ -407,10 +436,68 @@
   </div>
   {% endif %}
 
+  {# Open jobs: unresolved items on the ad-hoc jobs board — all logged-in users #}
+  {% if open_jobs %}
+  <div id="dash_jobs" class="col-md-6 d-flex{% if 'dash_jobs' in dash_hidden_cards %} d-none{% endif %}">
+    <div class="card w-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Open jobs</strong>
+        <a href="{% url "labs-jobs" %}" style="font-size:0.85em">Full board &rarr;</a>
+      </div>
+      <div class="card-body">
+        <table class="w-100">
+          {% for job in open_jobs %}
+          <tr class="shift-row">
+            <td>
+              {{ job.title }}
+              {% if job.skill_required %}<br><span style="font-size:0.8em; color:#6c757d;">🔧 {{ job.skill_required }}</span>{% endif %}
+            </td>
+            <td style="font-size:0.8em; white-space:nowrap;">
+              {% if job.urgency == "high" %}<span style="color:#dc3545;">Urgent</span>
+              {% elif job.urgency == "medium" %}<span style="color:#c07600;">Soon</span>
+              {% else %}<span style="color:#6c757d;">Whenever</span>{% endif %}
+            </td>
+            <td style="font-size:0.8em; color:#6c757d; white-space:nowrap;">
+              {% if job.claimed_by %}{{ job.claimed_by.get_full_name|default:job.claimed_by.username }}{% else %}unclaimed{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Upcoming maintenance: next few recurring maintenance tasks by due date #}
+  {% if upcoming_maintenance %}
+  <div id="dash_maintenance" class="col-md-6 d-flex{% if 'dash_maintenance' in dash_hidden_cards %} d-none{% endif %}">
+    <div class="card w-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Upcoming maintenance</strong>
+        <a href="{% url "operations-schedule" %}" style="font-size:0.85em">Full schedule &rarr;</a>
+      </div>
+      <div class="card-body">
+        <table class="w-100">
+          {% for task in upcoming_maintenance %}
+          <tr class="shift-row">
+            <td>{{ task.name }}</td>
+            <td style="font-size:0.8em; white-space:nowrap;">
+              {% if task.status == MAINT_STATUS_OVERDUE %}<span style="color:#dc3545;">Overdue</span>
+              {% elif task.status == MAINT_STATUS_DUE_SOON %}<span style="color:#c07600;">Due soon</span>
+              {% else %}<span style="color:#6c757d;">{{ task.next_due|date:"d M Y"|default:"not scheduled" }}</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
 </div>
 <script>
 (function() {
-    var KEYS = ['dash_bulletins','dash_favourites','dash_upcoming_shifts','dash_starred_events','dash_rota_gaps','dash_new_showings','dash_shopping','dash_training','dash_unconfirmed'];
+    var KEYS = ['dash_bulletins','dash_favourites','dash_upcoming_shifts','dash_starred_events','dash_rota_gaps','dash_new_showings','dash_shopping','dash_jobs','dash_maintenance','dash_training','dash_unconfirmed'];
     var ORDER_KEY = 'dash_order';
     var row = document.getElementById('dash-cards-row');
     var hasServerPrefs = row && row.dataset.hasServerPrefs === '1';
