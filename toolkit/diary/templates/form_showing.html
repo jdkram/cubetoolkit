@@ -192,28 +192,70 @@ document.addEventListener("DOMContentLoaded", function () {
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     "use strict";
-    var nextIdx = document.querySelectorAll("[data-oneshot-row]").length;
+    var nextIdx = document.querySelectorAll("#oneshot-rows [data-oneshot-row]").length;
+
+    function syncWarning(row) {
+        var countInput = row.querySelector("input[name^='oneshot_count_']");
+        var warn = row.querySelector(".oneshot-warn");
+        if (!countInput || !warn) return;
+        var signedUp = parseInt(row.dataset.signedUpCount || "0", 10);
+        var v = parseInt(countInput.value, 10);
+        if (isNaN(v)) v = 0;
+        if (v < signedUp && signedUp > 0) {
+            warn.textContent =
+                "Reducing to " + v + " will drop " +
+                (signedUp - v) + " signed-up volunteer" +
+                ((signedUp - v) === 1 ? "" : "s") + " from this role.";
+            warn.classList.remove("d-none");
+        } else {
+            warn.classList.add("d-none");
+        }
+    }
 
     document.getElementById("add-oneshot").addEventListener("click", function () {
         var row = document.createElement("div");
-        row.className = "d-flex gap-2 mb-2 align-items-center flex-wrap";
+        row.className = "d-flex gap-2 mb-2 align-items-center flex-wrap oneshot-row";
         row.dataset.oneshotRow = nextIdx;
+        row.dataset.signedUpCount = "0";
         row.innerHTML =
             '<input type="text" name="oneshot_name_' + nextIdx + '" class="form-control form-control-sm" placeholder="Role name" style="max-width:16rem">' +
             '<input type="text" name="oneshot_desc_' + nextIdx + '" class="form-control form-control-sm" placeholder="Optional description" style="max-width:24rem">' +
-            '<input type="number" name="oneshot_count_' + nextIdx + '" value="1" class="form-control form-control-sm rota_count" min="0" max="30" style="width:5rem">' +
-            '<button type="button" class="btn btn-sm btn-outline-danger oneshot-remove">Remove</button>';
+            '<input type="number" name="oneshot_count_' + nextIdx + '" value="1" min="0" max="30" class="form-control form-control-sm rota_count" style="width:5rem">' +
+            '<button type="button" class="btn btn-sm btn-outline-danger oneshot-remove">Remove</button>' +
+            '<small class="text-warning oneshot-warn w-100 d-none"></small>';
         document.getElementById("oneshot-rows").appendChild(row);
         nextIdx++;
     });
 
     document.getElementById("oneshot-rows").addEventListener("click", function (e) {
-        if (e.target.classList.contains("oneshot-remove")) {
-            var row = e.target.closest("[data-oneshot-row]");
-            row.querySelector("[name^='oneshot_count_']").value = 0;
-            row.style.display = "none";
+        if (!e.target.classList.contains("oneshot-remove")) return;
+        var row = e.target.closest("[data-oneshot-row]");
+        // For existing rows (those with oneshot_id_N), synthesise hidden
+        // zero-inputs so _parse_oneshot_roles walks the index without
+        // breaking out of the while-loop on missing oneshot_name_N keys.
+        var idInput = row.querySelector("input[name^='oneshot_id_']");
+        if (idInput) {
+            var removedDiv = document.getElementById("oneshot-removed");
+            ["id", "name", "count", "desc"].forEach(function (k) {
+                var inp = document.createElement("input");
+                inp.type = "hidden";
+                inp.name = "oneshot_" + k + "_" + (row.dataset.oneshotRow);
+                inp.value = k === "count" ? "0" : "";
+                if (k === "id" && idInput.value) inp.value = idInput.value;
+                removedDiv.appendChild(inp);
+            });
+        }
+        row.remove();
+    });
+
+    document.getElementById("oneshot-rows").addEventListener("input", function (e) {
+        if (e.target.matches("input[name^='oneshot_count_']")) {
+            syncWarning(e.target.closest("[data-oneshot-row]"));
         }
     });
+
+    // Initial warning state on server-rendered rows.
+    document.querySelectorAll("#oneshot-rows [data-oneshot-row]").forEach(syncWarning);
 });
 </script>
 {% endblock %}
@@ -413,15 +455,18 @@ document.addEventListener("DOMContentLoaded", function () {
   <h4>One-shot roles <small class="text-muted fw-normal" style="font-size:0.8em">Bespoke roles for this event only — not added to the permanent list</small></h4>
   <div id="oneshot-rows">
     {% for r in oneshot_roles %}
-    <div class="d-flex gap-2 mb-2 align-items-center flex-wrap" data-oneshot-row="{{ forloop.counter0 }}">
+    <div class="d-flex gap-2 mb-2 align-items-center flex-wrap oneshot-row" data-oneshot-row="{{ forloop.counter0 }}" data-signed-up-count="{{ r.signed_up_count }}">
       <input type="hidden" name="oneshot_id_{{ forloop.counter0 }}" value="{{ r.pk }}">
       <input type="text" name="oneshot_name_{{ forloop.counter0 }}" value="{{ r.name }}" class="form-control form-control-sm" placeholder="Role name" style="max-width:16rem">
       <input type="text" name="oneshot_desc_{{ forloop.counter0 }}" value="{{ r.description }}" class="form-control form-control-sm" placeholder="Optional description" style="max-width:24rem">
-      <input type="number" name="oneshot_count_{{ forloop.counter0 }}" value="{{ r.current_count }}" class="form-control form-control-sm rota_count" min="0" max="30" style="width:5rem">
+      <input type="number" name="oneshot_count_{{ forloop.counter0 }}" value="{{ r.current_count }}" min="0" max="30" class="form-control form-control-sm rota_count" style="width:5rem">
       <button type="button" class="btn btn-sm btn-outline-danger oneshot-remove">Remove</button>
+      <small class="text-warning oneshot-warn w-100 d-none"></small>
     </div>
     {% endfor %}
   </div>
+  {# Hidden sink for removed existing one-shot rows; keeps POST indices contiguous #}
+  <div id="oneshot-removed" aria-hidden="true"></div>
   <button type="button" id="add-oneshot" class="btn btn-sm btn-outline-secondary mb-3">+ Add one-shot role</button>
 
   <h3>Rota notes</h3>

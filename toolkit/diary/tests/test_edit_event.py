@@ -1464,6 +1464,96 @@ class OneShotRoleTests(DiaryTestsMixin, TestCase):
         standard_roles = Role.objects.filter(is_one_shot=False)
         self.assertFalse(standard_roles.filter(name="One-Shot Only Role").exists())
 
+    def test_get_oneshot_roles_carries_signed_up_count(self):
+        # _get_oneshot_roles_for_showing reports both slot count and signed-up
+        # volunteer count, so the edit form can warn before reducing below
+        # the number of real sign-ups.
+        from toolkit.members.models import Volunteer
+
+        role = self._make_one_shot("Signed-Up Role")
+        v = Volunteer.objects.first()
+        RotaEntry.objects.create(
+            role=role, showing=self.e4s3, volunteer=v, name=v.member.name
+        )
+        RotaEntry.objects.create(
+            role=role, showing=self.e4s3, volunteer=v, name=v.member.name
+        )
+        RotaEntry.objects.create(role=role, showing=self.e4s3, volunteer=None, name="")
+
+        from toolkit.diary.edit_views.showings import _get_oneshot_roles_for_showing
+
+        rows = _get_oneshot_roles_for_showing(self.e4s3)
+        self.assertEqual(len(rows), 1)
+        r = rows[0]
+        self.assertEqual(r["name"], "Signed-Up Role")
+        self.assertEqual(r["current_count"], 3)
+        self.assertEqual(r["signed_up_count"], 2)
+
+    def test_edit_showing_get_renders_signed_up_count(self):
+        # The edit-showing page surfaces signed_up_count on each existing
+        # one-shot row, plus a hidden sink div so the JS removal handler can
+        # synthesise zero-inputs without breaking the POST index loop.
+        from toolkit.members.models import Volunteer
+
+        role = self._make_one_shot("Rendered Signups")
+        v = Volunteer.objects.first()
+        RotaEntry.objects.create(
+            role=role, showing=self.e4s3, volunteer=v, name=v.member.name
+        )
+        RotaEntry.objects.create(role=role, showing=self.e4s3, volunteer=None, name="")
+
+        url = reverse("edit-showing", kwargs={"showing_id": self.e4s3.pk})
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'data-signed-up-count="1"')
+        # Hidden sink so JS can synthesise removal inputs
+        self.assertContains(resp, 'id="oneshot-removed"')
+        # Warning element present (CSS hides it until count drops)
+        self.assertContains(resp, "oneshot-warn")
+
+    @patch("django.utils.timezone.now")
+    def test_remove_existing_oneshot_clears_entries(self, now_patch):
+        # Mirrors what the JS remove handler emits for an existing one-shot:
+        # synthesised id + blanked name + zeroed count. The server must clear
+        # the role's RotaEntries and then orphan-cleanup removes the Role.
+        from toolkit.members.models import Volunteer
+
+        now_patch.return_value = self._fake_now
+        role = self._make_one_shot("Removed Role")
+        v = Volunteer.objects.first()
+        RotaEntry.objects.create(
+            role=role, showing=self.e4s3, volunteer=v, name=v.member.name
+        )
+        RotaEntry.objects.create(role=role, showing=self.e4s3, volunteer=None, name="")
+        self.assertEqual(self.e4s3.rotaentry_set.filter(role=role).count(), 2)
+
+        url = reverse("edit-showing", kwargs={"showing_id": self.e4s3.pk})
+        resp = self.client.post(
+            url,
+            data={
+                "start": "09/06/2013 19:30",
+                "booked_by": "Test Booker",
+                "confirmed": "on",
+                "role_1": "0",
+                "other_2": "0",
+                "other_3": "0",
+                # Synthesised removal — mirrors the JS handler's output
+                "oneshot_id_0": str(role.pk),
+                "oneshot_name_0": "",
+                "oneshot_count_0": "0",
+                "oneshot_desc_0": "",
+                "room_bookings-TOTAL_FORMS": "0",
+                "room_bookings-INITIAL_FORMS": "0",
+                "room_bookings-MIN_NUM_FORMS": "0",
+                "room_bookings-MAX_NUM_FORMS": "1000",
+            },
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.e4s3.refresh_from_db()
+        self.assertFalse(self.e4s3.rotaentry_set.filter(role=role).exists())
+        # Orphan cleanup removes the now-unreferenced one-shot Role
+        self.assertFalse(Role.objects.filter(pk=role.pk).exists())
+
 
 class StructuredCostTermsTests(DiaryTestsMixin, TestCase):
     """Structured cost terms: feature flag, word-count waiver, required validation."""

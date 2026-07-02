@@ -70,13 +70,25 @@ logger.setLevel(logging.DEBUG)
 
 
 def _get_oneshot_roles_for_showing(showing):
-    """Return a list of {pk, name, description, current_count} dicts for one-shot roles on this showing."""
-    from django.db.models import Count as _Count
+    """Return a list of {pk, name, description, current_count, signed_up_count}
+    dicts for one-shot roles on this showing.
+
+    ``current_count`` is the total number of RotaEntry slots for the role on
+    this showing; ``signed_up_count`` is how many of those have a volunteer
+    FK (a real sign-up). The template uses the difference to warn before the
+    programmer drops volunteer sign-ups by lowering the count.
+    """
+    from django.db.models import Count as _Count, Q as _Q
 
     return list(
         Role.objects.filter(rotaentry__showing=showing, is_one_shot=True)
-        .annotate(current_count=_Count("rotaentry"))
-        .values("pk", "name", "description", "current_count")
+        .annotate(
+            current_count=_Count("rotaentry"),
+            signed_up_count=_Count(
+                "rotaentry", filter=_Q(rotaentry__volunteer__isnull=False)
+            ),
+        )
+        .values("pk", "name", "description", "current_count", "signed_up_count")
         .distinct()
     )
 
