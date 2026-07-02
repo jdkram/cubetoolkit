@@ -42,6 +42,7 @@ from toolkit.diary.edit_views import (
     omdb_search,
     link_film,
     unlink_film,
+    past_events_search,
 )
 from toolkit.diary.public_views import (
     ArchiveIndex,
@@ -189,6 +190,14 @@ diary_urls = [
         r"^edit/(?P<year>\d{4})/(?P<month>\d{1,2})/(?P<day>\d{1,2})",
         edit_diary_list,
         name="day-edit",
+    ),
+    # Find a past event by name/date range -- bypasses the date-redirect
+    # above, since a calendar day/month/year view can never show a date
+    # before today.
+    re_path(
+        r"^edit/events/past/$",
+        past_events_search,
+        name="past-events-search",
     ),
     # Edit an event: view event before editing
     re_path(

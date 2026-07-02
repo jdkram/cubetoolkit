@@ -21,7 +21,7 @@ from django.contrib import messages
 from django.views.generic import View
 import django.template
 import django.db
-from django.db.models import Count, Q, Min
+from django.db.models import Count, Q, Min, Max, Sum
 import django.utils.timezone as timezone
 from django.contrib.auth.decorators import (
     permission_required,
@@ -52,8 +52,10 @@ from toolkit.diary.models import (
     Room,
     RoomBooking,
     EventTemplateRoom,
+    EventBudgetLine,
     VolunteerEventMark,
     get_site_config,
+    sync_budget_lines_for_event,
 )
 import toolkit.diary.forms as diary_forms
 import toolkit.diary.validators as diary_validators
@@ -69,6 +71,58 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 from ._common import _film_json, _get_omdb_api_key
+
+
+@write_required
+@require_http_methods(["GET"])
+def past_events_search(request):
+    """Find a past event by name/date range, linking to its edit page.
+
+    edit_diary_list() (diary_overview.py) redirects the calendar day/month/
+    year views away from any date before today, which makes past events
+    hard to *reach* via the calendar once their date has gone by -- but
+    EditEventView has no date guard, so a specific event's edit page is
+    already reachable once you have its URL. This view is that missing
+    entry point: a simple search, not a calendar, so it isn't subject to
+    the same "don't allow viewing of dates before today" redirect. Exists
+    for task 9.149's post-event budget reconciliation workflow -- a
+    programmer filling in actuals days or weeks after an event needs a way
+    to find it again without knowing its ID.
+    """
+    now = timezone.now()
+    q = request.GET.get("q", "").strip()
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
+
+    def _parse_date(value):
+        try:
+            return datetime.date.fromisoformat(value)
+        except ValueError:
+            return None
+
+    events = Event.objects.annotate(
+        latest_showing_start=Max("showings__start")
+    ).filter(latest_showing_start__lte=now)
+    if q:
+        events = events.filter(name__icontains=q)
+    parsed_from = _parse_date(date_from) if date_from else None
+    if parsed_from:
+        events = events.filter(latest_showing_start__date__gte=parsed_from)
+    parsed_to = _parse_date(date_to) if date_to else None
+    if parsed_to:
+        events = events.filter(latest_showing_start__date__lte=parsed_to)
+    events = events.order_by("-latest_showing_start")[:200]
+
+    return render(
+        request,
+        "past_events_search.html",
+        {
+            "events": events,
+            "q": q,
+            "date_from": date_from,
+            "date_to": date_to,
+        },
+    )
 
 
 @write_required
@@ -723,6 +777,49 @@ def _build_cert_lookup_url(url_template: str, film) -> str:
     )
 
 
+def _budget_grid_context(event, budget_formset):
+    """Group a budget formset's forms by category, and compute totals.
+
+    Grouping is done here (not via the {% regroup %} template tag) so
+    category order doesn't depend on the model's Meta.ordering (which
+    sorts by direction/order/pk, not category) -- rows are grouped by
+    first appearance of their category, which matches template order
+    since sync_budget_lines_for_event() assigns `order` category-block by
+    category-block. Totals are always a fresh read-time aggregate over the
+    DB, never a stored value, so there's nothing to reconcile against
+    client-side JS sums -- recomputing on every render *is* the
+    "server-side re-check" the spec asks for.
+    """
+    categories = OrderedDict()
+    for bform in budget_formset.forms:
+        categories.setdefault(bform.instance.category, []).append(bform)
+
+    totals = event.budget_lines.aggregate(
+        estimate_outgoing=Sum(
+            "estimate_gbp",
+            filter=Q(direction=EventBudgetLine.DIRECTION_OUTGOING),
+        ),
+        estimate_incoming=Sum(
+            "estimate_gbp",
+            filter=Q(direction=EventBudgetLine.DIRECTION_INCOME),
+        ),
+        actual_outgoing=Sum(
+            "actual_gbp",
+            filter=Q(direction=EventBudgetLine.DIRECTION_OUTGOING),
+        ),
+        actual_incoming=Sum(
+            "actual_gbp",
+            filter=Q(direction=EventBudgetLine.DIRECTION_INCOME),
+        ),
+    )
+    return {
+        "budget_categories": [
+            {"name": name, "forms": forms} for name, forms in categories.items()
+        ],
+        "budget_totals": totals,
+    }
+
+
 class EditEventView(PermissionRequiredMixin, View):
     """Handle the "edit event" form."""
 
@@ -801,11 +898,31 @@ class EditEventView(PermissionRequiredMixin, View):
             request.POST, request.FILES, instance=media_item
         )
 
+        cfg = get_site_config()
+        budget_formset = None
+        if cfg.budget_lines_enabled:
+            # Bound to whatever budget_lines existed as of the GET that
+            # rendered this form -- deliberately NOT re-running
+            # sync_budget_lines_for_event() here first: the inline formset
+            # binds POST data to existing rows *positionally* (by queryset
+            # index), so inserting a new row via sync between GET and POST
+            # would shift every later row's index and silently misassign
+            # submitted values to the wrong row. Sync only runs on GET.
+            budget_formset = diary_forms.EventBudgetLineInlineFormSet(
+                request.POST, instance=event
+            )
+
         # Validate
-        if form.is_valid() and media_form.is_valid():
+        if (
+            form.is_valid()
+            and media_form.is_valid()
+            and (budget_formset is None or budget_formset.is_valid())
+        ):
             event._saved_by = request.user
             generated_media_id = request.POST.get("generated_media_id")
             self._save(event, media_item, form, media_form, generated_media_id)
+            if budget_formset is not None:
+                budget_formset.save()
             messages.add_message(
                 request,
                 messages.SUCCESS,
@@ -819,7 +936,6 @@ class EditEventView(PermissionRequiredMixin, View):
             )
 
         # Got here if there's a form validation error:
-        cfg = get_site_config()
         context = {
             "event": event,
             "event_form": form,
@@ -843,7 +959,11 @@ class EditEventView(PermissionRequiredMixin, View):
             "event_film_json": (
                 json.dumps(_film_json(event.film)) if event.film else "null"
             ),
+            "budget_lines_enabled": cfg.budget_lines_enabled,
         }
+        if budget_formset is not None:
+            context["budget_formset"] = budget_formset
+            context.update(_budget_grid_context(event, budget_formset))
         return render(request, "form_event.html", context)
 
     def get(self, request, event_id):
@@ -860,6 +980,13 @@ class EditEventView(PermissionRequiredMixin, View):
         media_form = diary_forms.MediaItemForm(instance=media_item)
 
         cfg = get_site_config()
+
+        budget_formset = None
+        if cfg.budget_lines_enabled:
+            sync_budget_lines_for_event(event)
+            budget_formset = diary_forms.EventBudgetLineInlineFormSet(
+                instance=event
+            )
 
         tag_descriptions = {
             str(t["pk"]): t["description"]
@@ -904,6 +1031,10 @@ class EditEventView(PermissionRequiredMixin, View):
             "event_film_json": (
                 json.dumps(_film_json(event.film)) if event.film else "null"
             ),
+            "budget_lines_enabled": cfg.budget_lines_enabled,
         }
+        if budget_formset is not None:
+            context["budget_formset"] = budget_formset
+            context.update(_budget_grid_context(event, budget_formset))
 
         return render(request, "form_event.html", context)

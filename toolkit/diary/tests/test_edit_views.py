@@ -72,6 +72,7 @@ class ViewSecurity(DiaryTestsMixin, TestCase):
         "add-printed-programme": {},
         "clone-event": {"event_id": "4"},
         "edit-event-links": {"event_id": "1"},
+        "past-events-search": {},
     }
 
     only_read_required = {
@@ -338,5 +339,72 @@ class EditDiaryListViewTests(DiaryTestsMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         # Template emits a <td class="time"> for empty days
         self.assertContains(response, "<td")
+
+
+class PastEventsSearchViewTests(DiaryTestsMixin, TestCase):
+    """Tests for past_events_search (9.149): the past-events findability fix."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="admin", password="T3stPassword!")
+        self.url = reverse("past-events-search")
+
+        self.past_event = Event(name="Old Jazz Night")
+        self.past_event.save()
+        Showing(
+            start=datetime(2010, 3, 4, 20, 0, tzinfo=UTC),
+            event=self.past_event,
+            booked_by="Tester",
+            confirmed=True,
+        ).save(force=True)
+
+        self.future_event = Event(name="Upcoming Gig")
+        self.future_event.save()
+        Showing(
+            start=datetime.now(UTC) + timedelta(days=30),
+            event=self.future_event,
+            booked_by="Tester",
+            confirmed=True,
+        ).save()
+
+    def test_page_loads(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_only_past_events_shown(self):
+        response = self.client.get(self.url)
+        events = list(response.context["events"])
+        self.assertIn(self.past_event, events)
+        self.assertNotIn(self.future_event, events)
+
+    def test_name_filter(self):
+        response = self.client.get(self.url, {"q": "Jazz"})
+        events = list(response.context["events"])
+        self.assertEqual(events, [self.past_event])
+
+    def test_name_filter_no_match(self):
+        response = self.client.get(self.url, {"q": "Nonexistent"})
+        self.assertEqual(list(response.context["events"]), [])
+
+    def test_date_range_filter(self):
+        response = self.client.get(
+            self.url, {"date_from": "2010-01-01", "date_to": "2010-12-31"}
+        )
+        self.assertIn(self.past_event, list(response.context["events"]))
+        response = self.client.get(
+            self.url, {"date_from": "2015-01-01", "date_to": "2015-12-31"}
+        )
+        self.assertNotIn(self.past_event, list(response.context["events"]))
+
+    def test_invalid_date_ignored_not_500(self):
+        response = self.client.get(self.url, {"date_from": "not-a-date"})
+        self.assertEqual(response.status_code, 200)
+
+    def test_result_links_to_edit_page(self):
+        response = self.client.get(self.url, {"q": "Jazz"})
+        expected_url = reverse(
+            "edit-event-details-view", kwargs={"event_id": self.past_event.pk}
+        )
+        self.assertContains(response, expected_url)
 
 

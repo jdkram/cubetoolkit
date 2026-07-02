@@ -1080,6 +1080,74 @@ RoomBookingInlineFormSet = inlineformset_factory(
 )
 
 
+class EventBudgetLineForm(forms.ModelForm):
+    """A single budget row (category/item, estimate, actual).
+
+    category/item/direction/order/estimate_source are hidden: they're set
+    programmatically by sync_budget_lines_for_event() and by the
+    budget-grid's "override" JS, not free-text-editable -- letting a
+    programmer silently rename a category would defeat the point of the
+    fixed, collectively-agreed category templates. estimate_gbp is shown
+    read-only (via the template) for derived rows until "override" unlocks
+    it; item is unhidden for ad-hoc rows added via "Add item".
+    """
+
+    class Meta:
+        model = toolkit.diary.models.EventBudgetLine
+        fields = (
+            "direction",
+            "category",
+            "item",
+            "estimate_gbp",
+            "estimate_source",
+            "actual_gbp",
+            "notes",
+            "order",
+        )
+        widgets = {
+            "direction": forms.HiddenInput(),
+            "category": forms.HiddenInput(),
+            "item": forms.TextInput(
+                attrs={
+                    "class": "form-control form-control-sm budget-item-input",
+                    "placeholder": "Item (optional)",
+                }
+            ),
+            "estimate_source": forms.HiddenInput(),
+            "order": forms.HiddenInput(),
+            "estimate_gbp": forms.NumberInput(
+                attrs={
+                    "step": "0.01",
+                    "min": "0",
+                    "class": "form-control form-control-sm budget-estimate-input",
+                }
+            ),
+            "actual_gbp": forms.NumberInput(
+                attrs={
+                    "step": "0.01",
+                    "min": "0",
+                    "class": "form-control form-control-sm budget-actual-input",
+                }
+            ),
+            "notes": forms.Textarea(
+                attrs={
+                    "class": "form-control form-control-sm",
+                    "rows": 2,
+                    "wrap": "soft",
+                }
+            ),
+        }
+
+
+EventBudgetLineInlineFormSet = inlineformset_factory(
+    toolkit.diary.models.Event,
+    toolkit.diary.models.EventBudgetLine,
+    form=EventBudgetLineForm,
+    extra=0,
+    can_delete=True,
+)
+
+
 def _target_month_choices():
     """Generate (YYYY-MM, "Month YYYY") choices for the next 18 months."""
     today = datetime.date.today()

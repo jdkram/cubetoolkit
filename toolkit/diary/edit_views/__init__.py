@@ -21,6 +21,7 @@ from .events import (
     add_event,
     EditEventView,
     _build_cert_lookup_url,
+    past_events_search,
 )
 
 from .diary_overview import (
@@ -146,4 +147,5 @@ __all__ = [
     "link_film",
     "unlink_film",
     "_film_json",
+    "past_events_search",
 ]

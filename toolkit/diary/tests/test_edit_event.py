@@ -15,7 +15,9 @@ from django.urls import reverse
 from toolkit.diary.models import (
     Showing,
     Event,
+    EventBudgetLine,
     EventLink,
+    EventTag,
     Role,
     DiaryIdea,
     EventTemplate,
@@ -1653,5 +1655,204 @@ class StructuredCostTermsTests(DiaryTestsMixin, TestCase):
         form = resp.context.get("form") if resp.context else None
         if form:
             self.assertIn("cost_type", form.errors)
+
+
+class BudgetLinesTests(DiaryTestsMixin, TestCase):
+    """Itemised budget lines (9.149 MVI): flag gating, auto-creation, override, totals."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="admin", password="T3stPassword!")
+
+    def _post_event(self, event_id, overrides=None, budget_forms=None):
+        url = reverse("edit-event-details", kwargs={"event_id": event_id})
+        event = Event.objects.get(pk=event_id)
+        data = {
+            "name": event.name,
+            "duration": "01:00:00",
+            "terms": event.terms or "",
+            "copy": event.copy or "",
+            "copy_summary": event.copy_summary or "",
+            "pricing": event.pricing or "",
+            "pre_title": event.pre_title or "",
+            "post_title": event.post_title or "",
+            "film_information": event.film_information or "",
+            "programming_status": event.programming_status or "idea",
+            "approval_type": event.approval_type or "",
+        }
+        if overrides:
+            data.update(overrides)
+        if budget_forms is not None:
+            data["budget_lines-TOTAL_FORMS"] = str(len(budget_forms))
+            data["budget_lines-INITIAL_FORMS"] = str(
+                len([f for f in budget_forms if f.get("id")])
+            )
+            data["budget_lines-MIN_NUM_FORMS"] = "0"
+            data["budget_lines-MAX_NUM_FORMS"] = "1000"
+            for i, form_data in enumerate(budget_forms):
+                for key, value in form_data.items():
+                    data[f"budget_lines-{i}-{key}"] = value
+        return self.client.post(url, data, follow=True)
+
+    def _budget_forms_from_event(self, event, overrides_by_pk=None):
+        """Build formset POST data reflecting the event's current budget_lines."""
+        overrides_by_pk = overrides_by_pk or {}
+        forms = []
+        for line in event.budget_lines.all():
+            form_data = {
+                "id": str(line.pk),
+                "direction": line.direction,
+                "category": line.category,
+                "item": line.item,
+                "estimate_gbp": (
+                    "" if line.estimate_gbp is None else str(line.estimate_gbp)
+                ),
+                "estimate_source": line.estimate_source,
+                "actual_gbp": (
+                    "" if line.actual_gbp is None else str(line.actual_gbp)
+                ),
+                "notes": line.notes,
+                "order": str(line.order),
+            }
+            form_data.update(overrides_by_pk.get(line.pk, {}))
+            forms.append(form_data)
+        return forms
+
+    def test_budget_section_absent_when_flag_off(self):
+        cfg = get_site_config()
+        cfg.budget_lines_enabled = False
+        cfg.save()
+        resp = self.client.get(
+            reverse("edit-event-details", kwargs={"event_id": self.e4.pk})
+        )
+        self.assertNotContains(resp, "id_budget_lines-TOTAL_FORMS")
+
+    def test_budget_section_present_when_flag_on(self):
+        cfg = get_site_config()
+        cfg.budget_lines_enabled = True
+        cfg.save()
+        resp = self.client.get(
+            reverse("edit-event-details", kwargs={"event_id": self.e4.pk})
+        )
+        self.assertContains(resp, "id_budget_lines-TOTAL_FORMS")
+
+    def test_get_auto_creates_rows(self):
+        cfg = get_site_config()
+        cfg.budget_lines_enabled = True
+        cfg.save()
+        self.assertEqual(self.e4.budget_lines.count(), 0)
+        self.client.get(
+            reverse("edit-event-details", kwargs={"event_id": self.e4.pk})
+        )
+        self.assertGreater(self.e4.budget_lines.count(), 0)
+
+    def test_category_set_matches_film_tag(self):
+        cfg = get_site_config()
+        cfg.budget_lines_enabled = True
+        cfg.save()
+        EventTag(name="film", slug="film").save()
+        self.e4.tags.set([EventTag.objects.get(slug="film")])
+        self.client.get(
+            reverse("edit-event-details", kwargs={"event_id": self.e4.pk})
+        )
+        categories = set(
+            self.e4.budget_lines.values_list("category", flat=True)
+        )
+        self.assertIn("Programming", categories)
+
+    def test_override_post_persists_manual_value_and_survives_resync(self):
+        from toolkit.diary.models import sync_budget_lines_for_event
+
+        cfg = get_site_config()
+        cfg.budget_lines_enabled = True
+        cfg.save()
+        self.e4.cost_type = Event.COST_TYPE_PERFORMER_FEE
+        self.e4.cost_total_gbp = "150.00"
+        self.e4.save()
+        EventTag(name="music", slug="music", filter_group="music").save()
+        self.e4.tags.set([EventTag.objects.get(slug="music")])
+        sync_budget_lines_for_event(self.e4)
+
+        line = self.e4.budget_lines.get(
+            category="Acts/ Performers", item="Hire fee"
+        )
+        self.assertEqual(line.estimate_source, EventBudgetLine.SOURCE_DEAL_TERMS)
+
+        forms = self._budget_forms_from_event(
+            self.e4,
+            overrides_by_pk={
+                line.pk: {
+                    "estimate_gbp": "300.00",
+                    "estimate_source": EventBudgetLine.SOURCE_MANUAL,
+                }
+            },
+        )
+        resp = self._post_event(self.e4.pk, budget_forms=forms)
+        self.assertEqual(resp.status_code, 200)
+
+        line.refresh_from_db()
+        self.assertEqual(str(line.estimate_gbp), "300.00")
+        self.assertEqual(line.estimate_source, EventBudgetLine.SOURCE_MANUAL)
+
+        # Changing the underlying deal-terms field afterwards must not
+        # clobber the now-manual override.
+        self.e4.cost_total_gbp = "999.00"
+        self.e4.save()
+        sync_budget_lines_for_event(self.e4)
+        line.refresh_from_db()
+        self.assertEqual(str(line.estimate_gbp), "300.00")
+
+    def test_adhoc_item_post_saves_and_is_not_touched_by_resync(self):
+        from toolkit.diary.models import sync_budget_lines_for_event
+
+        cfg = get_site_config()
+        cfg.budget_lines_enabled = True
+        cfg.save()
+        sync_budget_lines_for_event(self.e4)
+
+        forms = self._budget_forms_from_event(self.e4)
+        forms.append(
+            {
+                "id": "",
+                "direction": EventBudgetLine.DIRECTION_OUTGOING,
+                "category": "Misc.",
+                "item": "Skip hire",
+                "estimate_gbp": "60.00",
+                "estimate_source": EventBudgetLine.SOURCE_MANUAL,
+                "actual_gbp": "",
+                "notes": "",
+                "order": "999",
+            }
+        )
+        resp = self._post_event(self.e4.pk, budget_forms=forms)
+        self.assertEqual(resp.status_code, 200)
+
+        adhoc = self.e4.budget_lines.get(category="Misc.", item="Skip hire")
+        self.assertEqual(str(adhoc.estimate_gbp), "60.00")
+
+        sync_budget_lines_for_event(self.e4)
+        adhoc.refresh_from_db()
+        self.assertEqual(str(adhoc.estimate_gbp), "60.00")
+
+    def test_totals_match_db_sums(self):
+        from toolkit.diary.models import sync_budget_lines_for_event
+
+        cfg = get_site_config()
+        cfg.budget_lines_enabled = True
+        cfg.save()
+        sync_budget_lines_for_event(self.e4)
+        line = self.e4.budget_lines.filter(
+            direction=EventBudgetLine.DIRECTION_OUTGOING
+        ).first()
+        line.estimate_gbp = "42.50"
+        line.save()
+
+        resp = self.client.get(
+            reverse("edit-event-details", kwargs={"event_id": self.e4.pk})
+        )
+        self.assertEqual(
+            float(resp.context["budget_totals"]["estimate_outgoing"]),
+            42.50,
+        )
 
 

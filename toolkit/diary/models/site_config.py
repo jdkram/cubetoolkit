@@ -350,6 +350,21 @@ class SiteConfiguration(models.Model):
             "acted on only via the manual 'purge_stale_volunteers' command — never automatically."
         ),
     )
+    consent_renewal_days = models.PositiveIntegerField(
+        default=365,
+        help_text=(
+            "Days after a volunteer's last consent before they're asked to reconfirm it. "
+            "Set to 0 to disable renewal reminders. Applied by the 'send_consent_renewal_reminders' "
+            "management command (run periodically, e.g. via cron)."
+        ),
+    )
+    consent_renewal_grace_days = models.PositiveIntegerField(
+        default=30,
+        help_text=(
+            "Days after a renewal reminder is sent before the volunteer is flagged as "
+            "consent-overdue for manual review (shown on the volunteer list)."
+        ),
+    )
 
     DIGEST_DAY_DISABLED = 0
     DIGEST_DAY_CHOICES = [
