@@ -13,7 +13,7 @@ dir_share_email = true
 dir_share_collectives = true
 dir_share_access_rider = true
 access_intro = "Deaf volunteer, BSL user."
-access_needs = "Please use text or email rather than calling. I lip-read reasonably well in good lighting — face me when speaking. Subtitles or captions on any screening I'm projecting are helpful."
+access_needs = "Please use text or email rather than calling. I lip-read reasonably well in good lighting, so face me when speaking. Subtitles or captions on any screening I'm projecting are helpful."
 access_links = "https://bda.org.uk"
 emergency_contact_name = "Sofia Marchetti"
 emergency_contact_relationship = "Sister"
@@ -71,7 +71,7 @@ dir_share_pronouns = true
 dir_share_collectives = true
 dir_share_access_rider = true
 access_intro = "Autistic volunteer."
-access_needs = "I work best when I know what to expect. A brief rundown of the shift at the start helps a lot. Loud unplanned sounds are hard — I wear ear defenders for busy events, which is fine."
+access_needs = "I work best when I know what to expect. A brief rundown of the shift at the start helps a lot. Loud unplanned sounds are hard. I wear ear defenders for busy events, which is fine."
 emergency_contact_name = "Yuki Horita"
 emergency_contact_relationship = "Parent"
 emergency_contact_phone = "07700 900004"
@@ -136,7 +136,7 @@ email = "nell.arundel@example.com"
 collectives = ["caretaking-operations", "bar-collective"]
 dir_share_name = "initial"
 dir_share_access_rider = true
-access_intro = "Chronic pain condition — varies day to day."
+access_intro = "Chronic pain condition, varies day to day."
 access_needs = "Standing for long periods is difficult. A stool behind the bar or at the door makes a big difference. Happy to swap to a seated role if needed."
 
 [[volunteers]]
@@ -261,7 +261,7 @@ dir_share_name = "full"
 dir_share_pronouns = true
 dir_share_collectives = true
 dir_share_access_rider = true
-access_intro = "Anxiety disorder — support needs vary."
+access_intro = "Anxiety disorder, support needs vary."
 access_needs = "I'm fine with most shifts. Prefer advanced notice of any changes to the running order. Busy crowds are easier if I know what to expect."
 
 [[volunteers]]

@@ -116,11 +116,11 @@ room = "Cinema"
 [[events]]
 name = "Starcade"
 copy_summary = "Our video game afternoon is back. Come play classic games on original hardware in venue space. Free."
-copy = """STARCADE has spontaneously downloaded and is roaming the halls of Star & Shadow, demanding you come along — or risk infection by its digital virus! Our video game afternoon is back! Come along and play classic games in our venue space. You can also donate consoles, games, and controllers to STARCADE inventory — or even borrow from what we have (just bring returns to the next event). Think of it as a gaming library... or a Blockbuster Video reborn. We'll be filling the venue and bar with as many consoles and games as possible, sticking to original hardware — because that's how STARCADE likes it."""
+copy = """STARCADE has spontaneously downloaded and is roaming the halls of Star & Shadow, demanding you come along, or risk infection by its digital virus! Our video game afternoon is back! Come along and play classic games in our venue space. You can also donate consoles, games, and controllers to STARCADE inventory, or even borrow from what we have (just bring returns to the next event). Think of it as a gaming library... or a Blockbuster Video reborn. We'll be filling the venue and bar with as many consoles and games as possible, sticking to original hardware, because that's how STARCADE likes it."""
 pricing = "Free"
 tags = ["party", "free"]
 private = false
-rota_notes = "Set up from 3pm. Fill venue space and bar with consoles — original hardware only. Bar open. Doors 4pm."
+rota_notes = "Set up from 3pm. Fill venue space and bar with consoles, original hardware only. Bar open. Doors 4pm."
 roles = ["Keyholder", "Programmer", "Extra Hands (no training needed)", "Extra Hands (no training needed)", "Bar Staff - Shift 1"]
 day_offset = 21
 hour = 16
@@ -364,7 +364,7 @@ room = "Meeting"
 [[events]]
 name = "Image Test: Portrait Poster (2:3)"
 copy_summary = "Test event to exercise portrait-format images in the index and detail views."
-copy = "This event exists only to seed a portrait-format image (2:3 aspect ratio, like a film poster). It should be ignored in UI design reviews — it is here so the grid and list views can be checked with a realistic tall image."
+copy = "This event exists only to seed a portrait-format image (2:3 aspect ratio, like a film poster). It should be ignored in UI design reviews: it is here so the grid and list views can be checked with a realistic tall image."
 tags = ["film"]
 private = false
 hide_in_programme = true
@@ -377,7 +377,7 @@ room = "Cinema"
 [[events]]
 name = "Image Test: Square Format (1:1)"
 copy_summary = "Test event to exercise square-format images in the index and detail views."
-copy = "This event exists only to seed a square-format image (1:1 aspect ratio, like a phone camera square or social card). It should be ignored in UI design reviews — it is here so the grid and list views can be checked with a square image."
+copy = "This event exists only to seed a square-format image (1:1 aspect ratio, like a phone camera square or social card). It should be ignored in UI design reviews: it is here so the grid and list views can be checked with a square image."
 tags = ["workshop"]
 private = false
 hide_in_programme = true
@@ -391,7 +391,7 @@ room = "Venue Space"
 [[events]]
 name = "Image Test: Wide Landscape (16:9)"
 copy_summary = "Test event to exercise wide-landscape images in the index and detail views."
-copy = "This event exists only to seed a wide-landscape image (16:9 aspect ratio, like a venue banner or promo photo). It should be ignored in UI design reviews — it is here so the grid and list views can be checked with a wide image."
+copy = "This event exists only to seed a wide-landscape image (16:9 aspect ratio, like a venue banner or promo photo). It should be ignored in UI design reviews: it is here so the grid and list views can be checked with a wide image."
 tags = ["performance"]
 private = false
 hide_in_programme = true

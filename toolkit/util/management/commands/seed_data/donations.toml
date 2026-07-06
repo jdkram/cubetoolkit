@@ -51,7 +51,7 @@ display_order = 1
 category = "Tech & AV"
 name = "Extension leads (surge-protected)"
 status = "check_first"
-notes = "We have several — check with caretaking first as storage is limited."
+notes = "We have several, check with caretaking first as storage is limited."
 display_order = 2
 
 [[items]]
@@ -81,7 +81,7 @@ display_order = 5
 category = "Furniture & Fixtures"
 name = "Folding tables"
 status = "wanted"
-notes = "Lightweight ones for events — 6ft rectangular preferred."
+notes = "Lightweight ones for events, 6ft rectangular preferred."
 display_order = 1
 
 [[items]]

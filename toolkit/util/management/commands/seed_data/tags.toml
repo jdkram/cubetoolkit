@@ -29,7 +29,7 @@ description = "Ongoing or drop-in visual art exhibitions. Use for shows people c
 name = "performance"
 promoted = true
 filter_group = "music"
-description = "Live performance that isn't a film or a gig — theatre, spoken word, comedy, circus, dance."
+description = "Live performance that isn't a film or a gig: theatre, spoken word, comedy, circus, dance."
 
 [[tags]]
 name = "meeting"
@@ -41,7 +41,7 @@ description = "Internal planning or decision-making meetings. Use 'induction' fo
 name = "induction"
 promoted = true
 filter_group = "meeting"
-description = "Onboarding sessions for new volunteers — café induction, general induction, keyholder training, etc."
+description = "Onboarding sessions for new volunteers: café induction, general induction, keyholder training, etc."
 
 [[tags]]
 name = "volunteer"
@@ -51,7 +51,7 @@ description = "Events that are specifically for volunteers only, not open to the
 [[tags]]
 name = "training-for-volunteers"
 promoted = true
-description = "Training sessions open to volunteers — first aid, bar training, projection, etc. Different from 'induction'."
+description = "Training sessions open to volunteers: first aid, bar training, projection, etc. Different from 'induction'."
 
 [[tags]]
 name = "party"
@@ -63,12 +63,12 @@ description = "Social events and parties, usually with DJ or live music. Distinc
 name = "cafe"
 promoted = false
 filter_group = "cafe"
-description = "Café-focused events — regular Sundays, pop-ups, community kitchen (kinda). The café is a key part of the event."
+description = "Café-focused events: regular Sundays, pop-ups, community kitchen (kinda). The café is a key part of the event."
 
 [[tags]]
 name = "online"
 promoted = true
-description = "Events with an online component — livestreamed, hybrid, or fully remote. Add to other relevant tags too."
+description = "Events with an online component (livestreamed, hybrid, or fully remote). Add to other relevant tags too."
 
 [[tags]]
 name = "subtitles"
@@ -83,12 +83,12 @@ description = "Screening or event with closed captions (soft subtitles, typicall
 [[tags]]
 name = "free"
 promoted = false
-description = "Free-admission events. Also set the pricing field to 'Free' — both should agree."
+description = "Free-admission events. Also set the pricing field to 'Free', both should agree."
 
 [[tags]]
 name = "outside-hire"
 promoted = false
-description = "Events run by an external organisation hiring the venue. Tick the Outside Hire checkbox on the event too — this tag is for public programme filtering only."
+description = "Events run by an external organisation hiring the venue. Tick the Outside Hire checkbox on the event too: this tag is for public programme filtering only."
 
 
 # Background colours used when generating placeholder event images,

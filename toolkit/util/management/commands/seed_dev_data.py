@@ -385,6 +385,7 @@ class Command(BaseCommand):
                 counts["collectives"] += 1
 
         # Members and Volunteers
+        all_collective_slugs = [c["slug"] for c in COLLECTIVES]
         volunteer_objects = {}
         for idx, vol_data in enumerate(VOLUNTEERS):
             member, created = Member.objects.get_or_create(
@@ -445,8 +446,14 @@ class Command(BaseCommand):
             if vol_dirty:
                 volunteer.save()
 
-            # Sync collective memberships.
-            wanted_slugs = vol_data.get("collectives", [])
+            # Sync collective memberships. Volunteers with no "collectives" key
+            # in the TOML at all get a small random assignment instead of being
+            # left with none, so the directory/collectives pages show realistic
+            # variety rather than a hard split between "curated" and "empty".
+            wanted_slugs = vol_data.get("collectives")
+            if wanted_slugs is None:
+                n = random.choices([0, 1, 2], weights=[15, 55, 30])[0]
+                wanted_slugs = random.sample(all_collective_slugs, min(n, len(all_collective_slugs)))
             wanted_collectives = list(Collective.objects.filter(slug__in=wanted_slugs))
             if set(volunteer.collectives.values_list("slug", flat=True)) != set(wanted_slugs):
                 volunteer.collectives.set(wanted_collectives)
@@ -834,7 +841,7 @@ class Command(BaseCommand):
                 "name": "SUMA",
                 "fulfilment_type": Supplier.FULFILMENT_DELIVERY,
                 "ordering_url": "",
-                "ordering_notes": "Wholesale wholefoods cooperative. Ethical/environmental preference for cleaning supplies — not just a cost choice. Place orders online.",
+                "ordering_notes": "Wholesale wholefoods cooperative. Ethical/environmental preference for cleaning supplies, not just a cost choice. Place orders online.",
                 "link_items": [
                     {"name": "Washing detergent", "code": "ECO001", "unit": "5L", "price": "3.50"},
                     {"name": "Dishwasher detergent", "code": "ECO002", "unit": "5L", "price": "3.80"},
@@ -845,7 +852,7 @@ class Command(BaseCommand):
                 "name": "Bookers",
                 "fulfilment_type": Supplier.FULFILMENT_PICKUP,
                 "ordering_url": "",
-                "ordering_notes": "Cash & carry — in person only. Cheaper than Nisbets. Check stock on arrival.",
+                "ordering_notes": "Cash & carry, in person only. Cheaper than Nisbets. Check stock on arrival.",
                 "link_items": [
                     {"name": "Bin bags", "code": "BB001", "unit": "200-pack", "price": "8.99"},
                     {"name": "Cling film", "code": "KT001", "unit": "6-pack", "price": "5.50"},
@@ -864,7 +871,7 @@ class Command(BaseCommand):
                 "name": "Nisbets",
                 "fulfilment_type": Supplier.FULFILMENT_DELIVERY,
                 "ordering_url": "https://www.nisbets.co.uk",
-                "ordering_notes": "Catering supplies — broader range than Bookers, more expensive. Online ordering with delivery.",
+                "ordering_notes": "Catering supplies: broader range than Bookers, more expensive. Online ordering with delivery.",
                 "link_items": [
                     {
                         "name": "Dishwasher detergent",
@@ -872,7 +879,7 @@ class Command(BaseCommand):
                         "unit": "5L",
                         "price": "",
                         "product_url": "https://www.nisbets.co.uk/jantex-pro-dishwasher-detergent-5-litre/gm981",
-                        "ordering_notes": "Hard water formula — use this version to reduce descaling.",
+                        "ordering_notes": "Hard water formula, use this version to reduce descaling.",
                     },
                     {"name": "Multi-surface spray", "code": "", "unit": "each", "price": ""},
                 ],
@@ -991,7 +998,7 @@ class Command(BaseCommand):
 
         _BULLETIN_GUIDANCE = (
             "Use bulletins for short notices that are relevant to the whole volunteer community "
-            "right now — things people need to know before their next shift, or time-sensitive "
+            "right now: things people need to know before their next shift, or time-sensitive "
             "updates about the building, programme, or online tools.\n\n"
             "Good examples:\n"
             "• Keyholders can now be contacted via the address totally_real@list.name\n"
@@ -1008,6 +1015,20 @@ class Command(BaseCommand):
         if not cfg.bulletin_guidance:
             cfg.bulletin_guidance = _BULLETIN_GUIDANCE
             cfg.save(update_fields=["bulletin_guidance"])
+
+        # BBFC-style age rating choices, so the age_restriction values set on
+        # some seeded films (films.toml) actually resolve to a label. Normally
+        # already populated by migration 0036/0042; this is just a fallback.
+        if not cfg.age_rating_choices:
+            cfg.age_rating_choices = [
+                {"value": "U", "label": "U (Universal)"},
+                {"value": "PG", "label": "PG (Parental Guidance)"},
+                {"value": "12A", "label": "12A (Cinema only, under 12s with adult)"},
+                {"value": "12", "label": "12"},
+                {"value": "15", "label": "15"},
+                {"value": "18", "label": "18"},
+            ]
+            cfg.save(update_fields=["age_rating_choices"])
 
         # Star and Shadow runs a mixed programme (films, gigs, workshops, club
         # nights), so "date" reads better than the cinema-default "showing".
@@ -1055,7 +1076,7 @@ class Command(BaseCommand):
                 "condition": ExchangeItem.CONDITION_FAIR,
                 "owner_type": ExchangeItem.OWNER_COLLECTIVE,
                 "location_notes": "Workshop cupboard, left side",
-                "notes": "Slightly wobbly on the left leg — tighten before use.",
+                "notes": "Slightly wobbly on the left leg, tighten before use.",
                 "status": ExchangeItem.STATUS_AVAILABLE,
             },
             {
@@ -1075,7 +1096,7 @@ class Command(BaseCommand):
                 "condition": ExchangeItem.CONDITION_GOOD,
                 "owner_type": ExchangeItem.OWNER_VOLUNTEER,
                 "owner_name": "Lila Estraven",
-                "location_notes": "You'll need a car or van — too big to carry",
+                "location_notes": "You'll need a car or van, too big to carry",
                 "description": "Moving house, no room for it. In good nick, no damage.",
                 "status": ExchangeItem.STATUS_AVAILABLE,
             },
@@ -1097,7 +1118,7 @@ class Command(BaseCommand):
                 "condition": ExchangeItem.CONDITION_FAIR,
                 "owner_type": ExchangeItem.OWNER_VOLUNTEER,
                 "owner_name": "Jules Travers",
-                "location_notes": "You collect — it's heavy",
+                "location_notes": "You collect - it's heavy",
                 "description": "Works fine, just very loud at night. Ideal for a garage or workshop.",
                 "status": ExchangeItem.STATUS_AVAILABLE,
             },
@@ -1128,7 +1149,7 @@ class Command(BaseCommand):
                 "category": ExchangeItem.CATEGORY_AV,
                 "condition": ExchangeItem.CONDITION_GOOD,
                 "owner_type": ExchangeItem.OWNER_COLLECTIVE,
-                "location_notes": "Projection booth — ask a keyholder",
+                "location_notes": "Projection booth, ask a keyholder",
                 "notes": "For small events only. Log your loan on the equipment sheet.",
                 "status": ExchangeItem.STATUS_ON_LOAN,
             },
@@ -1161,7 +1182,7 @@ class Command(BaseCommand):
                 "owner_type": ExchangeItem.OWNER_COLLECTIVE,
                 "quantity": "about 10kg",
                 "available_until": datetime.date.today() + datetime.timedelta(days=5),
-                "location_notes": "Kitchen fridge/store — help yourself at any event",
+                "location_notes": "Kitchen fridge/store, help yourself at any event",
                 "description": "CK bought in bulk and won't get through them before next month's session. Please take some!",
                 "status": ExchangeItem.STATUS_AVAILABLE,
             },
@@ -1171,7 +1192,7 @@ class Command(BaseCommand):
                 "category": ExchangeItem.CATEGORY_KITCHEN,
                 "owner_type": ExchangeItem.OWNER_COLLECTIVE,
                 "quantity": "several multipacks",
-                "location_notes": "Bar shelf — grab a bag",
+                "location_notes": "Bar shelf, grab a bag",
                 "description": "Best before was last week but they're completely fine. Mixed flavours.",
                 "status": ExchangeItem.STATUS_AVAILABLE,
             },
@@ -1181,7 +1202,7 @@ class Command(BaseCommand):
                 "category": ExchangeItem.CATEGORY_OTHER,
                 "owner_type": ExchangeItem.OWNER_COLLECTIVE,
                 "quantity": "about 30 left",
-                "location_notes": "Box behind the bar — take one (or two)",
+                "location_notes": "Box behind the bar, take one (or two)",
                 "description": "Leftover from the Twin Peaks screening. Assorted designs. Volunteers first but take as many as you like.",
                 "status": ExchangeItem.STATUS_AVAILABLE,
             },
@@ -1574,6 +1595,7 @@ class Command(BaseCommand):
                 image_url=film.get("image_url"),
                 minute=minute,
                 trailer_url=film.get("trailer_url", ""),
+                age_rating=film.get("age_rating", ""),
             )
 
         # Varied start times for Thursday films — slightly earlier/later
@@ -1602,6 +1624,7 @@ class Command(BaseCommand):
                 image_url=film.get("image_url"),
                 minute=minute,
                 trailer_url=film.get("trailer_url", ""),
+                age_rating=film.get("age_rating", ""),
             )
 
         # Seed monthly events
@@ -1802,6 +1825,7 @@ class Command(BaseCommand):
         image_url=None,
         minute=0,
         trailer_url="",
+        age_rating="",
     ):
         event, created = Event.objects.get_or_create(
             name=title,
@@ -1815,6 +1839,7 @@ class Command(BaseCommand):
                 "terms": copy or copy_summary,
                 "duration": datetime.time(2, 0),
                 "trailer_url": trailer_url,
+                "age_restriction": age_rating,
             },
         )
         if created:
@@ -1934,7 +1959,7 @@ class Command(BaseCommand):
         # A date with no "room" is deliberately left unbooked — a realistic gap.
         PROPOSED_EVENTS = [
             {
-                "name": "Pleasure Activism — monthly reading group",
+                "name": "Pleasure Activism: monthly reading group",
                 "template": "Workshop",
                 "status": "proposed",
                 "booked_by": "Sasha Pryce",
@@ -1943,7 +1968,7 @@ class Command(BaseCommand):
                 "created_days_ago": 21,
                 "copy_summary": (
                     "A relaxed monthly reading group working through adrienne "
-                    "maree brown's 'Pleasure Activism'. No prep needed — come "
+                    "maree brown's 'Pleasure Activism'. No prep needed, come "
                     "for any session."
                 ),
                 "copy": (
@@ -1968,13 +1993,13 @@ class Command(BaseCommand):
                 "duration": 180,
                 "created_days_ago": 10,
                 "copy_summary": (
-                    "Bring something broken — a lamp, a jumper, a toaster — and "
+                    "Bring something broken (a lamp, a jumper, a toaster) and "
                     "fix it with help from volunteers, instead of binning it."
                 ),
                 "programming_notes": (
                     "Block-booked four monthly trial dates to hold the Venue "
                     "Space. We'll almost certainly drop the later ones once we "
-                    "know how many fixers we can get — likely keeping just the "
+                    "know how many fixers we can get, likely keeping just the "
                     "first one or two. Placeholders for now."
                 ),
                 "dates": [
@@ -1994,13 +2019,13 @@ class Command(BaseCommand):
                 "created_days_ago": 4,
                 "programming_notes": (
                     "Pencilled in while I chase a headline act. Nothing "
-                    "confirmed — title, line-up and door price all TBC. Will "
+                    "confirmed: title, line-up and door price all TBC. Will "
                     "firm up nearer the time."
                 ),
                 "dates": [{"weeks": 11, "hour": 20}],
             },
             {
-                "name": "Trans Day of Visibility — film + panel",
+                "name": "Trans Day of Visibility: film + panel",
                 "template": "Film (DCP)",
                 "status": "proposed",
                 "booked_by": "Lila Estraven",
@@ -2011,10 +2036,10 @@ class Command(BaseCommand):
                     "A screening followed by a panel discussion with local "
                     "trans and non-binary artists and organisers."
                 ),
-                "copy": "Film TBC — shortlisting now. Panel guests being confirmed.",
+                "copy": "Film TBC, shortlisting now. Panel guests being confirmed.",
                 "programming_notes": (
                     "Approved in principle at the meeting. Still needs a room "
-                    "booked and the panel guests confirmed — no date clash, just "
+                    "booked and the panel guests confirmed. No date clash, just "
                     "not booked yet."
                 ),
                 "dates": [{"weeks": 10, "hour": 19}],
@@ -2032,9 +2057,9 @@ class Command(BaseCommand):
                     "repairs. All proceeds to the building fund."
                 ),
                 "copy": "Line-up confirmed. Sound by the in-house PA. Bar open all night.",
-                "terms": "",  # deliberately missing — publishing will fail until added
+                "terms": "",  # deliberately missing - publishing will fail until added
                 "programming_notes": (
-                    "Ready to go except it has no terms/pricing yet — confirming "
+                    "Ready to go except it has no terms/pricing yet, confirming "
                     "it will fail until those are filled in. Flagged to Rex."
                 ),
                 "dates": [{"weeks": 13, "hour": 19, "room": "Venue Space"}],
@@ -2048,7 +2073,7 @@ class Command(BaseCommand):
                 "duration": 180,
                 "created_days_ago": 2,
                 "programming_notes": (
-                    "Very early — just holding a weekend in the diary. "
+                    "Very early, just holding a weekend in the diary. "
                     "Programme, guests and budget all TBC. Two placeholder dates "
                     "we'll likely thin out."
                 ),
@@ -2068,7 +2093,7 @@ class Command(BaseCommand):
                 "created_days_ago": 3,
                 "target_month_offset_months": 3,
                 "programming_notes": (
-                    "Proposed at Monday meeting — everyone excited. Priya "
+                    "Proposed at Monday meeting, everyone excited. Priya "
                     "checking maker availability before we lock a date. Probably "
                     "a Saturday afternoon."
                 ),
@@ -2084,7 +2109,7 @@ class Command(BaseCommand):
                 "target_month_offset_months": 4,
                 "programming_notes": (
                     "Halloween-adjacent. Kaz shortlisting titles. No room or "
-                    "date agreed yet — just flagging so it lands in the right "
+                    "date agreed yet, just flagging so it lands in the right "
                     "month's planning."
                 ),
             },
@@ -2428,7 +2453,7 @@ class Command(BaseCommand):
             session_dt = timezone.make_aware(
                 datetime.datetime.combine(session_date, datetime.time(14, 0))
             )
-            title = f"Volunteer Induction — {session_date.strftime('%B %Y')}"
+            title = f"Volunteer Induction: {session_date.strftime('%B %Y')}"
 
             session, created = InductionSession.objects.get_or_create(
                 title=title,
@@ -2550,7 +2575,7 @@ class Command(BaseCommand):
                     "whether I can commit on a flexible basis rather than to a regular rota. "
                     "Standing for long periods is difficult."
                 ),
-                "rough_availability": "I need to respond to how I'm feeling on the day — hard to book far ahead.",
+                "rough_availability": "I need to respond to how I'm feeling on the day - hard to book far ahead.",
                 "status": InductionRequest.STATUS_PENDING,
             },
             {

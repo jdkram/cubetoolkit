@@ -578,7 +578,7 @@ class AgeRatingFilterTests(DiaryTestsMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.context["age_ratings"],
-            [("12A", "12A — Cinema only, under 12s with adult"), ("18", "18")],
+            [("12A", "12A (Cinema only, under 12s with adult)"), ("18", "18")],
         )
 
     @patch("django.utils.timezone.now")
