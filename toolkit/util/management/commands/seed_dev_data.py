@@ -36,6 +36,7 @@ from toolkit.diary.models import (
     RotaEntry,
     Room,
     Showing,
+    VolunteerEventMark,
 )
 from toolkit.index.models import IndexCategory, IndexLink
 from toolkit.members.models import Member, Volunteer, Qualification, VolunteerQualification
@@ -176,6 +177,13 @@ def _nth_weekday_of_month(year, month, weekday, n):
 class Command(BaseCommand):
     help = "Populate the database with anonymised sample data."
 
+    # Fixed fill rates for the two roles the dashboard and rota-vacancies
+    # views care about most: most near-future showings should already have a
+    # keyholder, and programmer signup should look realistically busy but not
+    # total, per the current seed-data brief.
+    KEYHOLDER_FILL_RATE = 0.85
+    PROGRAMMER_FILL_RATE = 0.70
+
     def add_arguments(self, parser):
         parser.add_argument(
             "--wipe",
@@ -250,6 +258,8 @@ class Command(BaseCommand):
             "induction_sessions": 0,
             "induction_signups": 0,
             "induction_requests": 0,
+            "demo_shifts": 0,
+            "demo_stars": 0,
         }
 
         # Roles
@@ -666,7 +676,7 @@ class Command(BaseCommand):
 
             day_offset = event_data.get("day_offset", 14)
             normalized_distance = min(day_offset / 28.0, 1.0)
-            fill_rate = 0.8 - (normalized_distance * 0.45)
+            generic_fill_rate = 0.85 - (normalized_distance * 0.3)
 
             expanded_roles = []
             for role_name in roles_list:
@@ -674,25 +684,27 @@ class Command(BaseCommand):
                 if random.random() < 0.7:
                     expanded_roles.append(role_name)
 
-            num_expanded = len(expanded_roles)
-            num_to_fill = max(1, int(num_expanded * fill_rate))
-            num_unfilled = max(0, num_expanded - num_to_fill)
-            unfilled_indices = set()
-            if num_expanded > 0 and num_unfilled > 0:
-                unfilled_indices = set(random.sample(range(num_expanded), num_unfilled))
-
             for i, role_name in enumerate(expanded_roles):
                 try:
                     role = Role.objects.get(name=role_name)
                 except Role.DoesNotExist:
                     continue
-                if i in unfilled_indices:
-                    vol_name = ""
+
+                if role_name == "Keyholder":
+                    fill_chance = self.KEYHOLDER_FILL_RATE
+                elif role_name == "Programmer":
+                    fill_chance = self.PROGRAMMER_FILL_RATE
                 else:
+                    fill_chance = generic_fill_rate
+
+                vol = None
+                vol_name = ""
+                if random.random() < fill_chance:
                     try:
-                        vol_name = next(vol_iter).member.name
+                        vol = next(vol_iter)
+                        vol_name = vol.member.name
                     except StopIteration:
-                        vol_name = ""
+                        vol = None
 
                 _, re_created = RotaEntry.objects.get_or_create(
                     showing=showing,
@@ -701,6 +713,7 @@ class Command(BaseCommand):
                     defaults={
                         "required": (i < num_roles),
                         "name": vol_name,
+                        "volunteer": vol,
                     },
                 )
                 if re_created:
@@ -1199,6 +1212,10 @@ class Command(BaseCommand):
         # Historical past showings with FK-linked rota entries (volunteer stats / heatmap)
         self._seed_historical_shifts(volunteer_objects, counts)
 
+        # Give the demo/test accounts (admin, programmer, volunteer1-5) upcoming
+        # shifts and starred events, so the dashboard cards have something to show.
+        self._seed_demo_account_activity(counts)
+
         # Induction sessions and sign-ups
         self._seed_inductions(counts)
 
@@ -1238,6 +1255,8 @@ class Command(BaseCommand):
                 f"  Induction sessions: {counts['induction_sessions']} new\n"
                 f"  Induction signups:  {counts['induction_signups']} new\n"
                 f"  Induction requests: {counts['induction_requests']} new\n"
+                f"  Demo account shifts: {counts['demo_shifts']} new\n"
+                f"  Demo account stars:  {counts['demo_stars']} new\n"
             )
         )
 
@@ -1389,6 +1408,74 @@ class Command(BaseCommand):
                 current = current.replace(year=year + 1, month=1)
             else:
                 current = current.replace(month=month + 1)
+
+    def _seed_demo_account_activity(self, counts):
+        """Give the demo/test accounts (admin, programmer, volunteer1-5) a lively
+        rota presence: a handful of upcoming shifts and starred events each, so
+        the dashboard's "upcoming shifts" and "starred events" cards have
+        something to show without needing to sign in as a randomly-named
+        seeded volunteer.
+
+        Must run after _seed_recurring_events/_seed_film_showing (so there are
+        future showings and open rota slots to claim) and after the demo
+        accounts' Volunteer rows exist (created earlier in handle()).
+        """
+        now = timezone.now()
+        demo_usernames = [
+            "admin", "programmer", "programmer2",
+            "volunteer", "volunteer2", "volunteer3", "volunteer4", "volunteer5",
+        ]
+        demo_vols = list(
+            Volunteer.objects.select_related("member", "user")
+            .filter(user__username__in=demo_usernames, member__isnull=False)
+        )
+        if not demo_vols:
+            return
+
+        # Claim a few currently-unfilled required slots per demo account.
+        open_slots = list(
+            RotaEntry.objects.filter(
+                showing__start__gte=now,
+                showing__cancelled=False,
+                volunteer__isnull=True,
+                name="",
+                required=True,
+            )
+            .select_related("showing")
+            .order_by("showing__start")
+        )
+        random.shuffle(open_slots)
+        slot_iter = iter(open_slots)
+        shifts_per_demo = 4
+        for vol in demo_vols:
+            claimed = 0
+            for slot in slot_iter:
+                slot.volunteer = vol
+                slot.name = vol.member.name
+                slot.save(update_fields=["volunteer", "name"])
+                counts["demo_shifts"] += 1
+                claimed += 1
+                if claimed >= shifts_per_demo:
+                    break
+
+        # Star a few upcoming events per demo account.
+        upcoming_events = list(
+            Event.objects.filter(
+                showings__start__gte=now, showings__cancelled=False
+            )
+            .distinct()
+            .order_by("showings__start")[:40]
+        )
+        for vol in demo_vols:
+            sample_size = min(3, len(upcoming_events))
+            for event in random.sample(upcoming_events, sample_size):
+                _, created = VolunteerEventMark.objects.get_or_create(
+                    volunteer=vol,
+                    event=event,
+                    defaults={"mark_type": VolunteerEventMark.MARK_STAR},
+                )
+                if created:
+                    counts["demo_stars"] += 1
 
     def _seed_recurring_events(self, rooms_dict, vol_list, counts, anchor):
         today = timezone.now().date()
@@ -1659,26 +1746,32 @@ class Command(BaseCommand):
             if random.random() < 0.7:
                 expanded_roles.append(rn)
 
-        num_expanded = len(expanded_roles)
-        fill_rate = random.uniform(0.4, 0.8)
-        num_to_fill = max(1, int(num_expanded * fill_rate))
-        num_unfilled = max(0, num_expanded - num_to_fill)
-        unfilled_indices = set()
-        if num_expanded > 0 and num_unfilled > 0:
-            unfilled_indices = set(random.sample(range(num_expanded), num_unfilled))
+        # Keyholder and Programmer are the roles the dashboard "upcoming shifts"
+        # and rota-vacancies views care most about, so they get their own high,
+        # fixed fill rates rather than the generic per-event roll below.
+        generic_fill_rate = random.uniform(0.55, 0.85)
 
         for i, role_name in enumerate(expanded_roles):
             try:
                 role = Role.objects.get(name=role_name)
             except Role.DoesNotExist:
                 continue
-            if i in unfilled_indices:
-                vol_name = ""
+
+            if role_name == "Keyholder":
+                fill_chance = self.KEYHOLDER_FILL_RATE
+            elif role_name == "Programmer":
+                fill_chance = self.PROGRAMMER_FILL_RATE
             else:
+                fill_chance = generic_fill_rate
+
+            vol = None
+            vol_name = ""
+            if random.random() < fill_chance:
                 try:
-                    vol_name = next(vol_iter).member.name
+                    vol = next(vol_iter)
+                    vol_name = vol.member.name
                 except StopIteration:
-                    vol_name = ""
+                    vol = None
 
             _, re_created = RotaEntry.objects.get_or_create(
                 showing=showing,
@@ -1687,6 +1780,7 @@ class Command(BaseCommand):
                 defaults={
                     "required": (i < num_roles),
                     "name": vol_name,
+                    "volunteer": vol,
                 },
             )
             if re_created:
@@ -1773,37 +1867,48 @@ class Command(BaseCommand):
                 )
             self._book_slot(room, showing_start, 120)
 
-        # Rota entries for a film screening
+        # Rota entries for a film screening. Keyholder and Programmer get their
+        # own high, fixed fill rates (see _seed_one_recurring_showing); the
+        # remaining support roles are always staffed for a screening.
         available_vols = list(vol_list)
         random.shuffle(available_vols)
         vol_iter = iter(available_vols)
 
         film_roles = [
-            ("Keyholder", True, "Keyholder"),
-            ("Projectionist - DCP", True, None),
-            ("Box Office - Admission Tickets", True, None),
-            ("Bar Staff - Shift 1", True, None),
-            ("Usher - Fire Trained", True, None),
+            "Keyholder",
+            "Programmer",
+            "Projectionist - DCP",
+            "Box Office - Admission Tickets",
+            "Bar Staff - Shift 1",
+            "Usher - Fire Trained",
         ]
 
-        for role_name, required, default_name in film_roles:
+        for role_name in film_roles:
             try:
                 role = Role.objects.get(name=role_name)
             except Role.DoesNotExist:
                 continue
 
-            if default_name:
-                vol_name = default_name
+            if role_name == "Keyholder":
+                fill_chance = self.KEYHOLDER_FILL_RATE
+            elif role_name == "Programmer":
+                fill_chance = self.PROGRAMMER_FILL_RATE
             else:
+                fill_chance = 1.0
+
+            vol = None
+            vol_name = ""
+            if random.random() < fill_chance:
                 try:
-                    vol_name = next(vol_iter).member.name
+                    vol = next(vol_iter)
+                    vol_name = vol.member.name
                 except StopIteration:
-                    vol_name = ""
+                    vol = None
 
             _, re_created = RotaEntry.objects.get_or_create(
                 showing=showing,
                 role=role,
-                defaults={"required": required, "name": vol_name},
+                defaults={"required": True, "name": vol_name, "volunteer": vol},
             )
             if re_created:
                 counts["rota_entries"] += 1

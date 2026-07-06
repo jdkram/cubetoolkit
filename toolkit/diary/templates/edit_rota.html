@@ -1016,8 +1016,9 @@ edit_rota(
 
     // ── Tag filter bar: build from data-tags/data-tag-names on each showing ──
     // Reads data attributes (always in the DOM) rather than rendered badge
-    // elements, so it works regardless of the rota_show_tags setting.
+    // elements, but only when rota_show_tags is on -- see ROTA_SHOW_TAGS above.
     function buildTagFilterBar() {
+        if (!ROTA_SHOW_TAGS) { return; }
         var seen = {};
         var tags = [];
         $(".rota-showing[data-tags]").each(function() {
@@ -1377,6 +1378,8 @@ edit_rota(
     // forced on for this page load, overriding any stored "off" preference, to
     // help them ease back in. They can still toggle it off again.
     var FORCE_BEGINNER = {{ force_beginner_highlight|yesno:"true,false" }};
+
+    var ROTA_SHOW_TAGS = {{ rota_show_tags|yesno:"true,false" }};
 
     function initBadgeToggles() {
         var wrapper = $(".rota-wrapper");

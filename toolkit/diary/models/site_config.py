@@ -39,7 +39,7 @@ class SiteConfiguration(models.Model):
         help_text="The banner copy. Only shown when 'Films start on time' is enabled.",
     )
     rota_show_tags = models.BooleanField(
-        default=True,
+        default=False,
         help_text=(
             "Show coloured event tag badges (e.g. 'family-friendly', 'accessible') on the "
             "edit rota page, along with a filter bar for narrowing the rota by tag. "
