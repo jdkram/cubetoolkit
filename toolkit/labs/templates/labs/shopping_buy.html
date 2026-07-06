@@ -72,7 +72,7 @@
 {% if unsorted_count %}
 <div class="unsorted-card">
   <div>
-    <div class="unsorted-card__label">Needs sorting — {{ unsorted_count }} item{{ unsorted_count|pluralize }} with no supplier yet</div>
+    <div class="unsorted-card__label">Needs sorting: {{ unsorted_count }} item{{ unsorted_count|pluralize }} with no supplier yet</div>
     <div class="unsorted-card__sub">Help out: attach these to a supplier so they appear on the right shop sheet.</div>
   </div>
   <a href="{% url "labs-shopping-buy-unsorted" %}" class="btn btn-sm btn-warning">Sort them →</a>

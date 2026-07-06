@@ -1,6 +1,6 @@
 {% extends "base_admin.html" %}
 
-{% block title %}{{ supplier.name }} — shop sheet{% endblock %}
+{% block title %}{{ supplier.name }}: shop sheet{% endblock %}
 
 {% block css %}
 {{ block.super }}
@@ -59,16 +59,16 @@
 
 {% if supplier.fulfilment_type == "delivery" %}
 <div class="shop-banner shop-banner--delivery">
-  📦 Online order / delivery — items confirmed when you place the order.
+  📦 Online order / delivery, items confirmed when you place the order.
   {% if supplier.ordering_url %}<a href="{{ supplier.ordering_url }}" target="_blank" rel="noopener">Open ordering site →</a>{% endif %}
 </div>
 {% elif supplier.fulfilment_type == "pickup" %}
 <div class="shop-banner shop-banner--pickup">
-  🛒 In person — availability not guaranteed until you're there.
+  🛒 In person, availability not guaranteed until you're there.
 </div>
 {% else %}
 <div class="shop-banner shop-banner--either">
-  Delivery or pickup — check the order below.
+  Delivery or pickup, check the order below.
   {% if supplier.ordering_url %}<a href="{{ supplier.ordering_url }}" target="_blank" rel="noopener">Open ordering site →</a>{% endif %}
 </div>
 {% endif %}
@@ -155,7 +155,7 @@
           <form method="post" action="{% url "labs-shopping-oos" row.flag.pk %}">
             {% csrf_token %}
             <input type="hidden" name="supplier_id" value="{{ supplier.pk }}">
-            <button type="submit" class="btn btn-sm btn-outline-danger" title="Out of stock — keeps the need open">OOS</button>
+            <button type="submit" class="btn btn-sm btn-outline-danger" title="Out of stock, keeps the need open">OOS</button>
           </form>
           {% endif %}
         {% endif %}

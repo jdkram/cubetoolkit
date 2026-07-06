@@ -202,7 +202,7 @@
         </p>
         <form method="post" action="{% url "volunteer-renew-consent-self" %}" class="d-inline">
           {% csrf_token %}
-          <button type="submit" class="btn btn-warning btn-sm">I've read it — reconfirm my consent</button>
+          <button type="submit" class="btn btn-warning btn-sm">I've read it: reconfirm my consent</button>
         </form>
       </div>
     </div>
@@ -704,11 +704,11 @@
 <p class="access-tier">
   Access level:
   {% if user.is_superuser %}
-    <strong>Panopticon</strong> — full admin access
+    <strong>Panopticon</strong>: full admin access
   {% elif perms.toolkit.write %}
-    <strong>Programmer</strong> — can edit events, templates and tags; cannot manage members, volunteers or roles
+    <strong>Programmer</strong>: can edit events, templates and tags; cannot manage members, volunteers or roles
   {% else %}
-    <strong>Volunteer</strong> — can edit the rota
+    <strong>Volunteer</strong>: can edit the rota
   {% endif %}
   {% if VENUE.show_user_management %}
   &middot; <a href="{% url "password_change" %}">Change password</a>

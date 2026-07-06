@@ -199,7 +199,7 @@
         var active  = activeFilters();
         var lines   = [];
         var daysAhead = {{ days_ahead }};
-        lines.push('{{ VENUE.longname }} rota — roles still needed (next ' + daysAhead + ' days)');
+        lines.push('{{ VENUE.longname }} rota: roles still needed (next ' + daysAhead + ' days)');
         lines.push('');
 
         document.querySelectorAll('#vacancy-list .vacancy-card').forEach(function(card) {
@@ -214,7 +214,7 @@
                 .map(function(p) { return p.textContent.trim(); });
             if (roles.length === 0) { return; }
 
-            lines.push(dateEl.textContent.trim() + ' — ' + eventEl.textContent.trim());
+            lines.push(dateEl.textContent.trim() + ': ' + eventEl.textContent.trim());
             roles.forEach(function(r) { lines.push('  ' + r); });
             lines.push('');
         });

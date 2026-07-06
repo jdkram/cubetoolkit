@@ -157,11 +157,11 @@ function hideAddShowingForm() {
         {% endif %}
     {% endif %}
     {% if c.film_details_required and not c.has_film_details %}<a href="{% url "edit-event-details" event.pk %}#film-section" class="badge text-bg-warning text-decoration-none">Film details not linked →</a>{% endif %}
-    {% if unconfirmed_future_count and c.has_future_showing %}<a href="#showings-heading" class="badge text-bg-warning text-decoration-none">{{ unconfirmed_future_count }} unconfirmed {% if unconfirmed_future_count == 1 %}{{ site_config.occurrence_noun }}{% else %}{{ site_config.occurrence_noun_plural }}{% endif %} — hidden from the public programme and rota →</a>{% endif %}
+    {% if unconfirmed_future_count and c.has_future_showing %}<a href="#showings-heading" class="badge text-bg-warning text-decoration-none">{{ unconfirmed_future_count }} unconfirmed {% if unconfirmed_future_count == 1 %}{{ site_config.occurrence_noun }}{% else %}{{ site_config.occurrence_noun_plural }}{% endif %}, hidden from the public programme and rota →</a>{% endif %}
 </div>
 {% elif unconfirmed_future_count and c.has_future_showing %}
 <div class="alert alert-success d-flex align-items-center gap-3 mb-3 py-2 flex-wrap">
-    <span><strong>✓ Everything looks good</strong> — ready to go live?</span>
+    <span><strong>✓ Everything looks good</strong>, ready to go live?</span>
     {% if not is_series %}{% with showing=future_showings.0 %}{% if showing and not showing.confirmed %}
     <form method="post" action="{% url 'update-showing-status' showing.id %}" class="mb-0">
         {% csrf_token %}<input type="hidden" name="action" value="confirm">
@@ -343,16 +343,16 @@ function hideAddShowingForm() {
 
   <dt class="col-sm-3">Private
     <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
-          title="When ticked, this event is hidden from the public website entirely — it won't appear in any listing or be accessible via URL, even if its {{ site_config.occurrence_noun_plural }} are confirmed. Use for internal events or placeholders.">ⓘ</span>
+          title="When ticked, this event is hidden from the public website entirely, so it won't appear in any listing or be accessible via URL, even if its {{ site_config.occurrence_noun_plural }} are confirmed. Use for internal events or placeholders.">ⓘ</span>
   </dt>
   <dd class="col-sm-9">
-    {% if event.private %}<span class="badge text-bg-warning">Yes — hidden from public</span>
+    {% if event.private %}<span class="badge text-bg-warning">Yes (hidden from public)</span>
     {% else %}<span class="text-muted">No</span>{% endif %}
   </dd>
 
   <dt class="col-sm-3">Programmer's notes
     <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
-          title="Internal working notes — never shown to the public. Use for queue context, meeting decisions, and conditions attached to approval. Financial details and hire contacts belong in Terms.">ⓘ</span>
+          title="Internal working notes, never shown to the public. Use for queue context, meeting decisions, and conditions attached to approval. Financial details and hire contacts belong in Terms.">ⓘ</span>
   </dt>
   <dd class="col-sm-9">
     {% if event.programming_notes %}{{ event.programming_notes|linebreaksbr }}
@@ -361,7 +361,7 @@ function hideAddShowingForm() {
 
   <dt class="col-sm-3">Approval status
     <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
-          title="How this event entered the programme — approved at a programming meeting, or a standing/regular event that needs no meeting.">ⓘ</span>
+          title="How this event entered the programme: approved at a programming meeting, or a standing/regular event that needs no meeting.">ⓘ</span>
   </dt>
   <dd class="col-sm-9">
     {% if event.approval_type %}
@@ -486,19 +486,19 @@ function hideAddShowingForm() {
   <dd class="col-sm-9">
     {% with event.media.all.0 as media_item %}
     {% if media_item and media_item.alt_text %}{{ media_item.alt_text }}
-    {% elif media_item %}<span class="text-muted">— (no alt text set for this image)</span>
+    {% elif media_item %}<span class="text-muted">(no alt text set for this image)</span>
     {% else %}<span class="text-muted">—</span>{% endif %}
     {% endwith %}
   </dd>
 
   <dt class="col-sm-3">Image credit
     <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
-          title="Public attribution for the image — shown alongside the image on the event page, e.g. &quot;Photo: Jane Smith&quot;.">ⓘ</span>
+          title="Public attribution for the image, shown alongside the image on the event page, e.g. &quot;Photo: Jane Smith&quot;.">ⓘ</span>
   </dt>
   <dd class="col-sm-9">
     {% with event.media.all.0 as media_item %}
     {% if media_item and media_item.credit %}{{ media_item.credit }}
-    {% elif media_item %}<span class="text-muted">— (no credit given for uploaded image)</span>
+    {% elif media_item %}<span class="text-muted">(no credit given for uploaded image)</span>
     {% else %}<span class="text-muted">—</span>{% endif %}
     {% endwith %}
     <small class="text-muted d-block mt-1">⚠️ Please make sure you have the right to use any image you upload.{% if IMAGE_COPYRIGHT_GUIDANCE_URL %} See our <a href="{{ IMAGE_COPYRIGHT_GUIDANCE_URL }}" target="_blank" rel="noopener">image copyright guidance</a> for help finding freely-licensed images.{% endif %}</small>
@@ -518,7 +518,7 @@ function hideAddShowingForm() {
 
   <dt class="col-sm-3">Copy summary
     <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
-          title="Short plain-text description (ideally ≤25 words). Used in the print programme and brief online listings — separate from the full description above.">ⓘ</span>
+          title="Short plain-text description (ideally ≤25 words). Used in the print programme and brief online listings, separate from the full description above.">ⓘ</span>
   </dt>
   <dd class="col-sm-9">
     {% if event.copy_summary %}
@@ -565,9 +565,7 @@ function hideAddShowingForm() {
 {% for showing in future_showings %}
 <div class="card showing-card">
   <div class="card-body">
-    <strong>{{ showing.start|date:"D j M Y, H:i" }}</strong>
-    {% if MULTIROOM_ENABLED %}{% with rd=showing.rooms_display %}{% if rd %} in {{ rd }}{% endif %}{% endwith %}{% endif %}
-    — booked by <em>{{ showing.booked_by }}</em>
+    <strong>{{ showing.start|date:"D j M Y, H:i" }}</strong>{% if MULTIROOM_ENABLED %}{% with rd=showing.rooms_display %}{% if rd %} in {{ rd }}{% endif %}{% endwith %}{% endif %}, booked by <em>{{ showing.booked_by }}</em>
 
     {% if showing.hide_in_programme %}
     <span class="badge text-bg-secondary ms-1" data-bs-toggle="tooltip"
@@ -585,14 +583,14 @@ function hideAddShowingForm() {
     <div class="status-actions">
       {% if showing.cancelled %}
         <span class="badge text-bg-danger" data-bs-toggle="tooltip"
-              title="This {{ site_config.occurrence_noun }} is cancelled — it stays visible on the public programme and the rota, clearly labelled CANCELLED, so the public knows and volunteers aren't left guessing.">Cancelled</span>
+              title="This {{ site_config.occurrence_noun }} is cancelled but stays visible on the public programme and the rota, clearly labelled CANCELLED, so the public knows and volunteers aren't left guessing.">Cancelled</span>
         <form method="post" action="{% url 'update-showing-status' showing.id %}">
           {% csrf_token %}<input type="hidden" name="action" value="uncancel">
           <button type="submit" class="btn btn-sm btn-outline-secondary">Uncancel</button>
         </form>
       {% elif showing.confirmed %}
         <span class="badge text-bg-success" data-bs-toggle="tooltip"
-              title="Confirmed — this {{ site_config.occurrence_noun }} is public in the online programme and its rota is open for sign-ups.">Confirmed</span>
+              title="Confirmed: this {{ site_config.occurrence_noun }} is public in the online programme and its rota is open for sign-ups.">Confirmed</span>
         <form method="post" action="{% url 'update-showing-status' showing.id %}">
           {% csrf_token %}<input type="hidden" name="action" value="unconfirm">
           <button type="submit" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip"
@@ -605,7 +603,7 @@ function hideAddShowingForm() {
         </form>
       {% else %}
         <span class="badge text-bg-secondary" data-bs-toggle="tooltip"
-              title="Not yet confirmed — this {{ site_config.occurrence_noun }} is not public and its rota is not yet open.">Unconfirmed</span>
+              title="Not yet confirmed: this {{ site_config.occurrence_noun }} is not public and its rota is not yet open.">Unconfirmed</span>
         <form method="post" action="{% url 'update-showing-status' showing.id %}">
           {% csrf_token %}<input type="hidden" name="action" value="confirm">
           <button type="submit" class="btn btn-sm btn-success" data-bs-toggle="tooltip"
@@ -674,7 +672,7 @@ function hideAddShowingForm() {
   {# Single occurrence: the affordance that introduces the series concept. #}
   <button id="add-showing-toggle" type="button" class="btn btn-outline-info btn-sm"
           onclick="showAddShowingForm()" data-bs-toggle="tooltip"
-          title="Give this event another {{ site_config.occurrence_noun }}. It becomes a series — one description shared across all its {{ site_config.occurrence_noun_plural }}, each with its own rota and room bookings.">+ Add another {{ site_config.occurrence_noun }}</button>
+          title="Give this event another {{ site_config.occurrence_noun }}. It becomes a series: one description shared across all its {{ site_config.occurrence_noun_plural }}, each with its own rota and room bookings.">+ Add another {{ site_config.occurrence_noun }}</button>
   <a href="{% url 'batch-add-showings' event.pk %}"
      class="btn btn-outline-info btn-sm ms-2"
      data-bs-toggle="tooltip"
@@ -695,7 +693,7 @@ function hideAddShowingForm() {
     <h5>Add another {{ site_config.occurrence_noun }}</h5>
     {% if clone_source_showing.rota_notes %}
     <div class="alert alert-warning alert-sm py-2 px-3 mb-2" role="alert">
-      <strong>Note:</strong> Rota notes from the most recent {{ site_config.occurrence_noun }} will be copied to this one — please review them afterwards.
+      <strong>Note:</strong> Rota notes from the most recent {{ site_config.occurrence_noun }} will be copied to this one, so please review them afterwards.
     </div>
     {% endif %}
     <form method="post">

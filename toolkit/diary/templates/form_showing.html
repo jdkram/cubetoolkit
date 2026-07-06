@@ -163,14 +163,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Field tooltips
     var FIELD_TIPS = {
-        'id_confirmed':           'Must be ticked for a showing to appear on the volunteer rota AND the public programme. Leave unticked while a booking is provisional. For a volunteer-only event — visible on the rota but not to the public — confirm it and mark the event as Private.',
+        'id_confirmed':           'Must be ticked for a showing to appear on the volunteer rota AND the public programme. Leave unticked while a booking is provisional. For a volunteer-only event (visible on the rota but not to the public), confirm it and mark the event as Private.',
         'id_hide_in_programme':   'Hides this specific date from the public programme, but the showing still appears on the volunteer rota. To hide all dates for an event from the public, use the Private flag on the event instead.',
-        'id_cancelled':           'Marks this showing as cancelled. Cancelled showings stay visible in the public programme and on the rota, clearly labelled CANCELLED — so the public knows and volunteers aren’t left guessing.',
+        'id_cancelled':           'Marks this showing as cancelled. Cancelled showings stay visible in the public programme and on the rota, clearly labelled CANCELLED, so the public knows and volunteers aren’t left guessing.',
         'id_sold_out':            'Shows a "Sold out" badge on the public listing for this date. Does not automatically remove the ticket link.',
         'id_discounted':          'Marks this specific date as discounted. Shown with a discounted badge on the public programme.',
         'id_setup_time':          'Time of day when setup starts, e.g. 19:00. Shown on the rota as the earliest call time before doors open. Format: HH:MM (24-hour).',
         'id_doors_time':          'Time doors open to the public. Shown on the rota. Format: HH:MM (24-hour).',
-        'id_final_volunteer_time':'Latest time volunteers are needed — anyone signed up knows they can leave after this. Shown on the rota. Format: HH:MM (24-hour).',
+        'id_final_volunteer_time':'Latest time volunteers are needed, so anyone signed up knows they can leave after this. Shown on the rota. Format: HH:MM (24-hour).',
     };
 
     $.each(FIELD_TIPS, function (fieldId, tipText) {
@@ -356,7 +356,7 @@ document.addEventListener("DOMContentLoaded", function () {
     <li>{{ clash.room.name }} overlaps with <strong>{{ clash.showing.event.name }}</strong> ({{ clash.start|date:"D j M, H:i" }}{% if clash.end %}–{{ clash.end|date:"H:i" }}{% endif %})</li>
     {% endfor %}
   </ul>
-  <p class="mb-0 mt-1 small">Saved anyway — resolve if this is unintentional.</p>
+  <p class="mb-0 mt-1 small">Saved anyway, resolve if this is unintentional.</p>
 </div>
 {% endif %}
 
@@ -452,7 +452,7 @@ document.addEventListener("DOMContentLoaded", function () {
     {% endfor %}
   </ul>
 
-  <h4>One-shot roles <small class="text-muted fw-normal" style="font-size:0.8em">Bespoke roles for this event only — not added to the permanent list</small></h4>
+  <h4>One-shot roles <small class="text-muted fw-normal" style="font-size:0.8em">Bespoke roles for this event only, not added to the permanent list</small></h4>
   <div id="oneshot-rows">
     {% for r in oneshot_roles %}
     <div class="d-flex gap-2 mb-2 align-items-center flex-wrap oneshot-row" data-oneshot-row="{{ forloop.counter0 }}" data-signed-up-count="{{ r.signed_up_count }}">

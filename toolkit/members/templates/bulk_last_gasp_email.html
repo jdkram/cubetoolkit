@@ -16,13 +16,13 @@
 
 <p style="color:#555; font-size:0.9em;">
   This email gives volunteers a chance to re-engage before their records are anonymised.
-  A {{ cooldown_days }}-day cooldown applies per recipient — anyone already within that window will be skipped automatically.
+  A {{ cooldown_days }}-day cooldown applies per recipient: anyone already within that window will be skipped automatically.
   <br>Use <code>{name}</code> and <code>{venue}</code> as placeholders; they are filled in per recipient at send time.
 </p>
 
 {% if cooldown_count %}
 <div class="alert alert-warning" style="max-width:48rem;">
-  <strong>{{ cooldown_count }} recipient{{ cooldown_count|pluralize }} in cooldown</strong> —
+  <strong>{{ cooldown_count }} recipient{{ cooldown_count|pluralize }} in cooldown</strong>:
   a last-gasp email was sent to them within the last {{ cooldown_days }} days.
   They will be skipped when you send; only the {{ ready_count }} shown as ready will receive the email.
 </div>
@@ -73,7 +73,7 @@
         <td>{{ r.volunteer.member.email }}</td>
         <td>
           {% if r.in_cooldown %}
-            <span class="text-muted">Skipped — emailed {{ r.recent_log.sent_at|timesince }} ago</span>
+            <span class="text-muted">Skipped (emailed {{ r.recent_log.sent_at|timesince }} ago)</span>
           {% else %}
             <span class="text-success">Ready</span>
           {% endif %}

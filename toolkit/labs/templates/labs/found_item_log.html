@@ -1,6 +1,6 @@
 {% extends "base_admin.html" %}
 
-{% block title %}Lost &amp; found — log{% endblock %}
+{% block title %}Lost &amp; found: log{% endblock %}
 
 {% block css %}
 {{ block.super }}
@@ -94,7 +94,7 @@
     <div class="laf-field">
       <label for="id_description">Description</label>
       {{ form.description }}
-      <div class="form-text" id="desc-hint-found">What is it? Keep it brief — colour, type, distinguishing features.</div>
+      <div class="form-text" id="desc-hint-found">What is it? Keep it brief: colour, type, distinguishing features.</div>
       <div class="form-text" id="desc-hint-lost" style="display:none;">What did they lose? Colour, type, any distinguishing features.</div>
     </div>
 
@@ -112,13 +112,13 @@
       <label for="id_logged_by">Your name</label>
       {{ form.logged_by }}
       <div class="form-text" id="loggedby-hint-found">You'll be the contact if someone comes looking.</div>
-      <div class="form-text" id="loggedby-hint-lost" style="display:none;">You're the point of contact — the reporter's details stay private to this system.</div>
+      <div class="form-text" id="loggedby-hint-lost" style="display:none;">You're the point of contact, and the reporter's details stay private to this system.</div>
     </div>
 
     <div class="laf-field" id="field-reporter-contact" style="display:none;">
       <label for="id_reporter_contact">{{ form.reporter_contact.label }}</label>
       {{ form.reporter_contact }}
-      <div class="laf-private-note">Only visible to logged-in volunteers — not shown to the public.</div>
+      <div class="laf-private-note">Only visible to logged-in volunteers, not shown to the public.</div>
     </div>
 
     <div class="laf-field" id="field-photo">
@@ -137,7 +137,7 @@
   </form>
 
   <p class="laf-hint" id="hint-found">
-    If you can manage it, writing the item ID on a sticky note and attaching it to the item makes things easier when someone comes looking — but realistically that probably won't happen. Logging it somewhere is what matters, so that we know when it's reasonable to chuck stuff out.
+    If you can manage it, writing the item ID on a sticky note and attaching it to the item makes things easier when someone comes looking, but realistically that probably won't happen. Logging it somewhere is what matters, so that we know when it's reasonable to chuck stuff out.
   </p>
   <p class="laf-hint" id="hint-lost" style="display:none;">
     Once logged, anyone searching the list will be able to see the description. If something matching turns up in the found items, they can contact you directly.

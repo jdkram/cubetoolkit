@@ -1,6 +1,6 @@
 {% extends "base_admin.html" %}
 
-{% block title %}{% if editing %}Edit listing{% else %}Offer something{% endif %} — community exchange{% endblock %}
+{% block title %}{% if editing %}Edit listing{% else %}Offer something{% endif %}: community exchange{% endblock %}
 
 {% block css %}
 {{ block.super }}
@@ -93,7 +93,7 @@
             Available until <span class="text-muted fw-normal">(optional)</span>
           </label>
           {{ form.available_until }}
-          <div class="form-text">Show urgency — useful for food that will go off. Displayed prominently on the listing.</div>
+          <div class="form-text">Show urgency: useful for food that will go off. Displayed prominently on the listing.</div>
           {% if form.available_until.errors %}<div class="text-danger small">{{ form.available_until.errors }}</div>{% endif %}
         </div>
       </div>

@@ -72,7 +72,7 @@
         <form method="post" action="{% url "labs-shopping-enrich" flag.item.pk %}" class="enrich-form">
           {% csrf_token %}
           <select name="supplier_id" class="supplier-select" aria-label="Choose existing supplier">
-            <option value="">— pick supplier —</option>
+            <option value="">Pick supplier</option>
             {% for s in active_suppliers %}
             <option value="{{ s.pk }}">{{ s.name }}</option>
             {% endfor %}
@@ -91,7 +91,7 @@
 </table>
 </div>
 {% else %}
-<p class="text-muted mt-3">No unsorted items — everything flagged as needed has a supplier attached.</p>
+<p class="text-muted mt-3">No unsorted items: everything flagged as needed has a supplier attached.</p>
 {% endif %}
 
 <script>

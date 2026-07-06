@@ -93,13 +93,13 @@ $(document).ready(function() {
             msg = words + ' words';
         } else if (words < 25) {
             cls = 'wc-close';
-            msg = words + ' words — getting close to 25';
+            msg = words + ' words, getting close to 25';
         } else if (words === 25) {
             cls = 'wc-perfect';
-            msg = '25 words — perfect for print programme and magazines';
+            msg = '25 words, perfect for print programme and magazines';
         } else {
             cls = 'wc-over';
-            msg = words + ' words — over 25, print version will need shortening';
+            msg = words + ' words, over 25, print version will need shortening';
         }
         word_counter.attr('class', cls).text(msg);
     }
@@ -274,10 +274,10 @@ $(document).ready(function () {
         'id_cost_minimum_guarantee_gbp': 'Guaranteed minimum payment regardless of door takings, in pounds.',
         'id_cost_total_gbp':             'Total agreed fee for the booking (performer / venue hire), in pounds. For private hires, records the income received.',
         'id_terms':                      'Booking or screening terms for this event. Must be filled in (minimum word count) before any showing can be confirmed, unless the event type exempts it or a cost type is set above.',
-        'id_cost_rider_notes':           'Hospitality and rider requirements for the performer or hirer — food, drink, accommodation, etc.',
+        'id_cost_rider_notes':           'Hospitality and rider requirements for the performer or hirer, e.g. food, drink, accommodation.',
         'id_cost_sound_engineer_name':   'Sound engineer name or contact, if one is booked for this event.',
         'id_cost_sound_engineer_fee_gbp': 'Sound engineer fee in pounds.',
-        'id_cost_sound_engineer_paid_by': 'Who covers the sound engineer fee — the venue, the performer/act, or the hirer.',
+        'id_cost_sound_engineer_paid_by': 'Who covers the sound engineer fee: the venue, the performer/act, or the hirer.',
         'id_copy':                       'The main event description shown in the public programme. Can be formatted with HTML (bold, links, etc.).',
         'id_copy_summary':               'Short plain-text description (ideally \u226425 words). Used in the print programme and brief online listings \u2014 separate from the full description above.',
         'id_media_file':                 'The event poster or promotional image shown in the public programme.',
@@ -443,7 +443,7 @@ $(document).ready(function () {
             + '<div class="d-flex align-items-center px-3 py-2" style="cursor:pointer;" id="ticket-link-guide-toggle" onclick="var b=document.getElementById(\'ticket-link-guide-body\');var arr=this.querySelector(\'.ts-arrow\');b.style.display=b.style.display===\'none\'?\'\':\'none\';arr.textContent=b.style.display===\'none\'?\'▶\':\'▼\';">'
             + '<span class="ts-arrow me-2">▶</span>'
             + '<strong>Ticket link setup guide</strong>'
-            + '<span class="text-muted small ms-2">— expand for a quick checklist</span>'
+            + '<span class="text-muted small ms-2">(expand for a quick checklist)</span>'
             + '</div>'
             + '<div id="ticket-link-guide-body" style="display:none;" class="px-3 pb-3 small">'
             + guidanceBody
@@ -1259,7 +1259,7 @@ document.addEventListener('DOMContentLoaded', function () {
   {% for showing in event.showings.all %}
   <a href="{% url 'edit-showing' showing.id %}"
      class="badge text-decoration-none {% if showing.cancelled %}text-bg-danger{% elif showing.confirmed %}text-bg-success{% else %}text-bg-secondary{% endif %}"
-     title="{% if showing.cancelled %}Cancelled{% elif showing.confirmed %}Confirmed — public{% else %}Unconfirmed — not yet public{% endif %} · Edit this {{ site_config.occurrence_noun }}">
+     title="{% if showing.cancelled %}Cancelled{% elif showing.confirmed %}Confirmed, public{% else %}Unconfirmed, not yet public{% endif %} · Edit this {{ site_config.occurrence_noun }}">
     {{ showing.start|date:"D j M Y, H:i" }}
   </a>
   {% empty %}
@@ -1284,7 +1284,7 @@ document.addEventListener('DOMContentLoaded', function () {
         <span class="section-arrow">&#9658;</span>
         <strong>Budget</strong>
         <span class="badge bg-warning text-dark ms-1">Experimental</span>
-        <small class="text-muted ms-2">estimate vs actual, by category — trial replacement for the budget spreadsheet, not yet well-tested</small>
+        <small class="text-muted ms-2">estimate vs actual, by category, a trial replacement for the budget spreadsheet, not yet well-tested</small>
       </div>
       <div id="budget-body" class="collapse">
         <div class="card-body pt-2 pb-1">
@@ -1476,7 +1476,7 @@ document.addEventListener('DOMContentLoaded', function () {
            aria-controls="film-section-collapse">
         <span class="film-section-arrow" style="display:inline-block;transition:transform 0.15s;{% if event.film or has_film_tag %}transform:rotate(90deg){% endif %}">&#9658;</span>
         <strong>Film / screened work details</strong>
-        <small class="text-muted ms-2">optional — links structured metadata to this event</small>
+        <small class="text-muted ms-2">optional, links structured metadata to this event</small>
       </div>
       <div id="film-section-collapse" class="collapse {% if event.film or has_film_tag %}show{% endif %}">
       <div class="card-body">

@@ -13,7 +13,7 @@
 {% if recent_log %}
 <div class="alert alert-warning">
   A last-gasp email was already sent to <strong>{{ member.name }}</strong> on {{ recent_log.sent_at|date:"j N Y" }}
-  ({{ recent_log.sent_at|timesince }} ago). The {{ cooldown_days }}-day cooldown has not elapsed — sending is disabled.
+  ({{ recent_log.sent_at|timesince }} ago). The {{ cooldown_days }}-day cooldown has not elapsed, so sending is disabled.
   <p><a href="{% url "view-volunteer-pool-health" %}" class="btn btn-sm btn-secondary" style="margin-top:0.5rem;">Back to pool maintenance</a></p>
 </div>
 {% else %}

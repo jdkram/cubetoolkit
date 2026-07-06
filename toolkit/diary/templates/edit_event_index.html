@@ -727,13 +727,13 @@ $(document).ready(function() {
   <details class="diary-key">
     <summary>Key</summary>
     <p>
-      <span class="unconfirmed">unconfirmed — wavy underline, lower case</span><br>
-      <span class="confirmed">Confirmed — upper case</span><br>
-      <span class="private">Private — italic</span><br>
-      <span class="external">Outside hire — bold</span><br>
-      <span class="discounted">Discounted — magenta + *</span><br>
-      <span class="cancelled">Cancelled — red</span><br>
-      <span class="daytime" style="padding:0 2px;">Daytime (before 6pm) — yellow bg</span>
+      <span class="unconfirmed">unconfirmed: wavy underline, lower case</span><br>
+      <span class="confirmed">Confirmed: upper case</span><br>
+      <span class="private">Private: italic</span><br>
+      <span class="external">Outside hire: bold</span><br>
+      <span class="discounted">Discounted: magenta + *</span><br>
+      <span class="cancelled">Cancelled: red</span><br>
+      <span class="daytime" style="padding:0 2px;">Daytime (before 6pm): yellow bg</span>
     </p>
   </details>
 </div>
@@ -813,7 +813,7 @@ $(document).ready(function() {
       {% if has_other_rooms %}
         {% other_room_bookings_at slot_showings time_slot as other_bookings %}
         <td class="room-col other-col" data-room="other">
-          {% for rb, showing in other_bookings %}<a href="{% url "edit-event-details-view" event_id=showing.event.pk %}" class="other-room-badge" style="border-left-color:{{ rb.room.colour }};" title="{{ showing.event.name }} — {{ rb.room.name }}">{{ rb.room.name }}</a>{% endfor %}
+          {% for rb, showing in other_bookings %}<a href="{% url "edit-event-details-view" event_id=showing.event.pk %}" class="other-room-badge" style="border-left-color:{{ rb.room.colour }};" title="{{ showing.event.name }} ({{ rb.room.name }})">{{ rb.room.name }}</a>{% endfor %}
           {% if can_edit %}<a href="{% url "add-event" %}?date={{ day|date:"j-m-Y" }}&time={{ slot_local|date:"G:i" }}" class="other-room-add">+</a>{% endif %}
         </td>
       {% endif %}

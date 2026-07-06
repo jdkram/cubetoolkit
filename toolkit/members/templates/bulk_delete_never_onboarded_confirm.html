@@ -35,7 +35,7 @@
 <div class="danger-box">
   <strong>This cannot be undone.</strong>
   The following {{ delete_count }} account{{ delete_count|pluralize }} will be
-  <strong>permanently deleted</strong> — name, email, member record, login account, and
+  <strong>permanently deleted</strong>: name, email, member record, login account, and
   all associated data removed entirely. These volunteers never logged in and have no
   rota history.
 </div>
@@ -58,8 +58,8 @@
 
 {% if to_anonymise %}
 <div class="warning-box">
-  <strong>{{ anonymise_count }} account{{ anonymise_count|pluralize }} cannot be deleted</strong>
-  — they either have rota entries, or a last-gasp re-engagement email was sent to them (so they
+  <strong>{{ anonymise_count }} account{{ anonymise_count|pluralize }} cannot be deleted</strong>:
+  they either have rota entries, or a last-gasp re-engagement email was sent to them (so they
   had a chance to respond and the contact is on record). These will be
   <strong>anonymised instead</strong>: personal data erased, rota history preserved.
 </div>

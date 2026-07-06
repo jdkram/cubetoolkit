@@ -277,7 +277,7 @@ $(document).ready(function() {
     <div class="vol-section" id="vol-status">
       <h4>Volunteer status</h4>
       {% if volunteer.status == "suspended" %}
-      <p class="status-intro"><strong class="text-danger">Suspended</strong> — login disabled, removed from upcoming shifts, digest paused. Use the Suspension card below to lift the suspension before changing this status.</p>
+      <p class="status-intro"><strong class="text-danger">Suspended</strong>: login disabled, removed from upcoming shifts, digest paused. Use the Suspension card below to lift the suspension before changing this status.</p>
       {% else %}
       <p class="status-intro">Controls whether they're on the active roster, receiving the digest, and visible in pool health.</p>
       {% endif %}
@@ -313,7 +313,7 @@ $(document).ready(function() {
         <span class="dir-badge" id="dir-badge-access-rider"><i class="fa fa-eye"></i> shared in directory</span>
       </h4>
       <p style="font-size:0.85em; color:#666; margin:0 0 0.6rem;">
-        Fill in what feels useful. This is your own record — you control whether it appears in the directory.
+        Fill in what feels useful. This is your own record, and you control whether it appears in the directory.
         {% if site_config.access_rider_guidance_url %}Not sure where to start? <a href="{{ site_config.access_rider_guidance_url }}" target="_blank" rel="noopener noreferrer">See here for guidance.</a>{% endif %}
       </p>
       <div style="margin-bottom:0.5rem;">
@@ -337,7 +337,7 @@ $(document).ready(function() {
 
       <div id="access-rider-share-nudge" style="display:none; margin-top:0.75rem;"
            class="alert alert-info" role="alert">
-        You've filled in your access rider but haven't chosen to share it — it won't appear
+        You've filled in your access rider but haven't chosen to share it, so it won't appear
         in the volunteer directory until you tick <strong>Show access rider</strong> in the
         directory sharing section.
       </div>
@@ -354,7 +354,7 @@ $(document).ready(function() {
       <h4>Profile photo</h4>
       <div id="photo-wrap">
         <div id="webcampreview">
-          <i>Experimental — may not work on all browsers</i>
+          <i>Experimental, may not work on all browsers</i>
           <video id="video"></video>
           <button id="capturebutton">Take photo</button>
         </div>
@@ -621,7 +621,7 @@ $(document).ready(function() {
 <div id="vol-qualifications" style="margin-top:1rem;">
   <h3>Qualifications</h3>
   <p style="font-size:0.9em; color:#555; margin-bottom:0.5rem;">
-    Qualifications are role clearances that gate rota sign-up — a record that this volunteer is currently cleared for a role (e.g. Bar). Add one when you've verified they've completed the relevant induction.
+    Qualifications are role clearances that gate rota sign-up, a record that this volunteer is currently cleared for a role (e.g. Bar). Add one when you've verified they've completed the relevant induction.
     Manage the list of qualifications at <a href="{% url 'edit_roles' %}">Meta &rsaquo; Roles</a>.
   </p>
   <table class="table table-sm" style="max-width:600px;">
@@ -652,7 +652,7 @@ $(document).ready(function() {
     <div>
       <label for="qual-select" style="font-size:0.9em; font-weight:500; display:block;">Add qualification</label>
       <select id="qual-select" name="qualification_id" class="form-control form-control-sm" style="min-width:180px;" required>
-        <option value="">— choose —</option>
+        <option value="">Choose one</option>
         {% for qual in all_qualifications %}
         <option value="{{ qual.pk }}">{{ qual.name }}</option>
         {% endfor %}
@@ -729,20 +729,20 @@ $(document).ready(function() {
     <form method="post" action="{% url "toggle-volunteer-suspension" volunteer.pk %}">
       {% csrf_token %}
       <input type="hidden" name="action" value="reinstate">
-      <button type="submit" class="btn btn-sm btn-outline-secondary">Lift suspension — restore to Active</button>
+      <button type="submit" class="btn btn-sm btn-outline-secondary">Lift suspension and restore to Active</button>
     </form>
     <p class="suspension-consequences" style="margin-top:0.6rem; margin-bottom:0;">Note: shifts they were removed from are <strong>not</strong> automatically re-added.</p>
   </div>
   {% else %}
   <div class="suspension-card inactive vol-section danger-zone" id="vol-suspension">
     <h4>Suspension</h4>
-    <p class="suspension-consequences">Suspending a volunteer immediately disables their login, removes them from all upcoming shifts, and pauses the digest. Use this for safeguarding or access-control situations — not for ordinary status changes like dormancy or retirement.</p>
+    <p class="suspension-consequences">Suspending a volunteer immediately disables their login, removes them from all upcoming shifts, and pauses the digest. Use this for safeguarding or access-control situations, not for ordinary status changes like dormancy or retirement.</p>
     <form method="post" action="{% url "toggle-volunteer-suspension" volunteer.pk %}">
       {% csrf_token %}
       <input type="hidden" name="action" value="suspend">
       <div style="margin-bottom:0.6rem;">
         <label for="suspension_reason" style="font-weight:500; display:block; margin-bottom:0.2rem;">Reason for suspension <span style="color:#c00;">*</span></label>
-        <p style="font-size:0.82em; color:#888; margin:0 0 0.3rem;">Visible to Panopticons only — not shown to the volunteer.</p>
+        <p style="font-size:0.82em; color:#888; margin:0 0 0.3rem;">Visible to Panopticons only, not shown to the volunteer.</p>
         <textarea id="suspension_reason" name="suspension_reason" rows="2"
           style="width:100%; max-width:360px; box-sizing:border-box;"
           required placeholder="e.g. Safeguarding concern raised on 21/06/2026"></textarea>
@@ -757,7 +757,7 @@ $(document).ready(function() {
     <h4 style="margin-top:0;">Send suspension email?</h4>
     <p style="font-size:0.88em; color:#555; margin:0 0 0.75rem;">
       The volunteer has been suspended. You can optionally send them the email below.
-      This is a separate step — the suspension is already in effect.
+      This is a separate step, since the suspension is already in effect.
     </p>
     <dl style="font-size:0.88em; margin-bottom:0.75rem;">
       <dt>To</dt>
@@ -775,11 +775,11 @@ $(document).ready(function() {
       </form>
       <form method="post" action="{% url "skip-suspension-email" volunteer.pk %}" style="margin:0;">
         {% csrf_token %}
-        <button type="submit" class="btn btn-sm btn-outline-secondary">Skip — don't send</button>
+        <button type="submit" class="btn btn-sm btn-outline-secondary">Skip, don't send</button>
       </form>
     </div>
     {% else %}
-    <p class="text-muted" style="font-size:0.88em;">No email address on file — cannot send.</p>
+    <p class="text-muted" style="font-size:0.88em;">No email address on file, so this can't be sent.</p>
     <form method="post" action="{% url "skip-suspension-email" volunteer.pk %}" style="margin:0;">
       {% csrf_token %}
       <button type="submit" class="btn btn-sm btn-outline-secondary">Dismiss</button>
@@ -791,7 +791,7 @@ $(document).ready(function() {
   <div class="vol-section danger-zone">
     <h4>GDPR right to erasure</h4>
     <p style="font-size:0.88em; color:#555; margin:0.25rem 0 0.6rem;">
-      Permanently remove all personal data for this volunteer. Irreversible — use only in response to a verified erasure request.
+      Permanently remove all personal data for this volunteer. Irreversible, so use only in response to a verified erasure request.
     </p>
     <a href="{% url 'anonymise-volunteer' volunteer.id %}" class="btn btn-sm btn-outline-danger">Anonymise this volunteer…</a>
   </div>

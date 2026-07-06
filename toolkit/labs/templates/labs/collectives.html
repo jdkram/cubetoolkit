@@ -1,6 +1,6 @@
 {% extends "base_admin.html" %}
 
-{% block title %}Collectives — Labs{% endblock %}
+{% block title %}Collectives: Labs{% endblock %}
 
 {% block css %}
 {{ block.super }}
@@ -159,13 +159,13 @@
   </div>
 
   <div class="help-box">
-    <strong>Joining a collective here</strong> records your membership in the toolkit — it shows up in your profile,
+    <strong>Joining a collective here</strong> records your membership in the toolkit: it shows up in your profile,
     on the volunteer directory, and in rota context. It does <em>not</em> yet subscribe you to the collective's
     mailing list.{% if mailing_list_signup_url %} To subscribe to a mailing list, use the
     <a href="{{ mailing_list_signup_url }}">working groups sign-up page</a>.{% endif %}
   </div>
   <div class="help-box">
-    <strong>Editing:</strong> use the <em>Edit</em> button on any card to update its text — any volunteer can do this.
+    <strong>Editing:</strong> use the <em>Edit</em> button on any card to update its text, which any volunteer can do.
     {% if user.is_superuser %}
     To add or remove a collective, or change its ordering, use the
     <a href="/toolkit/admin/labs/collective/">Django admin</a>.
@@ -273,7 +273,7 @@
               {% csrf_token %}
               {% if c.invite_only %}
               <button type="submit" class="btn btn-outline-danger btn-sm edit-btn"
-                onclick="return confirm('Leave {{ c.name }}?\n\nThis collective is invite-only — you won’t be able to rejoin on your own. An admin will need to add you back.')">Leave</button>
+                onclick="return confirm('Leave {{ c.name }}?\n\nThis collective is invite-only, so you won’t be able to rejoin on your own. An admin will need to add you back.')">Leave</button>
               {% else %}
               <button type="submit" class="btn btn-outline-danger btn-sm edit-btn">Leave</button>
               {% endif %}

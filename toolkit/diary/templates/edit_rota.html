@@ -950,7 +950,7 @@ edit_rota(
     var ROLE_BADGES = [
         {
             attr: "beginner",
-            html: '<span class="role-badge role-badge--beginner" title="Good first role — great for new volunteers">🌱</span>'
+            html: '<span class="role-badge role-badge--beginner" title="Good first role: great for new volunteers">🌱</span>'
         },
         {
             attr: "wheelchair",
@@ -958,7 +958,7 @@ edit_rota(
         },
         {
             attr: "keyholder",
-            html: '<span class="role-badge role-badge--keyholder" title="Keyholder slot — must be filled by a trained venue keyholder">🔑</span>'
+            html: '<span class="role-badge role-badge--keyholder" title="Keyholder slot: must be filled by a trained venue keyholder">🔑</span>'
         }
     ];
 
@@ -1191,8 +1191,8 @@ edit_rota(
     var MARK_ICON  = { "": "☆", "star": "★", "shadow": "☽" };
     var MARK_TITLE = {
         "":       "Click to bookmark this event",
-        "star":   "★ Bookmarked — click for ☽ deprioritise",
-        "shadow": "☽ Deprioritised — click to clear"
+        "star":   "★ Bookmarked, click for ☽ deprioritise",
+        "shadow": "☽ Deprioritised, click to clear"
     };
 
     function setToggleState(btn, markType) {
@@ -1633,13 +1633,13 @@ edit_rota(
                 var text;
                 if (role.isMine) {
                     cls  += " rota-signup-role-mine";
-                    text  = "✓ " + role.roleName + " — signed up (Enter to unsign)";
+                    text  = "✓ " + role.roleName + ", signed up (Enter to unsign)";
                 } else if (role.isAvail) {
                     cls  += " rota-signup-role-available";
                     text  = role.roleName;
                 } else {
                     cls  += " rota-signup-role-taken";
-                    text  = role.roleName + (role.takenName ? " — " + role.takenName : " — taken");
+                    text  = role.roleName + (role.takenName ? ": " + role.takenName : ": taken");
                 }
                 listItems += '<li class="' + cls + '" data-entry-id="' + escHtml(role.entryId) +
                     '" data-role-name="' + escHtml(role.roleName) + '">' + escHtml(text) + '</li>';

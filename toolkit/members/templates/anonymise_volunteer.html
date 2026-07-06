@@ -59,7 +59,7 @@
 {% if has_active_membership %}
 <div class="anon-warning" style="border-color: #dc3545; background: #f8d7da;">
   <h2 style="color: #721c24;">⚠ This volunteer has an active membership</h2>
-  <p>Their membership has not expired. Anonymising will permanently destroy their membership record. This is allowed, but it should be a conscious decision — confirm you intend to erase an active member before proceeding.</p>
+  <p>Their membership has not expired. Anonymising will permanently destroy their membership record. This is allowed, but it should be a conscious decision: confirm you intend to erase an active member before proceeding.</p>
 </div>
 {% endif %}
 
@@ -111,7 +111,7 @@
     <th>Rota history</th>
     <td>
       {% if rota_match_count == 0 %}
-        No rota entries linked to this volunteer — none will be changed.
+        No rota entries linked to this volunteer, so none will be changed.
       {% elif rota_match_count == 1 %}
         1 rota entry linked to <strong>{{ member.name }}</strong> will be blanked.
       {% else %}
@@ -124,7 +124,7 @@
             <br>Sample:
             <ul>
               {% for entry in rota_sample %}
-                <li>{{ entry.showing.event.name }} ({{ entry.showing.start|date:"d M Y" }}) — role: {{ entry.role }}</li>
+                <li>{{ entry.showing.event.name }} ({{ entry.showing.start|date:"d M Y" }}), role: {{ entry.role }}</li>
               {% endfor %}
             </ul>
           {% endif %}

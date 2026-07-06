@@ -182,7 +182,7 @@ details[open].pq-guide > summary::before { content: "▾ "; }
 </p>
 
 {% if not queue %}
-<div class="alert alert-success">The queue is empty — nothing waiting for a decision.</div>
+<div class="alert alert-success">The queue is empty, nothing waiting for a decision.</div>
 {% else %}
 
 <details class="pq-guide">
@@ -196,10 +196,10 @@ details[open].pq-guide > summary::before { content: "▾ "; }
       <div class="pq-fn pq-fn--active"><strong>Active ✓</strong><small>In the diary</small></div>
     </div>
     <div class="pq-flow-return">
-      If the meeting flags issues: <strong>Returned for changes</strong> — the proposer revises the event and re-proposes it, which puts it back in the queue as <strong>Proposed</strong>.
+      If the meeting flags issues: <strong>Returned for changes</strong>, where the proposer revises the event and re-proposes it, which puts it back in the queue as <strong>Proposed</strong>.
     </div>
     <div class="pq-flow-bypass">
-      <strong>Already approved</strong> is for events that never really needed the queue — things already informally agreed, like a regular cleaning club or weekly café shift. It moves the event straight to active with no meeting record.
+      <strong>Already approved</strong> is for events that never really needed the queue, things already informally agreed, like a regular cleaning club or weekly café shift. It moves the event straight to active with no meeting record.
     </div>
   </div>
 </details>
@@ -242,12 +242,12 @@ details[open].pq-guide > summary::before { content: "▾ "; }
         {% if event.programming_status == "proposed" %}
         <span class="badge text-bg-primary me-1" title="Proposed for discussion at the next meeting">Proposed</span>
         {% elif event.programming_status == "rejected" %}
-        <span class="badge text-bg-warning text-dark me-1" title="Returned for changes — needs amending before re-proposing">Returned for changes</span>
+        <span class="badge text-bg-warning text-dark me-1" title="Returned for changes: needs amending before re-proposing">Returned for changes</span>
         {% else %}
-        <span class="badge text-bg-secondary me-1" title="Draft — not yet ready for a meeting">Draft</span>
+        <span class="badge text-bg-secondary me-1" title="Draft: not yet ready for a meeting">Draft</span>
         {% endif %}
         <a href="{% url "edit-event-details-view" event.pk %}">{{ event.name }}</a>
-        {% if event.template %}<small class="text-muted">— {{ event.template.name }}</small>{% endif %}
+        {% if event.template %}<small class="text-muted">({{ event.template.name }})</small>{% endif %}
       </h5>
 
       {% if first_showing %}
@@ -319,8 +319,8 @@ details[open].pq-guide > summary::before { content: "▾ "; }
       <input type="hidden" name="action" value="make_active">
       <input type="hidden" name="next" value="{% url "programming-queue" %}">
       <button type="submit" class="btn btn-sm btn-outline-secondary"
-              title="For events that were never really in the queue — things already informally agreed, like a regular cleaning club or weekly café shift."
-              onclick="return confirm('Mark \'{{ event.name|escapejs }}\' as active without a meeting vote?\n\nUse this for events that were never really in the queue — things already agreed, like a regular cleaning club or weekly café shift.')">→ Already approved</button>
+              title="For events that were never really in the queue, things already informally agreed, like a regular cleaning club or weekly café shift."
+              onclick="return confirm('Mark \'{{ event.name|escapejs }}\' as active without a meeting vote?\n\nUse this for events that were never really in the queue, things already agreed, like a regular cleaning club or weekly café shift.')">→ Already approved</button>
     </form>
   </div>
 
@@ -335,7 +335,7 @@ details[open].pq-guide > summary::before { content: "▾ "; }
     <ul style="font-size:0.8em;color:#6c757d;margin:0 0 0.5rem 1.1rem;padding:0;line-height:1.6;">
       <li><strong>Costs and income</strong>: estimated hire / performer fee / tech costs, and expected ticket income. If total costs are likely to exceed £{{ fc_standard_threshold }} (£{{ fc_music_threshold }} for music), flag it. Finance Collective sign-off is needed.</li>
       <li><strong>Technical or access requirements</strong>: anything the building or rota will need to accommodate.</li>
-      <li><strong>Anything that might affect collective capacity</strong> — unusual setup, late finish, external parties, licensing questions.</li>
+      <li><strong>Anything that might affect collective capacity</strong>: unusual setup, late finish, external parties, licensing questions.</li>
     </ul>
     <p style="font-size:0.78em;color:#adb5bd;margin:0 0 0.4rem;">Keep it to a sentence or two. The meeting doesn't need a pitch, just enough to make a responsible decision.</p>
     {% endif %}

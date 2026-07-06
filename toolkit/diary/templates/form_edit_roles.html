@@ -38,7 +38,7 @@
       <li><strong>Archiving a role</strong> hides it from rota dropdowns and volunteer profiles. Past rota entries are preserved.
         Roles used in past rota entries are automatically archived rather than deleted.</li>
       <li>Roles marked <em>read-only</em> are protected and cannot be archived or deleted here.</li>
-      <li><strong>Renaming a role changes its name retroactively everywhere</strong> — all past rota entries, templates, and
+      <li><strong>Renaming a role changes its name retroactively everywhere</strong>: all past rota entries, templates, and
         qualification gates will display the new name immediately. This is usually what you want when correcting a typo or
         tidying terminology. If you want a genuinely new role with its own history, create a new one instead.</li>
     </ul>
@@ -70,7 +70,7 @@
                 Gate
                 <span class="badge text-bg-secondary ms-1" style="font-weight:normal; font-size:0.7em; cursor:default;"
                       data-bs-toggle="tooltip" data-bs-placement="left"
-                      title="Off — no check. Advisory — volunteer is warned but can still sign up. Blocking — sign-up is refused without the qualification (Panopticons bypass).">?</span>
+                      title="Off: no check. Advisory: volunteer is warned but can still sign up. Blocking: sign-up is refused without the qualification (Panopticons bypass).">?</span>
               </th>
               <th class="text-center" style="width:70px" title="Number of rota sign-ups using this role (all time)">Entries</th>
               <th class="text-center" style="width:70px">Archive</th>
@@ -149,7 +149,7 @@
   <div class="card mt-3">
     <div class="card-header d-flex flex-wrap align-items-center" style="gap:0.5rem">
       <h4 class="mb-0 card-header-title">Qualifications</h4>
-      <small class="text-muted">Named credentials volunteers can hold — e.g. "Bar", "Projectionist level 1". Award these on individual volunteer profiles. Roles reference qualifications to gate sign-up.</small>
+      <small class="text-muted">Named credentials volunteers can hold, e.g. "Bar", "Projectionist level 1". Award these on individual volunteer profiles. Roles reference qualifications to gate sign-up.</small>
     </div>
     <div class="card-body p-0">
       {% if all_qualifications %}

@@ -114,14 +114,14 @@ Add a new event
     <div class="new-event-zone new-event-zone--mode">
       <div class="entry-mode-cards">
         <div class="entry-mode-card selected" data-value="queue"
-             title="Use this for films, external guests, or anything that needs the full programming process — discussed and voted on at a meeting.">
+             title="Use this for films, external guests, or anything that needs the full programming process, discussed and voted on at a meeting.">
           Needs meeting approval
           <small>Goes into the programming queue for discussion at the next meeting. If you add a date, it's held as a placeholder on the calendar straight away.</small>
         </div>
         <div class="entry-mode-card" data-value="standing"
              title="Use this for recurring or self-authorised events: the regular café shift, cleaning days, workshops that run without separate approval each time.">
           Regular / standing event
-          <small>No approval needed — café, cleaning day, regular workshop, etc.</small>
+          <small>No approval needed, e.g. café, cleaning day, regular workshop.</small>
         </div>
         <div class="entry-mode-card" data-value="tentative"
              title="Use this to block out a date while details are still being worked out. The event won't show as confirmed until you come back to finalise it.">
@@ -192,7 +192,7 @@ $(document).ready(function () {
             });
             html += '<div class="preview-row"><span class="preview-label">Rooms</span> ' + roomParts.join(', ') + '</div>';
         } else {
-            html += '<div class="preview-row"><span class="preview-label">Rooms</span> <span class="text-muted">none set — add after creating</span></div>';
+            html += '<div class="preview-row"><span class="preview-label">Rooms</span> <span class="text-muted">none set, add after creating</span></div>';
         }
 
         if (tmpl.roles && tmpl.roles.length) {
@@ -253,7 +253,7 @@ $(document).ready(function () {
     }
 
     var FIELD_TIPS = {
-        'id_private':      "When ticked, this event is hidden from the public website entirely — it won't appear in any listing or be accessible via URL, even if its {{ site_config.occurrence_noun_plural|escapejs }} are confirmed.",
+        'id_private':      "When ticked, this event is hidden from the public website entirely, so it won't appear in any listing or be accessible via URL, even if its {{ site_config.occurrence_noun_plural|escapejs }} are confirmed.",
         'id_outside_hire': "Tick if this event is run by an external organisation hiring the venue, not programmed by us. Affects internal reporting.",
         'id_discounted':   "Marks this event as discounted for reporting purposes. Does not automatically change ticket prices.",
     };

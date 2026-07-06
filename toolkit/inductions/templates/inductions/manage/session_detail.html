@@ -1,5 +1,5 @@
 {% extends "base_admin.html" %}
-{% block title %}{{ session.title }} — Induction{% endblock %}
+{% block title %}{{ session.title }}: Induction{% endblock %}
 
 {% block body %}
 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -107,10 +107,10 @@ body.ots-mode #ots-btn { background-color: #0d6efd; color: #fff; border-color: #
     Select all pending
   </button>
   <button type="button" class="btn btn-sm btn-outline-secondary" id="ots-btn"
-          title="Over the shoulder mode — blurs names and emails so the next person can enter their own details without seeing others'">
+          title="Over the shoulder mode: blurs names and emails so the next person can enter their own details without seeing others'">
     Over the shoulder
   </button>
-  <span class="text-muted small ms-2">Tick the people who attended. Unticked people remain pending — no account is created for them.</span>
+  <span class="text-muted small ms-2">Tick the people who attended. Unticked people remain pending, so no account is created for them.</span>
   <span class="text-muted small ms-2 border-start ps-2">Keys: <kbd>j</kbd>/<kbd>k</kbd> navigate · <kbd>c</kbd>/<kbd>space</kbd> check in · <kbd>n</kbd> no-show</span>
 </div>
 <table class="table table-sm table-hover" id="signup-table">
@@ -132,7 +132,7 @@ body.ots-mode #ots-btn { background-color: #0d6efd; color: #fff; border-color: #
         {% if s.volunteer_id %}
         {# Account created — checkbox locked #}
         <input type="checkbox" class="form-check-input attendance-cb" checked disabled
-               title="Account already created — locked">
+               title="Account already created: locked">
         {% elif s.status == 'no_show' %}
         {# No-show — checkbox locked until undone #}
         <input type="checkbox" class="form-check-input" id="cb-{{ s.pk }}" disabled title="Marked as no-show">
@@ -178,7 +178,7 @@ body.ots-mode #ots-btn { background-color: #0d6efd; color: #fff; border-color: #
         {% elif s.status == 'pending' %}
         <button type="button" class="btn btn-link btn-sm text-muted p-0 no-show-btn" data-signup-id="{{ s.pk }}"
                 data-url="{% url 'inductions:manage_no_show' slug=session.slug signup_id=s.pk %}"
-                title="Mark as no-show — did not attend">No show</button>
+                title="Mark as no-show: did not attend">No show</button>
         {% if user.is_superuser %}
         &nbsp;·&nbsp;
         <button type="button" class="btn btn-link btn-sm text-danger p-0 remove-signup-btn" data-signup-id="{{ s.pk }}"
@@ -188,7 +188,7 @@ body.ots-mode #ots-btn { background-color: #0d6efd; color: #fff; border-color: #
         {% else %}
         <button type="button" class="btn btn-link btn-sm text-muted p-0 undo-no-show-btn" data-signup-id="{{ s.pk }}"
                 data-url="{% url 'inductions:manage_no_show' slug=session.slug signup_id=s.pk %}"
-                title="Undo no-show — return to pending">Undo</button>
+                title="Undo no-show: return to pending">Undo</button>
         {% endif %}
       </td>
     </tr>
@@ -251,7 +251,7 @@ body.ots-mode #ots-btn { background-color: #0d6efd; color: #fff; border-color: #
     <p class="card-text text-muted small mb-3">
       This creates a volunteer account for everyone marked as present (ticked above) who doesn't have one yet,
       and sends each of them a welcome email with a link to set their password.
-      <strong>This cannot be undone</strong> — make sure you've unticked anyone who didn't attend before clicking.
+      <strong>This cannot be undone</strong>, so make sure you've unticked anyone who didn't attend before clicking.
     </p>
     <button type="button" class="btn btn-success" id="create-accounts-btn"
             data-url="{% url 'inductions:manage_create_accounts' slug=session.slug %}">
@@ -357,7 +357,7 @@ function updateRowStatus(signupId, status) {
     document.getElementById('account-' + signupId).innerHTML =
       '<button type="button" class="btn btn-link btn-sm text-muted p-0 no-show-btn"' +
       ' data-signup-id="' + signupId + '" data-url="' + noShowUrl + '"' +
-      ' title="Mark as no-show — did not attend">No show</button>';
+      ' title="Mark as no-show: did not attend">No show</button>';
   }
 
   var ci = 0;
@@ -418,7 +418,7 @@ if (createAccountsBtn) createAccountsBtn.addEventListener('click', function() {
       data.created.forEach(function(item) {
         var signupId = item.signup_id;
         var cb = document.querySelector('.attendance-cb[data-signup-id="' + signupId + '"]');
-        if (cb) { cb.disabled = true; cb.setAttribute('title', 'Account created — locked'); }
+        if (cb) { cb.disabled = true; cb.setAttribute('title', 'Account created: locked'); }
         var accountCell = document.getElementById('account-' + signupId);
         if (accountCell) accountCell.innerHTML = '<span class="badge bg-success">Account created</span>';
         var editBtn = document.querySelector('.edit-btn[data-signup-id="' + signupId + '"]');
@@ -438,13 +438,13 @@ if (createAccountsBtn) createAccountsBtn.addEventListener('click', function() {
       msg += '</ul></div>';
     }
     if (data.duplicates && data.duplicates.length) {
-      msg += '<div class="alert alert-warning py-2 mb-0"><strong>Possible duplicates — action required:</strong>';
+      msg += '<div class="alert alert-warning py-2 mb-0"><strong>Possible duplicates, action required:</strong>';
       data.duplicates.forEach(function(d) {
         var matchDesc = d.match_type === 'email'
           ? 'email match: ' + d.existing_email
           : 'name match: ' + d.existing_username;
         msg += '<div class="mt-2 border-top pt-2">';
-        msg += '<strong>' + d.name + '</strong> — existing account found (' + matchDesc + ', username: <code>' + d.existing_username + '</code>)<br>';
+        msg += '<strong>' + d.name + '</strong>: existing account found (' + matchDesc + ', username: <code>' + d.existing_username + '</code>)<br>';
         msg += '<button class="btn btn-sm btn-outline-secondary mt-1 me-1 link-existing-btn" '
              + 'data-signup-id="' + d.signup_id + '" '
              + 'data-volunteer-id="' + d.existing_volunteer_id + '" '
@@ -547,13 +547,13 @@ if (signupTableEl) signupTableEl.addEventListener('click', function(e) {
       statusEl.innerHTML = '<span class="badge bg-secondary">No show</span>';
       if (cb) { cb.checked = false; cb.disabled = true; }
       accountEl.innerHTML = '<button type="button" class="btn btn-link btn-sm text-muted p-0 undo-no-show-btn"' +
-        ' data-signup-id="' + signupId + '" data-url="' + url + '" title="Undo no-show — return to pending">Undo</button>';
+        ' data-signup-id="' + signupId + '" data-url="' + url + '" title="Undo no-show: return to pending">Undo</button>';
     } else {
       row.classList.remove('table-secondary');
       statusEl.innerHTML = '<span class="badge bg-warning text-dark">Pending</span>';
       if (cb) { cb.disabled = false; }
       accountEl.innerHTML = '<button type="button" class="btn btn-link btn-sm text-muted p-0 no-show-btn"' +
-        ' data-signup-id="' + signupId + '" data-url="' + url + '" title="Mark as no-show — did not attend">No show</button>';
+        ' data-signup-id="' + signupId + '" data-url="' + url + '" title="Mark as no-show: did not attend">No show</button>';
     }
   });
 });
@@ -817,7 +817,7 @@ if (walkinAddBtn) {
         '<td id="account-' + data.signup_id + '" class="align-middle">' +
           '<button type="button" class="btn btn-link btn-sm text-muted p-0 no-show-btn"' +
           ' data-signup-id="' + data.signup_id + '" data-url="' + noShowUrl + '"' +
-          ' title="Mark as no-show — did not attend">No show</button>' +
+          ' title="Mark as no-show: did not attend">No show</button>' +
           '{% if user.is_superuser %} &nbsp;·&nbsp; <button type="button" class="btn btn-link btn-sm text-danger p-0 remove-signup-btn"' +
           ' data-signup-id="' + data.signup_id + '" data-url="/inductions/manage/{{ session.slug }}/signups/' + data.signup_id + '/remove/"' +
           ' title="Remove this sign-up">×</button>{% endif %}</td>';

@@ -1,7 +1,7 @@
 {% extends "base_admin.html" %}
 {% load crispy_forms_tags %}
 
-{% block title %}Edit — {{ collective.name }}{% endblock %}
+{% block title %}Edit: {{ collective.name }}{% endblock %}
 
 {% block body %}
 <div class="container-fluid" style="max-width: 52rem;">
@@ -30,7 +30,7 @@
     <h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem;">Defined roles</h2>
     <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1rem;">
       Structured roles shown on the collective card to help volunteers understand what joining actually means.
-      "Needs volunteers" flags a role as actively recruiting — shown as a small badge.
+      "Needs volunteers" flags a role as actively recruiting: shown as a small badge.
       Up to 12 roles.
     </p>
 
@@ -77,7 +77,7 @@
     <hr style="margin: 2rem 0 1.5rem;">
     <h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem;">Links</h2>
     <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1rem;">
-      Up to 3 links shown on the collective's card — WhatsApp group, Linktree, shared pad, etc.
+      Up to 3 links shown on the collective's card (WhatsApp group, Linktree, shared pad, etc).
       Only approved domains are accepted (riseup.net, linktr.ee, chat.whatsapp.com, nextcloud.com/org).
     </p>
 

@@ -164,7 +164,7 @@
 
 <div class="shopping-search-bar">
   <input type="search" id="shopping-search" placeholder="Find an item…" autocomplete="off" aria-label="Filter shopping list">
-  <span id="shopping-no-match" hidden>No match — <a href="{% url "labs-shopping-add" %}" id="shopping-add-link">add it</a></span>
+  <span id="shopping-no-match" hidden>No match, <a href="{% url "labs-shopping-add" %}" id="shopping-add-link">add it</a></span>
 </div>
 
 {% if items %}
@@ -268,7 +268,7 @@
     </tbody>
   </table>
 </div>
-  <p class="table-legend">* This item has a note — tap the badge to read it.</p>
+  <p class="table-legend">* This item has a note, tap the badge to read it.</p>
 {% else %}
 <p><em>No items yet. <a href="{% url "labs-shopping-add" %}">Add the first one.</a></em></p>
 {% endif %}

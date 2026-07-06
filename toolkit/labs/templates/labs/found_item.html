@@ -1,6 +1,6 @@
 {% extends "base_admin.html" %}
 
-{% block title %}{{ item.label_id }} — Lost &amp; found{% endblock %}
+{% block title %}{{ item.label_id }}: Lost &amp; found{% endblock %}
 
 {% block css %}
 {{ block.super }}
@@ -208,7 +208,7 @@
   <form method="post" action="{% url "labs-found-item-dispose" item.pk %}">
     {% csrf_token %}
     <input type="hidden" name="disposal_method" value="other">
-    <p style="font-size: 0.9rem; color: #6c757d; margin: 0 0 0.75rem;">Use this if the search has been abandoned — item never found, owner stopped following up, etc.</p>
+    <p style="font-size: 0.9rem; color: #6c757d; margin: 0 0 0.75rem;">Use this if the search has been abandoned (item never found, owner stopped following up, etc).</p>
     <button type="submit" class="btn btn-secondary">Close report</button>
   </form>
 </div>

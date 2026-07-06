@@ -105,7 +105,7 @@
     Marks active volunteers as Dormant when they have been quiet too long.
     {% if dormancy_days %}Dormancy threshold: {{ dormancy_days|days_to_human }} without login.{% endif %}
     {% if never_logged_in_grace_days %}Never-logged-in grace period: {{ never_logged_in_grace_days|days_to_human }}.{% endif %}
-    {% if not dormancy_days and not never_logged_in_grace_days %}<strong>Disabled</strong> — configure thresholds in Site settings.{% endif %}
+    {% if not dormancy_days and not never_logged_in_grace_days %}<strong>Disabled</strong>: configure thresholds in Site settings.{% endif %}
   </p>
   <a href="{% url "auto-dormancy-preview" %}" class="btn btn-sm btn-outline-secondary">Preview auto-dormancy &rarr;</a>
 </section>
@@ -373,12 +373,12 @@
       </div>
       <div class="modal-body">
         <p><strong>Always use BCC, not To or CC.</strong></p>
-        <p>These are personal email addresses. Sending to multiple people in the To or CC field reveals everyone's address to everyone else — a privacy breach. Put the addresses in BCC, and use a placeholder in the To field (such as your own address).</p>
+        <p>These are personal email addresses. Sending to multiple people in the To or CC field reveals everyone's address to everyone else, which is a privacy breach. Put the addresses in BCC, and use a placeholder in the To field (such as your own address).</p>
         <p>If you are not sure how to use BCC in your email client, please check before sending.</p>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
-        <button type="button" class="btn btn-primary" id="bcc-confirmed-btn">I understand — show me the addresses</button>
+        <button type="button" class="btn btn-primary" id="bcc-confirmed-btn">I understand, show me the addresses</button>
       </div>
     </div>
   </div>

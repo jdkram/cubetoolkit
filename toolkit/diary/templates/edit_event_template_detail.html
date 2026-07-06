@@ -85,7 +85,7 @@
 (function () {
   "use strict";
   var FIELD_TIPS = {
-    "id_name":                       "Internal name for this template — not shown to the public.",
+    "id_name":                       "Internal name for this template, not shown to the public.",
     "id_tags":                       "Tags applied to every new event created from this template.",
     "id_pricing":                    "Pricing text shown to the public, e.g. “£5 Full / £3 Concession”. Leave blank if usually free.",
     "id_film_information":           "Screening details shown in public listings, e.g. “Dir: Jane Smith, 1990, USA, 95 mins, Cert: 15”.",
@@ -99,7 +99,7 @@
     "id_cost_minimum_guarantee_gbp": "Default guaranteed minimum payment regardless of door takings, in pounds.",
     "id_cost_total_gbp":             "Default total agreed fee, in pounds.",
     "id_terms":                      "Booking or screening terms text. Must be filled in (minimum word count) before any showing can be confirmed, unless a cost type is set above.",
-    "id_rota_notes":                 "Setup instructions, access codes, timing — shown to volunteers on the rota.",
+    "id_rota_notes":                 "Setup instructions, access codes, timing: shown to volunteers on the rota.",
     "id_copy_summary":                "Short plain-text description (ideally ≤25 words) shown in listings.",
     "id_copy":                       "The main event description shown in the public programme."
   };
@@ -207,10 +207,10 @@
 
   <h1>{% if event_template %}{{ event_template.name }}{% else %}New event template{% endif %}</h1>
   <p>These defaults are applied when a new event is created from this template. Editing them does <strong>not</strong> affect existing events.</p>
-  <p class="warn">This template is shared — changes take effect immediately for anyone creating a new event. A carefully set-up template with rota, copy, and terms can represent a lot of work; edit with care.</p>
+  <p class="warn">This template is shared: changes take effect immediately for anyone creating a new event. A carefully set-up template with rota, copy, and terms can represent a lot of work; edit with care.</p>
   {% if source_event %}
   <p class="text-info">
-    Pre-filled from <a href="{% url 'edit-event-details-view' source_event.pk %}">{{ source_event.name }}</a>. Review the fields below and give it a distinct name before saving — nothing is created yet.
+    Pre-filled from <a href="{% url 'edit-event-details-view' source_event.pk %}">{{ source_event.name }}</a>. Review the fields below and give it a distinct name before saving, since nothing is created yet.
   </p>
   {% endif %}
 
@@ -352,7 +352,7 @@
       <div class="card-header"><h3>Resource links</h3></div>
       <div class="card-body">
       <p class="text-muted" style="font-size:0.88em; margin-bottom:0.5rem;">
-        Up to 3 links copied to every new event created from this template. Appear as chip buttons on the rota — internal only, not on the public site.
+        Up to 3 links copied to every new event created from this template. Appear as chip buttons on the rota, internal only, not on the public site.
       </p>
       <p class="allowed-domains mb-2">
         Allowed: {% for domain in allowed_domains %}<code>*.{{ domain }}</code>{% if not forloop.last %}, {% endif %}{% endfor %}.

@@ -7,7 +7,7 @@
 
 {% if disabled %}
 <div class="alert alert-warning">
-  Auto-dormancy is disabled — neither dormancy threshold nor never-logged-in grace period is configured.
+  Auto-dormancy is disabled: neither dormancy threshold nor never-logged-in grace period is configured.
   Set <strong>volunteer_dormancy_days</strong> and/or <strong>volunteer_never_logged_in_grace_days</strong>
   in <a href="{% url "edit-site-configuration" %}">Site settings</a>.
 </div>
@@ -60,7 +60,7 @@
   {% csrf_token %}
   <button type="submit" class="btn btn-warning"
     onclick="return confirm('Mark {{ total }} volunteer{{ total|pluralize }} as Dormant? This can be reversed by editing their profile.')">
-    Run auto-dormancy — mark {{ total }} volunteer{{ total|pluralize }} as Dormant
+    Run auto-dormancy: mark {{ total }} volunteer{{ total|pluralize }} as Dormant
   </button>
 </form>
 {% endif %}

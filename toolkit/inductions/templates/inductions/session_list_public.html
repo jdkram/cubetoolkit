@@ -1,7 +1,7 @@
 {% extends "base_public.html" %}
 {% load static %}
 
-{% block title %}Volunteer inductions — {{ VENUE.name }}{% endblock %}
+{% block title %}Volunteer inductions: {{ VENUE.name }}{% endblock %}
 
 {% block css %}
 {{ block.super }}
@@ -150,7 +150,7 @@
         {% if session.location %}<p class="session-location">{{ session.location }}</p>{% endif %}
         {% with cap=session.effective_capacity %}
         {% if cap %}
-        <p class="session-capacity">{{ session.total_count }}/{{ cap }} places taken{% if session.is_full %} — full{% endif %}</p>
+        <p class="session-capacity">{{ session.total_count }}/{{ cap }} places taken{% if session.is_full %} (full){% endif %}</p>
         {% endif %}
         {% endwith %}
       </div>
