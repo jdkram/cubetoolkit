@@ -181,8 +181,8 @@ class Command(BaseCommand):
     # views care about most: most near-future showings should already have a
     # keyholder, and programmer signup should look realistically busy but not
     # total, per the current seed-data brief.
-    KEYHOLDER_FILL_RATE = 0.85
-    PROGRAMMER_FILL_RATE = 0.70
+    KEYHOLDER_FILL_RATE = 0.70
+    PROGRAMMER_FILL_RATE = 0.55
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -676,7 +676,7 @@ class Command(BaseCommand):
 
             day_offset = event_data.get("day_offset", 14)
             normalized_distance = min(day_offset / 28.0, 1.0)
-            generic_fill_rate = 0.85 - (normalized_distance * 0.3)
+            generic_fill_rate = 0.70 - (normalized_distance * 0.3)
 
             expanded_roles = []
             for role_name in roles_list:
@@ -1749,7 +1749,7 @@ class Command(BaseCommand):
         # Keyholder and Programmer are the roles the dashboard "upcoming shifts"
         # and rota-vacancies views care most about, so they get their own high,
         # fixed fill rates rather than the generic per-event roll below.
-        generic_fill_rate = random.uniform(0.55, 0.85)
+        generic_fill_rate = random.uniform(0.40, 0.70)
 
         for i, role_name in enumerate(expanded_roles):
             try:
@@ -1868,8 +1868,8 @@ class Command(BaseCommand):
             self._book_slot(room, showing_start, 120)
 
         # Rota entries for a film screening. Keyholder and Programmer get their
-        # own high, fixed fill rates (see _seed_one_recurring_showing); the
-        # remaining support roles are always staffed for a screening.
+        # own fixed fill rates (see _seed_one_recurring_showing); the remaining
+        # support roles are usually staffed but still leave some open slots.
         available_vols = list(vol_list)
         random.shuffle(available_vols)
         vol_iter = iter(available_vols)
@@ -1894,7 +1894,7 @@ class Command(BaseCommand):
             elif role_name == "Programmer":
                 fill_chance = self.PROGRAMMER_FILL_RATE
             else:
-                fill_chance = 1.0
+                fill_chance = 0.85
 
             vol = None
             vol_name = ""
