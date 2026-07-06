@@ -2646,10 +2646,22 @@ class Command(BaseCommand):
 
             # auto_crop: select a 2:3 vertical slice from landscape/square source images,
             # simulating a volunteer choosing which part of a wide image to show.
+            #
+            # crop_x/y/w/h are fractions of the *padded* canvas that thumbnail_l.py's
+            # _crop_thumbnail_url() builds at render time (it pads any source whose
+            # aspect ratio doesn't match the target onto a same-target-ratio canvas
+            # before applying the crop box) -- not fractions of the raw source image.
+            # The real edit-form Cropper.js UI saves coordinates in that same padded
+            # space, so this must match it or the crop lands on the wrong region.
             if auto_crop and (image_url or image_path):
                 orig_w, orig_h = img.size
                 target_ratio = 2 / 3
-                if orig_w / orig_h > target_ratio + 0.05:  # wider than 2:3
+                actual_ratio = orig_w / orig_h
+                if actual_ratio > target_ratio + 0.05:  # wider than 2:3
+                    canvas_w = orig_w
+                    canvas_h = round(orig_w / target_ratio)
+                    paste_x, paste_y = 0, (canvas_h - orig_h) // 2
+
                     crop_h_px = orig_h
                     crop_w_px = min(int(orig_h * target_ratio), orig_w)
                     if auto_crop == "left":
@@ -2658,10 +2670,11 @@ class Command(BaseCommand):
                         crop_x_px = orig_w - crop_w_px
                     else:  # center
                         crop_x_px = (orig_w - crop_w_px) // 2
-                    media_item.crop_x = round(crop_x_px / orig_w, 6)
-                    media_item.crop_y = 0.0
-                    media_item.crop_w = round(crop_w_px / orig_w, 6)
-                    media_item.crop_h = 1.0
+
+                    media_item.crop_x = round(crop_x_px / canvas_w, 6)
+                    media_item.crop_y = round(paste_y / canvas_h, 6)
+                    media_item.crop_w = round(crop_w_px / canvas_w, 6)
+                    media_item.crop_h = round(crop_h_px / canvas_h, 6)
                     media_item.save(update_fields=["crop_x", "crop_y", "crop_w", "crop_h"])
 
             event.media.add(media_item)
