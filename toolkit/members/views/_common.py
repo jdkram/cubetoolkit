@@ -97,13 +97,24 @@ def _notify_vols_admin_status_change(request, vol, now_active):
         f"{vol.member.name} <{vol.member.email}>\n\n"
         f"{action_line}"
     )
-    send_mail(
-        f"[{settings.VENUE['longname']}] Change in volunteer status {vol.member.name}",
-        admin_body,
-        settings.VENUE["mailout_from_address"],
-        vols_admin,
-        fail_silently=False,
-    )
+    # An SMTP failure here must not 500 the volunteer save that triggered it.
+    try:
+        send_mail(
+            f"[{settings.VENUE['longname']}] Change in volunteer status {vol.member.name}",
+            admin_body,
+            settings.VENUE["mailout_from_address"],
+            vols_admin,
+            fail_silently=False,
+        )
+    except Exception:
+        logger.exception(
+            f"Failed to notify vols admin of status change for volunteer pk={vol.pk}"
+        )
+        messages.warning(
+            request,
+            "Saved, but the notification email to the volunteers admin failed "
+            "to send. They may need to be told about this change manually.",
+        )
 
 
 __all__ = [

@@ -70,7 +70,10 @@ STORAGES = {
     },
 }
 
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# Logging wrapper (9.154): one log line per email on the toolkit.email
+# logger. The backend that actually delivers goes in TOOLKIT_WRAPPED_EMAIL_BACKEND.
+EMAIL_BACKEND = "toolkit.util.email_backend.LoggingEmailBackend"
+TOOLKIT_WRAPPED_EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 # Fail fast on SMTP connection attempts rather than hanging a worker.
 # Django's default has no timeout. Only takes effect with smtp.EmailBackend.
 EMAIL_TIMEOUT = 10

@@ -70,13 +70,26 @@ def send_suspension_email(request, volunteer_id):
     subject = _render_admin_email(site_config.suspension_email_subject, vol_name, venue_name)
     body = _render_admin_email(site_config.suspension_email_body, vol_name, venue_name)
 
-    send_mail(
-        subject,
-        body,
-        settings.VENUE["mailout_from_address"],
-        [member.email],
-        fail_silently=False,
-    )
+    try:
+        send_mail(
+            subject,
+            body,
+            settings.VENUE["mailout_from_address"],
+            [member.email],
+            fail_silently=False,
+        )
+    except Exception:
+        logger.exception(
+            f"Failed to send suspension email to volunteer pk={volunteer.pk}"
+        )
+        messages.error(
+            request,
+            f"The suspension email to {member.name} failed to send. "
+            f"Their suspension is unaffected; try sending the email again.",
+        )
+        return HttpResponseRedirect(
+            reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id})
+        )
     logger.info(
         "EMAIL SENT: suspension email to %s (volunteer pk=%s) by %s",
         member.email, volunteer.pk, request.user.username,

@@ -118,10 +118,23 @@ def edit_volunteer(request, volunteer_id, create_new=False):
                 # Send the new volunteer a welcome email with a password-set link.
                 # They use it to choose their own password before first login.
                 if user.email:
-                    _send_password_set_email(request, user, welcome=True)
-                    logger.info(
-                        "Welcome email sent to new volunteer pk=%s", volunteer.pk
-                    )
+                    # The volunteer is already saved at this point; an SMTP
+                    # failure should warn, not 500 the whole save.
+                    try:
+                        _send_password_set_email(request, user, welcome=True)
+                        logger.info(
+                            "Welcome email sent to new volunteer pk=%s", volunteer.pk
+                        )
+                    except Exception:
+                        logger.exception(
+                            f"Failed to send welcome email to new volunteer pk={volunteer.pk}"
+                        )
+                        messages.warning(
+                            request,
+                            f"Saved, but the welcome email to {member.name} failed "
+                            f"to send. You can send them a password-set link from "
+                            f"their profile page.",
+                        )
 
                 # Email admin (only if vols_admin_address is configured)
                 vols_admin = settings.VENUE.get("vols_admin_address") or []
@@ -134,15 +147,27 @@ def edit_volunteer(request, volunteer_id, create_new=False):
                         f"Please add them to the volunteers mailing list "
                         f"at your earliest convenience."
                     )
-                    send_mail(
-                        (
-                            f"[{settings.VENUE['longname']}] New volunteer {volunteer.member.name}"
-                        ),
-                        admin_body,
-                        settings.VENUE["mailout_from_address"],
-                        vols_admin,
-                        fail_silently=False,
-                    )
+                    # An SMTP failure must not 500 the save of the new volunteer.
+                    try:
+                        send_mail(
+                            (
+                                f"[{settings.VENUE['longname']}] New volunteer {volunteer.member.name}"
+                            ),
+                            admin_body,
+                            settings.VENUE["mailout_from_address"],
+                            vols_admin,
+                            fail_silently=False,
+                        )
+                    except Exception:
+                        logger.exception(
+                            f"Failed to notify vols admin of new volunteer pk={volunteer.pk}"
+                        )
+                        messages.warning(
+                            request,
+                            "Saved, but the notification email to the volunteers "
+                            "admin failed to send. They may need to be told about "
+                            "this new volunteer manually.",
+                        )
             # After a new suspension, stay on the edit page with email preview.
             if not create_new and now_suspended and not was_suspended:
                 request.session[f"suspension_email_pending_{volunteer.pk}"] = True

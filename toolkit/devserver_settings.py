@@ -52,7 +52,10 @@ except ImportError:
 
 CRISPY_FAIL_SILENTLY = False
 
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# Logging wrapper (9.154): one log line per email on the toolkit.email
+# logger. The backend that actually delivers goes in TOOLKIT_WRAPPED_EMAIL_BACKEND.
+EMAIL_BACKEND = "toolkit.util.email_backend.LoggingEmailBackend"
+TOOLKIT_WRAPPED_EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 warnings.filterwarnings(
     "error",

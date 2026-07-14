@@ -156,13 +156,21 @@ def send_organiser_notification(induction_request):
         f"Rough availability: {induction_request.rough_availability or 'Not specified'}\n\n"
         f"Log in to the toolkit to view and manage this request."
     )
-    send_mail(
-        subject=subject,
-        message=body,
-        from_email=_from_email(),
-        recipient_list=[cfg.organiser_notification_email],
-        fail_silently=True,
-    )
+    # Organiser notification: a failure shouldn't break the requester's
+    # flow, but it must leave a trace (was fail_silently=True, a black hole).
+    try:
+        send_mail(
+            subject=subject,
+            message=body,
+            from_email=_from_email(),
+            recipient_list=[cfg.organiser_notification_email],
+            fail_silently=False,
+        )
+    except Exception:
+        logger.exception(
+            f"Failed to send organiser notification for 1:1 induction "
+            f"request pk={induction_request.pk}"
+        )
 
 
 def send_new_signup_notification(session, signup):
@@ -181,13 +189,19 @@ def send_new_signup_notification(session, signup):
         f"Sign-ups so far: {capacity}\n\n"
         f"Log in to the toolkit to see the full list."
     )
-    send_mail(
-        subject=subject,
-        message=body,
-        from_email=_from_email(),
-        recipient_list=[cfg.organiser_notification_email],
-        fail_silently=True,
-    )
+    try:
+        send_mail(
+            subject=subject,
+            message=body,
+            from_email=_from_email(),
+            recipient_list=[cfg.organiser_notification_email],
+            fail_silently=False,
+        )
+    except Exception:
+        logger.exception(
+            f"Failed to send new-signup notification for session "
+            f"pk={session.pk} (signup pk={signup.pk})"
+        )
 
 
 def send_session_full_notification(session):
@@ -203,13 +217,18 @@ def send_session_full_notification(session):
         f"The session sign-up page will now show as full. "
         f"Log in to the toolkit to manage the session or increase capacity."
     )
-    send_mail(
-        subject=subject,
-        message=body,
-        from_email=_from_email(),
-        recipient_list=[cfg.organiser_notification_email],
-        fail_silently=True,
-    )
+    try:
+        send_mail(
+            subject=subject,
+            message=body,
+            from_email=_from_email(),
+            recipient_list=[cfg.organiser_notification_email],
+            fail_silently=False,
+        )
+    except Exception:
+        logger.exception(
+            f"Failed to send session-full notification for session pk={session.pk}"
+        )
 
 
 def _login_url():

@@ -454,7 +454,18 @@ def last_gasp_email(request, volunteer_id):
                 f"A last-gasp email was sent to {name} {(timezone.now() - recent_log.sent_at).days} day(s) ago — cooldown not yet elapsed.",
             )
             return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
-        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [volunteer.member.email])
+        try:
+            send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [volunteer.member.email])
+        except Exception:
+            logger.exception(
+                f"Failed to send last-gasp email to volunteer pk={volunteer.pk}"
+            )
+            messages.error(
+                request,
+                f"The last-gasp email to {name} failed to send. Try again, or "
+                f"check their email address ({volunteer.member.email}).",
+            )
+            return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
         LastGaspEmailLog.objects.create(volunteer=volunteer, sent_by=request.user)
         messages.success(request, f"Last-gasp email sent to {name} ({volunteer.member.email}).")
         return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
@@ -563,6 +574,7 @@ def bulk_last_gasp_email(request):
 
         sent = 0
         skipped = 0
+        failed = 0
         for vol in volunteers:
             in_cooldown = LastGaspEmailLog.objects.filter(
                 volunteer=vol, sent_at__gt=cooldown_cutoff
@@ -573,7 +585,15 @@ def bulk_last_gasp_email(request):
             name = vol.member.name
             subject = _render_admin_email(subject_template, name, venue)
             body = _render_admin_email(body_template, name, venue)
-            send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [vol.member.email])
+            # Catch per-volunteer so one bad address doesn't abort the rest.
+            try:
+                send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [vol.member.email])
+            except Exception:
+                logger.exception(
+                    f"Failed to send bulk last-gasp email to volunteer pk={vol.pk}"
+                )
+                failed += 1
+                continue
             LastGaspEmailLog.objects.create(volunteer=vol, sent_by=request.user)
             logger.info(
                 "Bulk last-gasp email sent to volunteer pk=%s (%s) by %s",
@@ -584,7 +604,15 @@ def bulk_last_gasp_email(request):
         parts = [f"Last-gasp email sent to {sent} volunteer{'s' if sent != 1 else ''}"]
         if skipped:
             parts.append(f"{skipped} skipped (still within {cooldown_days}-day cooldown)")
-        messages.success(request, ". ".join(parts) + ".")
+        if failed:
+            parts.append(
+                f"{failed} failed to send (their cooldown was not started, so "
+                f"they can be retried)"
+            )
+        if failed:
+            messages.warning(request, ". ".join(parts) + ".")
+        else:
+            messages.success(request, ". ".join(parts) + ".")
         return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
 
     return HttpResponseRedirect(reverse("view-volunteer-pool-health"))

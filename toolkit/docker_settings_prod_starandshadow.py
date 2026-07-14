@@ -80,13 +80,16 @@ DATABASES = {
 }
 
 # --- Email ---
-# Set EMAIL_BACKEND to smtp.EmailBackend and configure these if you want
+# EMAIL_BACKEND is the logging wrapper (9.154); the backend that actually
+# delivers goes in TOOLKIT_WRAPPED_EMAIL_BACKEND. Point that at
+# smtp.EmailBackend and configure the EMAIL_* settings below if you want
 # mailouts to actually send. Console backend is safe for now.
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_BACKEND = "toolkit.util.email_backend.LoggingEmailBackend"
+TOOLKIT_WRAPPED_EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 # Fail fast on SMTP connection attempts rather than hanging a worker.
 # Django's default has no timeout. Only takes effect with smtp.EmailBackend.
 EMAIL_TIMEOUT = 10
-# EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# TOOLKIT_WRAPPED_EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 # EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
 # EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
 # EMAIL_USE_TLS = True
