@@ -1,7 +1,13 @@
-version: "3.7"
 networks:
   toolkit_staging:
     driver: bridge
+# Cap container log growth (9.158): Docker's json-file driver is unbounded
+# by default.
+x-logging: &defaultLogging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
 services:
   toolkit:
     user: "1002:1002"
@@ -11,6 +17,7 @@ services:
     build: .
     command: ["tk_run", "gunicorn"]
     restart: on-failure
+    logging: *defaultLogging
     ports:
       - "127.0.0.1:7192:8000"
     environment:

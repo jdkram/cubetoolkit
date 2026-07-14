@@ -83,6 +83,7 @@ case "$COMMAND" in
         echo "  send_induction_reminders:       daily at 08:00"
         echo "  send_consent_renewal_reminders: daily at 08:30"
         echo "  send_volunteer_digest:          daily at 09:00 (day controlled by SiteConfiguration)"
+        echo "  purge_email_archive:            daily after auto_dormancy (60-day retention)"
 
         _sleep_until() {
             # Sleep until the next occurrence of HH:MM today (or tomorrow if past).
@@ -103,9 +104,21 @@ case "$COMMAND" in
                 || echo "[$(date '+%Y-%m-%d %H:%M')] [${label}] FAILED (exit $?)"
         }
 
+        _purge_email_archive() {
+            # 9.155: when TOOLKIT_WRAPPED_EMAIL_BACKEND is the filebased
+            # backend, /log/emails accumulates one file per connection. The
+            # archive holds member addresses and personal content, so purge
+            # anything older than 60 days (GDPR + disk). No-op when the
+            # directory doesn't exist (i.e. archive not configured).
+            if [ -d /log/emails ]; then
+                find /log/emails -type f -mtime +60 -delete
+            fi
+        }
+
         while true; do
             _sleep_until "auto_dormancy" "03:00"
             _run "auto_dormancy" /venv/bin/python3 /site/manage.py auto_dormancy
+            _run "purge_email_archive" _purge_email_archive
 
             _sleep_until "purge_induction_signups" "03:30"
             _run "purge_induction_signups" /venv/bin/python3 /site/manage.py purge_induction_signups

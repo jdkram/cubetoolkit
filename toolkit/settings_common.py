@@ -432,14 +432,6 @@ LOGGING = {
             "datefmt": "%d/%b/%Y %H:%M:%S",
         },
     },
-    "filters": {
-        "require_debug_false": {
-            "()": "django.utils.log.RequireDebugFalse",
-        },
-        "require_debug_true": {
-            "()": "django.utils.log.RequireDebugTrue",
-        },
-    },
     "handlers": {
         "console": {
             "level": "DEBUG",
@@ -458,11 +450,10 @@ LOGGING = {
             "maxBytes": 10485760,
             "backupCount": 5,
         },
-        "mail_admins": {
-            "level": "ERROR",
-            "filters": ["require_debug_false"],
-            "class": "django.utils.log.AdminEmailHandler",
-        },
+        # The old mail_admins AdminEmailHandler was deleted 2026-07 (9.158):
+        # it was attached to no logger, ADMINS is empty, and the console email
+        # backend couldn't deliver it anyway. Revisit admin error emails once
+        # a real SMTP relay exists.
         # 'null': {
         #     'level': 'DEBUG',
         #     'class': 'logging.NullHandler',
@@ -477,6 +468,9 @@ LOGGING = {
         "toolkit": {
             "handlers": ["console", "file"],
             "level": "DEBUG",
+            # Has its own handlers; propagating to root's console handler
+            # would print every toolkit log line twice.
+            "propagate": False,
         },
     },
     # Don't configure a root logger or any other logging config; each settings

@@ -12,6 +12,13 @@ volumes:
   media_data:
   seed_image_cache:
   mariadb_data:
+# Cap container log growth (9.158): Docker's json-file driver is unbounded
+# by default.
+x-logging: &defaultLogging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
 services:
   toolkit:
     networks:
@@ -20,6 +27,7 @@ services:
     build: .
     command: ["tk_run", "runserver"]
     restart: on-failure
+    logging: *defaultLogging
     environment: &commonEnv
       DB_NAME: "${DB_NAME:-toolkit}"
       DB_USER: "${DB_USER:-toolkit}"
@@ -51,6 +59,23 @@ services:
     image: toolkit:latest
     command: ["tk_run", "scheduler"]
     restart: unless-stopped
+    logging: *defaultLogging
+    environment: *commonEnv
+    volumes:
+      - type: bind
+        source: .
+        target: /site/
+      - type: volume
+        source: media_data
+        target: /site/media/
+  # Without mailerd, mailouts queued in the UI sit PENDING forever (9.157).
+  mailer:
+    networks:
+      - toolkit_dev
+    image: toolkit:latest
+    command: ["tk_run", "mailerd"]
+    restart: unless-stopped
+    logging: *defaultLogging
     environment: *commonEnv
     volumes:
       - type: bind
@@ -63,6 +88,7 @@ services:
     networks:
       - toolkit_dev
     image: mariadb:10
+    logging: *defaultLogging
     environment:
       MARIADB_USER: "${DB_USER:-toolkit}"
       MARIADB_PASSWORD: "${DB_PASSWORD:-devserver_db_password}"
