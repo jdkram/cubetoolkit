@@ -78,6 +78,9 @@ def collectives(request):
         user_collective_slugs = frozenset()
         user_is_volunteer = False
     config = get_site_config()
+    has_public_collectives = Collective.objects.filter(
+        active=True, listed_publicly=True
+    ).exclude(public_copy="").exists()
     return render(
         request,
         "labs/collectives.html",
@@ -86,6 +89,7 @@ def collectives(request):
             "user_collective_slugs": user_collective_slugs,
             "user_is_volunteer": user_is_volunteer,
             "mailing_list_signup_url": config.collectives_mailing_list_signup_url,
+            "has_public_collectives": has_public_collectives,
         },
     )
 

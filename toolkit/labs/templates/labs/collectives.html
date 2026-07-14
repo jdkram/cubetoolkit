@@ -151,6 +151,9 @@
   <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
     <h1 style="margin-bottom: 0;">Collectives at the Star and Shadow</h1>
     <div class="action-bar">
+      {% if has_public_collectives %}
+      <a href="{% url 'labs-collectives-public' %}" class="btn btn-outline-secondary btn-sm" target="_blank">View public page</a>
+      {% endif %}
       <a href="{% url 'labs-collectives-print' %}" class="btn btn-outline-secondary btn-sm" target="_blank">Print all leaflets</a>
       {% if user.is_superuser %}
       <a href="/toolkit/admin/labs/collective/add/" class="btn btn-primary btn-sm">Add collective</a>

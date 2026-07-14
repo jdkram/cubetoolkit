@@ -10,8 +10,11 @@ setup_page(false);
 
 {% block body %}
 {{ block.super }}
-<div class="grid">
-  <div class="grid-item">
+{# base_public.html already opens .grid > main#main-content around this block — #}
+{# don't nest another .grid here, it double-applies the sidebar margin-left #}
+{# and pushes the page off-screen to the right. #}
+<div class="programme" style="min-width: 0;">
+  <div class="grid-item" style="min-width: 0;">
     <h1 style="font-size: 1.5rem; margin-bottom: 0.75rem;">Collectives</h1>
 
     {% if collectives_intro %}
@@ -34,7 +37,7 @@ setup_page(false);
       {% for collective in collectives %}
       <div style="border-left: 4px solid {{ collective.colour }}; padding: 1rem 1rem 1rem 1.25rem; background: #f8f4ef;">
         <h2 style="font-size: 1.1rem; margin: 0 0 0.5rem; color: {{ collective.colour }};">{{ collective.name }}</h2>
-        <p style="margin: 0 0 0.75rem; font-size: 0.95rem;">{{ collective.public_copy }}</p>
+        <p style="margin: 0 0 0.75rem; font-size: 0.95rem; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden;">{{ collective.public_copy }}</p>
         {% if collective.sample_role %}
         <p style="margin: 0 0 0.5rem; font-size: 0.875rem;"><strong>Example role:</strong> {{ collective.sample_role }}</p>
         {% endif %}
@@ -43,21 +46,28 @@ setup_page(false);
         {% endif %}
         {% with pub_roles=collective.defined_roles.all %}
         {% if pub_roles %}
-        <div style="margin: 0.5rem 0 0.5rem;">
-          {% for r in pub_roles %}
-          {% if r.open_to_new_volunteers %}
-          <div style="padding: 0.4rem 0; border-top: 1px solid rgba(0,0,0,0.1);">
-            <div style="display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap;">
-              <strong style="font-size: 0.875rem;">{{ r.title }}</strong>
-              {% if r.time_commitment %}<span style="font-size: 0.8rem; color: #555;">{{ r.time_commitment }}</span>{% endif %}
-              {% if r.needs_volunteers %}<span style="font-size: 0.72rem; background: #2d6a4f; color: #fff; padding: 0.1rem 0.4rem; border-radius: 3px;">looking for people</span>{% endif %}
+        {% with open_roles=pub_roles|dictsort:"open_to_new_volunteers" %}
+        <details style="margin: 0.5rem 0 0.5rem;">
+          <summary style="cursor: pointer; font-size: 0.875rem; font-weight: 600; color: {{ collective.colour }};">
+            Roles in this collective
+          </summary>
+          <div style="margin-top: 0.25rem;">
+            {% for r in pub_roles %}
+            {% if r.open_to_new_volunteers %}
+            <div style="padding: 0.4rem 0; border-top: 1px solid rgba(0,0,0,0.1);">
+              <div style="display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap;">
+                <strong style="font-size: 0.875rem;">{{ r.title }}</strong>
+                {% if r.time_commitment %}<span style="font-size: 0.8rem; color: #555;">{{ r.time_commitment }}</span>{% endif %}
+                {% if r.needs_volunteers %}<span style="font-size: 0.72rem; background: #2d6a4f; color: #fff; padding: 0.1rem 0.4rem; border-radius: 3px;">looking for people</span>{% endif %}
+              </div>
+              {% if r.description %}<div style="font-size: 0.82rem; margin-top: 0.15rem;">{{ r.description }}</div>{% endif %}
+              {% if r.getting_started %}<div style="font-size: 0.82rem; margin-top: 0.1rem; font-style: italic;">First step: {{ r.getting_started }}</div>{% endif %}
             </div>
-            {% if r.description %}<div style="font-size: 0.82rem; margin-top: 0.15rem;">{{ r.description }}</div>{% endif %}
-            {% if r.getting_started %}<div style="font-size: 0.82rem; margin-top: 0.1rem; font-style: italic;">First step: {{ r.getting_started }}</div>{% endif %}
+            {% endif %}
+            {% endfor %}
           </div>
-          {% endif %}
-          {% endfor %}
-        </div>
+        </details>
+        {% endwith %}
         {% endif %}
         {% endwith %}
         {% if collective.contact %}
