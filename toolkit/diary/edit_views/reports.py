@@ -143,7 +143,7 @@ def view_event_field(request, field, year=None, month=None, day=None):
 
     search = request.GET.get("search")
     if search:
-        logging.info(f"Search term: {search}")
+        logger.info(f"Search term: {search}")
         # Note slightly sneaky use of **; this effectively results in a method
         # call like: showings.filter(event__copy__icontains=search)
         showings = showings.filter(

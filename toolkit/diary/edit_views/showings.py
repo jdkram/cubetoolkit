@@ -277,7 +277,7 @@ def delete_showing(request, showing_id):
             reverse("edit-showing", kwargs={"showing_id": showing_id})
         )
     else:
-        logging.info(
+        logger.info(
             f"Deleting showing id {showing_id} (for event id {showing.event_id})"
         )
         messages.add_message(

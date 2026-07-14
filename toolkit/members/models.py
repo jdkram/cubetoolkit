@@ -420,13 +420,13 @@ class Volunteer(models.Model):
         if current_portrait_file != self.__original_portrait:
             # Delete old image:
             if self.__original_portrait:
-                logging.info(
+                logger.info(
                     f"Deleting old volunteer portrait '{self.__original_portrait}'"
                 )
                 try:
                     os.unlink(self.__original_portrait)
                 except OSError as err:
-                    logging.error(
+                    logger.error(
                         f"Failed deleting old volunteer portrait '{self.__original_portrait}': {err}"
                     )
                 self.__original_portrait = None
