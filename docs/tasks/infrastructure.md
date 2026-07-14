@@ -375,3 +375,130 @@ For Anacron catch-up on missed runs, copy the script to `/etc/cron.daily/sns-bac
 
 ---
 
+
+## Logging & email observability (audit 2026-07-10)
+
+Specs 9.154–9.159 come from a full inventory of what reaches the logs and what doesn't. Summary of the audit findings, for context:
+
+- All application logging routes through the `toolkit` logger to stderr, then to Docker's log driver. The Docker settings files delete the file handler from `settings_common.py`, so in-container, `docker logs` is the only log sink. Root logger: DEBUG in dev, WARNING in prod.
+- The mailout pipeline (`toolkit/mailer/`) is well instrumented: job lifecycle logging plus the `MailoutJob` row itself as a DB audit trail. But **no deployment currently runs `mailerd`** (absent from both the dev compose and the homeserver compose), so queued mailouts sit PENDING forever. The homeserver also lacks the scheduler container, so reminder/digest/consent emails never fire there.
+- Ad-hoc `send_mail()` call sites vary wildly: some log success, most don't; several have no try/except so an SMTP failure 500s the surrounding page (volunteer save, suspension); the three induction organiser notifications use `fail_silently=True` with no logging at all — a complete black hole.
+- With the console email backend, sent email bodies go to container stdout, which is deleted whenever the container is recreated (every homeserver deploy). There is no durable record of what was sent.
+- Docker's default json-file log driver has **no size cap**: no `daemon.json` on the homeserver, no `logging:` keys in any compose file. Container logs grow unbounded.
+- The `mail_admins` handler in `settings_common.py` is attached to no logger and `ADMINS = []` — dead config.
+- Event deletions: `Event.delete()` raises `IntegrityError` by design, but queryset deletes bypass it. On the old `s+s` branch (live), Django admin is exposed and its bulk "delete selected" action uses `queryset.delete()` — the probable route for the 2026 "missing event" incident on live. Admin deletions are recorded in `django_admin_log` (`action_flag=3`), so the live incident is queryable there. The new codebase doesn't expose Django admin, but has no deletion audit trail of its own, and showing deletions are logged via the wrong logger (see Bug AQ / 9.159).
+
+---
+
+### 9.154 — Email observability: logging backend wrapper + silent-failure fixes 🔵 S (6–10h)
+
+**Goal:** one structured, greppable log line for every email the toolkit attempts to send, regardless of which code path sent it or which real backend is configured — and no email failure that leaves zero trace.
+
+**1. `LoggingEmailBackend`** (new `toolkit/util/email_backend.py`):
+
+- Subclasses `django.core.mail.backends.base.BaseEmailBackend`. Instantiates an inner backend from a new setting `TOOLKIT_WRAPPED_EMAIL_BACKEND` (console, filebased, or smtp) and delegates `send_messages()` to it.
+- Logs one line per message to a dedicated `toolkit.email` logger: timestamp, recipients, subject, inner backend, and success or the exception text. Success at INFO, failure at ERROR.
+- `EMAIL_BACKEND` in each settings file points at the wrapper; `TOOLKIT_WRAPPED_EMAIL_BACKEND` carries what `EMAIL_BACKEND` holds today. Because it operates at the backend layer, it captures every send — mailouts, password resets, digests, one-off notifications — with no call-site changes.
+- This is also the natural hook point for the `SentEmailLog` DB rows in 9.156; design the wrapper so the DB write can be added there later without restructuring.
+
+**2. Silent-failure fixes at the worst call sites:**
+
+- `toolkit/inductions/emails.py` — the three organiser notification sends (`fail_silently=True`, lines ~159/184/206): replace with try/except + `logger.exception`. These currently fail with no trace anywhere.
+- `toolkit/members/views/_common.py:100` and `volunteer_edit.py:137` (vols-admin notifications) and `volunteer_suspension.py:73`: wrap in try/except so an SMTP failure logs the error and shows a `messages.warning` ("saved, but the notification email failed") instead of 500ing the volunteer save.
+- `toolkit/members/views/volunteer_pool_admin.py:457,576` (last-gasp single + bulk): add try/except; in the bulk loop, catch per-volunteer so one bad address doesn't abort the rest, and report the failure count in the summary message.
+
+**Sizing:** wrapper + settings wiring 2–3h; call-site fixes 2–3h; tests (wrapper log lines, failure paths don't 500) 2–4h.
+
+---
+
+### 9.155 — File-based email archive on the homeserver 🟢 XS (2–4h)
+
+**Goal:** a durable record of every email "sent" that survives container recreation, inspectable without log access, even with no SMTP relay configured.
+
+- On the homeserver, set `TOOLKIT_WRAPPED_EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"` with `EMAIL_FILE_PATH = "/log/emails"`. The `toolkit_log` volume is **already mounted at `/log` in the homeserver compose and currently unused** — this task finally gives it a job.
+- Django writes one timestamped `.log` file per connection (may contain several messages). Inspect with `docker compose exec toolkit ls /log/emails` or from a volume mount on the host.
+- **Retention:** the archive contains member email addresses and personal content, so it must not grow forever (GDPR + disk). Add a purge to the scheduler loop in `tk_run.sh` (a `find /log/emails -type f -mtime +60 -delete` daily is sufficient — no Django code needed) and document the retention period.
+- When a real SMTP relay is eventually configured, the archive backend simply becomes the wrapped backend on staging while prod wraps smtp — the logging layer (9.154) behaves identically in both.
+- **Security note — reset links in stored email bodies (considered 2026-07-14):** welcome, password-reset, and check-in emails contain password-set links that stay live for `PASSWORD_RESET_TIMEOUT` (currently 7 days), so the archive (and `docker logs` under the console backend) holds working account-takeover links for up to a week after each send. Mitigations: the 9.154 log lines and the 9.156 `SentEmailLog` rows deliberately store recipients + subject only, never bodies; Django reset tokens are single-use (invalidated by the password change and by any subsequent login), so most archived links are dead well before the timeout; Docker log caps (9.158) shorten the console-backend exposure window. What remains is access control: the `/log` volume must be readable only by the container user and root, and shell/Docker access to the box must be treated as equivalent to holding every unexpired reset link. Do not widen archive access (e.g. serving it over HTTP) without stripping bodies.
+
+**Depends on:** 9.154 (the wrapper provides the `TOOLKIT_WRAPPED_EMAIL_BACKEND` indirection).
+
+---
+
+### 9.156 — `SentEmailLog` model + toolkit email log page 🔵 S (10–16h)
+
+**Goal:** give organisers without server access an answer to "did the toolkit email X, and did it work?" — the generalisation of what `LastGaspEmailLog` already does for one email type.
+
+**Model** (new, in `toolkit/util/` or a small `toolkit/audit/` app):
+
+| Field | Type | Notes |
+|---|---|---|
+| `sent_at` | DateTimeField(auto_now_add, db_index) | |
+| `recipients` | TextField | Comma-joined; usually one address |
+| `subject` | CharField(255) | |
+| `success` | BooleanField | |
+| `error` | TextField(blank) | Exception text on failure |
+| `backend` | CharField(128) | Which inner backend handled it |
+
+Populated from the `LoggingEmailBackend` (9.154) so every send is captured with no call-site changes. Two deliberate exclusions: **no body storage** (PII minimisation — the file archive in 9.155 covers content inspection) and **mailout batch sends are summarised, not logged per-recipient** (a 500-member mailout must not create 500 rows; detect `MailoutJob` sends by connection reuse or a thread-local flag and log one summary row, since `MailoutJob` already tracks per-job state).
+
+**View:** `/toolkit/emails/` — Panopticon only (recipient addresses are PII). Table newest-first: time, recipients, subject, green/red status badge, error text expandable. Filter by success/failure and free-text search on recipient/subject. Pagination.
+
+**Retention:** `email_log_retain_days` on `SiteConfiguration` (default 90); purge old rows in an existing daily scheduler command. GDPR anonymisation flows should also scrub rows matching an anonymised member's address.
+
+**Failure to write the log must never block the send:** wrap the DB write in its own try/except that logs and continues. Also handle the mailerd context, where sends happen outside a request.
+
+**Depends on:** 9.154. **Related:** `LastGaspEmailLog` stays as-is (it drives cooldown logic, not just audit); consolidation is a possible follow-up, not part of this task.
+
+---
+
+### 9.157 — Run mailerd and the scheduler in every deployment 🟢 XS (1–2h)
+
+**Problem:** no environment currently runs `mailerd`, so any `MailoutJob` created through the UI sits PENDING forever with no error. The homeserver also lacks the scheduler container, so induction reminders, consent renewals, digests, and auto-dormancy never run there.
+
+- **Dev compose (`docker-compose.yml`):** add a `mailerd` service (`command: ["tk_run", "mailerd"]`, same env/volumes as the scheduler service, `restart: unless-stopped`).
+- **Homeserver compose** (`/home/jdkram/.docker/compose/docker-compose.prod.yml`, on freyja, not in the repo): add `mailer` and `scheduler` services. Copy the `mailer` service shape from the repo's `docker-compose-production.yml`, which already has the right healthcheck (`pgrep -f mailerd`) and `stop_grace_period: 5m`. Update `~/notes/Community/sns/servers.md` to record the change.
+- Smoke-test end-to-end after: queue a small mailout in the UI and confirm it transitions PENDING → SENDING → SENT and the email lands in the archive (9.155).
+
+---
+
+### 9.158 — Cap Docker log growth everywhere 🟢 XS (1–2h)
+
+**Problem:** the default json-file log driver has no size limit. No compose file sets `logging:` options and freyja has no `/etc/docker/daemon.json`, so every container's log grows unbounded until disk pressure.
+
+- Add to every service in `docker-compose.yml`, `docker-compose-production.yml`, `docker-compose-staging.yml`, and the freyja compose:
+
+  ```yaml
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+  ```
+
+- On freyja, also create `/etc/docker/daemon.json` with the same defaults (`{"log-driver": "json-file", "log-opts": {"max-size": "10m", "max-file": "3"}}`) so non-toolkit containers (SWAG etc.) are capped too. Note: daemon defaults apply only to **newly created** containers — recreate them after the change (`docker compose up -d --force-recreate`), and restarting the Docker daemon briefly takes everything down, so pick a quiet moment.
+- Cap the freyja healthcheck log: add a logrotate stanza for `/home/jdkram/logs/sns-healthcheck.log` (weekly, rotate 4, compress) or truncate from within the cron script.
+- The dev `debug.log` `RotatingFileHandler` in `settings_common.py` is already bounded (10MB × 5) and only used outside Docker — no change needed.
+- While in the settings files: delete the dead `mail_admins` handler from `settings_common.py` (attached to no logger, `ADMINS = []`, and undeliverable with the console backend anyway). Revisit admin error emails only once a real SMTP relay exists.
+
+---
+
+### 9.159 — Deletion audit trail for events, showings, and rota entries 🔵 S (6–12h)
+
+**Context — the live incident:** an event vanished from the live site with no explanation. Live runs the `s+s` branch, which exposes Django admin at `/admin/`; the admin's bulk "delete selected" action uses `queryset.delete()`, bypassing the `Event.delete()` guard that blocks single-instance deletion. **Ops note for the live investigation:** admin deletions are recorded — on jorn, `SELECT * FROM django_admin_log WHERE action_flag = 3 ORDER BY action_time DESC;` shows who deleted what and when.
+
+**Current state on this branch:** Django admin is not exposed and `Event.delete()` raises, so single events can't be deleted through the UI at all. But there is still no positive audit trail, and what deletion logging exists is broken or ephemeral:
+
+- **Bug AQ:** `delete_showing` (`toolkit/diary/edit_views/showings.py:280`) calls `logging.info(...)` — the root logger — instead of the module's `logger`. In production (root=WARNING) showing deletions are silently dropped from the logs. One-line fix; do it immediately, independent of the rest of this spec.
+- Even fixed, a console log line is lost on container recreation and doesn't record *who*.
+
+**What to build:**
+
+1. **Log with attribution in the deletion views.** `delete_showing` (and any other destructive view) logs at WARNING under the `toolkit` logger: showing pk, event pk + name, start date, and `request.user.username`. WARNING because destructive actions should survive a prod root-logger level of WARNING.
+2. **A minimal `DeletionLog` model** (same app as `SentEmailLog`, 9.156): `deleted_at`, `model` (CharField), `object_pk`, `description` (the object's `str()` plus key context, e.g. event name and showing date), `deleted_by` (FK User, SET_NULL), `via` (CharField: "edit-ui", "management-command", "cascade"). Written explicitly from the deletion views — **not** via `pre_delete` signals as the primary mechanism, because seed/reseed commands mass-delete thousands of rows and would flood the table (the homeserver reseeds every 3 days).
+3. **Optional belt-and-braces:** a `pre_delete` signal on `Event` only (deletion should be near-impossible, so any firing is signal-worthy) that logs at WARNING with a stack summary, gated off during seed commands via a module flag the seed command sets.
+4. **Surface it:** a "Recent deletions" table, either on the email-log page (9.156) or its own Panopticon page. Retention akin to `email_log_retain_days`.
+
+**Scope:** Showing, Event (guard-bypass paths), RotaEntry bulk clears if cheap. Not tags/roles (already archive-don't-delete), not seed commands.
+
+**Depends on:** nothing (Bug AQ fix is independent); pairs naturally with 9.156's app/page.

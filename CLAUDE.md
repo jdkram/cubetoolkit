@@ -193,6 +193,7 @@ docker compose exec toolkit /venv/bin/python3 manage.py test toolkit.diary.tests
 | S+S-specific templates | [star_and_shadow_templates/](star_and_shadow_templates/) |
 | Current work / status / roadmap | [CURRENT_WORK.md](CURRENT_WORK.md) |
 | System specification | [docs/SPEC.md](docs/SPEC.md) |
+| Logging: what's logged where, email log lines | [docs/LOGGING.md](docs/LOGGING.md) |
 | Feature specs & design rationale | [docs/TASKS.md](docs/TASKS.md) (index) → [docs/tasks/](docs/tasks/) (domain files) |
 | Current version string | [VERSION](VERSION) |
 

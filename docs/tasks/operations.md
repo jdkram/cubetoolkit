@@ -367,6 +367,41 @@ Add an "Open jobs" card: open + claimed (not yet resolved) jobs, ordered by urge
 
 ---
 
+### 9.153 — Cross-reference jobs board with the building map 🔵 S (10–16h)
+
+**Context:** Two Labs features already exist independently and don't know about each other. The jobs board (`toolkit/labs/models.py` `Job`, `toolkit/labs/views/jobs.py`, `/labs/jobs/` — see [9.148](#9148--jobs-board-skill-labelling-and-dashboard-visibility-s-1015h)) records `area` as free text (e.g. "Kitchen", "Roof", "Anywhere"). The building map (`toolkit/labs/views/floorplan.py`, `/labs/floorplan/`) already has a canonical, structured room list (`_FLOORPLAN_ROOMS` — id/display-name/category, matching element IDs in `toolkit/labs/static/labs/floorplan.svg`) and an established pattern for keying per-room data by that `room_id` and rendering it into the room cards (`RoomNote`, `AreaPhoto` both do this already — see `floorplan.py:100-153` and the `notes_json`/`area_photos_json` wiring in `floorplan.html`). Jobs aren't part of that structured room data, so there's no way to see "what's outstanding in this room" from the map, or "where is this job" from the jobs list, beyond reading the free-text `area` string.
+
+**Goal:** make the map and the jobs board cross-reference each other, following the same room_id-keyed pattern already used for notes and photos, without disturbing `Job.area` (still needed for remote jobs and areas not on the map, e.g. "Anywhere", "Roof" if not modelled as a room).
+
+**Design decisions:**
+
+1. **Add `Job.room_id`, don't replace `Job.area`.** `area` stays as free text (covers remote/out-of-map cases); `room_id` is a new optional field (`CharField(max_length=100, blank=True, default="")`) that links a job to a specific `_FLOORPLAN_ROOMS` entry when one applies. Give the model field `choices=` built from the room list so `job.get_room_id_display()` "just works" in templates without extra lookup logic (standard Django pattern already implicit in how `urgency`/`location_type` are handled on this model).
+2. **Extract the room list out of `floorplan.py` so `jobs.py` can use it too.** `_FLOORPLAN_ROOMS`/`_ROOM_SECTIONS` currently live only in `toolkit/labs/views/floorplan.py` (confirmed nothing else imports them except a comment in `seed_data/building_map.toml`). Move them to a new small module, e.g. `toolkit/labs/room_data.py`, and derive a flat `ROOM_CHOICES = [(rid, name) for rid, name, _ in FLOORPLAN_ROOMS]` there for the model field and form. Both `floorplan.py` and `jobs.py` (and `JobForm`) import from it — avoids a circular import between the two view modules.
+3. **Map → jobs (room card shows its open jobs).** `floorplan()` view gains a `jobs_by_room` dict, built the same way as `notes`/`area_photos` — one query over `Job.objects.filter(resolved=False, room_id__in=[...]).values(...)`, grouped by `room_id`, serialised to `jobs_json`. Only *open* jobs surface on the map — a room's history of resolved jobs isn't map-relevant and would just clutter the card. Each room card gets a compact line under the note (new `.room-jobs-container`, styled like the existing `.area-photo-container` slot) listing open job titles with an urgency dot, each linking to `/labs/jobs/?room=<id>` (see point 4). Loft zones are out of scope — `Job` has no zone-level granularity today (`location_type` only distinguishes building/remote/both), and stretching it to loft zones is a separate modelling question, not this ticket.
+4. **Jobs → map (job row shows its room, links back).** `job_list` gains an optional `?room=<id>` query filter (mirrors how the map card link works): when present, filter both `open_jobs` and `done_jobs` querysets and show a "Jobs in {{ room_name }}" heading with a "clear filter" link back to the unfiltered board. Each job row in `jobs.html` that has a `room_id` set shows a small 📍 badge with the room's display name, linking to `/labs/floorplan/#room-<id>` — this reuses the map's existing hash-based deep-link machinery (`floorplan.html` already restores the loft tab from `#loft`; extend that same hash parser to recognise `#room-<id>` and call the existing `selectFromMap(id)` function, which already switches tab, highlights the SVG element, and scrolls the matching card into view — no new JS pattern needed, just a small generalisation of the existing one).
+5. **Job add/edit form.** `JobForm` gains a `room_id` field — a `ChoiceField` (not required) built from `ROOM_CHOICES` with a blank "Not on the map / remote" option first. Doesn't replace the existing free-text `area` field; both are shown, `room_id` is purely the optional structured link.
+
+**Explicitly out of scope for this ticket:**
+- Visually flagging rooms with open/urgent jobs directly on the SVG itself (e.g. a persistent badge or colour independent of selection) — worth doing later as a "problems at a glance" view, but it's a separate rendering concern from the card cross-linking above and shouldn't block it.
+- Loft zone jobs (see point 3).
+- Retroactively backfilling `room_id` on existing jobs — leave existing rows with blank `room_id` (falls back to free-text `area` only, same as before this ticket); a volunteer can fill it in on next edit if they want the job to show on the map.
+
+**Sizing:**
+
+| Component | Est. |
+|---|---|
+| Extract `room_data.py`, `ROOM_CHOICES` | 1h |
+| `Job.room_id` field + migration | 1h |
+| `JobForm` room dropdown | 1h |
+| `floorplan()` view: `jobs_by_room` query + `jobs_json` | 1.5h |
+| Room card template/JS: jobs list rendering | 3h |
+| `job_list` `?room=` filter + heading/clear-filter | 1.5h |
+| `jobs.html`: room badge linking to map; generalise hash-restore JS to `#room-<id>` | 2h |
+| Tests | 3–4h |
+| **Total** | **~14–16h** |
+
+---
+
 ### 9.88 — Shared shopping list (consumables) 🟡 M (20–35h)
 
 A lightweight shared list for flagging when consumables run out and coordinating who will restock them. Lives under the existing Labs section (`/volunteers/labs/`), accessible to any logged-in volunteer.

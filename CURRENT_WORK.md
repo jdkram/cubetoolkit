@@ -2,14 +2,20 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-07-02
-**Last major change:** 9.149 itemised budget lines (MVI) shipped — see below.
+**Last updated:** 2026-07-14
+**Last major change:** Logging & email observability: Bug AQ fixed, 9.154 shipped, repo-side of 9.155/9.157/9.158 done (see section 3c). 9.156 + 9.159 still to build; freyja-side steps pending.
 **Current phase:** Phase 4 ongoing
 **See also:** [TASKS.md](docs/TASKS.md) (design rationale & feature specs) · [REWRITE_STRATEGY.md](docs/REWRITE_STRATEGY.md) (tech notes and migration guide)
 
 ---
 
 ## Immediate blockers (fix first)
+
+| # | Bug | Notes |
+|---|-----|-------|
+| **Bug AO** | **Site-wide horizontal overflow on public pages at ≥1000px viewports (not new — pre-existing)** | 🔴 Open, paused 2026-07-02. `layout.css:763` — `@media (min-width: 1000px) { .grid { margin-left: var(--sidebar-width); } }` — but `.grid` also carries `width: 100%` (`layout.css:416-420`) relative to its own containing block (`#container`, itself `width: 100%`). Nothing compensates for the added `margin-left`, so the `.grid` box's right edge sits `var(--sidebar-width)` past the viewport edge. Confirmed on **two independent pages** at 1280×900 headless-chromium screenshots: the existing `/programme/` public index *and* the new `/labs/collectives/public/` page both show a horizontal scrollbar / right-edge overflow — so this is not something introduced by the collectives work below, it's a latent site-wide bug that's more visually obvious on wide-content pages. Likely fix direction: `width: calc(100% - var(--sidebar-width))` (or drop `width: 100%` and let it size naturally) on the 1000px+ `.grid` rule — but needs verifying against the sidebar's `position: fixed` removal-from-flow first, since two layout mechanisms (fixed positioning + margin offset) are already stacked here per the file's own header comment about "drift" causing a previous bug (Bug AA). **Paused for Jonny to bring screenshots + design notes before resuming.** |
+| ~~**Bug AP**~~ | ~~**"No one's signed up" on demo rota — investigated, not actually a bug**~~ | ✅ 2026-07-02 — Confirmed via live DB query on the demo server: the every-3-days reseed cron (`crontab -e` on freyja) is running fine (ran 2026-07-01, created 551 rota entries), and 70 of 111 rota slots for the next 14 days have a name filled in. Fill rate is *intentionally* distance-weighted in `seed_dev_data.py` (~80% filled a few days out, tapering to ~35% for showings 3+ weeks out), so far-future showings will always look sparsely staffed by design. If the rota still looks empty, it's likely the date range being viewed, not a data problem — bring a screenshot next time to pin down which. |
+| ~~**9.152**~~ | ~~**Collectives public page: overflow + role flooding + "View public page" link**~~ | 🟡 Partial, 2026-07-02 — `collectives_public.html` was nesting a second `<div class="grid">` inside `<main>`, which is already wrapped in `.grid` by `base_public.html`; this double-applied the sidebar `margin-left` offset. Removed the redundant wrapper (now uses `.programme > .grid-item`, matching `view_event.html`'s pattern) — this fixes the *double*-offset, but the page still overflows because of the pre-existing **Bug AO** above (root-caused, not yet fixed). Also shipped: each collective's open-roles list is now a collapsed `<details>/<summary>` (was: all roles for all collectives rendered inline, flooding the page); `public_copy` is now CSS-clamped to 5 lines so uneven description lengths don't produce wildly different card heights (doesn't touch the actual copy — trimming description text itself is still an editorial task). Added a "View public page" button to the internal `/labs/collectives/` admin view, shown only when at least one collective is `listed_publicly` (there's no separate settings flag gating the public page — it's always reachable at its URL, so this gates on "is there anything to see" instead). Blocked on Bug AO for full visual fix. |
 
 | # | Bug | Notes |
 |---|-----|-------|
@@ -97,6 +103,7 @@ Tracking file: [MAINTAINABILITY_PASS.md](MAINTAINABILITY_PASS.md). Chunks 1-5 do
 | ~~**N**~~ | ~~Nav "Rota" link pointed at public `/diary/rota/` instead of edit `/diary/edit/rota/`~~ | ✅ 2026-03-02 |
 | ~~**AM**~~ | ~~`/diary/copy` index shows "Closed for private event." for every private/hidden showing~~ | ✅ 2026-06-10 / 2026-06-20 — Fix initially applied to `view_copy_summary.html` only; second fix applied to `view_copy.html` (the actual `/diary/copy` template). Private/hidden showings now suppressed from the index in both templates. |
 | ~~**Bug AN**~~ | ~~Nav dropdown: hover highlight wider than item text~~ | ✅ 2026-06-10 — `base_admin.html`: `.navbar .dropdown-menu .dropdown-item { width: fit-content }` constrains the hover highlight to the item's text width. |
+| ~~**Bug AQ**~~ | ~~**Showing deletions not logged in production — wrong logger**~~ | ✅ 2026-07-14 — `delete_showing` called `logging.info(...)` (the root logger, WARNING in prod) instead of the module's `logger`, so showing deletions left no log line. Fixed, along with the same mistake in `members/models.py` (portrait deletion + failure) and `diary/edit_views/reports.py` (search term). Full deletion audit trail remains spec'd as 9.159. Same-day related fix: the `toolkit` logger now sets `propagate: False` in `settings_common.py` — it has its own console handler and was also propagating to root's, printing every toolkit log line twice in Docker. |
 
 ---
 
@@ -292,6 +299,21 @@ Items identified during the April 2026 SNS production site outage investigation.
 
 ---
 
+### 3c. Logging & email observability (specs 2026-07-10; repo-side work built 2026-07-14)
+
+From a full audit of what reaches the logs and what doesn't. Headline findings: no deployment runs `mailerd` (mailouts queue forever), the homeserver lacks the scheduler (reminder/digest emails never fire there), console-backend emails vanish on every redeploy, and Docker logs are unbounded everywhere. Full audit summary + specs in [docs/tasks/infrastructure.md](docs/tasks/infrastructure.md). Suggested order: Bug AQ fix → 9.154 → 9.157 + 9.158 (both trivial) → 9.155 → 9.156 → 9.159.
+
+| # | Item | Size | Notes |
+|---|------|------|-------|
+| ~~**9.154**~~ | ~~**Email observability: `LoggingEmailBackend` wrapper + silent-failure fixes**~~ | 🔵 S | ✅ 2026-07-14 — `toolkit/util/email_backend.py` wraps the real backend (`TOOLKIT_WRAPPED_EMAIL_BACKEND`); one `toolkit.email` log line per message (INFO success / ERROR failure, including "backend reported 0 sent"). Wired into `devserver_settings.py` and both S+S Docker settings files. Silent-failure fixes: the three `fail_silently=True` organiser notifications in `inductions/emails.py` now try/except + `logger.exception`; vols-admin status-change + new-volunteer notifications, the new-volunteer welcome email, the suspension email, and single + bulk last-gasp sends all catch SMTP failures — log + `messages.warning`/`error` instead of 500ing, bulk continues per-volunteer and reports a failure count (failed recipients get no `LastGaspEmailLog` row, so cooldown doesn't start and they can be retried). 9 new tests (`toolkit/util/tests.py`, `members/tests/test_email_failures.py`); full suite 1114 green. Smoke-tested in dev container. |
+| **9.155** | **File-based email archive on the homeserver** | 🟢 XS | 🟡 Repo side done 2026-07-14: `tk_run.sh` scheduler loop purges `/log/emails` files older than 60 days daily (no-op if dir absent). **Remaining (on freyja):** set `TOOLKIT_WRAPPED_EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"` + `EMAIL_FILE_PATH = "/log/emails"` in the homeserver settings file, and `EMAIL_BACKEND = "toolkit.util.email_backend.LoggingEmailBackend"`. |
+| **9.156** | **`SentEmailLog` model + `/toolkit/emails/` page** | 🔵 S | DB row per send (recipients, subject, success/error) written from the 9.154 wrapper; Panopticon-only log page. Mailout batches summarised as one row, not per-recipient. Retention via new `SiteConfiguration` field. |
+| **9.157** | **Run mailerd + scheduler in every deployment** | 🟢 XS | 🟡 Repo side done 2026-07-14: `mailer` service added to dev compose; smoke-tested end-to-end (queued a `MailoutJob`, watched PENDING → SENT, 63 sends each logged by the 9.154 wrapper). **Remaining (on freyja):** add `mailer` + `scheduler` services to the homeserver compose (copy shapes from `docker-compose-production.yml`), update `~/notes/Community/sns/servers.md`. |
+| **9.158** | **Cap Docker log growth** | 🟢 XS | 🟡 Repo side done 2026-07-14: `logging: {json-file, max-size: 10m, max-file: 3}` on every service in dev/production/staging compose files (via `x-logging` anchor); dead `mail_admins` handler + its now-unused `require_debug_*` filters deleted from `settings_common.py`; obsolete `version:` keys dropped from prod/staging compose. **Remaining (on freyja):** `/etc/docker/daemon.json` with the same defaults + container recreation at a quiet moment; logrotate for the healthcheck log. |
+| **9.159** | **Deletion audit trail (events/showings/rota)** | 🔵 S | Prompted by the live "missing event" incident (probable cause: Django admin bulk delete on the `s+s` branch — check `django_admin_log` on jorn, `action_flag=3`). WARNING-level attributed logging in deletion views + minimal `DeletionLog` model + "Recent deletions" page. Bug AQ itself fixed 2026-07-14 (see blockers table). |
+
+---
+
 ### 4. Phase 3: What to build next
 
 Priorities agreed 2026-05-25. Full specs in [TASKS.md](docs/TASKS.md).
@@ -327,6 +349,7 @@ Priorities agreed 2026-05-25. Full specs in [TASKS.md](docs/TASKS.md).
 - ~~**9.104 Programme RSS/Atom feed**~~ ✅ 2026-06-10. `BasicWhatsOnFeed` improved: 60-day lookahead (was 7), titles include date/time, descriptions use `copy_summary` first, `item_pubdate` from `showing.created_at`. RSS autodiscovery `<link rel="alternate">` moved to `base_public.html` (all public pages). Open Graph tags (`og:type`, `og:site_name`, `og:url`, `og:title`, `og:image`) added to `base_public.html` as site defaults; event pages override with event name, description, and media image via `{% block opengraph %}`.
 - ~~**9.107 Letterbox bars on image upload**~~ — ✅ 2026-06-05. `bar_colour` field on `MediaItem`; on new upload with colour set, Pillow pads to `SiteConfiguration.thumbnail_crop_width/height` ratio (default 2:3). Colour picker + Canvas dominant-colour swatches in event edit form. Fixes latent `poster.py` bug (`thumbnail_crop_width/height` referenced but missing). Migration 0060.
 - **9.63 Room availability overlay on map** — helpful but not a priority
+- **9.153 Cross-reference jobs board with the building map** — spec only, not built. Adds optional `Job.room_id` (alongside existing free-text `area`); room cards on the map show their open jobs, job rows link back to their room on the map. Full spec in `docs/tasks/operations.md`.
 - ~~**9.49 Runtime-configurable permissions**~~ ✅ 2026-06-15 — See table row above.
 - ~~**9.124 Configurable access levels**~~ ✅ 2026-06-15 — Phase 1 (read-only table) shipped 2026-06-10. Phase 2 (editable dropdowns, `perm_*` fields, `feature_required` decorator, nav guards) shipped as part of 9.49.
 - ~~**9.29 Role management UX (Phase 1)**~~ ✅ 2026-06-10. Added "Entries" column to roles table showing rota sign-up count per role. Inline rename warning appears when a role name is changed: "⚠ Renaming affects N existing rota entries." (JS, no round-trip). Fixed misleading "renaming is safe" alert text — now accurately states that a rename retroactively updates the name everywhere. Deeper design questions (multiple ad-hoc "other" roles, removing a role from a showing that has entries) remain open and need collective input before implementation.
